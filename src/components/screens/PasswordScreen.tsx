@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Eye, EyeOff } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { supabase, hasSupabaseConfig } from '../../lib/supabase';
 
 export function PasswordScreen({ onBack, onLogin }: { onBack: () => void, onLogin: () => void }) {
   const [email, setEmail] = useState('');
@@ -11,6 +11,14 @@ export function PasswordScreen({ onBack, onLogin }: { onBack: () => void, onLogi
   const [errorMsg, setErrorMsg] = useState('');
 
   const handleAuth = async () => {
+    // 1. Bypass logic if Supabase is not configured (Local UI testing mode)
+    if (!hasSupabaseConfig) {
+      console.warn("⚠️ Konfigurasi Supabase kosong. Melewati autentikasi (Dev Mode).");
+      onLogin(); // Langsung login
+      return;
+    }
+
+    // 2. Jika Supabase dikonfigurasi, jalankan proses auth
     setLoading(true);
     setErrorMsg('');
     try {
@@ -20,8 +28,7 @@ export function PasswordScreen({ onBack, onLogin }: { onBack: () => void, onLogi
           password,
         });
         if (error) throw error;
-        // Supabase rate limit or local setup might require email confirmation, 
-        // but let's assume auto-confirm or successful login for preview.
+        // Berhasil mendaftar
         onLogin();
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -29,15 +36,18 @@ export function PasswordScreen({ onBack, onLogin }: { onBack: () => void, onLogi
           password,
         });
         if (error) throw error;
+        // Berhasil masuk
         onLogin();
       }
     } catch (err: any) {
-      // Provide a fallback development mode if supabase is not connected
-      if (err.message.includes("URL") || err.message.includes("key")) {
-         console.warn("Supabase not configured. Bypassing auth for dev mode.");
-         onLogin();
+      if (err.message && err.message.includes('Invalid path')) {
+        setErrorMsg('URL Supabase tidak valid. Pastikan VITE_SUPABASE_URL di .env memiliki format https://<project>.supabase.co');
+      } else if (err.message && err.message.includes('Invalid API key')) {
+        setErrorMsg('API Key Supabase tidak valid. Pastikan VITE_SUPABASE_ANON_KEY di .env sudah benar.');
+      } else if (err.message && err.message.toLowerCase().includes('api key')) {
+         setErrorMsg('API Key Supabase tidak valid atau kosong.');
       } else {
-         setErrorMsg(err.message);
+        setErrorMsg(err.message || 'Terjadi kesalahan saat otentikasi.');
       }
     } finally {
       setLoading(false);
