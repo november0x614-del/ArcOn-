@@ -1,0 +1,8 @@
+{
+  "name": "ArcOn",
+  "description": "Frontend UI Clone for Arc Commerce App featuring native-stablecoin Circle SDK integration.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
