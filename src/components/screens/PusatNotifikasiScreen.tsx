@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Bell, MessageSquare, CreditCard, BadgeDollarSign, Mail, Smartphone, Info, Calendar } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 
-export function PusatNotifikasiScreen({ onBack }: { onBack: () => void }) {
-  const [isOn, setIsOn] = React.useState(true);
+interface PusatNotifikasiScreenProps {
+  onBack: () => void;
+}
+
+export function PusatNotifikasiScreen({ onBack }: PusatNotifikasiScreenProps) {
+  const [isOn, setIsOn] = useState(true);
   
   return (
     <div className="w-full h-full bg-[#f8fafc] relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
@@ -31,7 +35,7 @@ export function PusatNotifikasiScreen({ onBack }: { onBack: () => void }) {
                   <h4 className="font-bold text-[15px] text-slate-800">Aktifkan Notifikasi Poin</h4>
                   <div 
                     role="button"
-                    className={`rounded-full flex items-center shrink-0 ml-4 px-[2px] cursor-pointer transition-colors duration-300 ${isOn ? 'bg-[#6366f1]' : 'bg-slate-300'}`}
+                    className={`rounded-full flex items-center shrink-0 ml-4 px-[2px] cursor-pointer transition-colors duration-300 ${isOn ? 'bg-[#3FA2F6]' : 'bg-slate-300'}`}
                     onClick={() => setIsOn(!isOn)}
                     style={{ width: '46px', height: '24px' }}
                   >
@@ -46,4 +50,3 @@ export function PusatNotifikasiScreen({ onBack }: { onBack: () => void }) {
     </div>
   );
 }
-

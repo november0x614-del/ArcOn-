@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
-import { Pencil, ArrowLeft, X, Check } from 'lucide-react';
+import { ArrowLeft, Pencil, X, Check } from 'lucide-react';
 
-export function NamaPanggilanScreen({ onBack }: { onBack: () => void }) {
-  const [isEditing, setIsEditing] = React.useState(false);
-  const [name, setName] = React.useState('RAKYAN INUKERTAPATI');
-  const [showToast, setShowToast] = React.useState(false);
+interface NamaPanggilanScreenProps {
+  onBack: () => void;
+}
+
+export function NamaPanggilanScreen({ onBack }: NamaPanggilanScreenProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [name, setName] = useState('RAKYAN INUKERTAPATI');
+  const [showToast, setShowToast] = useState(false);
 
   const handleSave = () => {
     setIsEditing(false);
@@ -45,14 +49,14 @@ export function NamaPanggilanScreen({ onBack }: { onBack: () => void }) {
             onClick={() => setIsEditing(true)}
           >
             <span className="font-bold text-[15px] text-slate-800 tracking-wide uppercase">{name}</span>
-            <button className="text-[#6366f1]">
+            <button className="text-[#3FA2F6]">
               <Pencil size={20} />
             </button>
           </div>
         ) : (
           <div className="flex flex-col flex-1 w-full relative">
-            <div className="w-full border border-slate-300 rounded-xl px-4 py-2 relative bg-white focus-within:border-[#6366f1] focus-within:ring-1 focus-within:ring-[#6366f1] transition-all group">
-              <label className="text-[12px] font-medium text-slate-500 group-focus-within:text-[#6366f1] transition-colors">Nama Panggilan</label>
+            <div className="w-full border border-slate-300 rounded-xl px-4 py-2 relative bg-white focus-within:border-[#3FA2F6] focus-within:ring-1 focus-within:ring-[#3FA2F6] transition-all group">
+              <label className="text-[12px] font-medium text-slate-500 group-focus-within:text-[#3FA2F6] transition-colors">Nama Panggilan</label>
               <div className="flex items-center">
                 <input 
                   type="text"
@@ -77,7 +81,7 @@ export function NamaPanggilanScreen({ onBack }: { onBack: () => void }) {
               <span className="text-[12px] text-slate-500 font-medium">{name.length}/16</span>
               <button 
                 onClick={() => setName('RAKYAN INUKERTAPATI')}
-                className="w-max mt-3 border border-[#6366f1] text-[#6366f1] px-3 py-1.5 rounded-full text-[12px] font-bold hover:bg-indigo-50 transition-colors"
+                className="w-max mt-3 border border-[#3FA2F6] text-[#3FA2F6] px-3 py-1.5 rounded-full text-[12px] font-bold hover:bg-blue-50 transition-colors"
               >
                 Pakai Nama Lengkap
               </button>
@@ -87,7 +91,7 @@ export function NamaPanggilanScreen({ onBack }: { onBack: () => void }) {
               <button 
                 onClick={handleSave}
                 disabled={name.length === 0}
-                className="w-full bg-[#4338ca] hover:bg-[#3730a3] disabled:bg-slate-300 disabled:text-slate-50 text-white font-bold py-3.5 rounded-full transition-colors"
+                className="w-full bg-[#0066b2] hover:bg-[#005a9e] disabled:bg-slate-300 disabled:text-slate-50 text-white font-bold py-3.5 rounded-full transition-colors"
               >
                 Simpan
               </button>
@@ -98,4 +102,3 @@ export function NamaPanggilanScreen({ onBack }: { onBack: () => void }) {
     </div>
   );
 }
-

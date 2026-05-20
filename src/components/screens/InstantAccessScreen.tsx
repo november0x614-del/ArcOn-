@@ -1,7 +1,20 @@
 import React, { useState } from 'react';
-import { Search, QrCode, Nfc, ArrowDownToLine, Settings, ArrowLeft, Wallet, Info, Zap, CreditCard, Smartphone, Check } from "lucide-react";
+import { 
+  ArrowLeft, 
+  Search, 
+  Settings, 
+  QrCode, 
+  Nfc, 
+  ArrowDownToLine, 
+  CreditCard, 
+  Zap 
+} from 'lucide-react';
 
-export function InstantAccessScreen({ onBack }: { onBack: () => void }) {
+interface InstantAccessScreenProps {
+  onBack: () => void;
+}
+
+export function InstantAccessScreen({ onBack }: InstantAccessScreenProps) {
   return (
     <div className="w-full h-full bg-white relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
       {/* Header */}
@@ -24,45 +37,45 @@ export function InstantAccessScreen({ onBack }: { onBack: () => void }) {
 
         <div className="flex flex-col">
            <InstantAccessItem 
-             icon={<Search size={22} className="text-[#6366f1]" />}
+             icon={<Search size={22} className="text-[#3FA2F6]" />}
              title="Intip Saldo"
              desc="Cek saldo tabungan, sisa limit kartu kredit, dan mutasi transaksi."
              enabled={true}
              hasSettings={true}
            />
            <InstantAccessItem 
-             icon={<QrCode size={22} className="text-[#6366f1]" />}
+             icon={<QrCode size={22} className="text-[#3FA2F6]" />}
              title="QR Bayar"
              desc="Bayar QR dengan scan atau upload kode lebih praktis tanpa perlu login!"
              enabled={false}
            />
            <InstantAccessItem 
-             icon={<Nfc size={22} className="text-[#6366f1]" />}
+             icon={<Nfc size={22} className="text-[#3FA2F6]" />}
              title="QRIS Tap"
              desc="Tap handphone untuk keluar dan masuk saat di transportasi publik hingga berbelanja."
              enabled={false}
            />
            <InstantAccessItem 
-             icon={<ArrowDownToLine size={22} className="text-[#6366f1]" />}
+             icon={<ArrowDownToLine size={22} className="text-[#3FA2F6]" />}
              title="Setor Tarik"
-             desc="Buat token lebih cepat untuk setor atau tarik tunai tanpa kartu di Jaringan Arc."
+             desc="Buat token lebih cepat untuk setor atau tarik tunai tanpa kartu di ATM Mandiri."
              enabled={true}
              hasSettings={true}
            />
            <InstantAccessItem 
-             icon={<CreditCard size={22} className="text-[#6366f1]" />}
+             icon={<CreditCard size={22} className="text-[#3FA2F6]" />}
              title="Instant e-money"
              desc="Isi saldo kartu e-money favorit untuk perjalanan bebas hambatan."
              enabled={false}
            />
            <InstantAccessItem 
-             icon={<Zap size={22} className="text-[#6366f1]" />}
+             icon={<Zap size={22} className="text-[#3FA2F6]" />}
              title="Quick Pick"
              desc="Transfer, top-up, dan bayar tagihan favorit dengan ringkas."
              enabled={false}
            />
            <InstantAccessItem 
-             icon={<Nfc size={22} className="text-[#6366f1]" />}
+             icon={<Nfc size={22} className="text-[#3FA2F6]" />}
              title="Tap to Pay"
              desc="Bayar ini itu dengan dekatkan handphone di..."
              enabled={false}
@@ -73,8 +86,16 @@ export function InstantAccessScreen({ onBack }: { onBack: () => void }) {
   );
 }
 
-export function InstantAccessItem({ icon, title, desc, enabled, hasSettings }: { icon: React.ReactNode, title: string, desc: string, enabled: boolean, hasSettings?: boolean }) {
-  const [isOn, setIsOn] = React.useState(enabled);
+interface InstantAccessItemProps {
+  icon: React.ReactNode;
+  title: string;
+  desc: string;
+  enabled: boolean;
+  hasSettings?: boolean;
+}
+
+function InstantAccessItem({ icon, title, desc, enabled, hasSettings }: InstantAccessItemProps) {
+  const [isOn, setIsOn] = useState(enabled);
   return (
     <div className="flex items-start gap-4 px-5 py-5 border-b border-slate-100/60 bg-white">
       <div className="shrink-0 pt-0.5">
@@ -85,7 +106,7 @@ export function InstantAccessItem({ icon, title, desc, enabled, hasSettings }: {
             <h4 className="font-bold text-[15px] text-slate-800">{title}</h4>
             <div 
               role="button"
-              className={`rounded-full flex items-center shrink-0 ml-4 px-[2px] cursor-pointer transition-colors duration-300 ${isOn ? 'bg-[#6366f1]' : 'bg-slate-300'}`}
+              className={`rounded-full flex items-center shrink-0 ml-4 px-[2px] cursor-pointer transition-colors duration-300 ${isOn ? 'bg-[#3FA2F6]' : 'bg-slate-300'}`}
               onClick={() => setIsOn(!isOn)}
               style={{ width: '46px', height: '24px' }}
             >
@@ -94,13 +115,12 @@ export function InstantAccessItem({ icon, title, desc, enabled, hasSettings }: {
          </div>
          <p className="text-[13px] text-slate-500 leading-[1.5] pr-8">{desc}</p>
          {hasSettings && isOn && (
-           <button className="flex items-center gap-1.5 mt-3 px-3 py-1.5 border border-[#6366f1]/30 text-[#6366f1] rounded-full w-max bg-indigo-50/40 hover:bg-indigo-50 transition-colors">
+           <button className="flex items-center gap-1.5 mt-3 px-3 py-1.5 border border-[#3FA2F6]/30 text-[#3FA2F6] rounded-full w-max bg-blue-50/40 hover:bg-blue-50 transition-colors">
               <Settings size={14} />
               <span className="font-bold text-[12px] pr-0.5">Atur</span>
            </button>
          )}
       </div>
     </div>
-  )
+  );
 }
-

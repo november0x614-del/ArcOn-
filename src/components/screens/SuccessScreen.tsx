@@ -1,72 +1,77 @@
-import React, { useState } from "react";
-import { X, Check, ChevronUp, ArrowUpRight, PlusCircle, ArrowLeft, CheckCircle2, Copy, Send, Download } from 'lucide-react';
-import { Contact } from "../../types";
+import React from 'react';
+import { Check, Receipt, Share2, Download, Home } from 'lucide-react';
 
-export function SuccessScreen({ contact, amount, onClose }: { contact: any, amount: string, onClose: () => void }) {
-  const [isSaved, setIsSaved] = useState(false);
-  const numericAmount = parseFloat(amount.replace(/\./g, ''));
-  const now = new Date();
-  const formatTime = `${now.getDate()} Mei 2026 • ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')} WIB`;
+interface SuccessScreenProps {
+  amount: string;
+  contact: {
+    name: string;
+    account: string;
+    bank?: string;
+    network?: string;
+  };
+  onClose: () => void;
+}
+
+export function SuccessScreen({ amount, contact, onClose }: SuccessScreenProps) {
+  const targetName = contact?.name || "Fauzan";
+  const targetAccount = contact?.account || "0x8823...32a1";
 
   return (
-    <div className="w-full h-full bg-slate-50 relative flex flex-col z-50 overflow-y-auto overflow-x-hidden pb-12 animate-in fade-in duration-300">
-      <div className="bg-white flex flex-col items-center pt-16 pb-8 text-center px-6 relative rounded-b-[32px] shadow-[0_4px_24px_rgba(0,0,0,0.02)]">
-         <button onClick={onClose} className="absolute right-5 top-5 p-2 bg-slate-100 text-slate-400 rounded-full hover:bg-slate-200 transition-colors">
-            <X size={20} strokeWidth={2.5}/>
-         </button>
-         
-         <div className="w-20 h-20 rounded-full bg-[#12B76A] flex items-center justify-center shadow-[0_4px_24px_rgba(18,183,106,0.3)] mb-5">
-            <Check size={40} className="text-white" strokeWidth={3} />
+    <div className="w-full h-full bg-white relative flex flex-col items-center pt-12 px-6 z-50 overflow-hidden animate-in fade-in duration-500">
+      <div className="flex-1 flex flex-col items-center justify-center -mt-8 max-w-sm w-full">
+         {/* Success Check Badge */}
+         <div className="w-16 h-16 bg-[#3cd458] rounded-full flex items-center justify-center text-white mb-6 shadow-lg shadow-green-500/10 relative scale-in">
+            <Check size={32} strokeWidth={3} />
          </div>
 
-         <h2 className="text-[24px] font-extrabold text-slate-800 mb-2">Transfer Berhasil!</h2>
-         <p className="text-slate-500 text-[13px]">{formatTime}</p>
-         
-         <div className="flex items-center gap-1.5 text-[#4f46e5] font-semibold text-[14px] mt-6 bg-[#4f46e5]/10 px-4 py-2 rounded-full cursor-pointer hover:bg-[#4f46e5]/20 transition-colors">
-             Lihat Resi
-             <ChevronUp size={16} strokeWidth={2.5} />
+         <span className="text-[14px] font-bold text-[#3cd458] tracking-widest uppercase mb-1">Transfer Sukses</span>
+         <h1 className="text-[36px] font-extrabold text-slate-800 tracking-tight flex items-baseline gap-1 mb-8">
+            {amount} <span className="text-[14px] text-slate-400 font-bold">USDC</span>
+         </h1>
+
+         {/* Receipt Details Box */}
+         <div className="bg-[#f8fafc] border border-slate-100 rounded-3xl p-5 w-full space-y-4 mb-8">
+            <div className="flex justify-between">
+               <span className="text-sm text-slate-500">Penerima</span>
+               <div className="text-right">
+                  <span className="text-sm font-bold text-slate-800 block">{targetName}</span>
+                  <span className="text-[11px] font-mono text-slate-400 block">{targetAccount}</span>
+               </div>
+            </div>
+            <div className="flex justify-between">
+               <span className="text-sm text-slate-500">Metode</span>
+               <span className="text-sm font-bold text-slate-800">Arc Fast Settlement</span>
+            </div>
+            <div className="flex justify-between">
+               <span className="text-sm text-slate-500">Waktu</span>
+               <span className="text-sm font-bold text-slate-800">Hari ini, {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} WIB</span>
+            </div>
+            <div className="flex justify-between">
+               <span className="text-sm text-slate-500">Network Fee</span>
+               <span className="text-sm font-bold text-green-500">Gratis (Subsidi)</span>
+            </div>
+         </div>
+
+         {/* Receipt buttons */}
+         <div className="flex gap-4 w-full mb-6">
+            <button className="flex-1 bg-slate-50 border border-slate-100 p-3.5 rounded-2xl flex items-center justify-center gap-2 hover:bg-slate-100 active:scale-[0.98] transition-all font-bold text-[13px] text-slate-600">
+               <Share2 size={16} /> Bagikan
+            </button>
+            <button className="flex-1 bg-slate-50 border border-slate-100 p-3.5 rounded-2xl flex items-center justify-center gap-2 hover:bg-slate-100 active:scale-[0.98] transition-all font-bold text-[13px] text-slate-600">
+               <Download size={16} /> Simpan PDF
+            </button>
          </div>
       </div>
 
-      <div className="px-5 mt-6 mb-8 flex-1">
-         {/* Details Card */}
-         <div className="bg-white rounded-[24px] p-6 shadow-[0_4px_24px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col items-center text-center relative overflow-hidden mb-6">
-            <div className="absolute inset-0 opacity-5" style={{ backgroundImage: "radial-gradient(#4f46e5 1px, transparent 1px)", backgroundSize: "20px 20px" }}></div>
-            
-            <span className="text-slate-500 text-[13px] mb-2 relative z-10">Penerima</span>
-            <h3 className="text-slate-800 font-extrabold text-[18px] mb-1 relative z-10 uppercase">{contact.name}</h3>
-            <p className="text-slate-600 text-[14px] mb-8 relative z-10">{contact.bank} - {contact.account}</p>
-
-            <span className="text-slate-500 text-[13px] mb-2 relative z-10">Nominal</span>
-            <h1 className="text-slate-800 font-extrabold text-[28px] tracking-tight mb-2 relative z-10">Rp {numericAmount.toLocaleString('id-ID')}</h1>
-            <p className="text-slate-500 text-[13px] relative z-10">dari RAKYAN INUKERTAPATI</p>
-
-            <div className="flex flex-col sm:flex-row gap-3 w-full mt-10 relative z-10">
-               <button className="flex-1 border-2 border-[#4f46e5] text-[#4f46e5] font-bold text-[14px] py-3.5 rounded-full flex items-center justify-center gap-2 hover:bg-[#4f46e5] hover:text-white transition-all active:scale-[0.98]">
-                  <ArrowUpRight size={18} strokeWidth={2.5} />
-                  Bagikan Resi
-               </button>
-               <button 
-                  onClick={() => setIsSaved(true)} 
-                  disabled={isSaved}
-                  className={`flex-1 font-bold text-[14px] py-3.5 rounded-full flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${isSaved ? 'bg-slate-100 text-slate-500 cursor-default' : 'bg-[#4f46e5] text-white hover:bg-[#3730a3] shadow-[0_4px_14px_rgba(0,143,205,0.3)]'}`}
-               >
-                  {isSaved ? (
-                    <>
-                       <Check size={18} strokeWidth={2.5} />
-                       Tersimpan
-                    </>
-                  ) : (
-                    <>
-                       <PlusCircle size={18} strokeWidth={2.5} />
-                       Simpan ke Daftar
-                    </>
-                  )}
-                </button>
-             </div>
-          </div>
-       </div>
-     </div>
-   );
+      <div className="pb-10 w-full max-w-sm">
+         <button 
+           onClick={onClose}
+           className="w-full bg-[#005faa] text-white font-bold py-4 rounded-full shadow-lg shadow-blue-500/20 hover:bg-[#004780] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+         >
+            <Home size={16} /> Kembali ke Beranda
+         </button>
+      </div>
+    </div>
+  );
 }
-
+export default SuccessScreen;

@@ -1,25 +1,47 @@
+import React from 'react';
+
+export type ViewState = 
+  | 'splash' 
+  | 'register' 
+  | 'registerSuccess' 
+  | 'swap' 
+  | 'ecommerce' 
+  | 'bayarVA' 
+  | 'otherAccounts' 
+  | 'password' 
+  | 'inputName' 
+  | 'home' 
+  | 'transfer' 
+  | 'newTransfer' 
+  | 'amountInput' 
+  | 'processing' 
+  | 'success' 
+  | 'settings' 
+  | 'inbox' 
+  | 'accountDetail' 
+  | 'instantAccess' 
+  | 'pusatNotifikasi' 
+  | 'namaPanggilan' 
+  | 'email' 
+  | 'manageFavorites' 
+  | 'connectEWallet' 
+  | 'topup';
+
+export interface ShortcutItem {
+  id: string;
+  icon: React.ReactNode;
+  label: string;
+  color: string;
+  bgCircle?: string;
+  badge?: string;
+  badgeColor?: string;
+  isTextIcon?: boolean;
+  textIcon?: string;
+}
+
 export interface Contact {
   id: string;
   name: string;
-  bank: string;
-  accountNumber: string;
-  initials?: string;
+  number: string;
+  avatar: string;
 }
-
-export type ViewState = 
-  | 'splash'
-  | 'password'
-  | 'inputName'
-  | 'home'
-  | 'transfer'
-  | 'newTransfer'
-  | 'amountInput'
-  | 'processing'
-  | 'success'
-  | 'settings'
-  | 'inbox'
-  | 'accountDetail'
-  | 'instantAccess'
-  | 'pusatNotifikasi'
-  | 'namaPanggilan'
-  | 'email';

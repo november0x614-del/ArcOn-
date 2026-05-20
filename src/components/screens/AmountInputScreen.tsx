@@ -1,8 +1,13 @@
-import React, { useState } from "react";
-import { ArrowLeft, CheckCircle2, ChevronDown, Edit3, X, ArrowRight, Check } from "lucide-react";
-import { Contact } from "../../types";
+import React, { useState } from 'react';
+import { ArrowLeft, CheckCircle2, Edit3, ChevronDown, ArrowRight, X } from 'lucide-react';
 
-export function AmountInputScreen({ contact, onBack, onNext }: { contact: any, onBack: () => void, onNext: (amount: string) => void }) {
+interface AmountInputScreenProps {
+  contact: any;
+  onBack: () => void;
+  onNext: (amount: string) => void;
+}
+
+export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreenProps) {
   const [amount, setAmount] = useState('');
   const [showPurpose, setShowPurpose] = useState(false);
   const [purpose, setPurpose] = useState('Lainnya');
@@ -18,7 +23,7 @@ export function AmountInputScreen({ contact, onBack, onNext }: { contact: any, o
     }
   };
 
-  const formattedAmount = amount ? parseInt(amount).toLocaleString('id-ID') : '0';
+  const formattedAmount = amount ? new Intl.NumberFormat('id-ID').format(parseInt(amount)) : '0';
   const numericAmount = amount ? parseInt(amount) : 0;
 
   return (
@@ -30,15 +35,15 @@ export function AmountInputScreen({ contact, onBack, onNext }: { contact: any, o
         </button>
         <div className="flex flex-col items-center justify-center flex-1">
           <h2 className="text-slate-800 font-bold text-[15px] uppercase tracking-tight leading-tight">{contact.name}</h2>
-          <p className="text-slate-500 text-[13px] mt-[2px]">{contact.bank} - {contact.account}</p>
+          <p className="text-slate-500 text-[13px] mt-[2px]">{contact.bank || contact.network} - {contact.account}</p>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto w-full pb-[280px]">
         {/* Nominal */}
         <div className="px-6 py-6 border-b border-transparent">
-          <label className={`${amount && numericAmount < 10000 ? 'text-[#db2e38]' : amount ? 'text-slate-500' : 'text-[#4f46e5]'} text-[13px] font-medium mb-1 block`}>Nominal</label>
-          <div className={`flex items-center relative border-b pb-1 ${amount && numericAmount < 10000 ? 'border-[#db2e38] border-b-[2px]' : amount ? 'border-slate-300' : 'border-[#4f46e5] border-b-[2px]'}`}>
+          <label className={`${amount && numericAmount < 10000 ? 'text-[#db2e38]' : amount ? 'text-slate-500' : 'text-[#008fcd]'} text-[13px] font-medium mb-1 block`}>Nominal</label>
+          <div className={`flex items-center relative border-b pb-1 ${amount && numericAmount < 10000 ? 'border-[#db2e38] border-b-[2px]' : amount ? 'border-slate-300' : 'border-[#008fcd] border-b-[2px]'}`}>
             <span className="text-[36px] font-medium text-slate-800 mr-2 tracking-tight">Rp</span>
             <input 
               type="text" 
@@ -64,19 +69,19 @@ export function AmountInputScreen({ contact, onBack, onNext }: { contact: any, o
           <label className="text-slate-400 text-[12px] mb-2 block font-medium">Rekening Sumber</label>
           <div className="bg-white border border-slate-200 rounded-[12px] p-4 flex justify-between shadow-sm overflow-hidden relative min-h-[96px]">
             <div className="flex flex-col z-10 w-[70%] bg-white/80 backdrop-blur-sm pr-2">
-              <div className="flex items-center gap-1.5 mb-1">
+              <div className="flex items-center gap-1.5 mb-1 text-left">
                 <span className="font-bold text-slate-800 text-[15px]">Tabungan NOW IDR</span>
-                <CheckCircle2 size={16} className="text-[#4f46e5] fill-[#e0e7ff]" strokeWidth={2.5} />
+                <CheckCircle2 size={16} className="text-[#008fcd] fill-[#e6f4fc]" strokeWidth={2.5} />
               </div>
-              <span className="text-slate-500 text-[13.5px] tracking-wide font-medium">1820014780589</span>
-              <span className="text-[#4f46e5] font-bold text-[15px] mt-1.5">Rp 18.261.185<span className="text-[10px] align-top relative top-[2px]">00</span></span>
+              <span className="text-slate-500 text-[13.5px] tracking-wide font-medium block text-left">1820014780589</span>
+              <span className="text-[#008fcd] font-bold text-[15px] mt-1.5 block text-left">Rp 18.261.185<span className="text-[10px] align-top relative top-[2px]">00</span></span>
             </div>
             
             {/* The absolute right part containing the fake card image */}
-            <div className="absolute right-0 top-0 bottom-0 w-[45%] bg-[#cbd5e1] overflow-hidden -z-0 rounded-r-[12px] shadow-inner" style={{ clipPath: 'polygon(15% 0, 100% 0, 100% 100%, 0% 100%)' }}>
-               <img src="https://images.unsplash.com/photo-1541592102481-c75c87a2d4b7?auto=format&fit=crop&q=80&w=200&h=200" className="w-full h-full object-cover mix-blend-overlay opacity-60" alt="card bg" />
+            <div className="absolute right-0 top-0 bottom-0 w-[45%] bg-[#dfcd99] overflow-hidden -z-0 rounded-r-[12px] shadow-inner" style={{ clipPath: 'polygon(15% 0, 100% 0, 100% 100%, 0% 100%)' }}>
+               <img src="https://images.unsplash.com/photo-1541592102481-c75c87a2d4b7?auto=format&fit=crop&q=80&w=200&h=200" className="w-full h-full object-cover mix-blend-overlay opacity-50" alt="card bg" />
                <div className="absolute top-2 left-4 text-white drop-shadow-md">
-                 <span className="font-bold italic text-[14px]">arc testnet</span>
+                 <span className="font-bold italic text-[14px]">mandiri</span>
                </div>
                <div className="absolute bottom-2 right-2 text-white drop-shadow-md font-bold italic text-[12px]">VISA</div>
             </div>
@@ -94,7 +99,7 @@ export function AmountInputScreen({ contact, onBack, onNext }: { contact: any, o
         <div className="px-6 py-2">
           <div className="border-t border-slate-100 pt-6 pb-2">
             <div className="flex justify-between items-center border border-slate-200 rounded-[12px] p-4 cursor-pointer hover:bg-slate-50 transition-colors">
-              <div className="flex flex-col">
+              <div className="flex flex-col text-left">
                 <span className="text-slate-400 text-[12px] mb-1 font-medium">Metode Transfer</span>
                 <span className="text-slate-800 font-bold text-[15px]">BI Fast</span>
               </div>
@@ -112,7 +117,7 @@ export function AmountInputScreen({ contact, onBack, onNext }: { contact: any, o
             disabled={!amount || parseInt(amount) < 10000}
             className={`w-full py-[14px] rounded-full font-bold text-[15px] transition-all flex items-center justify-center gap-2
               ${amount && parseInt(amount) >= 10000 
-                ? 'bg-[#4f46e5] text-white shadow-[0_4px_14px_rgba(0,143,205,0.4)] hover:bg-[#3730a3] active:scale-[0.98]' 
+                ? 'bg-[#008fcd] text-white shadow-[0_4px_14px_rgba(0,143,205,0.4)] hover:bg-[#007dba] active:scale-[0.98]' 
                 : 'bg-[#e5e7eb] text-[#9ca3af] shadow-none'}
             `}
           >
@@ -149,7 +154,7 @@ export function AmountInputScreen({ contact, onBack, onNext }: { contact: any, o
                    <button 
                       key={p}
                       onClick={() => { setPurpose(p); setShowPurpose(false); }}
-                      className="w-full py-4 px-4 text-left bg-white border border-slate-200 rounded-xl font-semibold text-slate-700 text-[14px] hover:border-[#6366f1] hover:text-[#6366f1] hover:bg-indigo-50/50 transition-colors"
+                      className="w-full py-4 px-4 text-left bg-white border border-slate-200 rounded-xl font-semibold text-slate-700 text-[14px] hover:border-[#3FA2F6] hover:text-[#3FA2F6] hover:bg-blue-50/50 transition-colors"
                    >
                      {p}
                    </button>
@@ -170,23 +175,23 @@ export function AmountInputScreen({ contact, onBack, onNext }: { contact: any, o
                  </button>
               </div>
 
-              <div className="px-5 pb-6 overflow-y-auto pt-5 flex-1">
+              <div className="px-5 pb-6 overflow-y-auto pt-5 flex-1 block">
                  {/* Contact Preview */}
-                 <div className="flex items-center gap-4 mb-8">
+                 <div className="flex items-center gap-4 mb-8 text-left">
                     <div className="w-[46px] h-[46px] rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600 text-[15px] shrink-0">
                        {contact.initials}
                     </div>
                     <div className="flex flex-col overflow-hidden gap-[2px]">
                        <span className="font-extrabold text-[15px] text-slate-800 uppercase tracking-tight truncate">{contact.name}</span>
-                       <span className="text-slate-500 text-[13px] truncate">{contact.bank} - {contact.account}</span>
+                       <span className="text-slate-500 text-[13px] truncate">{contact.bank || contact.network} - {contact.account}</span>
                     </div>
                  </div>
 
                  {/* Detail Table */}
-                 <div className="flex flex-col gap-3.5 mb-6">
+                 <div className="flex flex-col gap-3.5 mb-6 text-left">
                     <div className="flex justify-between items-center">
                        <span className="text-slate-600 text-[14.5px]">Nominal Transfer</span>
-                       <span className="text-slate-800 font-bold text-[14.5px]">Rp {numericAmount.toLocaleString('id-ID')}</span>
+                       <span className="text-slate-800 font-bold text-[14.5px]">Rp {new Intl.NumberFormat('id-ID').format(numericAmount)}</span>
                     </div>
                     <div className="flex justify-between items-center">
                        <span className="text-slate-600 text-[14.5px]">Metode Transfer</span>
@@ -201,8 +206,8 @@ export function AmountInputScreen({ contact, onBack, onNext }: { contact: any, o
                  <div className="h-[1px] bg-slate-100 w-full mb-6"></div>
 
                  {/* Rekening Sumber inside Confirm */}
-                 <label className="text-slate-500 text-[14.5px] mb-2 block">Rekening Sumber</label>
-                 <div className="bg-slate-50 border border-slate-100 rounded-[12px] p-4 flex flex-col gap-0.5">
+                 <label className="text-slate-500 text-[14.5px] mb-2 block text-left">Rekening Sumber</label>
+                 <div className="bg-slate-50 border border-slate-100 rounded-[12px] p-4 flex flex-col gap-0.5 text-left">
                     <span className="font-bold text-slate-800 text-[14.5px]">Tabungan NOW IDR - 1820014780589</span>
                     <span className="text-slate-500 text-[13px]">Rp 18.261.185<span className="text-[9px] align-top relative top-[1px]">00</span></span>
                  </div>
@@ -212,11 +217,11 @@ export function AmountInputScreen({ contact, onBack, onNext }: { contact: any, o
               <div className="px-5 py-5 bg-white shrink-0 shadow-[0_-10px_20px_rgba(0,0,0,0.03)] border-t border-slate-100">
                  <button 
                    onClick={() => onNext(amount)}
-                   className="w-full bg-[#4f46e5] text-white py-[14px] rounded-full flex justify-between px-6 items-center shadow-[0_4px_14px_rgba(0,143,205,0.4)] hover:bg-[#3730a3] active:scale-[0.98] transition-all"
+                   className="w-full bg-[#008fcd] text-white py-[14px] rounded-full flex justify-between px-6 items-center shadow-[0_4px_14px_rgba(0,143,205,0.4)] hover:bg-[#007dba] active:scale-[0.98] transition-all"
                  >
                     <span className="font-bold text-[15px]">Lanjut Transfer</span>
                     <div className="flex items-center gap-2">
-                       <span className="font-bold text-[16px]">Rp {(numericAmount + 6500).toLocaleString('id-ID')}</span>
+                       <span className="font-bold text-[16px]">Rp {new Intl.NumberFormat('id-ID').format(numericAmount + 6500)}</span>
                        <div className="bg-white/20 p-1 rounded-full">
                          <ArrowRight size={16} strokeWidth={3} />
                        </div>
@@ -227,6 +232,6 @@ export function AmountInputScreen({ contact, onBack, onNext }: { contact: any, o
         </div>
       )}
     </div>
-  )
+  );
 }
-
+export default AmountInputScreen;

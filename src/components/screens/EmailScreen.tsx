@@ -1,11 +1,15 @@
-import React from 'react';
-import { Pencil, X, ArrowLeft, Mail, ChevronRight, HelpCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowLeft, Pencil, X } from 'lucide-react';
 
-export function EmailScreen({ onBack }: { onBack: () => void }) {
-  const [isEditing, setIsEditing] = React.useState(false);
-  const [email, setEmail] = React.useState('rakyaninuk@gmail.com');
-  const [tempEmail, setTempEmail] = React.useState('');
-  const [error, setError] = React.useState('');
+interface EmailScreenProps {
+  onBack: () => void;
+}
+
+export function EmailScreen({ onBack }: EmailScreenProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [email, setEmail] = useState('rakyaninuk@gmail.com');
+  const [tempEmail, setTempEmail] = useState('');
+  const [error, setError] = useState('');
 
   const handleVerify = () => {
     if (tempEmail === 'rakyaninuk@gmail.com') {
@@ -40,7 +44,7 @@ export function EmailScreen({ onBack }: { onBack: () => void }) {
         <div className="pt-6 pb-6 text-center w-full">
           <p className="text-[14px] text-slate-600 leading-[1.6]">
             {isEditing 
-                ? "Semua notifikasi transaksi di ArcOn dan e-statement Anda akan dikirim ke email yang baru."
+                ? "Semua notifikasi transaksi di Arc Wallet dan e-statement Anda akan dikirim ke email yang baru."
                 : "Kami akan mengirim notifikasi transaksi dan pengaturan akun ke email yang Anda tentukan."
             }
           </p>
@@ -56,14 +60,14 @@ export function EmailScreen({ onBack }: { onBack: () => void }) {
             }}
           >
             <span className="font-bold text-[15px] text-slate-800 tracking-wide">{email}</span>
-            <button className="text-[#6366f1]">
+            <button className="text-[#3FA2F6]">
               <Pencil size={20} />
             </button>
           </div>
         ) : (
           <div className="flex flex-col flex-1 w-full relative">
-            <div className={`w-full border rounded-xl px-4 py-2 relative bg-white transition-all group ${error ? 'border-[#db2e38]' : 'border-slate-300 focus-within:border-[#6366f1] focus-within:ring-1 focus-within:ring-[#6366f1]'}`}>
-              <label className={`text-[12px] font-medium transition-colors ${error ? 'text-[#db2e38]' : 'text-slate-500 group-focus-within:text-[#6366f1]'}`}>Email</label>
+            <div className={`w-full border rounded-xl px-4 py-2 relative bg-white transition-all group ${error ? 'border-[#db2e38]' : 'border-slate-300 focus-within:border-[#3FA2F6] focus-within:ring-1 focus-within:ring-[#3FA2F6]'}`}>
+              <label className={`text-[12px] font-medium transition-colors ${error ? 'text-[#db2e38]' : 'text-slate-500 group-focus-within:text-[#3FA2F6]'}`}>Email</label>
               <div className="flex items-center mt-0.5">
                 <input 
                   type="email"
@@ -90,7 +94,7 @@ export function EmailScreen({ onBack }: { onBack: () => void }) {
               <button 
                 onClick={handleVerify}
                 disabled={tempEmail.length === 0}
-                className="w-full bg-[#4338ca] hover:bg-[#3730a3] disabled:bg-slate-300 disabled:text-slate-50 text-white font-bold py-3.5 rounded-full transition-colors"
+                className="w-full bg-[#0066b2] hover:bg-[#005a9e] disabled:bg-slate-300 disabled:text-slate-50 text-white font-bold py-3.5 rounded-full transition-colors"
               >
                 Verifikasi
               </button>
