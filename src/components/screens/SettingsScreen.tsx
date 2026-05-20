@@ -35,7 +35,7 @@ export function SettingsScreen({
   onEmail 
 }: SettingsScreenProps) {
   return (
-    <div className="w-full h-full bg-[#f8fafc] relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
+    <div className="w-full h-full bg-[#f8fafc] relative flex flex-col z-50 animate-in slide-in-from-bottom duration-300">
       {/* Header */}
       <div className="bg-white border-b border-slate-100 flex items-center gap-3 px-4 py-4 z-10 shrink-0">
         <button onClick={onBack} className="p-1 -ml-1 hover:bg-slate-50 rounded-full transition-colors">
@@ -56,7 +56,7 @@ export function SettingsScreen({
             <span className="text-[12px] font-bold text-slate-500 tracking-wide">Pusat Bantuan</span>
           </div>
           <div className="bg-white border-y border-slate-100">
-            <SettingItem icon={<HeadphonesIcon size={20} className="text-[#3FA2F6]" />} label="Arc Call Center" badge="NEW" isFirst isLast />
+            <SettingItem icon={<HeadphonesIcon size={20} className="text-[#3FA2F6]" />} label="Arc Call Center" badge="NEW" isLast />
           </div>
         </div>
 
@@ -66,7 +66,7 @@ export function SettingsScreen({
             <span className="text-[12px] font-bold text-slate-500 tracking-wide">Fitur Tanpa Login</span>
           </div>
           <div className="bg-white border-y border-slate-100">
-            <SettingItem icon={<LogIn size={20} className="text-[#3FA2F6]" />} label="Instant Access" isFirst onClick={onInstantAccess} />
+            <SettingItem icon={<LogIn size={20} className="text-[#3FA2F6]" />} label="Instant Access" onClick={onInstantAccess} />
             <SettingItem icon={<Bell size={20} className="text-[#3FA2F6]" />} label="Pusat Notifikasi" isLast onClick={onPusatNotifikasi} />
           </div>
         </div>
@@ -77,7 +77,7 @@ export function SettingsScreen({
             <span className="text-[12px] font-bold text-slate-500 tracking-wide">Akun</span>
           </div>
           <div className="bg-white border-y border-slate-100 flex flex-col">
-            <SettingItem icon={<UserCircle size={20} className="text-[#3FA2F6]" />} label="Nama Panggilan" isFirst onClick={onNamaPanggilan} />
+            <SettingItem icon={<UserCircle size={20} className="text-[#3FA2F6]" />} label="Nama Panggilan" onClick={onNamaPanggilan} />
             <SettingItem icon={<Mail size={20} className="text-[#3FA2F6]" />} label="Email" onClick={onEmail} />
             <SettingItem icon={<Settings size={20} className="text-[#3FA2F6]" />} label="Bahasa" />
             <SettingItem icon={<FileText size={20} className="text-[#3FA2F6]" />} label="Data Anda" isLast />
@@ -90,7 +90,7 @@ export function SettingsScreen({
             <span className="text-[12px] font-bold text-slate-500 tracking-wide">Fitur</span>
           </div>
           <div className="bg-white border-y border-slate-100 flex flex-col">
-            <SettingItem icon={<Key size={20} className="text-[#3FA2F6]" />} label="Token Online" badge="NEW" isFirst />
+            <SettingItem icon={<Key size={20} className="text-[#3FA2F6]" />} label="Token Online" badge="NEW" />
             <SettingItem icon={<RefreshCw size={20} className="text-[#3FA2F6]" />} label="Proxy untuk BI Fast" />
             <SettingItem icon={<CardIcon size={20} className="text-[#3FA2F6]" />} label="Sumber Dana Utama" badge="NEW" />
             <SettingItem icon={<ArrowUpRight size={20} className="text-[#3FA2F6]" />} label="Terima Tagihan" />
@@ -104,7 +104,7 @@ export function SettingsScreen({
             <span className="text-[12px] font-bold text-slate-500 tracking-wide">Keamanan</span>
           </div>
           <div className="bg-white border-y border-slate-100 flex flex-col">
-            <SettingItem icon={<Fingerprint size={20} className="text-[#3FA2F6]" />} label="Biometrik untuk Login" isFirst />
+            <SettingItem icon={<Fingerprint size={20} className="text-[#3FA2F6]" />} label="Biometrik untuk Login" />
             <SettingItem icon={<Lock size={20} className="text-[#3FA2F6]" />} label="PIN" />
             <SettingItem icon={<Shield size={20} className="text-[#3FA2F6]" />} label="Password" isLast />
           </div>
@@ -119,12 +119,11 @@ interface SettingItemProps {
   icon: React.ReactNode;
   label: string;
   badge?: string;
-  isFirst?: boolean;
   isLast?: boolean;
   onClick?: () => void;
 }
 
-function SettingItem({ icon, label, badge, isFirst, isLast, onClick }: SettingItemProps) {
+function SettingItem({ icon, label, badge, isLast, onClick }: SettingItemProps) {
   return (
     <button onClick={onClick} className={`w-full flex items-center justify-between px-4 py-3.5 hover:bg-slate-50 transition-colors ${!isLast ? 'border-b border-slate-100' : ''}`}>
       <div className="flex items-center gap-4">

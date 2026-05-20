@@ -56,7 +56,7 @@ export function BayarVAScreen({ onBack }: BayarVAScreenProps) {
         <h2 className="font-bold text-[16px] text-slate-800 ml-2">Bayar Virtual Account</h2>
       </div>
 
-      <div className="flex-1 p-5 flex flex-col pt-8">
+      <div className="flex-1 p-5 lg:p-10 flex flex-col pt-8 overflow-y-auto pb-24 max-w-2xl mx-auto w-full scrollbar-hide">
         {step === 'input' ? (
           <>
             <div className="mb-8">

@@ -86,7 +86,7 @@ export function AccountDetailScreen({
         </div>
 
         {/* Transactions List */}
-        <div className="flex-1 overflow-y-auto px-4 pb-8 flex flex-col pt-2">
+        <div className="flex-1 overflow-y-auto px-4 pb-24 flex flex-col pt-2">
            
            <div className="flex flex-col">
               <h4 className="text-[12px] font-bold text-slate-400 tracking-wider mb-2">18 Mei 2026</h4>

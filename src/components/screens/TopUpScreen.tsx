@@ -21,7 +21,7 @@ export function TopUpScreen({ onBack }: { onBack: () => void }) {
         <h2 className="font-bold text-[16px] text-slate-800 tracking-tight">Add Balance</h2>
       </div>
 
-      <div className="flex-1 overflow-y-auto w-full scrollbar-hide">
+      <div className="flex-1 overflow-y-auto w-full scrollbar-hide pb-24">
         
         {/* Search */}
         <div className="bg-white px-4 pb-4 shadow-sm border-b border-slate-100">

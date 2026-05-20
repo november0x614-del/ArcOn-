@@ -9,8 +9,6 @@ interface AmountInputScreenProps {
 
 export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreenProps) {
   const [amount, setAmount] = useState('');
-  const [showPurpose, setShowPurpose] = useState(false);
-  const [purpose, setPurpose] = useState('Lainnya');
   const [showConfirm, setShowConfirm] = useState(false);
 
   const handleNumpad = (num: string) => {
@@ -138,31 +136,6 @@ export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreen
            </button>
         </div>
       </div>
-
-      {/* Bottom Sheet Modal Tujuan */}
-      {showPurpose && (
-        <div className="absolute inset-0 z-50 bg-black/40 flex flex-col justify-end transition-opacity">
-           <div className="bg-white rounded-t-[24px] w-full flex flex-col pb-6 max-h-[80%] shadow-2xl animate-in slide-in-from-bottom duration-300">
-              <div className="px-5 pt-6 pb-4 flex justify-between items-center border-b border-slate-100">
-                 <h3 className="font-bold text-[16px] text-slate-800">Pilih Tujuan Transaksi</h3>
-                 <button onClick={() => setShowPurpose(false)} className="text-slate-400 p-1 bg-slate-50 rounded-full hover:bg-slate-100 transition-colors">
-                   <X size={20} strokeWidth={2.5}/>
-                 </button>
-              </div>
-              <div className="px-5 pt-4 flex flex-col gap-2 overflow-y-auto">
-                 {['Lainnya', 'Investasi', 'Transfer Kekayaan', 'Pembelian'].map(p => (
-                   <button 
-                      key={p}
-                      onClick={() => { setPurpose(p); setShowPurpose(false); }}
-                      className="w-full py-4 px-4 text-left bg-white border border-slate-200 rounded-xl font-semibold text-slate-700 text-[14px] hover:border-[#3FA2F6] hover:text-[#3FA2F6] hover:bg-blue-50/50 transition-colors"
-                   >
-                     {p}
-                   </button>
-                 ))}
-              </div>
-           </div>
-        </div>
-      )}
 
       {/* Confirm Modal */}
       {showConfirm && (

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Wallet, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Wallet } from 'lucide-react';
 
 const EWALLETS = [
   { id: 'gopay', name: 'GoPay', iconColor: 'text-green-500', isConnected: true, balance: 'Rp 125.000' },

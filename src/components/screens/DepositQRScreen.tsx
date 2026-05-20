@@ -25,7 +25,7 @@ export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
         <h2 className="font-bold text-[16px] text-slate-800 ml-2">Top-up via QR / Address</h2>
       </div>
 
-      <div className="flex-1 p-6 flex flex-col items-center justify-center">
+      <div className="flex-1 p-6 flex flex-col items-center justify-center overflow-y-auto pb-24">
          <div className="bg-white p-8 rounded-[32px] shadow-sm border border-slate-200/60 flex flex-col items-center max-w-sm w-full">
             <span className="text-[11px] font-black tracking-widest text-[#005faa] bg-blue-50 px-2.5 py-1 rounded-full mb-6 uppercase">USDC (ARC TESTNET)</span>
             

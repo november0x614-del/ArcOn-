@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, Receipt, Share2, Download, Home } from 'lucide-react';
+import { Check, Share2, Download, Home } from 'lucide-react';
 
 interface SuccessScreenProps {
   amount: string;

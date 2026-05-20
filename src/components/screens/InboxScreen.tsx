@@ -4,7 +4,6 @@ import {
   Trash2, 
   Search, 
   Calendar, 
-  ChevronRight, 
   Wallet, 
   ArrowRight, 
   Shield, 
@@ -21,7 +20,7 @@ export function InboxScreen({ onBack }: InboxScreenProps) {
   const [activeTab, setActiveTab] = useState<'resi' | 'notifikasi' | 'promo'>('resi');
 
   return (
-    <div className="w-full h-full bg-white relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
+    <div className="w-full h-full bg-white relative flex flex-col z-50 animate-in slide-in-from-bottom duration-300">
       {/* Search & Back Header */}
       <div className="px-4 pt-12 pb-2 bg-white flex items-center justify-between shrink-0">
         <button onClick={onBack} className="p-2 -ml-2 hover:bg-slate-50 rounded-full transition-colors">

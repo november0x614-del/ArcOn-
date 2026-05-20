@@ -52,7 +52,7 @@ export function NewTransferScreen({ onBack, onSelectContact }: NewTransferScreen
        </div>
 
        {/* Form Fields */}
-       <div className="px-5 w-full flex-1">
+       <div className="px-5 w-full flex-1 overflow-y-auto scrollbar-hide pb-32">
           {/* Bank Select */}
           <div 
             onClick={() => setShowNetworkSelect(true)} 

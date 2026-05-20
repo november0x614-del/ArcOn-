@@ -1,34 +1,22 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Send, Receipt, PlusCircle, CreditCard, ArrowDownToLine, Globe, Nfc, Coins, QrCode, LayoutGrid, Minus, Plus } from 'lucide-react';
-
-export interface ShortcutItem {
-  id: string;
-  icon: React.ReactNode;
-  label: string;
-  color: string;
-  bgCircle?: string;
-  badge?: string;
-  badgeColor?: string;
-  isTextIcon?: boolean;
-  textIcon?: string;
-}
+import { ArrowLeft, Send, Receipt, PlusCircle, CreditCard, ArrowDownToLine, Globe, Coins, QrCode, LayoutGrid, Minus, Plus, ArrowLeftRight, ShieldCheck } from 'lucide-react';
+import { ShortcutItem } from '../../types';
 
 export const defaultSelectedShortcuts: ShortcutItem[] = [
-    { id: '1', icon: <Send size={24} />, label: "Transfer USDC", color: "text-blue-500" },
-    { id: '2', icon: <Receipt size={24} />, label: "Bayar/Billing", color: "text-blue-500", badge: "NEW" },
-    { id: '3', icon: <PlusCircle size={24} />, label: "Isi Saldo USDC", color: "text-blue-500" },
-    { id: '4', icon: <CreditCard size={24} />, label: "Token Digital", color: "text-yellow-500", bgCircle: "bg-yellow-50" },
-    { id: '5', icon: <ArrowDownToLine size={24} />, label: "Deposit/Withdraw", color: "text-[#3FA2F6]" },
-    { id: '6', icon: <Globe size={24} />, label: "Cross-Chain Transfer", color: "text-[#3FA2F6]", badge: "Rp", badgeColor: "bg-yellow-400" },
-    { id: '7', icon: <Nfc size={24} />, label: "Tap to Pay", color: "text-[#3FA2F6]" },
-    { id: '8', icon: <Coins size={24} />, label: "Request Dana", color: "text-[#3FA2F6]", badge: "Rp" },
-    { id: '9', icon: <QrCode size={24} />, label: "Terima QRIS Web3", color: "text-yellow-500", isTextIcon: true, textIcon: "QRIS" },
+    { id: '1', icon: <Send size={24} />, label: "Transfer USDC On-chain", color: "text-blue-500" },
+    { id: '2', icon: <ArrowLeftRight size={24} />, label: "Swap Token", color: "text-orange-500", badge: "HOT" },
+    { id: '3', icon: <ArrowDownToLine size={24} />, label: "Receive USDC", color: "text-[#3FA2F6]" },
+    { id: '4', icon: <Globe size={24} />, label: "Bridge Network", color: "text-purple-500" },
+    { id: '5', icon: <LayoutGrid size={24} />, label: "DApp Browser", color: "text-[#3FA2F6]" },
+    { id: '6', icon: <QrCode size={24} />, label: "Pay with USDC", color: "text-[#3FA2F6]" },
+    { id: '7', icon: <Coins size={24} />, label: "Request Payment", color: "text-[#3FA2F6]" },
+    { id: '8', icon: <ShieldCheck size={24} />, label: "Security & Limits", color: "text-slate-500" },
   ];
 
   export const defaultAvailableShortcuts: ShortcutItem[] = [
-    { id: '10', icon: <Send size={24} />, label: "Transfer Fiat", color: "text-slate-400" },
-    { id: '11', icon: <Receipt size={24} />, label: "Tagih Aset", color: "text-[#3FA2F6]", badge: "NEW" },
-    { id: '12', icon: <LayoutGrid size={24} />, label: "Lihat Semua", color: "text-blue-400" },
+    { id: '9', icon: <CreditCard size={24} />, label: "Mint NFT", color: "text-indigo-500", bgCircle: "bg-indigo-50" },
+    { id: '10', icon: <PlusCircle size={24} />, label: "Buy Crypto", color: "text-green-500" },
+    { id: '11', icon: <Receipt size={24} />, label: "Transaction History", color: "text-slate-600" },
   ];
 
   export function ManageFavoritesScreen({ 
@@ -77,7 +65,7 @@ export const defaultSelectedShortcuts: ShortcutItem[] = [
         <div className="px-4">
            {/* Selected Grid */}
            <div className="grid grid-cols-4 gap-y-6 gap-x-2 mb-6">
-             {selected.map((item, idx) => (
+             {selected.map((item) => (
                <div key={item.id} className="flex flex-col items-center gap-2 cursor-pointer group w-full" onClick={() => handleRemove(item)}>
                  <div className="relative">
                    <div className={`w-[52px] h-[52px] rounded-full border border-[#f1f5f9] flex flex-col items-center justify-center shrink-0 shadow-sm relative ${item.bgCircle || 'bg-white'}`}>

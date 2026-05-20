@@ -40,7 +40,7 @@ export function EmailScreen({ onBack }: EmailScreenProps) {
         <h2 className="font-bold text-[16px] text-slate-800">{isEditing ? 'Atur Email' : 'Email'}</h2>
       </div>
 
-      <div className="flex flex-col flex-1 pb-6 px-4 bg-white relative w-full">
+      <div className="flex flex-col flex-1 pb-24 px-4 bg-white relative w-full overflow-y-auto scrollbar-hide">
         <div className="pt-6 pb-6 text-center w-full">
           <p className="text-[14px] text-slate-600 leading-[1.6]">
             {isEditing 

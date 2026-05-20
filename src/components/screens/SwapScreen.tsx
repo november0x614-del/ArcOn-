@@ -1,39 +1,72 @@
-import React, { useState } from 'react';
-import { ArrowLeft, ChevronDown, ArrowLeftRight, RefreshCw, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, ChevronDown, ArrowLeftRight, RefreshCw, Check, Zap } from 'lucide-react';
 
 interface SwapScreenProps {
   onBack: () => void;
 }
 
 export function SwapScreen({ onBack }: SwapScreenProps) {
-  const [fromAmount, setFromAmount] = useState('0');
+  const [fromAmount, setFromAmount] = useState('');
   const [toAmount, setToAmount] = useState('0');
   const [isSwapping, setIsSwapping] = useState(false);
   const [swapFinished, setSwapFinished] = useState(false);
+  const [exchangeRate, setExchangeRate] = useState(0.9852);
+  const [balance, setBalance] = useState(1134.66);
+
+  useEffect(() => {
+    // Live rate simulation
+    const interval = setInterval(() => {
+      setExchangeRate(prev => {
+        const change = (Math.random() - 0.5) * 0.01;
+        return parseFloat((prev + change).toFixed(4));
+      });
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (fromAmount) {
+      setToAmount((parseFloat(fromAmount) * exchangeRate).toFixed(4));
+    } else {
+      setToAmount('0');
+    }
+  }, [fromAmount, exchangeRate]);
 
   const handleSwap = () => {
     setIsSwapping(true);
     setTimeout(() => {
       setIsSwapping(false);
       setSwapFinished(true);
+      setBalance(prev => prev - parseFloat(fromAmount || '0'));
     }, 2500);
   };
 
   if (swapFinished) {
     return (
-      <div className="w-full h-full bg-white relative flex flex-col items-center justify-center p-6 animate-in fade-in duration-500 z-50 text-center">
-        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
-          <Check size={40} className="text-green-500" strokeWidth={3} />
+      <div className="w-full h-full bg-white relative flex flex-col items-center justify-center p-6 animate-in zoom-in-95 duration-500 z-50 text-center">
+        <div className="w-24 h-24 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center mb-6 shadow-xl shadow-green-500/20 border-4 border-green-50">
+          <Check size={48} className="text-white" strokeWidth={3} />
         </div>
-        <h2 className="text-[22px] font-bold text-slate-800 mb-2">Swap Berhasil!</h2>
-        <p className="text-[14px] text-slate-500 mb-8 leading-relaxed px-4">
-          Penukaran <span className="font-bold text-slate-800">{fromAmount} USDC</span> ke <span className="font-bold text-slate-800">{toAmount} ARC</span> telah diproses di jaringan Arc Testnet.
-        </p>
+        <h2 className="text-[24px] font-extrabold text-slate-800 mb-2 tracking-tight">Swap Berhasil!</h2>
+        <div className="bg-slate-50 p-6 rounded-3xl w-full mb-8 border border-slate-100">
+           <p className="text-[14px] text-slate-600 leading-relaxed mb-4">
+             Transaksi penukaran di Arc Testnet telah dikonfirmasi (Circle Managed).
+           </p>
+           <div className="flex justify-between items-center text-[18px] font-bold text-slate-800 bg-white p-4 rounded-xl shadow-sm">
+              <span className="text-blue-600">-{fromAmount} USDC</span>
+              <ArrowLeftRight size={16} className="text-slate-400" />
+              <span className="text-orange-500">+{toAmount} ARC</span>
+           </div>
+           <div className="flex justify-between items-center mt-4 px-2">
+             <span className="text-[12px] text-slate-400 font-medium">Sisa Saldo:</span>
+             <span className="text-[14px] text-slate-700 font-bold">{balance.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} USDC</span>
+           </div>
+        </div>
         <button 
           onClick={onBack}
-          className="w-full bg-[#005faa] text-white font-bold py-3.5 rounded-full hover:bg-[#004780] transition-colors"
+          className="w-full bg-[#005faa] text-white font-bold py-4 rounded-full hover:bg-[#004780] transition-colors shadow-lg shadow-blue-900/20 active:scale-95"
         >
-          Selesai
+          Selesai & Kembali
         </button>
       </div>
     );
@@ -46,66 +79,63 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
         <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full transition-colors active:bg-slate-200">
           <ArrowLeft size={24} className="text-slate-800" />
         </button>
-        <h2 className="font-bold text-[16px] text-slate-800 ml-2">Swap USDC</h2>
+        <h2 className="font-bold text-[16px] text-slate-800 ml-2">Swap USDC On-chain</h2>
       </div>
 
-      <div className="flex-1 p-5 flex flex-col pt-8">
+      <div className="flex-1 overflow-y-auto pb-24 p-5 lg:p-10 flex flex-col pt-8 max-w-2xl mx-auto w-full scrollbar-hide">
         <div className="mb-6">
           <h3 className="text-[24px] font-extrabold text-slate-800 leading-tight mb-2 tracking-tight">Tukar Aset</h3>
           <p className="text-[14px] text-slate-500">Konversi USDC Anda ke token lain secara instan dengan Arc Exchange.</p>
         </div>
 
         {/* Swap Box */}
-        <div className="relative space-y-2 mb-8">
+        <div className="relative mb-8">
           {/* From */}
-          <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-200/60 transition-all focus-within:border-blue-500">
+          <div className={`bg-white p-5 rounded-3xl shadow-sm border transition-all duration-500 relative z-10 ${isSwapping ? 'border-blue-400 shadow-blue-100/50 scale-[0.98]' : 'border-slate-200/60 focus-within:border-blue-500'}`}>
             <div className="flex justify-between items-center mb-4">
               <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">Anda Bayar</span>
-              <span className="text-[12px] font-bold text-[#005faa]">Saldo: 1,134.66</span>
+              <span className="text-[12px] font-bold text-[#005faa]">Saldo: {balance.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} USDC</span>
             </div>
-            <div className="flex justify-between items-end">
+            <div className="flex justify-between items-center">
               <div className="flex-1">
                 <input 
                   type="number"
                   value={fromAmount}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setFromAmount(val);
-                    setToAmount((parseFloat(val || '0') * 0.985).toFixed(2));
-                  }}
-                  className="w-full bg-transparent border-none outline-none text-[32px] font-bold text-slate-800 placeholder:text-slate-200"
-                  placeholder="0"
+                  onChange={(e) => setFromAmount(e.target.value)}
+                  disabled={isSwapping}
+                  className="w-full bg-transparent border-none outline-none text-[32px] font-bold text-slate-800 placeholder:text-slate-200 disabled:opacity-50"
+                  placeholder="0.00"
                 />
               </div>
-              <div className="flex items-center gap-2 bg-slate-50 border border-slate-100 hover:border-[#3FA2F6] transition-colors cursor-pointer px-3 py-1.5 rounded-2xl">
+              <div className="flex items-center gap-2 bg-slate-50 border border-slate-100 hover:border-[#3FA2F6] transition-colors cursor-pointer px-3 py-2 rounded-2xl shrink-0">
                  <div className="w-6 h-6 rounded-full bg-[#2775ca] flex items-center justify-center text-white text-[8px] font-bold shrink-0">USDC</div>
-                 <span className="font-bold text-slate-700 text-[14px]">USDC</span>
+                 <span className="font-bold text-slate-700 text-[14px] pr-1">USDC</span>
                  <ChevronDown size={14} className="text-slate-400" />
               </div>
             </div>
           </div>
 
           {/* Swap Button Middle */}
-          <div className="absolute left-1/2 top-1/2 -track-x-1/2 -track-y-1/2 z-10 transform -translate-x-1/2 -translate-y-1/2">
-            <button className="w-10 h-10 bg-white rounded-xl shadow-md border border-slate-100 flex items-center justify-center text-[#005faa] hover:scale-110 active:scale-95 transition-all">
-              <ArrowLeftRight size={20} className="rotate-90" />
+          <div className={`absolute left-1/2 top-1/2 z-20 transform -translate-x-1/2 -translate-y-1/2 transition-transform duration-500 ${isSwapping ? 'rotate-180 scale-110' : ''}`}>
+            <button className="w-12 h-12 bg-white rounded-2xl shadow-lg border border-slate-100 flex items-center justify-center text-[#005faa] hover:scale-105 active:scale-95 transition-all group">
+              <ArrowLeftRight size={20} className="rotate-90 group-hover:rotate-[-90deg] transition-transform duration-500" />
             </button>
           </div>
 
           {/* To */}
-          <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-200/60">
+          <div className={`bg-white p-5 rounded-3xl shadow-sm border mt-2 transition-all duration-500 relative z-10 ${isSwapping ? 'border-orange-400 shadow-orange-100/50 scale-[1.02]' : 'border-slate-200/60'}`}>
             <div className="flex justify-between items-center mb-4">
               <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">Anda Terima (Estimasi)</span>
             </div>
-            <div className="flex justify-between items-end">
+            <div className="flex justify-between items-center">
               <div className="flex-1">
-                <span className={`text-[32px] font-bold ${toAmount === '0' ? 'text-slate-200' : 'text-slate-800'}`}>
+                <span className={`text-[32px] font-bold ${toAmount === '0' ? 'text-slate-200' : 'text-slate-800'} transition-opacity ${isSwapping ? 'opacity-50' : 'opacity-100'}`}>
                   {toAmount}
                 </span>
               </div>
-              <div className="flex items-center gap-2 bg-slate-50 border border-slate-100 hover:border-[#f59e0b] transition-colors cursor-pointer px-3 py-1.5 rounded-2xl">
-                 <div className="w-6 h-6 rounded-full bg-[#f59e0b] flex items-center justify-center text-white text-[8px] font-bold shrink-0">ARC</div>
-                 <span className="font-bold text-slate-700 text-[14px]">ARC</span>
+              <div className="flex items-center gap-2 bg-slate-50 border border-slate-100 hover:border-[#f59e0b] transition-colors cursor-pointer px-3 py-2 rounded-2xl shrink-0">
+                 <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-orange-400 to-orange-500 flex items-center justify-center text-white text-[8px] font-bold shrink-0 shadow-sm shadow-orange-500/30">ARC</div>
+                 <span className="font-bold text-slate-700 text-[14px] pr-1">ARC</span>
                  <ChevronDown size={14} className="text-slate-400" />
               </div>
             </div>
@@ -113,36 +143,36 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
         </div>
 
         {/* Info Box */}
-        <div className="bg-[#005faa]/5 border border-[#005faa]/10 rounded-2xl p-4 mb-4">
-           <div className="flex justify-between mb-2">
-              <span className="text-[13px] text-slate-500">Kurs Konversi</span>
-              <span className="text-[13px] font-bold text-slate-700">1 USDC = 0.985 ARC</span>
+        <div className="bg-white border border-[#005faa]/10 rounded-2xl p-4 mb-4 shadow-sm animate-in fade-in duration-500">
+           <div className="flex justify-between items-center mb-3">
+              <span className="text-[13px] text-slate-500 flex items-center gap-1"><Zap size={14} className="text-yellow-500" /> Live Rate</span>
+              <span className="text-[13px] font-mono font-bold text-[#005faa] bg-blue-50 px-2 py-1 rounded-md transition-all">1 USDC = {exchangeRate} ARC</span>
            </div>
-           <div className="flex justify-between">
-              <span className="text-[13px] text-slate-500">Gas Fee (Circle Managed)</span>
-              <span className="text-[13px] font-bold text-green-600">Gratis (Subsidi)</span>
+           <div className="flex justify-between items-center pt-3 border-t border-slate-50">
+              <span className="text-[13px] text-slate-500">Network Fee (Arc)</span>
+              <span className="text-[12px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-md">Covered by Paymaster</span>
            </div>
         </div>
 
         <div className="mt-auto pb-10">
           <button 
-            disabled={fromAmount === '0' || isSwapping}
+            disabled={!fromAmount || parseFloat(fromAmount) === 0 || isSwapping || parseFloat(fromAmount) > balance}
             onClick={handleSwap}
-            className={`w-full font-bold py-[16px] rounded-full transition-all flex items-center justify-center gap-3
-              ${fromAmount !== '0' && !isSwapping
-                ? 'bg-[#005faa] text-white shadow-lg hover:bg-[#004780]' 
-                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+            className={`w-full font-bold py-[16px] rounded-full transition-all flex items-center justify-center gap-3 active:scale-95
+              ${(!fromAmount || parseFloat(fromAmount) === 0 || parseFloat(fromAmount) > balance)
+                ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                : !isSwapping ? 'bg-[#005faa] text-white shadow-lg shadow-blue-900/20 hover:bg-[#004780]' : 'bg-slate-800 text-white shadow-xl scale-[0.98]'
               }`}
           >
             {isSwapping ? (
               <>
-                <RefreshCw size={20} className="animate-spin" />
-                Processing Swap...
+                <RefreshCw size={20} className="animate-spin text-blue-400" />
+                Executing on Arc Network...
               </>
-            ) : 'Konfirmasi Swap'}
+            ) : parseFloat(fromAmount) > balance ? 'Saldo Tidak Cukup' : 'Konfirmasi Swap'}
           </button>
-          <p className="text-center text-[11px] text-slate-400 mt-4 leading-relaxed px-6">
-            Transaksi ini akan diproses menggunakan Circle Smart Contract di jaringan Arc Testnet.
+          <p className="text-center text-[11px] text-slate-400 mt-5 leading-relaxed px-6 flex items-center justify-center gap-1.5">
+            <Check size={12} className="text-green-500" /> Verified via Circle Developer Wallets
           </p>
         </div>
       </div>
