@@ -13,7 +13,7 @@ export function EmailScreen({ onBack }: EmailScreenProps) {
 
   const handleVerify = () => {
     if (tempEmail === 'rakyaninuk@gmail.com') {
-      setError('Email sudah terdaftar');
+      setError('Email is already registered');
     } else {
       setEmail(tempEmail);
       setIsEditing(false);
@@ -37,15 +37,15 @@ export function EmailScreen({ onBack }: EmailScreenProps) {
         <button onClick={handleBack} className="absolute left-4 p-1 hover:bg-slate-50 rounded-full transition-colors">
           <ArrowLeft size={24} className="text-slate-700" />
         </button>
-        <h2 className="font-bold text-[16px] text-slate-800">{isEditing ? 'Atur Email' : 'Email'}</h2>
+        <h2 className="font-bold text-[16px] text-slate-800">{isEditing ? 'Manage Email' : 'Email'}</h2>
       </div>
 
       <div className="flex flex-col flex-1 pb-24 px-4 bg-white relative w-full overflow-y-auto scrollbar-hide">
         <div className="pt-6 pb-6 text-center w-full">
           <p className="text-[14px] text-slate-600 leading-[1.6]">
             {isEditing 
-                ? "Semua notifikasi transaksi di Arc Wallet dan e-statement Anda akan dikirim ke email yang baru."
-                : "Kami akan mengirim notifikasi transaksi dan pengaturan akun ke email yang Anda tentukan."
+                ? "All transaction notifications on Arc Wallet and your e-statements will be sent to the new email."
+                : "We will send transaction notifications and account settings to your specified email."
             }
           </p>
         </div>
@@ -96,7 +96,7 @@ export function EmailScreen({ onBack }: EmailScreenProps) {
                 disabled={tempEmail.length === 0}
                 className="w-full bg-[#0066b2] hover:bg-[#005a9e] disabled:bg-slate-300 disabled:text-slate-50 text-white font-bold py-3.5 rounded-full transition-colors"
               >
-                Verifikasi
+                Verify
               </button>
             </div>
           </div>

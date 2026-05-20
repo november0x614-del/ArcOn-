@@ -85,10 +85,10 @@ export function NewTransferScreen({ onBack, onSelectContact }: NewTransferScreen
           <div className="bg-[#f6f8fb] rounded-[16px] px-4 py-4 mb-4 flex justify-between items-center border border-transparent focus-within:border-[#3FA2F6] transition-colors relative">
              <input 
                type="text" 
-               placeholder="Nama Akun" 
+               placeholder="Account Name" 
                value={receiverName}
-               onChange={(e) => setReceiverName(e.target.value.toUpperCase())}
-               className="w-full bg-transparent outline-none text-slate-800 font-medium placeholder:text-slate-400 text-[15px] pr-8 uppercase" 
+               onChange={(e) => setReceiverName(e.target.value)}
+               className="w-full bg-transparent outline-none text-slate-800 font-medium placeholder:text-slate-400 text-[15px] pr-8" 
              />
              {receiverName && (
                <button onClick={() => setReceiverName('')} className="absolute right-4 w-[22px] h-[22px] bg-[#d1d5db] rounded-full flex items-center justify-center text-white hover:bg-[#9ca3af] transition-colors">
@@ -108,11 +108,11 @@ export function NewTransferScreen({ onBack, onSelectContact }: NewTransferScreen
                 ? 'bg-[#008fcd] text-white shadow-[0_4px_14px_rgba(0,143,205,0.4)] hover:bg-[#007dba] active:scale-[0.98]' 
                 : 'bg-[#e5e7eb] text-[#9ca3af] shadow-none'}`}
           >
-             Lanjutkan
+             Continue
           </button>
        </div>
 
-       {/* Cek Detail Penerima Modal */}
+       {/* Check Receiver Details Modal */}
        {(isChecking || showReceiverDetail) && (
           <div className="absolute inset-0 z-[60] bg-black/40 flex flex-col justify-end transition-opacity overflow-hidden">
             {isChecking ? (
@@ -124,7 +124,7 @@ export function NewTransferScreen({ onBack, onSelectContact }: NewTransferScreen
             ) : (
               <div className="bg-white rounded-t-[24px] w-full flex flex-col pb-8 pt-6 shadow-2xl animate-in slide-in-from-bottom duration-300 relative">
                  <div className="px-5 pb-4 flex justify-between items-center mb-2">
-                    <h3 className="font-bold text-[18px] text-slate-800">Cek Detail Penerima</h3>
+                    <h3 className="font-bold text-[18px] text-slate-800">Check Receiver Details</h3>
                  </div>
                  
                  <div className="px-5 flex flex-col gap-4">
@@ -132,12 +132,12 @@ export function NewTransferScreen({ onBack, onSelectContact }: NewTransferScreen
                        <div className="w-[52px] h-[52px] rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600 text-[16px] mb-3">
                           {initials}
                        </div>
-                       <h4 className="font-extrabold text-[16px] text-slate-800 text-center uppercase tracking-tight">{receiverName.toUpperCase()}</h4>
+                       <h4 className="font-extrabold text-[16px] text-slate-800 text-center tracking-tight">{receiverName}</h4>
                        <p className="text-slate-500 text-[13px] text-center mt-1">{selectedNetwork} - {accountNumber}</p>
                     </div>
 
                     <p className="text-slate-500 text-[13px] text-center mt-2 mb-1 px-4">
-                      Pastikan detail penerima transfer benar.
+                      Ensure the transfer recipient details are correct.
                     </p>
 
                     <button 
@@ -145,7 +145,7 @@ export function NewTransferScreen({ onBack, onSelectContact }: NewTransferScreen
                         setShowReceiverDetail(false);
                         onSelectContact({
                           id: 'new',
-                          name: receiverName.toUpperCase(),
+                          name: receiverName,
                           network: selectedNetwork,
                           account: accountNumber,
                           initials: initials
@@ -153,13 +153,13 @@ export function NewTransferScreen({ onBack, onSelectContact }: NewTransferScreen
                       }}
                       className="w-full bg-[#008fcd] text-white py-[14px] rounded-full font-bold text-[15px] shadow-[0_4px_14px_rgba(0,143,205,0.4)] hover:bg-[#007dba] active:scale-[0.98] transition-all"
                     >
-                      Lanjutkan
+                      Continue
                     </button>
                     <button 
                       onClick={() => setShowReceiverDetail(false)}
                       className="w-full bg-transparent text-[#008fcd] py-1 rounded-full font-bold text-[15px] hover:bg-slate-50 active:scale-[0.98] transition-all mt-[-4px]"
                     >
-                      Ubah Rekening
+                      Change Account
                     </button>
                  </div>
               </div>
@@ -175,7 +175,7 @@ export function NewTransferScreen({ onBack, onSelectContact }: NewTransferScreen
              <button onClick={() => setShowNetworkSelect(false)} className="absolute left-4 p-1 hover:bg-slate-100 rounded-full transition-colors active:bg-slate-200">
                <ArrowLeft className="text-slate-800" size={24} />
              </button>
-             <h2 className="text-slate-800 font-bold text-[16px]">Daftar Network</h2>
+             <h2 className="text-slate-800 font-bold text-[16px]">Network List</h2>
            </div>
 
            <div className="flex-1 overflow-y-auto w-full">
@@ -185,10 +185,10 @@ export function NewTransferScreen({ onBack, onSelectContact }: NewTransferScreen
                       <div className="w-4 h-4 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold text-[10px]">i</div>
                     </div>
                     <div className="flex flex-col gap-1.5">
-                       <p className="text-slate-800 font-bold text-[14px] leading-snug">Tidak yakin jaringan mana yang harus dipilih?</p>
-                       <p className="text-slate-600 text-[13px] leading-snug">Pilih jaringan yang sesuai dengan jaringan pada platform penerima Anda.</p>
+                       <p className="text-slate-800 font-bold text-[14px] leading-snug">Unsure which network to choose?</p>
+                       <p className="text-slate-600 text-[13px] leading-snug">Select the network that matches the network on your recipient's platform.</p>
                        <div className="flex items-center gap-1 mt-1 cursor-pointer">
-                         <span className="text-slate-800 font-bold text-[13px]">Selengkapnya</span>
+                         <span className="text-slate-800 font-bold text-[13px]">Learn more</span>
                          <ArrowRight size={14} className="text-slate-800" strokeWidth={3} />
                        </div>
                     </div>
@@ -196,13 +196,13 @@ export function NewTransferScreen({ onBack, onSelectContact }: NewTransferScreen
 
                  <div className="flex flex-col gap-6 mt-6 pb-12 text-left">
                     {[
-                      { name: 'EVM (Arc Testnet)', fee: 'Biaya 0,0001 USDC (~$0,0001)', time: 'Estimasi waktu penerimaan: ~ 1 menit', logoBg: 'bg-[#008fcd]', logoForeground: <Zap className="text-white fill-white scale-[1.2]" size={16} /> },
-                      { name: 'X Layer (USDT0)', fee: 'Biaya 0,0022 USDT (~$0,0021)', time: 'Estimasi waktu penerimaan: ~ 2 menit', logoBg: 'bg-black', logoForeground: <div className="grid grid-cols-2 gap-[2px] w-[16px] h-[16px]"><div className="bg-white rounded-[2px]"></div><div className="bg-white rounded-[2px]" style={{opacity: 0}}></div><div className="bg-white rounded-[2px]"></div><div className="bg-white rounded-[2px]"></div></div>  },
-                      { name: 'Tron (TRC20)', fee: 'Biaya 1,5 USDT (~$1,4992)', time: 'Estimasi waktu penerimaan: ~ 2 minutes', logoBg: 'bg-[#db2e38]', logoForeground: <div className="border-[7px] border-transparent border-b-white transform -translate-y-1"></div> },
-                      { name: 'Ethereum (ERC20)', fee: 'Biaya 0,18 USDT (~$0,1799)', time: 'Estimasi waktu penerimaan: ~ 2 minutes', logoBg: 'bg-[#5e77db]', logoForeground: <div className="w-[12px] h-[18px] bg-white transform rotate-45 rounded-[2px] scale-y-[1.2] clip-path-rhombus" style={{ clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)'}}></div> },
-                      { name: 'Aptos', fee: 'Biaya 0,0015 USDT (~$0,0014)', time: 'Estimasi waktu penerimaan: ~ 2 minutes', logoBg: 'bg-black', logoForeground: <div className="flex flex-col gap-[3px] w-[20px]"><div className="h-[3px] bg-white rounded-full w-full"></div><div className="h-[3px] bg-white rounded-full w-[80%] ml-auto"></div><div className="h-[3px] bg-white rounded-full w-full"></div></div> },
-                      { name: 'Arbitrum One (USDT0)', fee: 'Biaya 0,0029 USDT (~$0,0028)', time: 'Estimasi waktu penerimaan: ~ 2 minutes', logoBg: 'bg-[#213a5b]', logoForeground: <div className="flex gap-1 items-end"><div className="w-[4px] h-[12px] bg-[#28A0F0] rounded-sm"></div><div className="w-[4px] h-[16px] bg-[#28A0F0] rounded-sm"></div><div className="w-[4px] h-[10px] bg-[#28A0F0] rounded-sm"></div></div> },
-                      { name: 'Avalanche C-Chain', fee: 'Biaya 0,00043 USDT (~$0,0004)', time: 'Estimasi waktu penerimaan: ~ 2 minutes', logoBg: 'bg-[#e84142]', logoForeground: <div className="border-[8px] border-transparent border-b-white rounded-[2px] transform scale-x-[0.8] -translate-y-[2px]"></div> }
+                      { name: 'EVM (Arc Testnet)', fee: 'Fee 0.0001 USDC (~$0.0001)', time: 'Estimated arrival time: ~ 1 minute', logoBg: 'bg-[#008fcd]', logoForeground: <Zap className="text-white fill-white scale-[1.2]" size={16} /> },
+                      { name: 'X Layer (USDT0)', fee: 'Fee 0.0022 USDT (~$0.0021)', time: 'Estimated arrival time: ~ 2 minutes', logoBg: 'bg-black', logoForeground: <div className="grid grid-cols-2 gap-[2px] w-[16px] h-[16px]"><div className="bg-white rounded-[2px]"></div><div className="bg-white rounded-[2px]" style={{opacity: 0}}></div><div className="bg-white rounded-[2px]"></div><div className="bg-white rounded-[2px]"></div></div>  },
+                      { name: 'Tron (TRC20)', fee: 'Fee 1.5 USDT (~$1.4992)', time: 'Estimated arrival time: ~ 2 minutes', logoBg: 'bg-[#db2e38]', logoForeground: <div className="border-[7px] border-transparent border-b-white transform -translate-y-1"></div> },
+                      { name: 'Ethereum (ERC20)', fee: 'Fee 0.18 USDT (~$0.1799)', time: 'Estimated arrival time: ~ 2 minutes', logoBg: 'bg-[#5e77db]', logoForeground: <div className="w-[12px] h-[18px] bg-white transform rotate-45 rounded-[2px] scale-y-[1.2] clip-path-rhombus" style={{ clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)'}}></div> },
+                      { name: 'Aptos', fee: 'Fee 0.0015 USDT (~$0.0014)', time: 'Estimated arrival time: ~ 2 minutes', logoBg: 'bg-black', logoForeground: <div className="flex flex-col gap-[3px] w-[20px]"><div className="h-[3px] bg-white rounded-full w-full"></div><div className="h-[3px] bg-white rounded-full w-[80%] ml-auto"></div><div className="h-[3px] bg-white rounded-full w-full"></div></div> },
+                      { name: 'Arbitrum One (USDT0)', fee: 'Fee 0.0029 USDT (~$0.0028)', time: 'Estimated arrival time: ~ 2 minutes', logoBg: 'bg-[#213a5b]', logoForeground: <div className="flex gap-1 items-end"><div className="w-[4px] h-[12px] bg-[#28A0F0] rounded-sm"></div><div className="w-[4px] h-[16px] bg-[#28A0F0] rounded-sm"></div><div className="w-[4px] h-[10px] bg-[#28A0F0] rounded-sm"></div></div> },
+                      { name: 'Avalanche C-Chain', fee: 'Fee 0.00043 USDT (~$0.0004)', time: 'Estimated arrival time: ~ 2 minutes', logoBg: 'bg-[#e84142]', logoForeground: <div className="border-[8px] border-transparent border-b-white rounded-[2px] transform scale-x-[0.8] -translate-y-[2px]"></div> }
                     ].map(( net, idx) => (
                       <div key={idx} className="flex gap-4 cursor-pointer group px-1" onClick={() => { setSelectedNetwork(net.name); setShowNetworkSelect(false); }}>
                          <div className={`w-[36px] h-[36px] rounded-full flex items-center justify-center shrink-0 ${net.logoBg} mt-0.5 overflow-hidden border border-slate-100 shadow-sm transition-transform group-active:scale-95`}>

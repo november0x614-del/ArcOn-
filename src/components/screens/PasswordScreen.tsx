@@ -34,7 +34,7 @@ export function PasswordScreen({ onBack, onLogin }: PasswordScreenProps) {
         
         <h1 className="text-2xl font-bold text-white tracking-tight mb-1 text-center drop-shadow-sm">Welcome Back</h1>
         <p className="text-blue-100 text-center text-[13px] font-medium px-6 leading-relaxed">
-          Masukkan kata sandi Anda untuk mengakses akun Arc Commerce.
+          Enter your password to access your Arc Commerce account.
         </p>
 
         {/* Security Badge */}
@@ -73,12 +73,12 @@ export function PasswordScreen({ onBack, onLogin }: PasswordScreenProps) {
                 ? 'bg-[#3FA2F6] text-white shadow-[0_8px_20px_rgba(63,162,246,0.25)] hover:bg-[#2b88d8]' 
                 : 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'}`}
             >
-            Login ke Akun
+            Login to Account
             </button>
 
             <div className="mt-8 flex justify-center">
                 <button className="text-[#3FA2F6] font-semibold text-[13px] hover:text-blue-700 transition-colors">
-                Lupa kata sandi?
+                Forgot password?
                 </button>
             </div>
         </div>

@@ -23,7 +23,7 @@ export function LoginScreen({ onLogin, onRegister }: LoginScreenProps) {
         
         <h1 className="text-3xl font-bold text-white tracking-tight mb-2 text-center drop-shadow-sm">Arc Commerce</h1>
         <p className="text-blue-100 text-center text-[13px] font-medium px-6 leading-relaxed">
-          Kelola aset digital dan nikmati pengalaman transaksi Web3 yang aman & instan.
+          Manage digital assets and enjoy secure & instant Web3 transaction experiences.
         </p>
 
         {/* Security Badge */}
@@ -41,20 +41,20 @@ export function LoginScreen({ onLogin, onRegister }: LoginScreenProps) {
             onClick={onLogin}
             className="w-full bg-[#3FA2F6] hover:bg-blue-600 text-white font-bold py-4 rounded-2xl transition-all shadow-[0_8px_20px_rgba(63,162,246,0.25)] flex justify-center items-center gap-2 active:scale-[0.98] border-0"
           >
-            Akses Akun <ChevronRight size={18} strokeWidth={2.5} />
+            Access Account <ChevronRight size={18} strokeWidth={2.5} />
           </button>
           
           <button 
             onClick={onRegister}
             className="w-full bg-blue-50 hover:bg-blue-100 text-[#3FA2F6] font-bold py-4 rounded-2xl transition-all flex justify-center items-center active:scale-[0.98] border-0"
           >
-            Buat Identitas Baru
+            Create New Identity
           </button>
         </div>
 
         <p className="text-[11px] text-center text-slate-400 font-medium mt-10 leading-relaxed">
-           Dengan masuk atau mendaftar, Anda menyetujui <br/>
-           <span className="text-[#3FA2F6] cursor-pointer hover:underline">Syarat Ketentuan</span> dan <span className="text-[#3FA2F6] cursor-pointer hover:underline">Kebijakan Privasi</span> kami.
+           By logging in or registering, you agree to our <br/>
+           <span className="text-[#3FA2F6] cursor-pointer hover:underline">Terms of Service</span> and <span className="text-[#3FA2F6] cursor-pointer hover:underline">Privacy Policy</span>.
         </p>
       </div>
     </div>

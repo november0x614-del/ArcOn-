@@ -47,10 +47,10 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
         <div className="w-24 h-24 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center mb-6 shadow-xl shadow-green-500/20 border-4 border-green-50">
           <Check size={48} className="text-white" strokeWidth={3} />
         </div>
-        <h2 className="text-[24px] font-extrabold text-slate-800 mb-2 tracking-tight">Swap Berhasil!</h2>
+        <h2 className="text-[24px] font-extrabold text-slate-800 mb-2 tracking-tight">Swap Successful!</h2>
         <div className="bg-slate-50 p-6 rounded-3xl w-full mb-8 border border-slate-100">
            <p className="text-[14px] text-slate-600 leading-relaxed mb-4">
-             Transaksi penukaran di Arc Testnet telah dikonfirmasi (Circle Managed).
+             Exchange transaction on Arc Testnet has been confirmed (Circle Managed).
            </p>
            <div className="flex justify-between items-center text-[18px] font-bold text-slate-800 bg-white p-4 rounded-xl shadow-sm">
               <span className="text-blue-600">-{fromAmount} USDC</span>
@@ -58,7 +58,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
               <span className="text-orange-500">+{toAmount} ARC</span>
            </div>
            <div className="flex justify-between items-center mt-4 px-2">
-             <span className="text-[12px] text-slate-400 font-medium">Sisa Saldo:</span>
+             <span className="text-[12px] text-slate-400 font-medium">Remaining Balance:</span>
              <span className="text-[14px] text-slate-700 font-bold">{balance.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} USDC</span>
            </div>
         </div>
@@ -66,7 +66,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
           onClick={onBack}
           className="w-full bg-[#005faa] text-white font-bold py-4 rounded-full hover:bg-[#004780] transition-colors shadow-lg shadow-blue-900/20 active:scale-95"
         >
-          Selesai & Kembali
+          Done & Return
         </button>
       </div>
     );
@@ -84,8 +84,8 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
 
       <div className="flex-1 overflow-y-auto pb-24 p-5 lg:p-10 flex flex-col pt-8 max-w-2xl mx-auto w-full scrollbar-hide">
         <div className="mb-6">
-          <h3 className="text-[24px] font-extrabold text-slate-800 leading-tight mb-2 tracking-tight">Tukar Aset</h3>
-          <p className="text-[14px] text-slate-500">Konversi USDC Anda ke token lain secara instan dengan Arc Exchange.</p>
+          <h3 className="text-[24px] font-extrabold text-slate-800 leading-tight mb-2 tracking-tight">Swap Assets</h3>
+          <p className="text-[14px] text-slate-500">Convert your USDC to other tokens instantly with Arc Exchange.</p>
         </div>
 
         {/* Swap Box */}
@@ -93,8 +93,8 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
           {/* From */}
           <div className={`bg-white p-5 rounded-3xl shadow-sm border transition-all duration-500 relative z-10 ${isSwapping ? 'border-blue-400 shadow-blue-100/50 scale-[0.98]' : 'border-slate-200/60 focus-within:border-blue-500'}`}>
             <div className="flex justify-between items-center mb-4">
-              <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">Anda Bayar</span>
-              <span className="text-[12px] font-bold text-[#005faa]">Saldo: {balance.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} USDC</span>
+              <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">You Pay</span>
+              <span className="text-[12px] font-bold text-[#005faa]">Balance: {balance.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} USDC</span>
             </div>
             <div className="flex justify-between items-center">
               <div className="flex-1">
@@ -125,7 +125,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
           {/* To */}
           <div className={`bg-white p-5 rounded-3xl shadow-sm border mt-2 transition-all duration-500 relative z-10 ${isSwapping ? 'border-orange-400 shadow-orange-100/50 scale-[1.02]' : 'border-slate-200/60'}`}>
             <div className="flex justify-between items-center mb-4">
-              <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">Anda Terima (Estimasi)</span>
+              <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">You Receive (Estimated)</span>
             </div>
             <div className="flex justify-between items-center">
               <div className="flex-1">
@@ -169,7 +169,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
                 <RefreshCw size={20} className="animate-spin text-blue-400" />
                 Executing on Arc Network...
               </>
-            ) : parseFloat(fromAmount) > balance ? 'Saldo Tidak Cukup' : 'Konfirmasi Swap'}
+            ) : parseFloat(fromAmount) > balance ? 'Insufficient Balance' : 'Confirm Swap'}
           </button>
           <p className="text-center text-[11px] text-slate-400 mt-5 leading-relaxed px-6 flex items-center justify-center gap-1.5">
             <Check size={12} className="text-green-500" /> Verified via Circle Developer Wallets

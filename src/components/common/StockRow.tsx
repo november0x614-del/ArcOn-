@@ -11,8 +11,20 @@ interface StockRowProps {
 }
 
 export function StockRow({ code, name, price, change, percent, isDown }: StockRowProps) {
+  const [flash, setFlash] = React.useState<'up' | 'down' | null>(null);
+  const prevPriceRef = React.useRef(price);
+
+  React.useEffect(() => {
+    if (prevPriceRef.current !== price) {
+      setFlash(isDown ? 'down' : 'up');
+      const timer = setTimeout(() => setFlash(null), 1000);
+      prevPriceRef.current = price;
+      return () => clearTimeout(timer);
+    }
+  }, [price, isDown]);
+
   return (
-    <div className="flex justify-between items-center py-2 border-b border-slate-50 last:border-0 hover:bg-slate-50 rounded-lg -mx-2 px-2 transition-colors cursor-pointer">
+    <div className="flex justify-between items-center py-2 border-b border-slate-50 last:border-0 hover:bg-slate-50 rounded-lg -mx-2 px-2 transition-colors cursor-pointer group">
       <div className="flex gap-3 items-center">
         <div className="w-8 h-8 rounded-full bg-blue-50 text-[#3FA2F6] flex justify-center items-center text-xs font-bold border border-blue-100">
            {code.substring(0, 1)}
@@ -23,8 +35,10 @@ export function StockRow({ code, name, price, change, percent, isDown }: StockRo
         </div>
       </div>
       <div className="text-right">
-        <p className="font-bold text-slate-800 text-[15px]">{price}</p>
-        <p className={`text-[12px] font-semibold flex items-center justify-end gap-1 ${isDown ? 'text-red-500' : 'text-green-500'}`}>
+        <div className={`transition-colors duration-300 rounded px-1 -mx-1 ${flash === 'up' ? 'bg-green-100 text-green-700' : flash === 'down' ? 'bg-red-100 text-red-700' : 'text-slate-800'}`}>
+          <p className="font-bold text-[15px]">{price}</p>
+        </div>
+        <p className={`text-[12px] font-semibold flex items-center justify-end gap-1 mt-0.5 ${isDown ? 'text-red-500' : 'text-green-500'}`}>
           {isDown ? <TrendingDown size={14} /> : <TrendingUp size={14} />}
           {change} ({percent})
         </p>

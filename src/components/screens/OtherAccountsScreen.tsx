@@ -7,9 +7,9 @@ interface OtherAccountsScreenProps {
 
 export function OtherAccountsScreen({ onBack }: OtherAccountsScreenProps) {
   const accounts = [
-    { name: 'Rekening Giro USDC', number: '123-00-1122334', balance: '5,000.00', type: 'Checking', isWeb3: true },
-    { name: 'Tabungan Deposito ARC', number: '123-00-9988776', balance: '12,500.00', type: 'Savings', isWeb3: true },
-    { name: 'Mandiri Tabungan Rencana', number: '123-00-4455667', balance: 'Rp 25.000.000', type: 'Legacy', isWeb3: false }
+    { name: 'USDC Checking Account', number: '123-00-1122334', balance: '5,000.00', type: 'Checking', isWeb3: true },
+    { name: 'ARC Deposit Savings', number: '123-00-9988776', balance: '12,500.00', type: 'Savings', isWeb3: true },
+    { name: 'Mandiri Planned Savings', number: '123-00-4455667', balance: 'Rp 25.000.000', type: 'Legacy', isWeb3: false }
   ];
 
   return (
@@ -24,8 +24,8 @@ export function OtherAccountsScreen({ onBack }: OtherAccountsScreenProps) {
 
       <div className="flex-1 p-5 overflow-y-auto">
         <div className="mb-8">
-           <h3 className="text-[24px] font-extrabold text-slate-800 leading-tight mb-2 tracking-tight">Semua Rekening</h3>
-           <p className="text-[14px] text-slate-500">Kelola dan lihat saldo dari berbagai aset Anda di satu tempat.</p>
+           <h3 className="text-[24px] font-extrabold text-slate-800 leading-tight mb-2 tracking-tight">All Accounts</h3>
+           <p className="text-[14px] text-slate-500">Manage and view balances from various assets in one place.</p>
         </div>
 
         <div className="space-y-4">
@@ -48,7 +48,7 @@ export function OtherAccountsScreen({ onBack }: OtherAccountsScreenProps) {
               
               <div className="flex justify-between items-end">
                 <div>
-                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Saldo Tersedia</span>
+                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Available Balance</span>
                    <p className="text-xl font-bold text-slate-800 h-8 flex items-baseline gap-1 mt-1">
                       {acc.balance} <span className="text-[10px] text-slate-400 font-medium">{acc.isWeb3 ? 'USDC' : ''}</span>
                    </p>
@@ -64,7 +64,7 @@ export function OtherAccountsScreen({ onBack }: OtherAccountsScreenProps) {
              <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-[#3FA2F6] group-hover:text-white transition-colors">
                 <Plus size={24} />
              </div>
-             <span className="text-[13px] font-bold">Hubungkan Rekening Baru</span>
+             <span className="text-[13px] font-bold">Connect New Account</span>
           </button>
         </div>
       </div>

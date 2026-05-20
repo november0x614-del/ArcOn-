@@ -44,13 +44,13 @@ export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
             </div>
 
             <p className="text-[12px] text-slate-400 text-center mb-6 leading-relaxed">
-               Pindai QR ini atau salin alamat di bawah untuk melakukan deposit token USDC via jaringan Arc Testnet.
+               Scan this QR or copy the address below to deposit USDC tokens via the Arc Testnet network.
             </p>
 
             {/* Address bar */}
             <div className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 flex items-center justify-between gap-3 group active:bg-slate-100 transition-all cursor-pointer overflow-hidden font-sans" onClick={handleCopy}>
                <div className="flex-1 overflow-hidden">
-                  <span className="text-[10px] font-bold text-slate-400 block mb-0.5">ALAMAT DOMPET</span>
+                  <span className="text-[10px] font-bold text-slate-400 block mb-0.5">WALLET ADDRESS</span>
                   <span className="text-[12px] font-mono font-bold text-slate-800 block truncate">{address}</span>
                </div>
                <button className="bg-white text-[#005faa] hover:bg-slate-50 border border-slate-100 p-2 rounded-xl shrink-0 shadow-sm transition-colors active:scale-95">
@@ -60,7 +60,7 @@ export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
          </div>
 
          <div className="mt-6 text-center max-w-xs">
-            <span className="text-[12px] text-slate-400 font-medium">Hanya kirim token USDC ke alamat ini. Transaksi melalui jaringan lain selain Arc akan mengakibatkan kehilangan aset secara permanen.</span>
+            <span className="text-[12px] text-slate-400 font-medium">Only send USDC tokens to this address. Transactions via networks other than Arc will result in permanent asset loss.</span>
          </div>
       </div>
     </div>

@@ -32,15 +32,15 @@ export function BayarVAScreen({ onBack }: BayarVAScreenProps) {
         <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
           <Check size={40} className="text-green-500" strokeWidth={3} />
         </div>
-        <h2 className="text-[22px] font-bold text-slate-800 mb-2">Pembayaran Sukses!</h2>
+        <h2 className="text-[22px] font-bold text-slate-800 mb-2">Payment Successful!</h2>
         <p className="text-[14px] text-slate-500 mb-8 leading-relaxed px-4">
-          Pembayaran VA <span className="font-bold text-slate-800">{vaNumber}</span> sebesar <span className="font-bold text-[#005faa]">250.00 USDC</span> telah berhasil diproses melalui Arc Network.
+          VA Payment <span className="font-bold text-slate-800">{vaNumber}</span> for <span className="font-bold text-[#005faa]">250.00 USDC</span> has been successfully processed via Arc Network.
         </p>
         <button 
           onClick={onBack}
           className="w-full bg-[#005faa] text-white font-bold py-3.5 rounded-full hover:bg-[#004780] transition-colors"
         >
-          Selesai
+          Done
         </button>
       </div>
     );
@@ -53,29 +53,29 @@ export function BayarVAScreen({ onBack }: BayarVAScreenProps) {
         <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full transition-colors active:bg-slate-200">
           <ArrowLeft size={24} className="text-slate-800" />
         </button>
-        <h2 className="font-bold text-[16px] text-slate-800 ml-2">Bayar Virtual Account</h2>
+        <h2 className="font-bold text-[16px] text-slate-800 ml-2">Pay Virtual Account</h2>
       </div>
 
       <div className="flex-1 p-5 lg:p-10 flex flex-col pt-8 overflow-y-auto pb-24 max-w-2xl mx-auto w-full scrollbar-hide">
         {step === 'input' ? (
           <>
             <div className="mb-8">
-               <h3 className="text-[24px] font-extrabold text-slate-800 leading-tight mb-2 tracking-tight">Input Nomor VA</h3>
-               <p className="text-[14px] text-slate-500">Masukkan nomor Virtual Account tujuan pembayaran Anda.</p>
+               <h3 className="text-[24px] font-extrabold text-slate-800 leading-tight mb-2 tracking-tight">Input VA Number</h3>
+               <p className="text-[14px] text-slate-500">Enter the destination Virtual Account number for your payment.</p>
             </div>
 
             <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-200/60 mb-6 font-sans">
-               <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Nomor Virtual Account</label>
+               <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Virtual Account Number</label>
                <input 
                   type="number"
                   value={vaNumber}
                   onChange={(e) => setVaNumber(e.target.value)}
-                  placeholder="Contoh: 8871 0812 3344 5566"
+                  placeholder="Example: 8871 0812 3344 5566"
                   className="w-full py-2 bg-transparent border-b-2 border-slate-100 focus:border-[#005faa] outline-none text-xl font-bold text-slate-800 transition-colors placeholder:text-slate-200"
                />
                <div className="mt-4 flex items-center gap-2 text-slate-400">
                   <Smartphone size={14} />
-                  <span className="text-[12px]">Mendukung VA Bank Mandiri, BCA, dan lainnya via Bridge</span>
+                  <span className="text-[12px]">Supports Mandiri, BCA, and other VAs via Bridge</span>
                </div>
             </div>
 
@@ -89,35 +89,35 @@ export function BayarVAScreen({ onBack }: BayarVAScreenProps) {
                       : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                     }`}
                >
-                  {isValidating ? <RefreshCw size={20} className="animate-spin" /> : 'Lanjutkan'}
+                  {isValidating ? <RefreshCw size={20} className="animate-spin" /> : 'Continue'}
                </button>
             </div>
           </>
         ) : step === 'confirm' ? (
           <>
             <div className="mb-8">
-               <h3 className="text-[24px] font-extrabold text-slate-800 leading-tight mb-2 tracking-tight">Konfirmasi Bayar</h3>
-               <p className="text-[14px] text-slate-500">Periksa detail tagihan sebelum membayar.</p>
+               <h3 className="text-[24px] font-extrabold text-slate-800 leading-tight mb-2 tracking-tight">Payment Confirmation</h3>
+               <p className="text-[14px] text-slate-500">Review billing details before paying.</p>
             </div>
 
             <div className="bg-white rounded-3xl shadow-sm border border-slate-200/60 overflow-hidden mb-6">
                <div className="p-5 border-b border-slate-100 bg-slate-50/50">
                   <div className="flex justify-between items-center">
-                     <span className="text-sm text-slate-500">Institusi</span>
-                     <span className="text-sm font-bold text-slate-800">PLN PRABAYAR</span>
+                     <span className="text-sm text-slate-500">Institution</span>
+                     <span className="text-sm font-bold text-slate-800">PREPAID ELECTRICITY</span>
                   </div>
                </div>
                <div className="p-5 space-y-4">
                   <div className="flex justify-between">
-                     <span className="text-sm text-slate-500">Nama Pelanggan</span>
+                     <span className="text-sm text-slate-500">Customer Name</span>
                      <span className="text-sm font-bold text-slate-800">RAKYAN INUK</span>
                   </div>
                   <div className="flex justify-between">
-                     <span className="text-sm text-slate-500">Nomor VA</span>
+                     <span className="text-sm text-slate-500">VA Number</span>
                      <span className="text-sm font-mono text-slate-800">{vaNumber}</span>
                   </div>
                   <div className="pt-4 border-t border-slate-100 flex justify-between items-end">
-                     <span className="text-sm text-slate-500">Total Tagihan</span>
+                     <span className="text-sm text-slate-500">Total Bill</span>
                      <div className="text-right">
                         <span className="text-[10px] font-bold text-[#005faa] block">USDC</span>
                         <span className="text-2xl font-black text-slate-800">250.00</span>
@@ -131,8 +131,8 @@ export function BayarVAScreen({ onBack }: BayarVAScreenProps) {
                   <Wallet size={20} className="text-[#005faa]" />
                </div>
                <div>
-                  <p className="text-[13px] font-bold text-slate-700">Sumber Dana: Arc Wallet</p>
-                  <p className="text-[11px] text-slate-500">Sisa Saldo: 1,134.66 USDC</p>
+                  <p className="text-[13px] font-bold text-slate-700">Source of Funds: Arc Wallet</p>
+                  <p className="text-[11px] text-slate-500">Remaining Balance: 1,134.66 USDC</p>
                </div>
             </div>
 
@@ -141,7 +141,7 @@ export function BayarVAScreen({ onBack }: BayarVAScreenProps) {
                   onClick={handlePay}
                   className="w-full bg-[#005faa] text-white font-bold py-[16px] rounded-full shadow-lg shadow-blue-500/20 hover:bg-[#004780] transition-colors"
                 >
-                  Bayar Sekarang
+                  Pay Now
                </button>
             </div>
           </>
@@ -153,9 +153,9 @@ export function BayarVAScreen({ onBack }: BayarVAScreenProps) {
                    <Smartphone size={24} className="text-[#005faa]/40" />
                 </div>
              </div>
-             <h3 className="font-bold text-slate-800 text-[20px] mb-3">Memproses VA via Arc</h3>
+             <h3 className="font-bold text-slate-800 text-[20px] mb-3">Processing VA via Arc</h3>
              <p className="text-slate-400 text-[14px] leading-relaxed max-w-[240px]">
-                Sedang memproses pembayaran tagihan ke sistem perbankan melalui bridge jaringan <span className="font-bold text-slate-700">Arc Testnet</span>...
+                Processing bill payment to the banking system via network bridge <span className="font-bold text-slate-700">Arc Testnet</span>...
              </p>
           </div>
         )}

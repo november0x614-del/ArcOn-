@@ -25,6 +25,7 @@ interface SettingsScreenProps {
   onPusatNotifikasi?: () => void;
   onNamaPanggilan?: () => void;
   onEmail?: () => void;
+  onShowToast?: (msg: string) => void;
 }
 
 export function SettingsScreen({ 
@@ -32,8 +33,15 @@ export function SettingsScreen({
   onInstantAccess, 
   onPusatNotifikasi, 
   onNamaPanggilan, 
-  onEmail 
+  onEmail,
+  onShowToast
 }: SettingsScreenProps) {
+  const handleNotImplemented = (featureInfo?: string) => {
+    if (onShowToast) {
+       onShowToast(`Feature ${featureInfo || 'this'} is still in development.`);
+    }
+  };
+
   return (
     <div className="w-full h-full bg-[#f8fafc] relative flex flex-col z-50 animate-in slide-in-from-bottom duration-300">
       {/* Header */}
@@ -43,70 +51,58 @@ export function SettingsScreen({
         </button>
         <div className="flex-1 bg-slate-100/80 rounded-[12px] flex items-center px-3 py-2.5">
           <Search size={18} className="text-slate-500 mr-2 shrink-0" />
-          <input type="text" placeholder="Cari pengaturan yang ingin diubah..." className="bg-transparent border-none outline-none text-[13px] w-full text-slate-700" />
+          <input type="text" placeholder="Search settings..." className="bg-transparent border-none outline-none text-[13px] w-full text-slate-700" />
         </div>
       </div>
 
       {/* Settings Content */}
       <div className="flex-1 overflow-y-auto pb-8">
         
-        {/* Pusat Bantuan */}
+        {/* Akun & Profil */}
         <div className="mt-4">
           <div className="px-4 mb-2">
-            <span className="text-[12px] font-bold text-slate-500 tracking-wide">Pusat Bantuan</span>
-          </div>
-          <div className="bg-white border-y border-slate-100">
-            <SettingItem icon={<HeadphonesIcon size={20} className="text-[#3FA2F6]" />} label="Arc Call Center" badge="NEW" isLast />
-          </div>
-        </div>
-
-        {/* Fitur Tanpa Login */}
-        <div className="mt-6">
-          <div className="px-4 mb-2">
-            <span className="text-[12px] font-bold text-slate-500 tracking-wide">Fitur Tanpa Login</span>
-          </div>
-          <div className="bg-white border-y border-slate-100">
-            <SettingItem icon={<LogIn size={20} className="text-[#3FA2F6]" />} label="Instant Access" onClick={onInstantAccess} />
-            <SettingItem icon={<Bell size={20} className="text-[#3FA2F6]" />} label="Pusat Notifikasi" isLast onClick={onPusatNotifikasi} />
-          </div>
-        </div>
-
-        {/* Akun */}
-        <div className="mt-6">
-          <div className="px-4 mb-2">
-            <span className="text-[12px] font-bold text-slate-500 tracking-wide">Akun</span>
+            <span className="text-[12px] font-bold text-slate-500 tracking-wide uppercase">Profile & Account</span>
           </div>
           <div className="bg-white border-y border-slate-100 flex flex-col">
-            <SettingItem icon={<UserCircle size={20} className="text-[#3FA2F6]" />} label="Nama Panggilan" onClick={onNamaPanggilan} />
-            <SettingItem icon={<Mail size={20} className="text-[#3FA2F6]" />} label="Email" onClick={onEmail} />
-            <SettingItem icon={<Settings size={20} className="text-[#3FA2F6]" />} label="Bahasa" />
-            <SettingItem icon={<FileText size={20} className="text-[#3FA2F6]" />} label="Data Anda" isLast />
+            <SettingItem icon={<UserCircle size={20} className="text-[#3FA2F6]" />} label="Nickname" onClick={onNamaPanggilan} />
+            <SettingItem icon={<Mail size={20} className="text-[#3FA2F6]" />} label="Registered Email" onClick={onEmail} />
+            <SettingItem icon={<Settings size={20} className="text-[#3FA2F6]" />} label="Language Preferences" isLast onClick={() => handleNotImplemented("Language Preferences")} />
           </div>
         </div>
 
-        {/* Fitur */}
+        {/* Keamanan & Dompet */}
         <div className="mt-6">
           <div className="px-4 mb-2">
-            <span className="text-[12px] font-bold text-slate-500 tracking-wide">Fitur</span>
+            <span className="text-[12px] font-bold text-slate-500 tracking-wide uppercase">Wallet Security</span>
           </div>
           <div className="bg-white border-y border-slate-100 flex flex-col">
-            <SettingItem icon={<Key size={20} className="text-[#3FA2F6]" />} label="Token Online" badge="NEW" />
-            <SettingItem icon={<RefreshCw size={20} className="text-[#3FA2F6]" />} label="Proxy untuk BI Fast" />
-            <SettingItem icon={<CardIcon size={20} className="text-[#3FA2F6]" />} label="Sumber Dana Utama" badge="NEW" />
-            <SettingItem icon={<ArrowUpRight size={20} className="text-[#3FA2F6]" />} label="Terima Tagihan" />
-            <SettingItem icon={<Smartphone size={20} className="text-[#3FA2F6]" />} label="Produk di Beranda" badge="NEW" isLast />
+            <SettingItem icon={<Fingerprint size={20} className="text-[#3FA2F6]" />} label="Biometric Auth" onClick={() => handleNotImplemented("Biometrics")} />
+            <SettingItem icon={<Lock size={20} className="text-[#3FA2F6]" />} label="Change PIN / Password" onClick={() => handleNotImplemented("Change PIN")} />
+            <SettingItem icon={<Key size={20} className="text-[#3FA2F6]" />} label="Recovery Phrase (Seed)" badge="IMPORTANT" onClick={() => handleNotImplemented("Recovery Phrase")} />
+            <SettingItem icon={<Shield size={20} className="text-[#3FA2F6]" />} label="Export Private Key" isLast onClick={() => handleNotImplemented("Export Private Key")} />
           </div>
         </div>
 
-        {/* Keamanan */}
+        {/* Jaringan & Web3 */}
+        <div className="mt-6">
+          <div className="px-4 mb-2">
+            <span className="text-[12px] font-bold text-slate-500 tracking-wide uppercase">Network & Connections</span>
+          </div>
+          <div className="bg-white border-y border-slate-100 flex flex-col">
+            <SettingItem icon={<RefreshCw size={20} className="text-[#3FA2F6]" />} label="Network Settings" badge="ARC TESTNET" onClick={() => handleNotImplemented("Network Settings")} />
+            <SettingItem icon={<Smartphone size={20} className="text-[#3FA2F6]" />} label="WalletConnect Sessions" onClick={() => handleNotImplemented("WalletConnect")} />
+            <SettingItem icon={<FileText size={20} className="text-[#3FA2F6]" />} label="Contract Allowances" isLast onClick={() => handleNotImplemented("Contract Allowances")}/>
+          </div>
+        </div>
+
+        {/* Pusat Bantuan */}
         <div className="mt-6 mb-8">
           <div className="px-4 mb-2">
-            <span className="text-[12px] font-bold text-slate-500 tracking-wide">Keamanan</span>
+            <span className="text-[12px] font-bold text-slate-500 tracking-wide uppercase">Help & Community</span>
           </div>
-          <div className="bg-white border-y border-slate-100 flex flex-col">
-            <SettingItem icon={<Fingerprint size={20} className="text-[#3FA2F6]" />} label="Biometrik untuk Login" />
-            <SettingItem icon={<Lock size={20} className="text-[#3FA2F6]" />} label="PIN" />
-            <SettingItem icon={<Shield size={20} className="text-[#3FA2F6]" />} label="Password" isLast />
+          <div className="bg-white border-y border-slate-100">
+            <SettingItem icon={<HeadphonesIcon size={20} className="text-[#3FA2F6]" />} label="Arc Help Center" onClick={() => handleNotImplemented("Help Center")} />
+            <SettingItem icon={<ArrowUpRight size={20} className="text-[#3FA2F6]" />} label="Developer Docs" isLast onClick={() => handleNotImplemented("Docs")} />
           </div>
         </div>
         

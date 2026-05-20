@@ -33,15 +33,15 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
           <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mb-4 mx-auto backdrop-blur-sm">
              <CheckCircle2 size={32} className="text-white" />
           </div>
-          <h2 className="text-[22px] font-bold mb-1">Pembayaran Berhasil</h2>
-          <p className="text-white/80 text-[13px]">Melalui M-Banking & Circle Wallet</p>
+          <h2 className="text-[22px] font-bold mb-1">Payment Successful</h2>
+          <p className="text-white/80 text-[13px]">Via M-Banking & Circle Wallet</p>
         </div>
 
       <div className="flex-1 px-4 lg:px-10 max-w-2xl mx-auto w-full -mt-16 pb-10">
            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col relative">
               
               <div className="flex flex-col items-center mb-6 border-b border-dashed border-slate-200 pb-6">
-                 <span className="text-[12px] text-slate-400 font-bold tracking-wider uppercase mb-2">Total Pembayaran</span>
+                 <span className="text-[12px] text-slate-400 font-bold tracking-wider uppercase mb-2">Total Payment</span>
                  <span className="text-[32px] font-extrabold text-slate-800">{selectedProduct?.price} <span className="text-[16px] text-slate-400">USDC</span></span>
               </div>
 
@@ -75,10 +75,10 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
              onClick={onBack}
              className="w-full bg-[#005faa] text-white font-bold py-4 rounded-full hover:bg-[#004780] transition-colors mt-8 shadow-lg shadow-blue-900/20"
            >
-             Kembali ke Beranda
+             Back to Home
            </button>
            <button className="w-full text-[#005faa] font-bold py-4 rounded-full hover:bg-blue-50 transition-colors mt-2 text-[14px]">
-             Lihat Resi di Block Explorer
+             View Receipt on Block Explorer
            </button>
         </div>
       </div>
@@ -97,7 +97,7 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input 
               type="text" 
-              placeholder="Cari produk impian Anda..." 
+              placeholder="Search for products..." 
               className="w-full bg-slate-100 border-none rounded-full py-2.5 pl-10 pr-4 text-[14px] outline-none focus:ring-2 ring-[#005faa]/20 font-medium"
             />
           </div>
@@ -117,17 +117,17 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
 
       <div className="flex-1 overflow-y-auto p-4 lg:p-10 space-y-6 pb-24 max-w-5xl mx-auto w-full">
         <div className="flex justify-between items-center">
-          <h3 className="font-extrabold text-[18px] text-slate-800 tracking-tight">Marketplace Khusus USDC</h3>
+          <h3 className="font-extrabold text-[18px] text-slate-800 tracking-tight">USDC Exclusive Marketplace</h3>
           <span className="text-[11px] font-bold text-[#005faa] bg-blue-50 px-2 py-1 rounded">ARC NETWORK</span>
         </div>
 
         {/* Hero Banner */}
         <div className="w-full h-36 bg-gradient-to-br from-slate-900 to-[#005faa] rounded-3xl p-6 relative overflow-hidden shadow-lg shadow-blue-900/10 mb-4">
            <div className="relative z-10">
-              <h4 className="text-white font-bold text-[18px] leading-tight mb-1">Flash Sale!<br/>Diskon 20% USDC</h4>
-              <p className="text-white/70 text-[11px] mb-3">Gunakan Arc Wallet untuk belanja hemat.</p>
+              <h4 className="text-white font-bold text-[18px] leading-tight mb-1">Flash Sale!<br/>20% Discount with USDC</h4>
+              <p className="text-white/70 text-[11px] mb-3">Use Arc Wallet for affordable shopping.</p>
               <button className="bg-white text-[#005faa] font-bold text-[11px] px-4 py-1.5 rounded-full hover:bg-slate-100 transition-colors">
-                Lihat Promo
+                View Promo
               </button>
            </div>
            <div className="absolute right-[-10px] bottom-[-20px] opacity-20">
@@ -150,7 +150,7 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
                 <h4 className="font-bold text-slate-800 text-[14px] mb-2 truncate">{product.name}</h4>
                 <div className="flex items-center justify-between mt-auto">
                   <div>
-                    <span className="text-[10px] font-bold text-[#005faa] block -mb-0.5">HARGA</span>
+                    <span className="text-[10px] font-bold text-[#005faa] block -mb-0.5">PRICE</span>
                     <span className="font-bold text-[16px] text-slate-800">{product.price} <span className="text-[10px] text-slate-400 font-normal">USDC</span></span>
                   </div>
                 </div>
@@ -158,7 +158,7 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
                   onClick={() => handlePurchase(product)}
                   className="w-full mt-3 bg-slate-800 text-white rounded-xl py-2 flex items-center justify-center gap-1.5 hover:bg-slate-700 active:scale-95 transition-all shadow-sm text-[12px] font-bold"
                 >
-                  <Wallet size={14} className="text-blue-400" /> Beli via Arc
+                  <Wallet size={14} className="text-blue-400" /> Buy via Arc
                 </button>
               </div>
             </div>
@@ -178,9 +178,9 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
                 <div className="w-4 h-4 bg-green-500 rounded-full animate-pulse"></div>
               </div>
            </div>
-           <h3 className="font-bold text-slate-800 text-[18px] mb-2">Memproses Smart Contract</h3>
+           <h3 className="font-bold text-slate-800 text-[18px] mb-2">Processing Smart Contract</h3>
            <p className="text-slate-500 text-[13px] leading-relaxed max-w-[280px]">
-             Menghubungkan <span className="font-bold text-slate-700">Circle Wallet</span> ke jaringan <span className="font-bold text-slate-700">Arc Testnet</span> untuk menyelesaikan pembayaran...
+             Connecting <span className="font-bold text-slate-700">Circle Wallet</span> to <span className="font-bold text-slate-700">Arc Testnet</span> to complete the payment...
            </p>
         </div>
       )}

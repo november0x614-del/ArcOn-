@@ -28,7 +28,7 @@ export function InstantAccessScreen({ onBack }: InstantAccessScreenProps) {
       <div className="flex-1 overflow-y-auto pb-10 bg-white">
         <div className="px-6 pt-6 pb-6 flex flex-col items-center text-center w-full">
           <p className="text-[14px] text-slate-600 leading-[1.6]">
-            Lakukan transaksi favorit tanpa perlu login. Yuk, aktifkan agar transaksi lebih hemat waktu!
+            Perform favorite transactions without logging in. Let's activate it to save time!
           </p>
           <div className="w-full max-w-[200px] h-[200px] mt-6 mb-2">
              <img src="https://images.unsplash.com/photo-1628155930542-3c7a64e2c833?auto=format&fit=crop&q=80&w=300&h=300" className="w-full h-full object-cover mix-blend-multiply opacity-90" alt="illustration" />
@@ -38,46 +38,46 @@ export function InstantAccessScreen({ onBack }: InstantAccessScreenProps) {
         <div className="flex flex-col">
            <InstantAccessItem 
              icon={<Search size={22} className="text-[#3FA2F6]" />}
-             title="Intip Saldo"
-             desc="Cek saldo tabungan, sisa limit kartu kredit, dan mutasi transaksi."
+             title="Peek Balance"
+             desc="Check savings balance, credit card remaining limit, and transaction mutations."
              enabled={true}
              hasSettings={true}
            />
            <InstantAccessItem 
              icon={<QrCode size={22} className="text-[#3FA2F6]" />}
-             title="QR Bayar"
-             desc="Bayar QR dengan scan atau upload kode lebih praktis tanpa perlu login!"
+             title="QR Pay"
+             desc="Pay QR by scanning or uploading codes more practically without logging in!"
              enabled={false}
            />
            <InstantAccessItem 
              icon={<Nfc size={22} className="text-[#3FA2F6]" />}
-             title="QRIS Tap"
-             desc="Tap handphone untuk keluar dan masuk saat di transportasi publik hingga berbelanja."
+             title="Tap to Pay"
+             desc="Tap phone to enter and exit public transport or to shop."
              enabled={false}
            />
            <InstantAccessItem 
              icon={<ArrowDownToLine size={22} className="text-[#3FA2F6]" />}
-             title="Setor Tarik"
-             desc="Buat token lebih cepat untuk setor atau tarik tunai tanpa kartu di ATM Mandiri."
+             title="Deposit or Withdraw"
+             desc="Create tokens faster for cardless deposits or cash withdrawals at Mandiri ATMs."
              enabled={true}
              hasSettings={true}
            />
            <InstantAccessItem 
              icon={<CreditCard size={22} className="text-[#3FA2F6]" />}
              title="Instant e-money"
-             desc="Isi saldo kartu e-money favorit untuk perjalanan bebas hambatan."
+             desc="Top up favorite e-money card balances for a smooth trip."
              enabled={false}
            />
            <InstantAccessItem 
              icon={<Zap size={22} className="text-[#3FA2F6]" />}
              title="Quick Pick"
-             desc="Transfer, top-up, dan bayar tagihan favorit dengan ringkas."
+             desc="Transfer, top-up, and pay favorite bills succinctly."
              enabled={false}
            />
            <InstantAccessItem 
              icon={<Nfc size={22} className="text-[#3FA2F6]" />}
-             title="Tap to Pay"
-             desc="Bayar ini itu dengan dekatkan handphone di..."
+             title="Tap & Pay"
+             desc="Pay this and that by bringing your phone closer to..."
              enabled={false}
            />
         </div>
@@ -117,7 +117,7 @@ function InstantAccessItem({ icon, title, desc, enabled, hasSettings }: InstantA
          {hasSettings && isOn && (
            <button className="flex items-center gap-1.5 mt-3 px-3 py-1.5 border border-[#3FA2F6]/30 text-[#3FA2F6] rounded-full w-max bg-blue-50/40 hover:bg-blue-50 transition-colors">
               <Settings size={14} />
-              <span className="font-bold text-[12px] pr-0.5">Atur</span>
+              <span className="font-bold text-[12px] pr-0.5">Manage</span>
            </button>
          )}
       </div>

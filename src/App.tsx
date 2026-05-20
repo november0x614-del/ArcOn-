@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { ManageFavoritesScreen, defaultSelectedShortcuts, defaultAvailableShortcuts } from './components/screens/ManageFavoritesScreen';
 import { ConnectEWalletScreen } from './components/screens/ConnectEWalletScreen';
 import { PasswordScreen } from './components/screens/PasswordScreen';
@@ -20,6 +21,7 @@ import { BayarVAScreen } from './components/screens/BayarVAScreen';
 import { EcommerceScreen } from './components/screens/EcommerceScreen';
 import { SwapScreen } from './components/screens/SwapScreen';
 import { InboxScreen } from './components/screens/InboxScreen';
+import { ReceiptScreen } from './components/screens/ReceiptScreen';
 import { AccountDetailScreen } from './components/screens/AccountDetailScreen';
 import { SuccessScreen } from './components/screens/SuccessScreen';
 import { AmountInputScreen } from './components/screens/AmountInputScreen';
@@ -31,12 +33,21 @@ import { Check } from 'lucide-react';
 
 export default function App() {
   const [viewState, setViewState] = useState<ViewState>('splash');
+  const [registeredUser, setRegisteredUser] = useState<{username: string; email: string} | null>(null);
+  const [receiptSource, setReceiptSource] = useState<ViewState>('home');
   const [selectedContact, setSelectedContact] = useState<any>(null);
   const [transferAmount, setTransferAmount] = useState('0');
   const userName = 'RAKYAN INUKERTAPATI';
   const [selectedShortcuts, setSelectedShortcuts] = useState<ShortcutItem[]>(defaultSelectedShortcuts);
   const [availableShortcuts, setAvailableShortcuts] = useState<ShortcutItem[]>(defaultAvailableShortcuts);
   const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('Settings saved successfully.');
+
+  const displayToast = (msg: string) => {
+    setToastMessage(msg);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3000);
+  };
 
   return (
     <div className="bg-[#EAF3FA] sm:bg-slate-900 min-h-screen sm:p-4 md:p-8 flex items-center justify-center">
@@ -50,159 +61,201 @@ export default function App() {
                 <div className="bg-emerald-500 w-5 h-5 rounded-full flex items-center justify-center shrink-0">
                   <Check size={12} strokeWidth={3} className="text-white" />
                 </div>
-                <span className="text-[13px] font-bold tracking-tight">Pengaturan berhasil disimpan.</span>
+                <span className="text-[13px] font-bold tracking-tight">{toastMessage}</span>
              </div>
           </div>
         )}
 
-        {viewState === 'splash' && (
-          <LoginScreen onLogin={() => setViewState('password')} onRegister={() => setViewState('register')} />
-        )}
-        
-        {viewState === 'register' && (
-          <RegisterWeb3Screen onBack={() => setViewState('splash')} onComplete={() => setViewState('registerSuccess')} />
-        )}
-        
-        {viewState === 'registerSuccess' && (
-          <RegisterSuccessScreen onContinue={() => setViewState('home')} />
-        )}
-        
-        {viewState === 'password' && (
-          <PasswordScreen 
-            onBack={() => setViewState('splash')} 
-            onLogin={() => setViewState('home')} 
-          />
-        )}
-        
-        {viewState === 'settings' && (
-          <SettingsScreen onBack={() => setViewState('home')} onInstantAccess={() => setViewState('instantAccess')} onPusatNotifikasi={() => setViewState('pusatNotifikasi')} onNamaPanggilan={() => setViewState('namaPanggilan')} onEmail={() => setViewState('email')} />
-        )}
-        
-        {viewState === 'instantAccess' && (
-          <InstantAccessScreen onBack={() => setViewState('settings')} />
-        )}
+        <AnimatePresence mode="wait">
+          <motion.div 
+            key={viewState}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            className="w-full h-full relative"
+          >
+            {viewState === 'splash' && (
+              <LoginScreen onLogin={() => setViewState('password')} onRegister={() => setViewState('register')} />
+            )}
+            
+            {viewState === 'register' && (
+              <RegisterWeb3Screen 
+                onBack={() => setViewState('splash')} 
+                onComplete={(data) => {
+                  setRegisteredUser(data);
+                  setViewState('registerSuccess');
+                }} 
+              />
+            )}
+            
+            {viewState === 'registerSuccess' && (
+              <RegisterSuccessScreen 
+                username={registeredUser?.username}
+                email={registeredUser?.email}
+                onContinue={() => setViewState('home')} 
+              />
+            )}
+            
+            {viewState === 'password' && (
+              <PasswordScreen 
+                onBack={() => setViewState('splash')} 
+                onLogin={() => setViewState('home')} 
+              />
+            )}
+            
+            {viewState === 'settings' && (
+              <SettingsScreen 
+                onBack={() => setViewState('home')} 
+                onInstantAccess={() => setViewState('instantAccess')} 
+                onPusatNotifikasi={() => setViewState('pusatNotifikasi')} 
+                onNamaPanggilan={() => setViewState('namaPanggilan')} 
+                onEmail={() => setViewState('email')}
+                onShowToast={displayToast}
+              />
+            )}
+            
+            {viewState === 'instantAccess' && (
+              <InstantAccessScreen onBack={() => setViewState('settings')} />
+            )}
+            
+            {viewState === 'pusatNotifikasi' && (
+              <PusatNotifikasiScreen onBack={() => setViewState('settings')} />
+            )}
 
-        {viewState === 'pusatNotifikasi' && (
-          <PusatNotifikasiScreen onBack={() => setViewState('settings')} />
-        )}
+            {viewState === 'namaPanggilan' && (
+              <NamaPanggilanScreen onBack={() => setViewState('settings')} />
+            )}
 
-        {viewState === 'namaPanggilan' && (
-          <NamaPanggilanScreen onBack={() => setViewState('settings')} />
-        )}
+            {viewState === 'ecommerce' && (
+              <EcommerceScreen onBack={() => setViewState('home')} />
+            )}
 
-        {viewState === 'ecommerce' && (
-          <EcommerceScreen onBack={() => setViewState('home')} />
-        )}
+            {viewState === 'bayarVA' && (
+              <BayarVAScreen onBack={() => setViewState('home')} />
+            )}
 
-        {viewState === 'bayarVA' && (
-          <BayarVAScreen onBack={() => setViewState('home')} />
-        )}
+            {viewState === 'email' && (
+              <EmailScreen onBack={() => setViewState('settings')} />
+            )}
 
-        {viewState === 'email' && (
-          <EmailScreen onBack={() => setViewState('settings')} />
-        )}
+            {viewState === 'otherAccounts' && (
+              <OtherAccountsScreen onBack={() => setViewState('home')} />
+            )}
 
-        {viewState === 'otherAccounts' && (
-          <OtherAccountsScreen onBack={() => setViewState('home')} />
-        )}
+            {viewState === 'swap' && (
+              <SwapScreen onBack={() => setViewState('home')} />
+            )}
+            
+            {viewState === 'inbox' && (
+              <InboxScreen 
+                onBack={() => setViewState('home')} 
+                onTransactionClick={() => {
+                  setReceiptSource('inbox');
+                  setViewState('receipt');
+                }}
+              />
+            )}
 
-        {viewState === 'swap' && (
-          <SwapScreen onBack={() => setViewState('home')} />
-        )}
-        
-        {viewState === 'inbox' && (
-          <InboxScreen onBack={() => setViewState('home')} />
-        )}
+            {viewState === 'accountDetail' && (
+              <AccountDetailScreen 
+                userName={userName}
+                onBack={() => setViewState('home')} 
+                onTransfer={() => setViewState('transfer')}
+                onTopup={() => setViewState('home')} // Handle inside home
+                onTransactionClick={() => {
+                  setReceiptSource('accountDetail');
+                  setViewState('receipt');
+                }}
+              />
+            )}
 
-        {viewState === 'accountDetail' && (
-          <AccountDetailScreen 
-            onBack={() => setViewState('home')} 
-            onTransfer={() => setViewState('transfer')}
-            onTopup={() => setViewState('home')} // Handle inside home
-          />
-        )}
+            {viewState === 'receipt' && (
+              <ReceiptScreen onBack={() => setViewState(receiptSource)} />
+            )}
 
-        {viewState === 'manageFavorites' && (
-          <ManageFavoritesScreen 
-            initialSelected={selectedShortcuts}
-            initialAvailable={availableShortcuts}
-            onBack={() => setViewState('home')}
-            onSave={(selected, available) => {
-               setSelectedShortcuts(selected);
-               setAvailableShortcuts(available);
-               setViewState('home');
-               setShowToast(true);
-               setTimeout(() => setShowToast(false), 3000);
-            }}
-          />
-        )}
+            {viewState === 'manageFavorites' && (
+              <ManageFavoritesScreen 
+                initialSelected={selectedShortcuts}
+                initialAvailable={availableShortcuts}
+                onBack={() => setViewState('home')}
+                onSave={(selected, available) => {
+                   setSelectedShortcuts(selected);
+                   setAvailableShortcuts(available);
+                   setViewState('home');
+                   displayToast('Pengaturan berhasil disimpan.');
+                }}
+              />
+            )}
 
-        {viewState === 'connectEWallet' && (
-          <ConnectEWalletScreen onBack={() => setViewState('home')} />
-        )}
+            {viewState === 'connectEWallet' && (
+              <ConnectEWalletScreen onBack={() => setViewState('home')} />
+            )}
 
-        {viewState === 'topup' && (
-          <TopUpScreen onBack={() => setViewState('home')} />
-        )}
-        
-        {viewState === 'transfer' && (
-          <TransferScreen 
-            onBack={() => setViewState('home')} 
-            onNewTransfer={() => setViewState('newTransfer')}
-            onSelectContact={(contact) => {
-              setSelectedContact(contact);
-              setViewState('amountInput');
-            }}
-          />
-        )}
+            {viewState === 'topup' && (
+              <TopUpScreen onBack={() => setViewState('home')} />
+            )}
+            
+            {viewState === 'transfer' && (
+              <TransferScreen 
+                onBack={() => setViewState('home')} 
+                onNewTransfer={() => setViewState('newTransfer')}
+                onSelectContact={(contact) => {
+                  setSelectedContact(contact);
+                  setViewState('amountInput');
+                }}
+              />
+            )}
 
-        {viewState === 'newTransfer' && (
-          <NewTransferScreen 
-            onBack={() => setViewState('transfer')} 
-            onSelectContact={(contact) => {
-              setSelectedContact(contact);
-              setViewState('amountInput');
-            }}
-          />
-        )}
+            {viewState === 'newTransfer' && (
+              <NewTransferScreen 
+                onBack={() => setViewState('transfer')} 
+                onSelectContact={(contact) => {
+                  setSelectedContact(contact);
+                  setViewState('amountInput');
+                }}
+              />
+            )}
 
-        {viewState === 'amountInput' && selectedContact && (
-          <AmountInputScreen 
-            contact={selectedContact} 
-            onBack={() => setViewState('transfer')} 
-            onNext={(amount) => {
-              setTransferAmount(amount);
-              setViewState('processing');
-              setTimeout(() => {
-                setViewState('success');
-              }, 1500);
-            }}
-          />
-        )}
+            {viewState === 'amountInput' && selectedContact && (
+              <AmountInputScreen 
+                contact={selectedContact} 
+                onBack={() => setViewState('transfer')} 
+                onNext={(amount) => {
+                  setTransferAmount(amount);
+                  setViewState('processing');
+                  setTimeout(() => {
+                    setViewState('success');
+                  }, 1500);
+                }}
+              />
+            )}
 
-        {viewState === 'processing' && (
-          <div className="w-full h-full bg-black flex flex-col items-center justify-center relative z-50 animate-in fade-in duration-300">
-             <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center mb-4 animate-bounce">
-                <div className="w-6 h-6 border-4 border-[#008fcd] border-t-transparent rounded-full animate-spin"></div>
-             </div>
-          </div>
-        )}
+            {viewState === 'processing' && (
+              <div className="w-full h-full bg-black flex flex-col items-center justify-center relative z-50">
+                 <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center mb-4 animate-bounce">
+                    <div className="w-6 h-6 border-4 border-[#008fcd] border-t-transparent rounded-full animate-spin"></div>
+                 </div>
+              </div>
+            )}
 
-        {viewState === 'success' && selectedContact && (
-          <SuccessScreen 
-            contact={selectedContact} 
-            amount={transferAmount} 
-            onClose={() => setViewState('home')} 
-          />
-        )}
+            {viewState === 'success' && selectedContact && (
+              <SuccessScreen 
+                contact={selectedContact} 
+                amount={transferAmount} 
+                onClose={() => setViewState('home')} 
+              />
+            )}
 
-        {viewState === 'home' && (
-          <HomeScreen
-            userName={userName}
-            selectedShortcuts={selectedShortcuts}
-            onNavigate={(view) => setViewState(view)}
-          />
-        )}
+            {viewState === 'home' && (
+              <HomeScreen
+                userName={userName}
+                selectedShortcuts={selectedShortcuts}
+                onNavigate={(view) => setViewState(view)}
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
 
       </div>
     </div>

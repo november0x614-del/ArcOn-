@@ -4,11 +4,11 @@ import { ArrowLeft, Smartphone, Zap, Wallet, Plane, Joystick, Car, Search } from
 export function TopUpScreen({ onBack }: { onBack: () => void }) {
   const topUpCategories = [
     { id: 'ewallet', name: 'Digital Wallet', icon: <Wallet className="text-blue-500" size={24} /> },
-    { id: 'pulsa', name: 'Layanan Digital', icon: <Smartphone className="text-purple-500" size={24} /> },
-    { id: 'pln', name: 'Utilitas & Energi', icon: <Zap className="text-yellow-500" size={24} /> },
-    { id: 'transport', name: 'Mobilitas', icon: <Car className="text-emerald-500" size={24} /> },
-    { id: 'game', name: 'Hiburan Digital', icon: <Joystick className="text-red-500" size={24} /> },
-    { id: 'roaming', name: 'Konektivitas', icon: <Plane className="text-indigo-500" size={24} /> },
+    { id: 'pulsa', name: 'Digital Services', icon: <Smartphone className="text-purple-500" size={24} /> },
+    { id: 'pln', name: 'Utility & Energy', icon: <Zap className="text-yellow-500" size={24} /> },
+    { id: 'transport', name: 'Mobility', icon: <Car className="text-emerald-500" size={24} /> },
+    { id: 'game', name: 'Digital Entertainment', icon: <Joystick className="text-red-500" size={24} /> },
+    { id: 'roaming', name: 'Connectivity', icon: <Plane className="text-indigo-500" size={24} /> },
   ];
 
   return (

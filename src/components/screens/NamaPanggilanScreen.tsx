@@ -24,7 +24,7 @@ export function NamaPanggilanScreen({ onBack }: NamaPanggilanScreenProps) {
           <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mr-3 shrink-0">
             <Check size={12} className="text-white" strokeWidth={3} />
           </div>
-          <span className="text-[13px] font-medium leading-tight">Nama panggilan berhasil disimpan!</span>
+          <span className="text-[13px] font-medium leading-tight">Nickname saved successfully!</span>
         </div>
       )}
 
@@ -33,13 +33,13 @@ export function NamaPanggilanScreen({ onBack }: NamaPanggilanScreenProps) {
         <button onClick={onBack} className="absolute left-4 p-1 hover:bg-slate-50 rounded-full transition-colors">
           <ArrowLeft size={24} className="text-slate-700" />
         </button>
-        <h2 className="font-bold text-[16px] text-slate-800">Nama Panggilan</h2>
+        <h2 className="font-bold text-[16px] text-slate-800">Nickname</h2>
       </div>
 
       <div className="flex flex-col flex-1 pb-24 px-4 bg-white relative w-full overflow-y-auto scrollbar-hide">
         <div className="pt-6 pb-6 text-center w-full">
           <p className="text-[14px] text-slate-600 leading-[1.6]">
-            Kami akan menyapa Anda di Beranda dengan nama yang Anda tentukan.
+            We will greet you on the Home screen with your chosen name.
           </p>
         </div>
 
@@ -56,7 +56,7 @@ export function NamaPanggilanScreen({ onBack }: NamaPanggilanScreenProps) {
         ) : (
           <div className="flex flex-col flex-1 w-full relative">
             <div className="w-full border border-slate-300 rounded-xl px-4 py-2 relative bg-white focus-within:border-[#3FA2F6] focus-within:ring-1 focus-within:ring-[#3FA2F6] transition-all group">
-              <label className="text-[12px] font-medium text-slate-500 group-focus-within:text-[#3FA2F6] transition-colors">Nama Panggilan</label>
+              <label className="text-[12px] font-medium text-slate-500 group-focus-within:text-[#3FA2F6] transition-colors">Nickname</label>
               <div className="flex items-center">
                 <input 
                   type="text"
@@ -83,7 +83,7 @@ export function NamaPanggilanScreen({ onBack }: NamaPanggilanScreenProps) {
                 onClick={() => setName('RAKYAN INUKERTAPATI')}
                 className="w-max mt-3 border border-[#3FA2F6] text-[#3FA2F6] px-3 py-1.5 rounded-full text-[12px] font-bold hover:bg-blue-50 transition-colors"
               >
-                Pakai Nama Lengkap
+                Use Full Name
               </button>
             </div>
 
@@ -93,7 +93,7 @@ export function NamaPanggilanScreen({ onBack }: NamaPanggilanScreenProps) {
                 disabled={name.length === 0}
                 className="w-full bg-[#0066b2] hover:bg-[#005a9e] disabled:bg-slate-300 disabled:text-slate-50 text-white font-bold py-3.5 rounded-full transition-colors"
               >
-                Simpan
+                Save
               </button>
             </div>
           </div>

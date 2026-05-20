@@ -25,7 +25,8 @@ export type ViewState =
   | 'email' 
   | 'manageFavorites' 
   | 'connectEWallet' 
-  | 'topup';
+  | 'topup'
+  | 'receipt';
 
 export interface ShortcutItem {
   id: string;

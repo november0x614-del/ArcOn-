@@ -3,21 +3,22 @@ import { ArrowLeft, UserCheck, Wallet } from 'lucide-react';
 
 interface RegisterWeb3ScreenProps {
   onBack: () => void;
-  onComplete: () => void;
+  onComplete: (data: { username: string; email: string }) => void;
 }
 
 export function RegisterWeb3Screen({ onBack, onComplete }: RegisterWeb3ScreenProps) {
   const [step, setStep] = useState(1);
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   
   React.useEffect(() => {
     if (step === 3) {
       const timer = setTimeout(() => {
-        onComplete();
+        onComplete({ username: username || 'Arcreal', email: email || 'user@example.com' });
       }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [step, onComplete]);
+  }, [step, onComplete, username, email]);
 
   return (
     <div className="w-full h-full bg-white relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
@@ -36,8 +37,8 @@ export function RegisterWeb3Screen({ onBack, onComplete }: RegisterWeb3ScreenPro
           
           <div className="space-y-6">
             <div>
-              <label className="text-[12.5px] font-bold text-[#005faa] mb-1 block">National ID (NIK)</label>
-              <input type="number" className="w-full border-b-[2px] border-slate-200 py-2 outline-none focus:border-[#005faa] text-[16px] font-bold text-slate-800 transition-colors" placeholder="Enter 16 Digit NIK" />
+              <label className="text-[12.5px] font-bold text-[#005faa] mb-1 block">Username</label>
+              <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="w-full border-b-[2px] border-slate-200 py-2 outline-none focus:border-[#005faa] text-[16px] font-bold text-slate-800 transition-colors" placeholder="Enter Username" />
             </div>
             <div>
               <label className="text-[12.5px] font-bold text-[#005faa] mb-1 block">Email</label>
