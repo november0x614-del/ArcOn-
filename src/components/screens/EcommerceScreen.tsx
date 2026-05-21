@@ -1,111 +1,223 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Search, ShoppingBag, Heart, Wallet, CheckCircle2, Copy } from 'lucide-react';
+import { ArrowLeft, Search, ShoppingBag, Heart, Wallet, CheckCircle2, Copy, ShieldCheck } from 'lucide-react';
+import { useApp } from '../../context/AppContext';
+import { BiometricVerifyScreen } from './BiometricVerifyScreen';
 
 interface EcommerceScreenProps {
   onBack: () => void;
 }
 
 export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
+  const { balance, setBalance, addTransaction, displayToast } = useApp();
+  const [viewState, setViewState] = useState<'list' | 'detail' | 'checkout' | 'success'>('list');
   const [isPurchasing, setIsPurchasing] = useState(false);
-  const [purchaseSuccess, setPurchaseSuccess] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<'idle' | 'preparing' | 'broadcasting' | 'settling'>('idle');
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [showBiometric, setShowBiometric] = useState(false);
+  const [transactionMetadata, setTransactionMetadata] = useState<any>(null);
+  const [showHapticFlash, setShowHapticFlash] = useState(false);
 
   const products = [
-    { id: 1, name: "Premium Hoodie", price: "45.00", image: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?q=80&w=300&auto=format&fit=crop", category: "Apparel" },
-    { id: 2, name: "Arc Gen-1 Sneakers", price: "120.00", image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=300&auto=format&fit=crop", category: "Footwear" },
-    { id: 3, name: "Digital Watch X", price: "299.00", image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=300&auto=format&fit=crop", category: "Electronics" },
-    { id: 4, name: "Travel Backpack", price: "85.00", image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?q=80&w=300&auto=format&fit=crop", category: "Accessories" }
+    { id: 1, name: "Spotify Premium (1 Month)", price: "4.50", image: "https://images.unsplash.com/photo-1614680376593-902f74cf0d41?q=80&w=300&auto=format&fit=crop", category: "Subscription", desc: "Nikmati musik tanpa iklan di semua perangkat. Aktivasi instan setelah pembayaran dikonfirmasi di jaringan Arc." },
+    { id: 2, name: "MLBB 500 Diamonds", price: "8.90", image: "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=300&auto=format&fit=crop", category: "Game Voucher", desc: "Top up diamond Mobile Legends instan. Masukkan ID user saat checkout untuk pengiriman otomatis via smart contract." },
+    { id: 3, name: "Netflix Card $15", price: "15.00", image: "https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?q=80&w=300&auto=format&fit=crop", category: "Entertainment", desc: "Voucher saldo Netflix global. Kode voucher akan muncul di struk transaksi Anda segera setelah transaksi final." },
+    { id: 4, name: "Steam Wallet $20", price: "20.00", image: "https://images.unsplash.com/photo-1585644131013-176865239a2d?q=80&w=300&auto=format&fit=crop", category: "Game Voucher", desc: "Isi saldo Steam Wallet Anda untuk membeli game terbaru. Mendukung transaksi lintas negara menggunakan USDC." }
   ];
 
-  const handlePurchase = (product: any) => {
+  const handleProductSelect = (product: any) => {
     setSelectedProduct(product);
-    setIsPurchasing(true);
-    setTimeout(() => {
-      setIsPurchasing(false);
-      setPurchaseSuccess(true);
-    }, 3000);
+    setViewState('detail');
   };
 
-  if (purchaseSuccess) {
+  const handleCheckoutInit = () => {
+    setViewState('checkout');
+  };
+
+  const handleConfirmPurchase = () => {
+    if (Number(selectedProduct.price) > balance) {
+        displayToast("Insufficient USDC balance.");
+        return;
+    }
+    if (Number(selectedProduct.price) > 100) {
+       setShowBiometric(true);
+    } else {
+       executePurchase();
+    }
+  };
+
+  const executePurchase = () => {
+    setIsPurchasing(true);
+    setPaymentStatus('preparing');
+    
+    // Step 1: Initialize Smart Contract Interaction
+    setTimeout(() => {
+      setPaymentStatus('broadcasting');
+      
+      // Step 2: Protocol Level Settlement (Escrow Lock)
+      setTimeout(() => {
+        setPaymentStatus('settling');
+        
+        // Step 3: Final confirmation (Fee Split & Delivery)
+        setTimeout(() => {
+          // Visual Haptic Effect
+          setShowHapticFlash(true);
+          setTimeout(() => setShowHapticFlash(false), 600);
+
+          setIsPurchasing(false);
+          setPaymentStatus('idle');
+          setViewState('success');
+          
+          const price = Number(selectedProduct.price);
+          const serviceFee = price * 0.015; // 1.5% App Profit
+          const totalToPay = price + serviceFee;
+          
+          setBalance((prev: number) => prev - totalToPay);
+          
+          const txHash = `0x${Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join('')}`;
+          const voucherCode = selectedProduct.category === 'Subscription' 
+            ? 'AUTO_ACTIVATE_SYD_' + Math.random().toString(36).substring(2, 10).toUpperCase()
+            : Array.from({length: 4}, () => Math.random().toString(36).substring(3, 7).toUpperCase()).join('-');
+
+          setTransactionMetadata({
+            txHash,
+            date: new Date().toISOString(),
+            merchantBase: '0x32F9...41cA',
+            voucherCode,
+            serviceFee: serviceFee.toFixed(2),
+            totalPaid: totalToPay.toFixed(2)
+          });
+
+          addTransaction({
+             type: 'purchase',
+             title: selectedProduct.name,
+             amount: `-${totalToPay.toFixed(2)}`,
+             currency: 'USDC',
+             status: 'success',
+             txHash,
+             metadata: {
+               voucherCode,
+               productCategory: selectedProduct.category,
+               instructions: selectedProduct.category === 'Subscription' 
+                 ? "Akun Anda telah diaktifkan secara otomatis via Arc Smart Contract." 
+                 : "Gunakan kode ini di aplikasi resmi penyedia layanan."
+             }
+          });
+          
+          displayToast("Payment Confirmed on Arc Testnet! 🎉");
+        }, 1200);
+      }, 1000);
+    }, 800);
+  };
+
+  if (viewState === 'success') {
     return (
-      <div className="w-full h-full bg-slate-50 relative flex flex-col z-50 animate-in slide-in-from-bottom duration-500 overflow-y-auto">
-        <div className="bg-[#005faa] pt-12 pb-24 px-6 text-center text-white relative">
-          <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mb-4 mx-auto backdrop-blur-sm">
-             <CheckCircle2 size={32} className="text-white" />
-          </div>
-          <h2 className="text-[22px] font-bold mb-1">Payment Successful</h2>
-          <p className="text-white/80 text-[13px]">Via M-Banking & Circle Wallet</p>
+      <div className="w-full h-full bg-slate-50 relative flex flex-col z-50 animate-in slide-in-from-bottom duration-300 overflow-y-auto">
+        <div className="flex items-center px-4 pt-12 pb-4 bg-white border-b border-slate-100 shadow-sm relative z-10 w-full">
+           <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+             <ArrowLeft size={24} className="text-slate-800" />
+           </button>
+           <h2 className="font-bold text-[16px] text-slate-800 ml-2">Transaction Receipt</h2>
         </div>
+        
+        <div className="flex-1 p-6 flex flex-col items-center justify-center animate-in zoom-in-95 duration-500">
+            <div className="bg-white p-6 rounded-[32px] w-full max-w-sm shadow-xl flex flex-col items-center relative overflow-hidden">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4 shadow-md animate-bounce">
+                  <CheckCircle2 size={32} className="text-green-500" />
+                </div>
+                <h2 className="text-[20px] font-extrabold text-slate-800 mb-1">Payment Successful</h2>
+                <p className="text-[13px] text-slate-500 mb-6 text-center">Your order has been paid securely via Arc Network.</p>
 
-      <div className="flex-1 px-4 lg:px-10 max-w-2xl mx-auto w-full -mt-16 pb-10">
-           <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col relative">
-              
-              <div className="flex flex-col items-center mb-6 border-b border-dashed border-slate-200 pb-6">
-                 <span className="text-[12px] text-slate-400 font-bold tracking-wider uppercase mb-2">Total Payment</span>
-                 <span className="text-[32px] font-extrabold text-slate-800">{selectedProduct?.price} <span className="text-[16px] text-slate-400">USDC</span></span>
-              </div>
-
-              <div className="space-y-4">
-                 <div className="flex justify-between items-start">
-                   <span className="text-[13px] text-slate-500">Item:</span>
-                   <span className="text-[13px] font-bold text-slate-800 text-right">{selectedProduct?.name}</span>
-                 </div>
-                 <div className="flex justify-between items-start">
-                   <span className="text-[13px] text-slate-500">Network:</span>
-                   <span className="text-[13px] font-bold text-slate-800 text-right flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500"></span> Arc Testnet</span>
-                 </div>
-                 <div className="flex justify-between items-start">
-                   <span className="text-[13px] text-slate-500">Merchant:</span>
-                   <span className="text-[13px] font-bold text-slate-800 text-right">Arc Marketplace</span>
-                 </div>
-                 <div className="flex justify-between items-start bg-slate-50 p-3 rounded-xl border border-slate-100 mt-2">
-                   <span className="text-[12px] text-slate-500 font-mono self-center">TxHash:</span>
-                   <div className="flex items-center gap-2">
-                     <span className="text-[12px] font-mono font-bold text-[#005faa] truncate max-w-[120px]">0x7F2a...B49c</span>
-                     <Copy size={14} className="text-slate-400" />
+                <div className="w-full border-t border-dashed border-slate-200 pt-6 space-y-4">
+                   <div className="flex justify-between items-start">
+                     <span className="text-[13px] font-medium text-slate-500">Merchant</span>
+                     <div className="text-right">
+                       <span className="text-[13px] font-bold text-slate-800 block">Arc Marketplace</span>
+                       <span className="text-[11px] font-mono text-slate-400">{transactionMetadata?.merchantBase}</span>
+                     </div>
                    </div>
-                 </div>
-              </div>
-              
-              <div className="absolute -left-3 top-28 w-6 h-6 bg-slate-50 rounded-full"></div>
-              <div className="absolute -right-3 top-28 w-6 h-6 bg-slate-50 rounded-full"></div>
-           </div>
+                   <div className="flex justify-between items-start">
+                     <span className="text-[13px] font-medium text-slate-500">Product</span>
+                     <span className="text-[13px] font-bold text-slate-800 text-right max-w-[150px] truncate">{selectedProduct?.name}</span>
+                   </div>
+                   <div className="flex justify-between items-center bg-blue-50/50 p-3 rounded-xl border border-blue-100/30">
+                     <span className="text-[13px] font-medium text-slate-500">Total Paid (inc. fee)</span>
+                     <span className="text-[16px] font-black text-slate-800">{transactionMetadata?.totalPaid} USDC</span>
+                   </div>
 
-           <button 
-             onClick={onBack}
-             className="w-full bg-[#005faa] text-white font-bold py-4 rounded-full hover:bg-[#004780] transition-colors mt-8 shadow-lg shadow-blue-900/20"
-           >
-             Back to Home
-           </button>
-           <button className="w-full text-[#005faa] font-bold py-4 rounded-full hover:bg-blue-50 transition-colors mt-2 text-[14px]">
-             View Receipt on Block Explorer
-           </button>
+                   {/* Digital Delivery Module */}
+                   <div className="bg-blue-50/50 rounded-2xl p-4 border border-blue-100/50 my-2 animate-in fade-in slide-in-from-top-2 duration-500 delay-200">
+                      <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2 block text-center">Your Digital Product</span>
+                      {selectedProduct?.category === 'Subscription' ? (
+                        <div className="flex flex-col items-center py-1">
+                          <div className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-[11px] font-bold mb-1">Status: Activated</div>
+                          <p className="text-[11px] text-slate-600 text-center font-medium leading-relaxed">
+                            Akses {selectedProduct?.name} telah diaktifkan di email akun Anda.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center">
+                           <div className="bg-white border-2 border-dashed border-blue-200 rounded-xl px-4 py-3 w-full flex items-center justify-between mb-2">
+                              <span className="font-mono font-bold text-[16px] text-blue-600 tracking-widest">{transactionMetadata?.voucherCode}</span>
+                              <button 
+                                onClick={() => {
+                                  if (transactionMetadata?.voucherCode) {
+                                    navigator.clipboard.writeText(transactionMetadata.voucherCode);
+                                    displayToast("Code Copied!");
+                                  }
+                                }}
+                                className="text-blue-500 hover:bg-blue-50 p-1.5 rounded-lg transition-colors border border-blue-100 bg-white"
+                              >
+                                <Copy size={16} />
+                              </button>
+                           </div>
+                           <p className="text-[10px] text-slate-400 text-center italic">Cek Inbox (Struk) untuk melihat kode ini kapan saja.</p>
+                        </div>
+                      )}
+                   </div>
+
+                   <div className="flex justify-between items-center">
+                     <span className="text-[12px] font-medium text-slate-500">Tx Hash</span>
+                     <div className="flex items-center gap-2">
+                       <span className="text-[12px] font-mono text-blue-600 font-bold truncate max-w-[120px]">{transactionMetadata?.txHash}</span>
+                       <button className="text-slate-400 hover:text-slate-600 transition-colors bg-white p-1 rounded-md shadow-sm border border-slate-200"><Copy size={12} /></button>
+                     </div>
+                   </div>
+                   <div className="flex justify-between items-center">
+                     <span className="text-[12px] font-medium text-slate-500">Network Fee</span>
+                     <span className="text-[11px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded">Sponsored by Arc Network</span>
+                   </div>
+                </div>
+            </div>
+            <button 
+              onClick={onBack}
+              className="w-full max-w-sm mt-8 bg-slate-900 text-white font-bold py-4 rounded-xl hover:bg-slate-800 transition-colors shadow-lg active:scale-95"
+            >
+              Continue Shopping
+            </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full h-full bg-slate-50 relative flex flex-col z-40 animate-in slide-in-from-bottom duration-500">
-      {/* Search Header */}
-      <div className="bg-white px-4 pt-12 pb-4 shadow-sm relative z-10 w-full">
-        <div className="flex items-center gap-3 mb-4">
-          <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-            <ArrowLeft size={24} className="text-slate-800" />
-          </button>
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input 
-              type="text" 
-              placeholder="Search for products..." 
-              className="w-full bg-slate-100 border-none rounded-full py-2.5 pl-10 pr-4 text-[14px] outline-none focus:ring-2 ring-[#005faa]/20 font-medium"
-            />
+    <div className="w-full h-full bg-slate-50 relative flex flex-col z-40 animate-in slide-in-from-bottom duration-300">
+      {/* Search Header (List View) */}
+      <div className={`bg-white px-4 pt-12 pb-4 shadow-sm relative z-10 w-full transition-all duration-300 ${viewState !== 'list' ? 'hidden' : 'block'}`}>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full transition-colors -ml-2">
+              <ArrowLeft size={24} className="text-slate-800" />
+            </button>
+            <h1 className="text-[18px] font-bold text-slate-800 tracking-tight font-sans">E-Commerce</h1>
           </div>
+          <button className="p-2 hover:bg-slate-100 rounded-full transition-colors -mr-2 bg-transparent border-0">
+            <Search size={22} className="text-slate-800" />
+          </button>
         </div>
         
         {/* Categories */}
         <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-1">
-          {['All', 'Apparel', 'Footwear', 'Electronics', 'Home'].map((cat, i) => (
+          {['All', 'Game Voucher', 'Subscription', 'Entertainment', 'Others'].map((cat, i) => (
             <span key={cat} className={`text-[13px] font-bold whitespace-nowrap pb-2 px-1 transition-colors cursor-pointer ${
               i === 0 ? 'text-[#005faa] border-b-2 border-[#005faa]' : 'text-slate-400 hover:text-slate-600'
             }`}>
@@ -115,74 +227,197 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 lg:p-10 space-y-6 pb-24 max-w-5xl mx-auto w-full">
-        <div className="flex justify-between items-center">
-          <h3 className="font-extrabold text-[18px] text-slate-800 tracking-tight">USDC Exclusive Marketplace</h3>
-          <span className="text-[11px] font-bold text-[#005faa] bg-blue-50 px-2 py-1 rounded">ARC NETWORK</span>
-        </div>
+      {/* Main List View */}
+      {viewState === 'list' && (
+        <div className="flex-1 overflow-y-auto p-4 lg:p-10 space-y-6 pb-24 max-w-5xl mx-auto w-full">
+          <div className="flex justify-between items-center">
+            <h3 className="font-extrabold text-[18px] text-slate-800 tracking-tight">USDC Exclusive</h3>
+            <span className="text-[11px] font-bold text-slate-600 bg-slate-200 px-2 py-1 rounded">ARC MARKETPLACE</span>
+          </div>
 
-        {/* Hero Banner */}
-        <div className="w-full h-36 bg-gradient-to-br from-slate-900 to-[#005faa] rounded-3xl p-6 relative overflow-hidden shadow-lg shadow-blue-900/10 mb-4">
-           <div className="relative z-10">
-              <h4 className="text-white font-bold text-[18px] leading-tight mb-1">Flash Sale!<br/>20% Discount with USDC</h4>
-              <p className="text-white/70 text-[11px] mb-3">Use Arc Wallet for affordable shopping.</p>
-              <button className="bg-white text-[#005faa] font-bold text-[11px] px-4 py-1.5 rounded-full hover:bg-slate-100 transition-colors">
-                View Promo
-              </button>
-           </div>
-           <div className="absolute right-[-10px] bottom-[-20px] opacity-20">
-              <ShoppingBag size={120} className="text-white" strokeWidth={1} />
-           </div>
-        </div>
+          {/* Hero Banner */}
+          <div className="w-full h-36 bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl p-6 relative overflow-hidden shadow-lg mb-4 cursor-pointer hover:shadow-xl transition-shadow">
+             <div className="relative z-10">
+                <h4 className="text-white font-bold text-[18px] leading-tight mb-2">Arc Paymaster Sale<br/><span className="text-blue-400">0 Gas Fees</span> on purchases</h4>
+                <button className="bg-white text-slate-900 font-bold text-[12px] px-4 py-1.5 rounded-full hover:bg-slate-100 transition-colors">
+                  Shop Now
+                </button>
+             </div>
+             <div className="absolute right-[-10px] bottom-[-20px] opacity-20 transform -rotate-12">
+                <ShoppingBag size={120} className="text-white" strokeWidth={1} />
+             </div>
+          </div>
 
-        {/* Product Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-10">
-          {products.map(product => (
-            <div key={product.id} className="bg-white rounded-[24px] overflow-hidden shadow-sm border border-slate-100 group">
-              <div className="relative h-40 overflow-hidden">
-                <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                <div className="absolute top-2 right-2 bg-white/90 backdrop-blur shadow-sm p-1.5 rounded-full">
-                  <Heart size={14} className="text-slate-300" />
-                </div>
-              </div>
-              <div className="p-3 flex flex-col h-full">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{product.category}</span>
-                <h4 className="font-bold text-slate-800 text-[14px] mb-2 truncate">{product.name}</h4>
-                <div className="flex items-center justify-between mt-auto">
-                  <div>
-                    <span className="text-[10px] font-bold text-[#005faa] block -mb-0.5">PRICE</span>
-                    <span className="font-bold text-[16px] text-slate-800">{product.price} <span className="text-[10px] text-slate-400 font-normal">USDC</span></span>
+          {/* Product Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-10">
+            {products.map((product, idx) => (
+              <div 
+                key={product.id} 
+                onClick={() => handleProductSelect(product)}
+                className="bg-white rounded-3xl overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-slate-100 group cursor-pointer hover:shadow-md hover:border-slate-200 transition-all flex flex-col animate-in fade-in slide-in-from-bottom-[10px]"
+                style={{ animationDelay: `${idx * 50}ms` }}
+              >
+                <div className="relative h-44 overflow-hidden bg-slate-100">
+                  <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <div className="absolute top-3 right-3 bg-white/90 backdrop-blur shadow-sm p-2 rounded-full hover:bg-white text-slate-400 hover:text-red-500 transition-colors" onClick={(e) => e.stopPropagation()}>
+                    <Heart size={16} />
                   </div>
                 </div>
-                <button 
-                  onClick={() => handlePurchase(product)}
-                  className="w-full mt-3 bg-slate-800 text-white rounded-xl py-2 flex items-center justify-center gap-1.5 hover:bg-slate-700 active:scale-95 transition-all shadow-sm text-[12px] font-bold"
-                >
-                  <Wallet size={14} className="text-blue-400" /> Buy via Arc
-                </button>
+                <div className="p-4 flex flex-col flex-1">
+                  <span className="text-[10px] font-bold text-blue-500 uppercase tracking-wider mb-1">{product.category}</span>
+                  <h4 className="font-bold text-slate-800 text-[14px] mb-3 leading-snug">{product.name}</h4>
+                  <div className="mt-auto">
+                    <span className="font-black text-[18px] text-slate-900 block">{product.price} <span className="text-[12px] text-slate-500 font-semibold">USDC</span></span>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Loading Overlay */}
-      {isPurchasing && (
-        <div className="absolute inset-0 bg-white/90 backdrop-blur-md z-[60] flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-300">
-           <div className="relative mb-6">
-              <div className="w-16 h-16 border-[3px] border-slate-100 border-t-[#005faa] rounded-full animate-spin"></div>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Wallet size={20} className="text-[#005faa]" />
-              </div>
-              <div className="absolute -bottom-1 -right-1 flex items-center justify-center w-6 h-6 bg-white rounded-full shadow-sm">
-                <div className="w-4 h-4 bg-green-500 rounded-full animate-pulse"></div>
-              </div>
+      {/* Product Detail View */}
+      {viewState === 'detail' && (
+        <div className="absolute inset-0 bg-white z-20 flex flex-col animate-in slide-in-from-right duration-300">
+           <div className="relative h-[45%] w-full bg-slate-100">
+             <img src={selectedProduct?.image} alt={selectedProduct?.name} className="w-full h-full object-cover" />
+             <div className="absolute top-12 left-4 z-10 flex w-[calc(100%-2rem)] justify-between items-center">
+               <button onClick={() => setViewState('list')} className="p-2.5 bg-white/80 backdrop-blur-md rounded-full shadow-md text-slate-800 hover:bg-white transition-colors">
+                 <ArrowLeft size={20} />
+               </button>
+               <button className="p-2.5 bg-white/80 backdrop-blur-md rounded-full shadow-md text-slate-800 hover:bg-white transition-colors">
+                 <Heart size={20} />
+               </button>
+             </div>
            </div>
-           <h3 className="font-bold text-slate-800 text-[18px] mb-2">Processing Smart Contract</h3>
-           <p className="text-slate-500 text-[13px] leading-relaxed max-w-[280px]">
-             Connecting <span className="font-bold text-slate-700">Circle Wallet</span> to <span className="font-bold text-slate-700">Arc Testnet</span> to complete the payment...
-           </p>
+           
+           <div className="flex-1 bg-white rounded-t-[32px] -mt-8 relative z-10 p-6 flex flex-col shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+             <div className="flex items-center justify-between mb-2">
+               <span className="bg-blue-50 text-blue-600 text-[11px] px-2.5 py-1 rounded-full font-bold tracking-wide uppercase">{selectedProduct?.category}</span>
+               <div className="flex items-center gap-1 text-slate-500 text-[12px] font-medium font-mono">
+                 <CheckCircle2 size={14} className="text-green-500" />
+                 Verified Merchant
+               </div>
+             </div>
+             
+             <h2 className="text-[28px] font-black text-slate-800 leading-tight mb-2 mt-2">{selectedProduct?.name}</h2>
+             <div className="text-[24px] font-extrabold text-[#005faa] mb-6">{selectedProduct?.price} USDC</div>
+             
+             <div className="mb-6">
+                <h4 className="text-[14px] font-bold text-slate-800 mb-2">Description</h4>
+                <p className="text-[14px] text-slate-500 leading-relaxed">{selectedProduct?.desc}</p>
+             </div>
+
+             <div className="mt-auto pt-6 border-t border-slate-100 flex items-center gap-4">
+                <button 
+                  onClick={handleCheckoutInit}
+                  className="flex-1 bg-slate-900 text-white font-bold py-4 rounded-2xl hover:bg-slate-800 transition-colors shadow-lg active:scale-95 flex items-center justify-center gap-2"
+                >
+                  <ShoppingBag size={18} /> Buy Now
+                </button>
+             </div>
+           </div>
         </div>
+      )}
+
+      {/* Checkout Bottom Sheet */}
+      {viewState === 'checkout' && (
+        <div className="absolute inset-0 z-30 flex items-end animate-in fade-in duration-200">
+           <div className="absolute inset-0 bg-slate-900/40" onClick={() => !isPurchasing && setViewState('detail')}></div>
+           <div className="bg-white w-full rounded-t-[32px] z-10 relative flex flex-col pt-6 pb-[40px] px-6 animate-in slide-in-from-bottom duration-300">
+              <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6"></div>
+              <h3 className="font-bold text-[20px] text-slate-800 mb-6">Confirm Purchase</h3>
+              
+              <div className="flex gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 mb-6 items-center">
+                 <img src={selectedProduct?.image} alt="product" className="w-16 h-16 rounded-xl object-cover shadow-sm" />
+                 <div className="flex-1">
+                    <h4 className="font-bold text-slate-800 text-[14px] mb-1">{selectedProduct?.name}</h4>
+                    <span className="font-bold text-[#005faa] text-[15px]">{selectedProduct?.price} USDC</span>
+                 </div>
+              </div>
+
+              <div className="space-y-3 mb-8 px-2">
+                 <div className="flex justify-between items-center text-[14px]">
+                    <span className="text-slate-500 font-medium">Subtotal</span>
+                    <span className="font-bold text-slate-800">{selectedProduct?.price} USDC</span>
+                 </div>
+                 <div className="flex justify-between items-center text-[14px]">
+                    <span className="text-slate-500 font-medium">Network Fee (Arc)</span>
+                    <span className="font-bold text-green-500">Free</span>
+                 </div>
+                 <div className="w-full border-t border-dashed border-slate-200 my-2"></div>
+                 <div className="flex justify-between items-center">
+                    <span className="text-slate-800 font-bold text-[16px]">Total Payment</span>
+                    <span className="font-black text-[22px] text-[#005faa]">{(Number(selectedProduct?.price) * 1.015).toFixed(2)} USDC</span>
+                 </div>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex gap-3 mb-6 items-start">
+                 <Wallet size={20} className="text-[#005faa] shrink-0 mt-0.5" />
+                 <div>
+                    <h5 className="font-bold text-[#005faa] text-[13px] mb-0.5">Pay with Web3 Wallet</h5>
+                    <p className="text-[12px] text-blue-600/70 leading-relaxed">Transactions are secured by Arc Testnet. Your current balance is <span className="font-bold text-[#005faa]">{balance.toFixed(2)} USDC</span>.</p>
+                 </div>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex items-start gap-3 mb-6">
+                <div className="bg-blue-100 p-2 rounded-lg shrink-0">
+                  <ShieldCheck size={18} className="text-blue-600" />
+                </div>
+                <div>
+                  <h4 className="text-[12px] font-bold text-slate-800">Protected by Arc Protocol</h4>
+                  <p className="text-[10px] text-slate-500 leading-tight mt-0.5">
+                    Transaksi dienkripsi secara end-to-end. Dana hanya diteruskan ke merchant setelah verifikasi smart contract.
+                  </p>
+                </div>
+              </div>
+
+              <button 
+                disabled={isPurchasing}
+                onClick={handleConfirmPurchase}
+                className={`w-full font-bold py-4 rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${
+                  isPurchasing ? 'bg-slate-800 text-white shadow-xl' : 'bg-slate-900 text-white hover:bg-slate-800'
+                }`}
+              >
+                {isPurchasing ? (
+                  <div className="flex flex-col items-center">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-4 h-4 border-2 border-slate-400 border-t-white rounded-full animate-spin"></div>
+                      <span className="text-[14px]">
+                        {paymentStatus === 'preparing' && 'Preparing Arc Order...'}
+                        {paymentStatus === 'broadcasting' && 'Broadcasting to Network...'}
+                        {paymentStatus === 'settling' && 'Finalizing Settlement...'}
+                      </span>
+                    </div>
+                    <div className="w-32 h-1 bg-slate-700 rounded-full overflow-hidden">
+                       <div className={`h-full bg-blue-400 transition-all duration-700 ${
+                         paymentStatus === 'preparing' ? 'w-1/4' : 
+                         paymentStatus === 'broadcasting' ? 'w-2/3' : 
+                         'w-[95%]'
+                       }`}></div>
+                    </div>
+                  </div>
+                ) : (
+                  <>Confirm & Pay</>
+                )}
+              </button>
+           </div>
+        </div>
+      )}
+
+      {showBiometric && (
+         <div className="absolute inset-0 z-[70]">
+            <BiometricVerifyScreen 
+               onVerify={() => {
+                  setShowBiometric(false);
+                  executePurchase();
+               }}
+               onCancel={() => setShowBiometric(false)}
+            />
+         </div>
+      )}
+      {showHapticFlash && (
+        <div className="fixed inset-0 z-[1000] bg-emerald-400/20 pointer-events-none animate-in fade-in out-fade-out duration-300"></div>
       )}
     </div>
   );

@@ -2,9 +2,30 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
+import { initiateDeveloperControlledWalletsClient } from "@circle-fin/developer-controlled-wallets";
 import dotenv from "dotenv";
 
 dotenv.config();
+
+// Lazy initialization of Circle Client
+let circleClient: any = null;
+
+function getCircleClient() {
+  if (!circleClient) {
+    const apiKey = process.env.CIRCLE_API_KEY;
+    const entitySecret = process.env.CIRCLE_ENTITY_SECRET;
+    
+    if (!apiKey || !entitySecret) {
+      throw new Error("CIRCLE_API_KEY and CIRCLE_ENTITY_SECRET are required for wallet operations.");
+    }
+
+    circleClient = initiateDeveloperControlledWalletsClient({
+      apiKey,
+      entitySecret,
+    });
+  }
+  return circleClient;
+}
 
 async function startServer() {
   const app = express();
@@ -12,10 +33,66 @@ async function startServer() {
 
   app.use(express.json());
 
+  // Health check and Env verification
+  app.get("/api/health", (_req, res) => {
+    res.json({ 
+      status: "ok", 
+      circle_keys: {
+        api_key: !!process.env.CIRCLE_API_KEY,
+        entity_secret: !!process.env.CIRCLE_ENTITY_SECRET
+      }
+    });
+  });
+
+  // Circle Wallet Routes
+  app.post("/api/wallets/create", async (_req, res) => {
+    try {
+      console.log("Creating new wallet for Arc Testnet...");
+      const client = getCircleClient();
+      
+      // 1. Create Wallet Set
+      const walletSetResponse = await client.createWalletSet({
+        name: "Arc Commerce Wallet Set",
+      });
+
+      const walletSet = walletSetResponse.data?.walletSet;
+      if (!walletSet?.id) {
+        throw new Error("Wallet set creation failed: no ID returned from Circle");
+      }
+
+      // 2. Create Wallet in the Set
+      const walletResponse = await client.createWallets({
+        walletSetId: walletSet.id,
+        blockchains: ["ARC-TESTNET"],
+        count: 1,
+        accountType: "EOA",
+      });
+
+      const wallet = walletResponse.data?.wallets?.[0];
+      if (!wallet) {
+        throw new Error("Wallet creation failed: no wallets array returned from Circle");
+      }
+
+      console.log(`Wallet created successfully: ${wallet.address}`);
+      res.json({
+        walletId: wallet.id,
+        address: wallet.address,
+        walletSetId: walletSet.id
+      });
+    } catch (error: any) {
+      console.error("Circle API Error detail:", error);
+      // Ensure we always return JSON
+      res.status(500).json({ 
+        error: error.message || "Failed to create wallet",
+        details: error.response?.data || null
+      });
+    }
+  });
+
   // AI Route
   app.post("/api/chat", async (req, res) => {
     try {
-      const { message, history } = req.body;
+      const { message, history, localContext } = req.body;
       
       const ai = new GoogleGenAI({
         apiKey: process.env.GEMINI_API_KEY,
@@ -24,22 +101,23 @@ async function startServer() {
         }
       });
       
-      // We format previous history for contents:
-      // Note: we can use chat in single call with generateContent by passing history context.
       const contents = `
 You are Arc AI Agent, a helpful virtual assistant for Arc Commerce and Arc Testnet Wallet.
 You help users with USDC transactions on Arc Testnet, wallet management, checking transaction history (simulated context), and troubleshooting web3 payments.
+
+System State / Local Context (Latest data):
+${localContext || 'No current state context available.'}
 
 User History Context:
 ${history.map((msg: any) => `${msg.sender}: ${msg.text}`).join('\n')}
 
 New User Message: ${message}
 
-Please respond concisely and helpfully in Indonesian.
+Please respond concisely and helpfully in Indonesian. Use the system state context to answer questions about balances or recent transactions directly.
 `;
 
       const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
+        model: "gemini-2.0-flash",
         contents: contents,
       });
 
@@ -60,7 +138,7 @@ Please respond concisely and helpfully in Indonesian.
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
+    app.get('*', (_req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }

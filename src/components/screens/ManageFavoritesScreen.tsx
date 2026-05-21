@@ -1,22 +1,20 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Send, Receipt, PlusCircle, CreditCard, ArrowDownToLine, Globe, Coins, QrCode, LayoutGrid, Minus, Plus, ArrowLeftRight, ShieldCheck } from 'lucide-react';
+import { IconRenderer } from '../common/IconRenderer';
+import { ArrowLeft, Minus, Plus } from 'lucide-react';
 import { ShortcutItem } from '../../types';
 
 export const defaultSelectedShortcuts: ShortcutItem[] = [
-    { id: '1', icon: <Send size={24} />, label: "Transfer USDC On-chain", color: "text-blue-500" },
-    { id: '2', icon: <ArrowLeftRight size={24} />, label: "Swap Token", color: "text-orange-500", badge: "HOT" },
-    { id: '3', icon: <ArrowDownToLine size={24} />, label: "Receive USDC", color: "text-[#3FA2F6]" },
-    { id: '4', icon: <Globe size={24} />, label: "Bridge Network", color: "text-purple-500" },
-    { id: '5', icon: <LayoutGrid size={24} />, label: "DApp Browser", color: "text-[#3FA2F6]" },
-    { id: '6', icon: <QrCode size={24} />, label: "Pay with USDC", color: "text-[#3FA2F6]" },
-    { id: '7', icon: <Coins size={24} />, label: "Request Payment", color: "text-[#3FA2F6]" },
-    { id: '8', icon: <ShieldCheck size={24} />, label: "Security & Limits", color: "text-slate-500" },
+    { id: '1', icon: 'Send', label: "Transfer USDC", color: "text-blue-500" },
+    { id: '2', icon: 'ArrowLeftRight', label: "Swap Token", color: "text-orange-500", badge: "HOT" },
+    { id: '3', icon: 'ArrowDownToLine', label: "Receive USDC", color: "text-[#3FA2F6]" },
+    { id: '13', icon: 'ArrowDownToLine', label: "Withdraw", color: "text-red-500" },
+    { id: '14', icon: 'ArrowLeftRight', label: "Bridge USDC", color: "text-indigo-600", badge: "NEW" },
+    { id: '12', icon: 'ShieldCheck', label: "Staking Pool", color: "text-emerald-500", badge: "NEW" },
+    { id: '8', icon: 'Settings2', label: "Security & Limits", color: "text-slate-500" },
   ];
 
   export const defaultAvailableShortcuts: ShortcutItem[] = [
-    { id: '9', icon: <CreditCard size={24} />, label: "Mint NFT", color: "text-indigo-500", bgCircle: "bg-indigo-50" },
-    { id: '10', icon: <PlusCircle size={24} />, label: "Buy Crypto", color: "text-green-500" },
-    { id: '11', icon: <Receipt size={24} />, label: "Transaction History", color: "text-slate-600" },
+    { id: '11', icon: 'Receipt', label: "Transaction History", color: "text-slate-600" },
   ];
 
   export function ManageFavoritesScreen({ 
@@ -70,7 +68,7 @@ export const defaultSelectedShortcuts: ShortcutItem[] = [
                  <div className="relative">
                    <div className={`w-[52px] h-[52px] rounded-full border border-[#f1f5f9] flex flex-col items-center justify-center shrink-0 shadow-sm relative ${item.bgCircle || 'bg-white'}`}>
                      <div className={item.color}>
-                       {item.icon}
+                       <IconRenderer name={item.icon} size={24} />
                      </div>
                      {item.isTextIcon && (
                        <span className={`text-[8px] font-bold -mt-0.5 ${item.color}`}>{item.textIcon}</span>
@@ -115,7 +113,7 @@ export const defaultSelectedShortcuts: ShortcutItem[] = [
                  <div className="relative w-max">
                    <div className={`w-[52px] h-[52px] rounded-full border border-[#f1f5f9] flex flex-col items-center justify-center shrink-0 shadow-sm transition-colors ${item.bgCircle || 'bg-white'}`}>
                      <div className={item.color}>
-                       {item.icon}
+                       <IconRenderer name={item.icon} size={24} />
                      </div>
                      {item.isTextIcon && (
                        <span className={`text-[8px] font-bold -mt-0.5 ${item.color}`}>{item.textIcon}</span>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, UserCheck, Wallet, Fingerprint, ScanFace } from 'lucide-react';
+import { ArrowLeft, UserCheck, Wallet, ScanFace } from 'lucide-react';
 
 interface RegisterWeb3ScreenProps {
   onBack: () => void;
@@ -11,6 +11,9 @@ export function RegisterWeb3Screen({ onBack, onComplete }: RegisterWeb3ScreenPro
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [willVerify, setWillVerify] = useState(false);
+  
+  const [isCreating, setIsCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   React.useEffect(() => {
     if (step === 3 && willVerify) {
@@ -24,14 +27,54 @@ export function RegisterWeb3Screen({ onBack, onComplete }: RegisterWeb3ScreenPro
     }
   }, [step, willVerify]);
 
+  const createWallet = async () => {
+    if (isCreating) return;
+    setIsCreating(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/wallets/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      
+      let data;
+      const contentType = response.headers.get("content-type");
+      const responseText = await response.text();
+      
+      if (contentType && contentType.includes("application/json")) {
+        try {
+          data = responseText ? JSON.parse(responseText) : null;
+        } catch (e) {
+          console.error("JSON Parse Error:", e);
+          throw new Error(`Invalid JSON response: ${responseText.substring(0, 100)}`);
+        }
+      } else {
+        throw new Error(responseText || `Server error: ${response.status}`);
+      }
+      
+      if (!response.ok) {
+         throw new Error(data?.error || `Request failed with status ${response.status}`);
+      }
+
+      onComplete({ 
+        username: username || 'Arcreal', 
+        email: email || 'user@example.com', 
+        isVerified: willVerify,
+        walletId: data.walletId,
+        walletAddress: data.address
+      } as any);
+    } catch (err: any) {
+      console.error("Wallet Creation Error:", err);
+      setError(err.message || 'Failed to create wallet. Please check server configuration.');
+      setIsCreating(false);
+    }
+  };
+
   React.useEffect(() => {
     if (step === 4) {
-      const timer = setTimeout(() => {
-        onComplete({ username: username || 'Arcreal', email: email || 'user@example.com', isVerified: willVerify });
-      }, 3000);
-      return () => clearTimeout(timer);
+      createWallet();
     }
-  }, [step, onComplete, username, email, willVerify]);
+  }, [step]);
 
   return (
     <div className="w-full h-full bg-white relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
@@ -120,16 +163,46 @@ export function RegisterWeb3Screen({ onBack, onComplete }: RegisterWeb3ScreenPro
 
       {step === 4 && (
         <div className="flex-1 p-6 flex flex-col items-center justify-center text-center animate-in fade-in duration-300">
-          <div className="relative mb-8 mt-[-10vh]">
-             <div className="w-20 h-20 border-[3px] border-slate-100 border-t-[#005faa] rounded-full animate-spin"></div>
-             <div className="absolute inset-0 flex items-center justify-center">
-               <Wallet size={24} className="text-[#005faa]" />
-             </div>
-          </div>
-          <h3 className="text-[20px] font-bold text-slate-800 mb-3">Creating Web3 Wallet...</h3>
-          <p className="text-[14px] text-slate-500 px-6 leading-relaxed">
-            Initializing <span className="font-semibold text-slate-700">Circle Developer-Controlled Wallet</span> on <span className="font-semibold text-slate-700">Arc Testnet</span>. Please wait a moment.
-          </p>
+          {!error ? (
+            <>
+              <div className="relative mb-8 mt-[-10vh]">
+                 <div className="w-20 h-20 border-[3px] border-slate-100 border-t-[#005faa] rounded-full animate-spin"></div>
+                 <div className="absolute inset-0 flex items-center justify-center">
+                   <Wallet size={24} className="text-[#005faa]" />
+                 </div>
+              </div>
+              <h3 className="text-[20px] font-bold text-slate-800 mb-3">Creating Web3 Wallet...</h3>
+              <p className="text-[14px] text-slate-500 px-6 leading-relaxed">
+                Initializing <span className="font-semibold text-slate-700">Circle Developer-Controlled Wallet</span> on <span className="font-semibold text-slate-700">Arc Testnet</span>. Please wait a moment.
+              </p>
+            </>
+          ) : (
+            <div className="mt-[-10vh] px-4">
+              <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-6 mx-auto border border-red-100">
+                <Wallet size={32} className="text-red-500" />
+              </div>
+              <h3 className="text-[20px] font-bold text-slate-800 mb-3">Registration Failed</h3>
+              <div className="bg-red-50/50 border border-red-100 p-4 rounded-xl mb-8">
+                <p className="text-[13px] text-red-600 font-mono text-left break-words overflow-auto max-h-[150px]">
+                  {error}
+                </p>
+              </div>
+              <div className="flex flex-col gap-3">
+                <button 
+                  onClick={() => createWallet()}
+                  className="w-full bg-[#005faa] text-white font-bold py-[14px] rounded-full hover:bg-[#004780] transition-colors active:scale-[0.98]"
+                >
+                  Retry Creation
+                </button>
+                <button 
+                  onClick={() => setStep(1)}
+                  className="w-full bg-slate-100 text-slate-500 font-bold py-[14px] border border-slate-200 rounded-full hover:bg-slate-200 transition-colors active:scale-[0.98]"
+                >
+                  Back to Form
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

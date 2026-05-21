@@ -1,20 +1,25 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Pencil, X } from 'lucide-react';
+import { useApp } from '../../context/AppContext';
 
 interface EmailScreenProps {
   onBack: () => void;
 }
 
 export function EmailScreen({ onBack }: EmailScreenProps) {
+  const { registeredUser, setRegisteredUser } = useApp();
   const [isEditing, setIsEditing] = useState(false);
-  const [email, setEmail] = useState('rakyaninuk@gmail.com');
+  const [email, setEmail] = useState(registeredUser?.email || 'rakyaninuk@gmail.com');
   const [tempEmail, setTempEmail] = useState('');
   const [error, setError] = useState('');
 
   const handleVerify = () => {
-    if (tempEmail === 'rakyaninuk@gmail.com') {
+    if (tempEmail === registeredUser?.email) {
       setError('Email is already registered');
     } else {
+      if (registeredUser) {
+        setRegisteredUser({ ...registeredUser, email: tempEmail });
+      }
       setEmail(tempEmail);
       setIsEditing(false);
       setError('');

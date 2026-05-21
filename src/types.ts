@@ -1,5 +1,3 @@
-import React from 'react';
-
 export type ViewState = 
   | 'splash' 
   | 'register' 
@@ -29,18 +27,58 @@ export type ViewState =
   | 'receipt'
   | 'scanQR'
   | 'aiAgent'
-  | 'forgotPassword';
+  | 'forgotPassword'
+  | 'biometricVerify'
+  | 'transactionHistory'
+  | 'merchant'
+  | 'faucet'
+  | 'receive'
+  | 'stablestake'
+  | 'depositOptions'
+  | 'receiveVA'
+  | 'receiveQRIS'
+  | 'logout'
+  | 'arcswap'
+  | 'arcbird'
+  | 'withdraw'
+  | 'bridge'
+  | 'batchTransfer';
 
 export interface ShortcutItem {
   id: string;
-  icon: React.ReactNode;
+  icon: string;
   label: string;
   color: string;
+  path?: string;
   bgCircle?: string;
   badge?: string;
   badgeColor?: string;
   isTextIcon?: boolean;
   textIcon?: string;
+}
+
+export interface UserIdentity {
+  username: string;
+  email: string;
+  isVerified: boolean;
+  registrationDate?: string;
+}
+
+export interface Transaction {
+  id: string;
+  type: 'deposit' | 'withdraw' | 'transfer' | 'purchase' | 'swap';
+  title: string;
+  amount: string;
+  currency: string;
+  timestamp: string;
+  status: 'pending' | 'success' | 'failed';
+  txHash?: string;
+  metadata?: {
+    voucherCode?: string;
+    productCategory?: string;
+    instructions?: string;
+    merchantId?: string;
+  };
 }
 
 export interface Contact {

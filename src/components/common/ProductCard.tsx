@@ -4,11 +4,15 @@ interface ProductCardProps {
   title: string;
   desc: string;
   icon: React.ReactNode;
+  onClick?: () => void;
 }
 
-export function ProductCard({ title, desc, icon }: ProductCardProps) {
+export function ProductCard({ title, desc, icon, onClick }: ProductCardProps) {
   return (
-    <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 relative overflow-hidden group cursor-pointer hover:bg-blue-50 hover:border-blue-100 transition-colors">
+    <div 
+      className="bg-slate-50 rounded-2xl p-4 border border-slate-100 relative overflow-hidden group cursor-pointer hover:bg-blue-50 hover:border-blue-100 transition-colors"
+      onClick={onClick}
+    >
       <div className="bg-white w-10 h-10 rounded-xl flex items-center justify-center shadow-sm mb-3">
          {icon}
       </div>

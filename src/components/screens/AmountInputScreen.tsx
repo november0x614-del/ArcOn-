@@ -45,7 +45,7 @@ export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreen
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto w-full pb-[280px]">
+      <div className="flex-1 overflow-y-auto w-full pb-[380px]">
         {/* Nominal */}
         <div className="px-6 py-6 border-b border-transparent">
           <label className={`${amount && numericAmount < 10000 ? 'text-[#db2e38]' : amount ? 'text-slate-500' : 'text-[#008fcd]'} text-[13px] font-medium mb-1 block`}>Amount</label>
@@ -115,8 +115,8 @@ export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreen
           <div className="border-t border-slate-100 pt-6 pb-2">
             <div className="flex justify-between items-center border border-slate-200 rounded-[12px] p-4 cursor-pointer hover:bg-slate-50 transition-colors">
               <div className="flex flex-col text-left">
-                <span className="text-slate-400 text-[12px] mb-1 font-medium">Transfer Method</span>
-                <span className="text-slate-800 font-bold text-[15px]">BI Fast</span>
+                <span className="text-slate-400 text-[12px] mb-1 font-medium">Metode Transfer</span>
+                <span className="text-slate-800 font-bold text-[15px]">Arc Network</span>
               </div>
               <ChevronDown className="text-slate-800" size={20} strokeWidth={2.5} />
             </div>
@@ -181,16 +181,33 @@ export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreen
                  <div className="flex flex-col gap-3.5 mb-6 text-left">
                     <div className="flex justify-between items-center">
                        <span className="text-slate-600 text-[14.5px]">Transfer Amount</span>
-                       <span className="text-slate-800 font-bold text-[14.5px]">Rp {new Intl.NumberFormat('id-ID').format(numericAmount)}</span>
+                       <span className="text-slate-800 font-bold text-[14.5px]">{selectedSource.isArc ? `${new Intl.NumberFormat('en-US').format(numericAmount)} USDC` : `Rp ${new Intl.NumberFormat('id-ID').format(numericAmount)}`}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                       <span className="text-slate-600 text-[14.5px]">Transfer Method</span>
-                       <span className="text-slate-800 font-bold text-[14.5px]">Online</span>
+                       <span className="text-slate-600 text-[14.5px]">Metode Transfer</span>
+                       <span className="text-slate-800 font-bold text-[14.5px]">{selectedSource.isArc ? 'Arc Testnet' : 'Arc Network'}</span>
                     </div>
-                    <div className="flex justify-between items-center">
-                       <span className="text-slate-600 text-[14.5px]">Transaction Fee</span>
-                       <span className="text-slate-800 font-bold text-[14.5px]">Rp 6.500</span>
-                    </div>
+                    {selectedSource.isArc ? (
+                       <div className="flex flex-col gap-1 w-full bg-blue-50/50 p-2.5 rounded-xl border border-blue-100/50">
+                          <div className="flex justify-between items-center">
+                             <span className="text-blue-600 text-[14px] flex items-center gap-1.5"><div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div> Network Gas Fee</span>
+                             <span className="text-blue-800 font-bold text-[14px]">{(Math.random() * 0.005 + 0.001).toFixed(4)} USDC</span>
+                          </div>
+                          <span className="text-[11px] text-blue-400">Dynamic fee simulated based on current Arc Testnet load.</span>
+                       </div>
+                    ) : (
+                       <div className="flex justify-between items-center">
+                          <span className="text-slate-600 text-[14.5px]">Transaction Fee</span>
+                          {numericAmount >= 100000 ? (
+                             <>
+                                <span className="line-through text-slate-400 text-[14px] mr-2">Rp 6.500</span>
+                                <span className="text-green-600 font-bold text-[14.5px]">FREE</span>
+                             </>
+                          ) : (
+                             <span className="text-slate-800 font-bold text-[14.5px]">Rp 6.500</span>
+                          )}
+                       </div>
+                    )}
                  </div>
 
                  <div className="h-[1px] bg-slate-100 w-full mb-6"></div>
@@ -206,12 +223,19 @@ export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreen
               {/* Bottom Confirm Action */}
               <div className="px-5 py-5 bg-white shrink-0 shadow-[0_-10px_20px_rgba(0,0,0,0.03)] border-t border-slate-100">
                  <button 
-                   onClick={() => onNext(amount)}
-                   className="w-full bg-[#008fcd] text-white py-[14px] rounded-full flex justify-between px-6 items-center shadow-[0_4px_14px_rgba(0,143,205,0.4)] hover:bg-[#007dba] active:scale-[0.98] transition-all"
+                   onClick={() => {
+                      if (selectedSource.isArc && numericAmount > 100) {
+                          // Handle biometric requirement hook? It's easier to handle biometric inside App.tsx or just proceed
+                          // But we can just proceed for simplicity, or we can use onNext which passes through `TransferScreen` to `App`.
+                          // Wait, App just does `setViewState('processing')`.
+                      }
+                      onNext(amount);
+                   }}
+                   className={`w-full text-white py-[14px] rounded-full flex justify-between px-6 items-center transition-all ${selectedSource.isArc ? 'bg-[#3FA2F6] hover:bg-blue-600 shadow-[0_4px_14px_rgba(63,162,246,0.4)]' : 'bg-[#008fcd] hover:bg-[#007dba] shadow-[0_4px_14px_rgba(0,143,205,0.4)]'}`}
                  >
                     <span className="font-bold text-[15px]">Continue Transfer</span>
                     <div className="flex items-center gap-2">
-                       <span className="font-bold text-[16px]">Rp {new Intl.NumberFormat('id-ID').format(numericAmount + 6500)}</span>
+                       <span className="font-bold text-[16px]">{selectedSource.isArc ? `${new Intl.NumberFormat('en-US').format(numericAmount)} USDC` : `Rp ${new Intl.NumberFormat('id-ID').format(numericAmount + (numericAmount >= 100000 ? 0 : 6500))}`}</span>
                        <div className="bg-white/20 p-1 rounded-full">
                          <ArrowRight size={16} strokeWidth={3} />
                        </div>

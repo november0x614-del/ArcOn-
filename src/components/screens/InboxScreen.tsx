@@ -13,27 +13,38 @@ import {
   CheckSquare,
   Square
 } from 'lucide-react';
+import { useApp } from '../../context/AppContext';
 
 interface InboxScreenProps {
   onBack: () => void;
-  onTransactionClick?: () => void;
+  onTransactionClick?: (tx: any) => void;
 }
 
 export function InboxScreen({ onBack, onTransactionClick }: InboxScreenProps) {
+  const { transactions, readReceiptIds, markAsRead } = useApp();
   const [activeTab, setActiveTab] = useState<'resi' | 'notifikasi' | 'promo'>('resi');
   const [selectedNotification, setSelectedNotification] = useState<{title: string, desc: string, date: string} | null>(null);
-  
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [deletedIds, setDeletedIds] = useState<Record<string, boolean>>({});
 
   const handleToggleSelect = (id: string) => {
+    // Check if it's an unread receipt
+    if (activeTab === 'resi' && !readReceiptIds.includes(id)) {
+      // Allow selection but maybe we won't let it be deleted? 
+      // The requirement says "tidak bisa di hapus", so maybe we shouldn't even allow selection
+      // But usually it's better to allow selection and then block deletion or show warning.
+      // However, "tidak bisa di hapus" is strict. Let's prevent selection or filter it out.
+      return; 
+    }
+    
     setSelectedIds(prev => 
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
   };
 
-  const handleDeleteSelected = () => {
+  const confirmDelete = () => {
     const newDeleted = { ...deletedIds };
     selectedIds.forEach(id => {
       newDeleted[id] = true;
@@ -41,11 +52,37 @@ export function InboxScreen({ onBack, onTransactionClick }: InboxScreenProps) {
     setDeletedIds(newDeleted);
     setIsSelectionMode(false);
     setSelectedIds([]);
+    setShowDeleteConfirm(false);
+  };
+
+  const handleSelectAll = () => {
+    let allIds: string[] = [];
+    if (activeTab === 'resi') {
+      allIds = transactions
+        .filter(t => !deletedIds[t.id] && readReceiptIds.includes(t.id))
+        .map(t => t.id);
+    } else if (activeTab === 'notifikasi') {
+      // Mock IDs for notifications as they are hardcoded in the component
+      allIds = ['n1', 'n2', 'n3', 'n4', 'n5'].filter(id => !deletedIds[id]);
+    } else if (activeTab === 'promo') {
+      allIds = ['p1'].filter(id => !deletedIds[id]);
+    }
+    
+    if (selectedIds.length === allIds.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(allIds);
+    }
   };
 
   const toggleSelectionMode = () => {
     setIsSelectionMode(!isSelectionMode);
     setSelectedIds([]);
+  };
+
+  const handleReceiptClick = (tx: any) => {
+    markAsRead(tx.id);
+    onTransactionClick?.(tx);
   };
 
   return (
@@ -54,14 +91,19 @@ export function InboxScreen({ onBack, onTransactionClick }: InboxScreenProps) {
       <div className="px-4 pt-12 pb-2 bg-white flex items-center justify-between shrink-0">
         {isSelectionMode ? (
           <div className="flex items-center justify-between w-full">
-            <button onClick={toggleSelectionMode} className="text-slate-500 font-bold text-[14px]">Cancel</button>
-            <div className="font-bold text-slate-800 tracking-tight">Select Items</div>
+            <button onClick={toggleSelectionMode} className="text-slate-500 font-bold text-[14px] hover:text-slate-700 transition-colors">Cancel</button>
             <button 
-              onClick={handleDeleteSelected} 
+              onClick={handleSelectAll}
+              className="text-[#3FA2F6] font-bold text-[14px] px-3 py-1 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+            >
+              {selectedIds.length > 0 ? "Deselect All" : "Select All"}
+            </button>
+            <button 
+              onClick={() => setShowDeleteConfirm(true)} 
               disabled={selectedIds.length === 0}
               className={`font-bold text-[14px] transition-colors ${selectedIds.length > 0 ? "text-red-500" : "text-slate-300"}`}
             >
-              Delete
+              Delete ({selectedIds.length})
             </button>
           </div>
         ) : (
@@ -109,10 +151,40 @@ export function InboxScreen({ onBack, onTransactionClick }: InboxScreenProps) {
 
       {/* Tabs Content */}
       <div className="flex-1 overflow-y-auto">
-         {activeTab === 'resi' && <ResiContent onTransactionClick={onTransactionClick} isSelectionMode={isSelectionMode} selectedIds={selectedIds} onToggleSelect={handleToggleSelect} deletedIds={deletedIds} />}
+         {activeTab === 'resi' && <ResiContent transactions={transactions} onTransactionClick={handleReceiptClick} isSelectionMode={isSelectionMode} selectedIds={selectedIds} onToggleSelect={handleToggleSelect} deletedIds={deletedIds} readReceiptIds={readReceiptIds} />}
          {activeTab === 'notifikasi' && <NotifikasiContent onNotificationClick={(title, desc, date) => setSelectedNotification({title, desc, date})} isSelectionMode={isSelectionMode} selectedIds={selectedIds} onToggleSelect={handleToggleSelect} deletedIds={deletedIds} />}
          {activeTab === 'promo' && <PromoContent isSelectionMode={isSelectionMode} selectedIds={selectedIds} onToggleSelect={handleToggleSelect} deletedIds={deletedIds} />}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="absolute inset-0 z-[110] flex items-center justify-center p-6">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in"></div>
+          <div className="bg-white rounded-[28px] p-8 w-full max-w-[340px] relative z-10 flex flex-col items-center text-center animate-in zoom-in-95 duration-200 shadow-2xl border border-slate-100">
+             <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6">
+                <Trash2 size={32} className="text-red-500" />
+             </div>
+             <h3 className="font-black text-[20px] text-slate-800 mb-2">Delete Items?</h3>
+             <p className="text-[14px] text-slate-500 leading-relaxed mb-8">
+               Are you sure you want to delete <span className="font-bold text-slate-800">{selectedIds.length}</span> selected items? This action cannot be undone.
+             </p>
+             <div className="flex flex-col w-full gap-3">
+                <button 
+                   onClick={confirmDelete}
+                   className="w-full py-4 bg-red-500 text-white font-black text-[15px] rounded-2xl hover:bg-red-600 active:scale-[0.98] transition-all shadow-lg shadow-red-500/20"
+                >
+                   Yes, Delete
+                </button>
+                <button 
+                   onClick={() => setShowDeleteConfirm(false)}
+                   className="w-full py-4 bg-slate-100 text-slate-700 font-bold text-[15px] rounded-2xl hover:bg-slate-200 active:scale-[0.98] transition-all"
+                >
+                   Cancel
+                </button>
+             </div>
+          </div>
+        </div>
+      )}
 
       {/* Notification Modal */}
       {selectedNotification && !isSelectionMode && (
@@ -133,26 +205,32 @@ export function InboxScreen({ onBack, onTransactionClick }: InboxScreenProps) {
                 Close
              </button>
           </div>
-        </div>
+         </div>
       )}
     </div>
   );
 }
 
 function ResiContent({ 
+  transactions,
   onTransactionClick, 
   isSelectionMode,
   selectedIds = [],
   onToggleSelect,
-  deletedIds = {} 
+  deletedIds = {},
+  readReceiptIds = []
 }: { 
-  onTransactionClick?: () => void, 
+  transactions: any[],
+  onTransactionClick?: (tx: any) => void, 
   isSelectionMode?: boolean,
   selectedIds?: string[],
   onToggleSelect?: (id: string) => void,
-  deletedIds?: Record<string, boolean>
+  deletedIds?: Record<string, boolean>,
+  readReceiptIds?: string[]
 }) {
-  if (deletedIds['allResiLuarBiasa']) {
+  const visibleTransactions = transactions.filter(t => !deletedIds[t.id]);
+
+  if (visibleTransactions.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center p-8 mt-12 animate-in fade-in">
         <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-4">
@@ -164,24 +242,6 @@ function ResiContent({
     );
   }
 
-  const resiSatu = !deletedIds['t1'];
-  const resiDua = !deletedIds['t2'];
-  const resiTiga = !deletedIds['t3'];
-  const resiEmpat = !deletedIds['t4'];
-  const resiLima = !deletedIds['t5'];
-
-  if (!resiSatu && !resiDua && !resiTiga && !resiEmpat && !resiLima) {
-     return (
-      <div className="flex flex-col items-center justify-center p-8 mt-12 animate-in fade-in">
-        <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-4">
-          <Info size={32} />
-        </div>
-        <h3 className="font-bold text-[16px] text-slate-800 mb-1">All receipts deleted</h3>
-        <p className="text-[13px] text-slate-500 text-center">No receipts left.</p>
-      </div>
-    );
-  }
-
   return (
     <div className="flex flex-col gap-6 pb-8 animate-in fade-in duration-300">
       <div className="flex items-center justify-between px-4 mt-6">
@@ -189,89 +249,37 @@ function ResiContent({
          <button className="text-slate-400 p-2 rounded-full bg-slate-50"><Calendar size={18} /></button>
       </div>
 
-      {(resiSatu || resiDua) && (
-        <div className="flex flex-col gap-4 px-4">
-          <h4 className="text-[13px] font-bold text-slate-500 tracking-wide mt-2">18 Mei 2026</h4>
-          {resiSatu && <TransactionItem 
-            id="t1"
-            isSelectionMode={isSelectionMode}
-            isSelected={selectedIds.includes('t1')}
-            onToggleSelect={onToggleSelect}
-            icon={<Wallet size={22} className="text-[#3FA2F6]" />}
-            title="GoPay Customer - RAKYAN INUKERTAPATI"
-            status="Successful"
-            amount="- Rp 361.000"
-            onClick={onTransactionClick}
-          />}
-          {resiDua && <TransactionItem 
-            id="t2"
-            isSelectionMode={isSelectionMode}
-            isSelected={selectedIds.includes('t2')}
-            onToggleSelect={onToggleSelect}
-            icon={<Wallet size={22} className="text-[#3FA2F6]" />}
-            title="GoPay Customer - RAKYAN INUKERTAPATI"
-            status="Successful"
-            amount="- Rp 941.000"
-            onClick={onTransactionClick}
-          />}
-        </div>
-      )}
-
-      {resiTiga && (
-        <div className="flex flex-col gap-4 px-4">
-          <h4 className="text-[13px] font-bold text-slate-500 tracking-wide mt-2">11 Mei 2026</h4>
-          <TransactionItem 
-            id="t3"
-            isSelectionMode={isSelectionMode}
-            isSelected={selectedIds.includes('t3')}
-            onToggleSelect={onToggleSelect}
-            icon={<Wallet size={22} className="text-[#3FA2F6]" />}
-            title="GoPay Customer - RAKYAN INUKERTAPATI"
-            status="Successful"
-            amount="- Rp 461.000"
-            onClick={onTransactionClick}
-          />
-        </div>
-      )}
-      
-      {resiEmpat && (
-        <div className="flex flex-col gap-4 px-4">
-          <h4 className="text-[13px] font-bold text-slate-500 tracking-wide mt-2">04 Mei 2026</h4>
-          <TransactionItem 
-            id="t4"
-            isSelectionMode={isSelectionMode}
-            isSelected={selectedIds.includes('t4')}
-            onToggleSelect={onToggleSelect}
-            icon={<Wallet size={22} className="text-[#3FA2F6]" />}
-            title="GoPay Customer - RAKYAN INUKERTAPATI"
-            status="Successful"
-            amount="- Rp 781.000"
-            onClick={onTransactionClick}
-          />
-        </div>
-      )}
-      
-      {resiLima && (
-        <div className="flex flex-col gap-4 px-4">
-          <h4 className="text-[13px] font-bold text-slate-500 tracking-wide mt-2">30 Apr 2026</h4>
-          <TransactionItem 
-            id="t5"
-            isSelectionMode={isSelectionMode}
-            isSelected={selectedIds.includes('t5')}
-            onToggleSelect={onToggleSelect}
-            icon={<ArrowRight size={22} className="text-[#3FA2F6]" />}
-            title="Bank Negara Indonesia - ARGA SATYAGRAHA"
-            status="Successful"
-            amount="- Rp 5.002.500"
-            onClick={onTransactionClick}
-          />
-        </div>
-      )}
+      <div className="flex flex-col gap-4 px-4">
+        {visibleTransactions.map((tx: any) => {
+          const isRead = readReceiptIds.includes(tx.id);
+          return (
+            <div key={tx.id} className="relative">
+              <TransactionItem 
+                id={tx.id}
+                isSelectionMode={isSelectionMode}
+                isSelected={selectedIds.includes(tx.id)}
+                onToggleSelect={onToggleSelect}
+                icon={tx.type === 'purchase' || tx.type === 'transfer' ? <Wallet size={22} className="text-[#3FA2F6]" /> : <ArrowRight size={22} className="text-emerald-500" />}
+                title={tx.title}
+                status={tx.status === 'success' ? 'Successful' : 'Processing'}
+                amount={`${tx.amount} ${tx.currency}`}
+                onClick={() => onTransactionClick?.(tx)}
+                isRead={isRead}
+                disabledSelection={!isRead}
+              />
+              {!isRead && !isSelectionMode && (
+                <div className="absolute top-2 left-10 w-2 h-2 bg-[#3FA2F6] rounded-full border border-white z-20"></div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
 
 interface TransactionItemProps {
+  key?: React.Key;
   id?: string;
   icon: React.ReactNode;
   title: string;
@@ -281,11 +289,14 @@ interface TransactionItemProps {
   isSelected?: boolean;
   onToggleSelect?: (id: string) => void;
   onClick?: () => void;
+  isRead?: boolean;
+  disabledSelection?: boolean;
 }
 
-function TransactionItem({ id, icon, title, status, amount, isSelectionMode, isSelected, onToggleSelect, onClick }: TransactionItemProps) {
+function TransactionItem({ id, icon, title, status, amount, isSelectionMode, isSelected, onToggleSelect, onClick, isRead, disabledSelection }: TransactionItemProps) {
   const handleClick = () => {
     if (isSelectionMode && id) {
+      if (disabledSelection) return;
       onToggleSelect?.(id);
     } else {
       onClick?.();
@@ -294,24 +305,24 @@ function TransactionItem({ id, icon, title, status, amount, isSelectionMode, isS
 
   return (
     <div 
-      className="flex items-start justify-between bg-white cursor-pointer active:scale-[0.98] transition-transform group"
+      className={`flex items-start justify-between bg-white cursor-pointer active:scale-[0.98] transition-all group p-1 rounded-xl ${isSelectionMode && disabledSelection ? 'opacity-40 grayscale pointer-events-none' : 'opacity-100'}`}
       onClick={handleClick}
     >
       <div className="flex gap-3 items-start pr-4">
          {isSelectionMode && (
            <div className="mt-1 shrink-0 w-6 flex items-center justify-center -mr-1">
-             {isSelected ? <CheckSquare size={20} className="text-blue-500" /> : <Square size={20} className="text-slate-300" />}
+             {isSelected ? <CheckSquare size={20} className="text-blue-500" /> : <Square size={20} className={`text-slate-300 ${disabledSelection ? 'text-slate-100' : ''}`} />}
            </div>
          )}
-         <div className="mt-0.5 w-8 h-8 flex items-center justify-center shrink-0 group-hover:bg-blue-50 transition-colors rounded-full">{icon}</div>
+         <div className={`mt-0.5 w-8 h-8 flex items-center justify-center shrink-0 group-hover:bg-blue-50 transition-colors rounded-full ${!isRead && !isSelectionMode ? 'bg-blue-50/30' : ''}`}>{icon}</div>
          <div className="flex flex-col">
-            <h5 className="font-medium text-[14px] text-slate-800 leading-snug mb-1">{title}</h5>
+            <h5 className={`font-medium text-[14px] leading-snug mb-1 transition-colors ${!isRead && !isSelectionMode ? 'text-slate-950 font-bold' : 'text-slate-700'}`}>{title}</h5>
             <span className="text-[12px] text-emerald-500 font-medium">{status}</span>
          </div>
       </div>
       <div className="flex shrink-0">
-         <span className="font-medium text-[14px] text-slate-800">{amount}</span>
-         <span className="text-[10px] font-bold text-slate-700 mt-0.5 ml-0.5">00</span>
+         <span className={`font-medium text-[14px] transition-colors ${!isRead && !isSelectionMode ? 'text-slate-900 font-bold' : 'text-slate-600'}`}>{amount}</span>
+         <span className="text-[10px] font-bold text-slate-400 mt-0.5 ml-0.5">00</span>
       </div>
     </div>
   );

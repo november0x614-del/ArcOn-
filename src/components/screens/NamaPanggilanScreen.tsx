@@ -1,16 +1,21 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Pencil, X, Check } from 'lucide-react';
+import { useApp } from '../../context/AppContext';
 
 interface NamaPanggilanScreenProps {
   onBack: () => void;
 }
 
 export function NamaPanggilanScreen({ onBack }: NamaPanggilanScreenProps) {
+  const { registeredUser, setRegisteredUser } = useApp();
   const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState('RAKYAN INUKERTAPATI');
+  const [name, setName] = useState(registeredUser?.username || 'RAKYAN INUKERTAPATI');
   const [showToast, setShowToast] = useState(false);
 
   const handleSave = () => {
+    if (registeredUser) {
+      setRegisteredUser({ ...registeredUser, username: name });
+    }
     setIsEditing(false);
     setShowToast(true);
     setTimeout(() => setShowToast(false), 3000);

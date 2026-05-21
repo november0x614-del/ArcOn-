@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Bot, Sparkles, Send } from 'lucide-react';
+import { useApp } from '../../context/AppContext';
 
 interface AIAgentScreenProps {
   onBack: () => void;
@@ -17,6 +18,8 @@ export function AIAgentScreen({ onBack }: AIAgentScreenProps) {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  const { balance, transactions } = useApp();
+
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
     
@@ -32,12 +35,17 @@ export function AIAgentScreen({ onBack }: AIAgentScreenProps) {
     setIsLoading(true);
 
     try {
+      const localContextString = `Current Balance: ${balance.toFixed(2)} USDC.
+Recent Transactions:
+${transactions.slice(0, 5).map(tx => `- ${tx.type.toUpperCase()}: ${tx.title} (${tx.amount} ${tx.currency}) [Status: ${tx.status}]`).join('\n')}`;
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: input,
-          history: messages
+          history: messages,
+          localContext: localContextString
         })
       });
       

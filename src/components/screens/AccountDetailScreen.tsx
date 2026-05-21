@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { motion, useMotionValue, useSpring, useTransform } from 'motion/react';
 import { 
   ArrowLeft, 
-  Copy, 
   Send, 
   Receipt, 
   Plus, 
@@ -10,18 +9,27 @@ import {
   Search, 
   Calendar, 
   ArrowUpRight, 
-  ArrowDownLeft,
   Coins,
   Eye,
   Lock,
-  Settings
+  Settings,
+  ArrowDownToLine,
+  ShoppingBag,
+  RefreshCw,
+  Clock,
+  CheckCircle2,
+  EyeOff,
+  ChevronDown,
+  QrCode,
+  Copy,
+  Check
 } from 'lucide-react';
+import { useApp } from '../../context/AppContext';
 
 interface AccountDetailScreenProps {
   onBack: () => void;
   onTransfer: () => void;
-  onTopup: () => void;
-  onPayVA?: () => void;
+  onReceive: () => void;
   onTransactionClick?: () => void;
   userName?: string;
 }
@@ -29,12 +37,35 @@ interface AccountDetailScreenProps {
 export function AccountDetailScreen({ 
   onBack, 
   onTransfer, 
-  onTopup,
-  onPayVA,
+  onReceive,
   onTransactionClick,
   userName = "ALEXANDER D"
 }: AccountDetailScreenProps) {
-  const [activeTab, setActiveTab] = useState<'transaksi' | 'token'>('transaksi');
+  const [activeTab, setActiveTab] = useState<'history' | 'token'>('history');
+  const { transactions, balance, showBalance, setShowBalance } = useApp();
+
+  const getTxIcon = (type: string) => {
+    switch (type) {
+      case 'deposit': return <ArrowDownToLine size={20} className="text-emerald-500" />;
+      case 'withdraw': return <ArrowUpRight size={20} className="text-red-500" />;
+      case 'transfer': return <ArrowUpRight size={20} className="text-orange-500" />;
+      case 'purchase': return <ShoppingBag size={20} className="text-purple-500" />;
+      case 'swap': return <RefreshCw size={20} className="text-blue-500" />;
+      default: return <Receipt size={20} className="text-slate-500" />;
+    }
+  };
+
+  const getTxBg = (type: string) => {
+    switch (type) {
+      case 'deposit': return 'bg-emerald-50 border-emerald-100';
+      case 'withdraw': return 'bg-red-50 border-red-100';
+      case 'transfer': return 'bg-orange-50 border-orange-100';
+      case 'purchase': return 'bg-purple-50 border-purple-100';
+      case 'swap': return 'bg-blue-50 border-blue-100';
+      default: return 'bg-slate-50 border-slate-100';
+    }
+  };
+
   const [showCard, setShowCard] = useState(false);
   
   return (
@@ -55,25 +86,73 @@ export function AccountDetailScreen({
         </div>
 
         {/* Wallet Address & Balance Content */}
-        <div className="flex flex-col items-center mt-6 z-10">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-full backdrop-blur-sm border border-white/20 mb-3 hover:bg-white/20 transition-colors cursor-pointer">
-            <span className="text-white/90 text-[13px] font-mono tracking-wider">0x742d...f44e</span>
-            <Copy size={13} className="text-white/80" />
-          </div>
+        <div className="flex flex-col items-center mt-6 z-10 w-full px-4 overflow-hidden">
+          <div className="w-full max-w-[340px] bg-gradient-to-br from-[#1e293b] via-[#111827] to-[#030712] border border-white/10 rounded-[24px] p-8 shadow-2xl relative overflow-hidden group flex flex-col items-center">
+            
+            <div className="flex flex-col items-center text-center text-white relative z-10">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-[13px] font-medium text-slate-400">
+                  Est total value
+                </span>
+                {showBalance ? (
+                  <Eye
+                    size={16}
+                    className="text-slate-500 shrink-0 cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowBalance(false);
+                    }}
+                  />
+                ) : (
+                  <EyeOff
+                    size={16}
+                    className="text-slate-500 shrink-0 cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowBalance(true);
+                    }}
+                  />
+                )}
+              </div>
 
-          <div className="flex items-baseline gap-1 mt-1">
-             <span className="text-blue-100 text-[16px] font-semibold mb-1">USDC</span>
-             <h1 className="text-white text-[42px] font-bold tracking-tight leading-none drop-shadow-sm">
-               1,134<span className="text-[20px] text-white/90 font-semibold">.66</span>
-             </h1>
+              <div className="flex items-baseline gap-2 mb-4">
+                <span className="text-[42px] font-black tracking-tight leading-none">
+                  {showBalance
+                    ? balance.toLocaleString("id-ID", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })
+                    : "••••••"}
+                </span>
+                <div className="flex items-center gap-1">
+                  <span className="text-[16px] font-black text-slate-200">
+                    USDC
+                  </span>
+                  <ChevronDown size={14} className="text-slate-400" />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <span className="text-[13px] text-slate-400 border-b border-dashed border-slate-600 pb-0.5 uppercase tracking-wider font-semibold">
+                  PnL 1 Bln
+                </span>
+                <span className="text-[13px] font-bold text-emerald-400">
+                  +₮0,86 (+0,12%)
+                </span>
+              </div>
+            </div>
+
+            {/* Background decorative elements */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/10 blur-[60px] rounded-full -translate-y-12 translate-x-12 pointer-events-none"></div>
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-500/10 blur-[40px] rounded-full translate-y-10 -translate-x-10 pointer-events-none"></div>
+            <div className="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent pointer-events-none"></div>
           </div>
         </div>
 
         {/* Action Buttons Row */}
-        <div className="flex justify-center gap-[18px] mt-6 w-full z-10 px-2">
+        <div className="flex justify-center gap-[32px] mt-8 w-full z-10 px-2">
           <DetailActionButton icon={<Send size={20} />} label={`Transfer\nUSDC`} onClick={onTransfer} />
-          <DetailActionButton icon={<Receipt size={20} />} label={`Pay/VA`} badge="VA" onClick={onPayVA} />
-          <DetailActionButton icon={<Plus size={22} />} label="Top-up" onClick={onTopup} />
+          <DetailActionButton icon={<ArrowDownToLine size={20} />} label={`Receive\nUSDC`} onClick={onReceive} />
           <DetailActionButton icon={<CreditCard size={20} />} label={`Card`} isGlow onClick={() => setShowCard(true)} />
         </div>
       </div>
@@ -84,30 +163,30 @@ export function AccountDetailScreen({
         <div className="px-6 pt-6 pb-2 shrink-0 border-b border-slate-100 flex items-center justify-between">
            <div className="flex items-center gap-6">
              <div 
-               className={`flex flex-col items-center border-b-[2.5px] pb-1.5 cursor-pointer transition-colors ${activeTab === 'token' ? 'border-slate-800' : 'border-transparent'}`}
+               className={`flex flex-col items-center border-b-[2.5px] pb-1.5 px-1 cursor-pointer transition-colors ${activeTab === 'token' ? 'border-[#3FA2F6]' : 'border-transparent'}`}
                onClick={() => setActiveTab('token')}
              >
-               <h3 className={`font-bold text-[15px] ${activeTab === 'token' ? 'text-slate-800' : 'text-slate-400'}`}>Tokens</h3>
+               <h3 className={`font-bold text-[14px] ${activeTab === 'token' ? 'text-slate-800' : 'text-slate-400'}`}>Tokens</h3>
              </div>
              <div 
-               className={`flex flex-col items-center border-b-[2.5px] pb-1.5 cursor-pointer transition-colors ${activeTab === 'transaksi' ? 'border-slate-800' : 'border-transparent'}`}
-               onClick={() => setActiveTab('transaksi')}
+               className={`flex flex-col items-center border-b-[2.5px] pb-1.5 px-1 cursor-pointer transition-colors ${activeTab === 'history' ? 'border-[#3FA2F6]' : 'border-transparent'}`}
+               onClick={() => setActiveTab('history')}
              >
-               <h3 className={`font-bold text-[15px] ${activeTab === 'transaksi' ? 'text-slate-800' : 'text-slate-400'}`}>Transactions</h3>
+               <h3 className={`font-bold text-[14px] ${activeTab === 'history' ? 'text-slate-800' : 'text-slate-400'}`}>History</h3>
              </div>
            </div>
-           {activeTab === 'transaksi' && <button className="text-[#3FA2F6] font-bold text-[13px]">e-Statement</button>}
+           {activeTab === 'history' && <button className="text-[#3FA2F6] font-bold text-[13px]">e-Statement</button>}
         </div>
 
-        {activeTab === 'transaksi' && (
+        {activeTab === 'history' && (
           <>
             <div className="flex items-center px-4 py-3 shrink-0 justify-between">
-               <div className="flex gap-4 overflow-x-auto scrollbar-hide py-1 text-[14px] text-slate-500 font-medium">
-                 <button className="whitespace-nowrap px-1">February</button>
-                 <button className="whitespace-nowrap px-1">March</button>
-                 <button className="whitespace-nowrap px-1">April</button>
-                 <button className="whitespace-nowrap px-1 text-slate-800 font-bold border-b-[2.5px] border-slate-800 pb-1">May</button>
-               </div>
+                <div className="flex gap-4 overflow-x-auto scrollbar-hide py-1 text-[13px] text-slate-500 font-medium">
+                  <button className="whitespace-nowrap px-1 text-slate-800 font-bold border-b-[2.5px] border-slate-800 pb-1">All</button>
+                  <button className="whitespace-nowrap px-1">Received</button>
+                  <button className="whitespace-nowrap px-1">Sent</button>
+                  <button className="whitespace-nowrap px-1">Swaps</button>
+                </div>
                <div className="flex items-center gap-3 ml-2 shrink-0">
                   <button className="text-[#3FA2F6] bg-blue-50 p-2 rounded-full"><Search size={16} strokeWidth={2.5} /></button>
                   <button className="text-slate-400 p-2 rounded-full bg-slate-50"><Calendar size={16} strokeWidth={2.5} /></button>
@@ -116,86 +195,50 @@ export function AccountDetailScreen({
 
             {/* Transactions List */}
             <div className="flex-1 overflow-y-auto px-4 pb-24 flex flex-col pt-2">
-               
-               <div className="flex flex-col">
-                  <h4 className="text-[12px] font-bold text-slate-400 tracking-wider mb-2">May 18, 2026</h4>
-                  <DetailTransactionItem 
-                    icon={<div className="w-[18px] h-[18px] rounded-full border-[1.5px] border-slate-400 flex items-center justify-center shrink-0 mt-0.5"><ArrowUpRight size={12} className="text-slate-400" /></div>}
-                    title="Transfer USDC"
-                    desc={`Transfer to Other Wallet\n0x8823...32a1`}
-                    amount="- 6.25 USDC"
-                    amountColor="text-slate-800"
-                    onClick={onTransactionClick}
-                  />
-                  <DetailTransactionItem 
-                    icon={<div className="w-[18px] h-[18px] rounded-full border-[1.5px] border-slate-400 flex items-center justify-center shrink-0 mt-0.5"><div className="w-[8px] h-[8px] bg-slate-400 rounded-full"></div></div>}
-                    title="Gas Fee"
-                    desc="Arc network fee"
-                    amount="- 0.40 USDC"
-                    amountColor="text-slate-800"
-                    hideSeparator
-                  />
-               </div>
-
-               <div className="flex flex-col mt-4">
-                  <h4 className="text-[12px] font-bold text-slate-400 tracking-wider mb-2">May 13, 2026</h4>
-                  <DetailTransactionItem 
-                    icon={<div className="w-[18px] h-[18px] rounded-full bg-[#e6f4fc] flex items-center justify-center shrink-0 mt-0.5"><Receipt size={10} className="text-[#008fcd]" /></div>}
-                    title="Bill Settlement"
-                    desc={`API Credit Purchase\nCircle Web3 Services`}
-                    amount="- 7.87 USDC"
-                    amountColor="text-slate-800"
-                    badge="+ 1 pts"
-                  />
-                  <DetailTransactionItem 
-                    icon={<div className="w-[18px] h-[18px] rounded-full bg-[#e6f4fc] flex items-center justify-center shrink-0 mt-0.5"><Receipt size={10} className="text-[#008fcd]" /></div>}
-                    title="Purchase"
-                    desc={`NFT Collection Purchase\n0x66f...b29a`}
-                    amount="- 28.75 USDC"
-                    amountColor="text-slate-800"
-                    badge="+ 1 pts"
-                    hideSeparator
-                  />
-               </div>
-
-               <div className="flex flex-col mt-4">
-                  <h4 className="text-[12px] font-bold text-slate-400 tracking-wider mb-2">May 7, 2026</h4>
-                  <DetailTransactionItem 
-                    icon={<div className="w-[18px] h-[18px] rounded-full border-[1.5px] border-slate-400 flex items-center justify-center shrink-0 mt-0.5"><div className="w-[8px] h-[8px] bg-slate-400 rounded-full"></div></div>}
-                    title="Fee"
-                    desc={`Bank transaction fee\nGoPay Customer Payment\n082173022116`}
-                    amount="- Rp 1.000"
-                    amountColor="text-slate-800"
-                  />
-                  <DetailTransactionItem 
-                    icon={<div className="w-[18px] h-[18px] rounded-full border-[1.5px] border-[#008fcd] flex items-center justify-center shrink-0 mt-0.5"><ArrowDownLeft size={12} className="text-[#008fcd]" /></div>}
-                    title="Transfer USDC"
-                    desc={`Deposit from External Wallet\n0x112b...fca9`}
-                    amount="+ 391.31 USDC"
-                    amountColor="text-[#008fcd]"
-                  />
-               </div>
-
-               <div className="flex flex-col mt-4">
-                  <h4 className="text-[12px] font-bold text-slate-400 tracking-wider mb-2">May 4, 2026</h4>
-                  <DetailTransactionItem 
-                    icon={<div className="w-[18px] h-[18px] rounded-full bg-[#e6f4fc] flex items-center justify-center shrink-0 mt-0.5"><Receipt size={10} className="text-[#008fcd]" /></div>}
-                    title="Staking"
-                    desc={`Deposit to Arc Liquidity Pool\n0x9ad...e92f`}
-                    amount="- 48.75 USDC"
-                    amountColor="text-slate-800"
-                    badge="+ 1 pts"
-                  />
-                  <DetailTransactionItem 
-                    icon={<div className="w-[18px] h-[18px] rounded-full border-[1.5px] border-slate-400 flex items-center justify-center shrink-0 mt-0.5"><div className="w-[8px] h-[8px] bg-slate-400 rounded-full"></div></div>}
-                    title="Fee"
-                    desc={`Bank transaction fee\nGoPay Customer Payment\n082173022116`}
-                    amount="- Rp 1.000"
-                    amountColor="text-slate-800"
-                    hideSeparator
-                  />
-               </div>
-
+              <div className="flex flex-col gap-3 mt-2">
+                 {transactions.length === 0 ? (
+                   <div className="flex flex-col items-center justify-center p-12 text-center text-slate-400 mt-10">
+                      <Clock size={48} className="mb-4 opacity-50" />
+                      <p>No transactions found.</p>
+                   </div>
+                 ) : (
+                   transactions.map((tx) => (
+                     <div 
+                       key={tx.id} 
+                       onClick={() => {
+                         if (onTransactionClick) onTransactionClick();
+                       }}
+                       className="bg-white p-4 rounded-2xl border border-slate-100 shadow-[0_2px_10px_rgba(0,0,0,0.02)] flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-all"
+                     >
+                       <div className="flex items-center gap-4">
+                         <div className={`w-12 h-12 rounded-full border flex items-center justify-center shrink-0 ${getTxBg(tx.type)}`}>
+                            {getTxIcon(tx.type)}
+                         </div>
+                         <div>
+                           <h3 className="font-bold text-[15px] text-slate-800 leading-tight">{tx.title}</h3>
+                           <p className="text-[12px] text-slate-500 mt-0.5">{tx.timestamp} • {tx.type.charAt(0).toUpperCase() + tx.type.slice(1)}</p>
+                         </div>
+                       </div>
+                       <div className="flex flex-col items-end">
+                         <span className={`font-bold text-[15px] ${tx.amount.startsWith('+') ? 'text-emerald-500' : 'text-slate-800'}`}>
+                            {tx.amount} {tx.currency}
+                         </span>
+                         {tx.status === 'success' ? (
+                            <div className="flex items-center gap-1 mt-1 text-emerald-500 bg-emerald-50/50 px-2 py-0.5 rounded-full border border-emerald-100">
+                               <CheckCircle2 size={10} />
+                               <span className="text-[9px] font-black uppercase tracking-wider">SUCCESS</span>
+                            </div>
+                         ) : (
+                            <div className="flex items-center gap-1 mt-1 text-amber-500 bg-amber-50/50 px-2 py-0.5 rounded-full border border-amber-100">
+                               <Clock size={10} />
+                               <span className="text-[9px] font-black uppercase tracking-wider">{tx.status}</span>
+                            </div>
+                         )}
+                       </div>
+                     </div>
+                   ))
+                 )}
+              </div>
             </div>
           </>
         )}
@@ -214,8 +257,12 @@ export function AccountDetailScreen({
                 </div>
               </div>
               <div className="flex flex-col items-end">
-                <span className="font-bold text-[16px] text-slate-800">1,134.66</span>
-                <span className="text-[12px] text-slate-400 font-medium tracking-wide">~$1,134.66</span>
+                <span className="font-bold text-[16px] text-slate-800">
+                  {balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+                <span className="text-[12px] text-slate-400 font-medium tracking-wide">
+                  ~${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
               </div>
             </div>
 
@@ -305,6 +352,21 @@ interface DetailActionButtonProps {
 }
 
 export function VirtualCard({ userName }: { userName: string }) {
+  const [copied, setCopied] = useState(false);
+  const { registeredUser } = useApp();
+  
+  const displayAddress = registeredUser?.walletAddress || "0x742d35cc6634f44e";
+  const formattedAddress = displayAddress.startsWith('0x') ? displayAddress : `0x${displayAddress}`;
+  
+  // Format to chunks of 4 for the card display
+  const addressChunks = formattedAddress.match(/.{1,4}/g)?.slice(0, 4).join(' ') || formattedAddress;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(formattedAddress);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   const x = useMotionValue(0);
   const y = useMotionValue(0);
 
@@ -314,9 +376,6 @@ export function VirtualCard({ userName }: { userName: string }) {
   const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["15deg", "-15deg"]);
   const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-15deg", "15deg"]);
   
-  const glareOpacity = useTransform(mouseYSpring, [-0.5, 0.5], [0, 0.3]);
-  const glareY = useTransform(mouseYSpring, [-0.5, 0.5], ["-100%", "100%"]);
-
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const width = rect.width;
@@ -346,83 +405,56 @@ export function VirtualCard({ userName }: { userName: string }) {
         rotateY,
         transformStyle: "preserve-3d"
       }}
-      className="w-full aspect-[1.586/1] rounded-2xl p-6 flex flex-col justify-between relative overflow-hidden shadow-xl shadow-blue-500/20 bg-gradient-to-br from-slate-900 via-[#1e293b] to-slate-800"
+      className="w-full aspect-[1.586/1] rounded-[24px] p-6 flex flex-col justify-between relative overflow-hidden shadow-2xl bg-[#1e293b]"
     >
-       {/* Glare effect */}
-       <motion.div 
-         className="absolute inset-0 bg-white/20 pointer-events-none blur-2xl rounded-full"
-         style={{
-            opacity: glareOpacity,
-            y: glareY,
-            x: "-20%",
-            scale: 2,
-            transformStyle: "preserve-3d",
-            translateZ: "30px"
-         }}
-       />
-
-       {/* Abstract patterns */}
-       <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" style={{ transform: "translateZ(10px)" }}></div>
-       <div className="absolute bottom-0 left-0 w-32 h-32 bg-indigo-500/20 rounded-full blur-2xl translate-y-1/3 -translate-x-1/4" style={{ transform: "translateZ(10px)" }}></div>
-       
-       <div className="flex justify-between items-start z-10" style={{ transform: "translateZ(30px)" }}>
-         <div className="flex items-center gap-1 opacity-90">
-            <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
-              <div className="w-3 h-3 bg-white rounded-full"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-[#1e293b] via-[#0f172a] to-[#010307] z-0"></div>
+        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none"></div>
+        
+        {/* Top Section: Logo & QR */}
+        <div className="flex justify-between items-start z-10" style={{ transform: "translateZ(30px)" }}>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center p-1 shadow-lg border border-white/20">
+              <div className="w-full h-full rounded-full bg-slate-400"></div>
             </div>
-            <span className="text-white font-bold text-[14px] tracking-widest italic ml-1 font-mono">arc</span>
-         </div>
-         
-         {/* Contactless icon */}
-         <div className="flex flex-col gap-1 opacity-80">
-            <div className="w-1 h-3 border-r-2 border-white rounded-[50%] rotate-[20deg] ml-2"></div>
-            <div className="w-2 h-4 border-r-2 border-white rounded-[50%] rotate-[20deg] ml-1.5 -mt-2"></div>
-            <div className="w-3 h-5 border-r-2 border-white rounded-[50%] rotate-[20deg] ml-0.5 -mt-3"></div>
-         </div>
-       </div>
-       
-       <div className="flex flex-col z-10 w-full mt-2" style={{ transform: "translateZ(35px)" }}>
-         <div className="flex items-center gap-4 text-white/50 mb-1">
-           <div className="w-9 h-6 bg-[#ffb700] rounded-sm opacity-90 relative overflow-hidden flex flex-col">
-              {/* EMV Chip mockup */}
-              <div className="w-full h-[1px] bg-black/20 mt-1"></div>
-              <div className="w-full h-[1px] bg-black/20 mt-1"></div>
-              <div className="w-full h-[1px] bg-black/20 mt-1"></div>
-              <div className="absolute inset-x-3 inset-y-0 border-x border-black/20"></div>
-           </div>
-           <span className="text-[12px] font-mono tracking-widest text-white/70">Virtual Card</span>
-         </div>
-         <p className="font-mono text-white text-[22px] tracking-[0.1em] font-semibold drop-shadow-md mt-2">
-           4123 5431 8892 4434
-         </p>
-       </div>
-       
-       <div className="flex justify-between items-end z-10 mt-1" style={{ transform: "translateZ(40px)" }}>
-         <div className="flex flex-col">
-           <span className="text-white/60 text-[10px] uppercase font-bold tracking-wider mb-0.5">Card Holder</span>
-           <span className="text-white text-[15px] font-medium tracking-wide truncate max-w-[120px] uppercase">{userName}</span>
-         </div>
-         
-         <div className="flex flex-col items-end">
-           <div className="flex gap-4">
-             <div className="flex flex-col">
-                <span className="text-white/60 text-[9px] uppercase font-bold tracking-wider mb-0.5">Valid Thru</span>
-                <span className="text-white text-[13px] font-mono tracking-wide">12/28</span>
+            <span className="text-white font-black text-[22px] tracking-tighter italic font-mono lowercase">arc</span>
+          </div>
+
+          <div className="w-12 h-12 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-lg cursor-pointer hover:bg-white/15 transition-colors">
+            <QrCode size={22} className="text-white opacity-80" />
+          </div>
+        </div>
+        
+        {/* Middle Section: Address */}
+        <div className="flex flex-col z-10" style={{ transform: "translateZ(50px)" }}>
+           <button 
+             onClick={handleCopy}
+             className="flex flex-col items-start gap-1 group/copy active:scale-95 transition-transform"
+           >
+             <span className="text-white/30 text-[9px] font-black uppercase tracking-[0.2em] ml-1">Card Address</span>
+             <div className="flex items-center gap-3">
+               <p className="text-white font-mono text-[20px] sm:text-[24px] tracking-[0.05em] font-medium drop-shadow-2xl group-hover/copy:text-blue-200 transition-colors">
+                 {addressChunks}
+               </p>
+               <div className="bg-white/10 p-2 rounded-lg backdrop-blur-md opacity-40 group-hover/copy:opacity-100 transition-all">
+                 {copied ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} className="text-white" />}
+               </div>
              </div>
-             <div className="flex flex-col">
-                <span className="text-white/60 text-[9px] uppercase font-bold tracking-wider mb-0.5">CVC</span>
-                <span className="text-white text-[13px] font-mono tracking-wide">•••</span>
-             </div>
+           </button>
+        </div>
+
+        {/* Bottom Section: User & Status */}
+        <div className="flex justify-between items-end z-10" style={{ transform: "translateZ(40px)" }}>
+           <div className="flex flex-col">
+              <span className="text-white/30 text-[9px] font-black uppercase tracking-[0.2em] mb-1">Card Holder</span>
+              <span className="text-white font-black text-[14px] uppercase tracking-wider">{userName}</span>
            </div>
            
-           {/* Mastercard/Visa logo mock */}
-           <div className="flex -space-x-3 mt-3">
-             <div className="w-8 h-8 rounded-full bg-red-500/80 mix-blend-screen"></div>
-             <div className="w-8 h-8 rounded-full bg-orange-400/80 mix-blend-screen"></div>
+           <div className="flex flex-col items-end">
+              <span className="text-white/30 text-[9px] font-black uppercase tracking-[0.2em] mb-1">Registered Since</span>
+              <span className="text-white font-mono text-[13px] tracking-wider leading-none">21 MEI 2024</span>
            </div>
-         </div>
-       </div>
-    </motion.div>
+        </div>
+      </motion.div>
     </div>
   );
 }

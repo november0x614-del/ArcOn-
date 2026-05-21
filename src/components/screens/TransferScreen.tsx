@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, CalendarClock, Search, X, Star, UserPlus, Plus, Users, Send, Info, ChevronRight, Trash2, CheckCircle2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Search, UserPlus, Plus, Users, Star, X } from 'lucide-react';
 
 interface Contact {
   id: string;
@@ -14,14 +14,7 @@ interface TransferScreenProps {
   onBack: () => void;
   onNewTransfer: () => void;
   onSelectContact: (contact: any) => void;
-}
-
-function ContactDivider({ letter }: { letter: string }) {
-  return (
-    <div className="text-slate-400 font-semibold mb-4 text-[13px] bg-white w-max pr-2 py-1 relative z-10">
-      {letter}
-    </div>
-  );
+  onBatchTransfer: () => void;
 }
 
 interface ContactItemProps {
@@ -109,58 +102,21 @@ function ContactItem({
   );
 }
 
-export function TransferScreen({ onBack, onNewTransfer, onSelectContact }: TransferScreenProps) {
+export function TransferScreen({ onBack, onNewTransfer, onSelectContact, onBatchTransfer }: TransferScreenProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isAddingFavorite, setIsAddingFavorite] = useState(false);
   const [isEditFavorites, setIsEditFavorites] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<any | null>(null);
   const [favorites, setFavorites] = useState<any[]>([]);
   const [isLoadingFavorite, setIsLoadingFavorite] = useState(false);
-  const [isMultiSendOpen, setIsMultiSendOpen] = useState(false);
-  const [multiSendStep, setMultiSendStep] = useState<'info' | 'form' | 'processing' | 'success'>('info');
-  const [recipients, setRecipients] = useState<{ address: string; name: string; amount: string }[]>([
-    { address: '0x3a4f...8c91', name: 'John Doe', amount: '25.00' },
-    { address: '0x84E2...f312', name: 'Alice Smith', amount: '12.50' }
+
+  const [realContacts, setRealContacts] = useState<Contact[]>([
+    { id: '1', letter: 'A', name: 'ANNISA PATRIA', network: 'EVM (Arc Testnet)', account: '0x1A2bc...3c4A', initials: 'AP' },
+    { id: '2', letter: 'A', name: 'ARGA SATYAGRAHA', network: 'EVM (Arc Testnet)', account: '0x9F8eA...2d1B', initials: 'AS' },
+    { id: '3', letter: 'H', name: 'HERU SALAM', network: 'EVM (Arc Testnet)', account: '0x4E5fC...6a7C', initials: 'HS' },
+    { id: '4', letter: 'I', name: 'IDA RIDAWATI', network: 'EVM (Arc Testnet)', account: '0x7FaZ...9A2b', initials: 'IR' },
+    { id: '5', letter: 'L', name: 'LIGAR WENINGGALIH', network: 'EVM (Arc Testnet)', account: '0x2B3cD...4D5e', initials: 'LW' }
   ]);
-  const [newAddress, setNewAddress] = useState('');
-  const [newAmount, setNewAmount] = useState('');
-  const [processingStatus, setProcessingStatus] = useState<string>('');
-  const [isAddedFeedback, setIsAddedFeedback] = useState(false);
-
-  const addRecipientItem = () => {
-    if (!newAddress || !newAmount) return;
-    const formattedAddress = newAddress.length > 12
-      ? `${newAddress.substring(0, 6)}...${newAddress.substring(newAddress.length - 4)}`
-      : newAddress;
-    setRecipients(prev => [
-      ...prev,
-      { address: formattedAddress, name: `Recipient #${prev.length + 1}`, amount: newAmount }
-    ]);
-    setNewAddress('');
-    setNewAmount('');
-    setIsAddedFeedback(true);
-    setTimeout(() => {
-      setIsAddedFeedback(false);
-    }, 1000);
-  };
-
-  const removeRecipientItem = (index: number) => {
-    setRecipients(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const startProcessing = () => {
-    setMultiSendStep('processing');
-    setProcessingStatus('Packaging transaction inputs...');
-    setTimeout(() => {
-      setProcessingStatus('Circle SDK - Requesting authorized multisig signatures...');
-    }, 1200);
-    setTimeout(() => {
-      setProcessingStatus('Broadcasting batch transaction payload to Arc Testnet...');
-    }, 2500);
-    setTimeout(() => {
-      setMultiSendStep('success');
-    }, 3800);
-  };
 
   const handleToggleFavorite = (contact: any) => {
     setIsAddingFavorite(false);
@@ -180,24 +136,9 @@ export function TransferScreen({ onBack, onNewTransfer, onSelectContact }: Trans
     }, 1000); 
   };
 
-  const [realContacts, setRealContacts] = useState<Contact[]>([
-    { id: '1', letter: 'A', name: 'ANNISA PATRIA', network: 'EVM (Arc Testnet)', account: '0x1A2bc...3c4A', initials: 'AP' },
-    { id: '2', letter: 'A', name: 'ARGA SATYAGRAHA', network: 'EVM (Arc Testnet)', account: '0x9F8eA...2d1B', initials: 'AS' },
-    { id: '3', letter: 'H', name: 'HERU SALAM', network: 'EVM (Arc Testnet)', account: '0x4E5fC...6a7C', initials: 'HS' },
-    { id: '4', letter: 'I', name: 'IDA RIDAWATI', network: 'EVM (Arc Testnet)', account: '0x7FaZ...9A2b', initials: 'IR' },
-    { id: '5', letter: 'L', name: 'LIGAR WENINGGALIH', network: 'EVM (Arc Testnet)', account: '0x2B3cD...4D5e', initials: 'LW' }
-  ]);
   const [isManageContacts, setIsManageContacts] = useState(false);
   const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-
-  const groupedContacts = realContacts.reduce((acc, contact) => {
-    if (!acc[contact.letter]) {
-      acc[contact.letter] = [];
-    }
-    acc[contact.letter].push(contact);
-    return acc;
-  }, {} as Record<string, Contact[]>);
 
   return (
     <div className="w-full h-full bg-[#3FA2F6] relative flex flex-col items-center overflow-hidden z-50 animate-in slide-in-from-right duration-300">
@@ -209,10 +150,10 @@ export function TransferScreen({ onBack, onNewTransfer, onSelectContact }: Trans
             </button>
             {!isAddingFavorite && (
               <button 
-                onClick={() => setIsMultiSendOpen(true)}
+                onClick={onBatchTransfer}
                 className="bg-white text-[#3FA2F6] px-3 py-1.5 rounded-full flex items-center text-[12px] font-bold gap-1.5 shadow-sm absolute right-0 hover:bg-slate-50 transition-colors active:scale-95"
               >
-                <Users size={16} strokeWidth={2.5}/> Multi Send
+                <Users size={16} strokeWidth={2.5}/> Batch Transfer
               </button>
             )}
          </div>
@@ -327,33 +268,28 @@ export function TransferScreen({ onBack, onNewTransfer, onSelectContact }: Trans
 
               {/* Contacts */}
               <div className="flex flex-col w-full relative pb-[80px]">
-                 {/* A Line container styling */}
+                 {/* Vertical line connector */}
                  <div className="absolute left-[23px] top-8 bottom-0 w-[1px] bg-slate-100 z-0"></div>
                  
-                 {Object.entries(groupedContacts).map(([letter, groupContacts]) => (
-                   <React.Fragment key={letter}>
-                     <ContactDivider letter={letter} />
-                     {(groupContacts as Contact[]).map(contact => (
-                       <ContactItem 
-                         key={contact.id}
-                         initials={contact.initials} 
-                         name={contact.name} 
-                         network={contact.network}
-                         address={contact.account}
-                         isExpanded={expandedId === contact.id}
-                         onToggle={() => setExpandedId(expandedId === contact.id ? null : contact.id)}
-                         onSelect={() => onSelectContact({ name: contact.name, bank: contact.network, account: contact.account, initials: contact.initials })}
-                         isAddingFavorite={isAddingFavorite}
-                         onToggleFavorite={() => handleToggleFavorite(contact)}
-                         isFavorite={favorites.some(f => f.id === contact.id)}
-                         isManageContacts={isManageContacts}
-                         isSelected={selectedContacts.includes(contact.id)}
-                         onSelectManage={() => {
-                           setSelectedContacts(prev => prev.includes(contact.id) ? prev.filter(id => id !== contact.id) : [...prev, contact.id]);
-                         }}
-                       />
-                     ))}
-                   </React.Fragment>
+                 {realContacts.map(contact => (
+                    <ContactItem 
+                      key={contact.id}
+                      initials={contact.initials} 
+                      name={contact.name} 
+                      network={contact.network}
+                      address={contact.account}
+                      isExpanded={expandedId === contact.id}
+                      onToggle={() => setExpandedId(expandedId === contact.id ? null : contact.id)}
+                      onSelect={() => onSelectContact({ name: contact.name, bank: contact.network, account: contact.account, initials: contact.initials })}
+                      isAddingFavorite={isAddingFavorite}
+                      onToggleFavorite={() => handleToggleFavorite(contact)}
+                      isFavorite={favorites.some(f => f.id === contact.id)}
+                      isManageContacts={isManageContacts}
+                      isSelected={selectedContacts.includes(contact.id)}
+                      onSelectManage={() => {
+                        setSelectedContacts(prev => prev.includes(contact.id) ? prev.filter(id => id !== contact.id) : [...prev, contact.id]);
+                      }}
+                    />
                  ))}
               </div>
           </div>
@@ -415,304 +351,6 @@ export function TransferScreen({ onBack, onNewTransfer, onSelectContact }: Trans
        )}
 
        {/* Delete Favorite Modal */}
-       {contactToDelete && (
-          <div className="absolute inset-0 z-[60] bg-black/40 flex flex-col justify-end transition-opacity overflow-hidden">
-             <div className="bg-white rounded-t-[24px] w-full flex flex-col pb-8 pt-6 max-h-[80%] shadow-2xl animate-in slide-in-from-bottom duration-300 relative">
-                 <div className="px-5 pb-4 flex justify-between items-center border-b border-slate-100 mb-4">
-                   <h3 className="font-bold text-[18px] text-slate-800">Remove from Favorites?</h3>
-                   <button onClick={() => setContactToDelete(null)} className="text-slate-400 p-1 bg-slate-50 hover:bg-slate-100 rounded-full transition-colors absolute right-4 top-5 border-0">
-                     <X size={20} strokeWidth={2.5}/>
-                   </button>
-                </div>
-                <div className="px-5 flex flex-col gap-2">
-                  <p className="text-slate-600 text-[14px] mb-8 font-medium text-left">
-                    This contact can still be found in the Transfer List.
-                  </p>
-                  <button 
-                    onClick={() => {
-                      setIsLoadingFavorite(true);
-                      setContactToDelete(null);
-                      setTimeout(() => {
-                        setFavorites(prev => prev.filter(f => f.id !== contactToDelete.id));
-                        setIsLoadingFavorite(false);
-                        if (favorites.length === 1) setIsEditFavorites(false); // Only 1 was left
-                      }, 800);
-                    }}
-                    className="w-full bg-[#3FA2F6] text-[#ffffff] py-4 rounded-full font-bold text-[15px] shadow-[0_4px_14px_rgba(63,162,246,0.3)] hover:bg-[#2b88d8] active:scale-[0.98] transition-all"
-                  >
-                    Delete
-                  </button>
-                </div>
-             </div>
-          </div>
-       )}
-
-       {/* Multi Send Sheet */}
-       {isMultiSendOpen && (
-          <div className="absolute inset-x-0 bottom-0 top-0 bg-slate-900/40 z-[70] flex flex-col justify-end">
-             <div className="bg-white rounded-t-[24px] w-full flex flex-col pb-8 pt-6 shadow-2xl animate-in slide-in-from-bottom duration-300 relative max-h-[92%] overflow-y-auto">
-                
-                {/* Close Button or Back button on steps */}
-                <div className="flex justify-between items-center px-5 mb-4 border-b border-slate-100 pb-3">
-                   {multiSendStep !== 'info' && multiSendStep !== 'processing' ? (
-                      <button 
-                         onClick={() => setMultiSendStep('info')} 
-                         className="flex items-center gap-1.5 text-slate-500 hover:text-[#005faa] font-bold text-sm bg-transparent border-0 py-1"
-                      >
-                         <ArrowLeft size={16} /> Back
-                      </button>
-                   ) : (
-                      <span className="text-[15px] font-bold text-slate-800">Multi Send Panel</span>
-                   )}
-                   {multiSendStep !== 'processing' && (
-                      <button 
-                         onClick={() => {
-                            setIsMultiSendOpen(false);
-                            setMultiSendStep('info');
-                         }} 
-                         className="text-slate-400 p-1.5 hover:bg-slate-100 rounded-full transition-colors bg-transparent border-0"
-                      >
-                         <X size={20} strokeWidth={2}/>
-                      </button>
-                   )}
-                </div>
-
-                {/* Step 1: Info Screen */}
-                {multiSendStep === 'info' && (
-                   <div className="px-5">
-                      <div className="flex flex-col items-center text-center mt-2 mb-6">
-                         <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center text-[#3FA2F6] mb-3">
-                            <Users size={32} />
-                         </div>
-                         <h3 className="font-extrabold text-[20px] text-slate-900 tracking-tight">Multi-Recipient Send</h3>
-                         <p className="text-[13px] text-slate-500 max-w-[280px] mt-1">Distribute USDC to multiple addresses instantly or batch them to save gas.</p>
-                      </div>
-
-                      <div className="flex flex-col gap-3 text-left">
-                         {/* Batch Transfers Card (CSS Selector targeted item) */}
-                         <div 
-                            onClick={() => setMultiSendStep('form')}
-                            className="flex gap-4 items-start p-4 bg-gradient-to-r from-blue-50/70 to-blue-50/20 border border-blue-100 rounded-2xl cursor-pointer hover:bg-blue-50/50 active:scale-[0.99] transition-all group shadow-sm"
-                         >
-                            <div className="w-10 h-10 rounded-full bg-blue-100 text-[#005faa] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                               <Send size={18} />
-                            </div>
-                            <div className="flex-1 min-w-0 pr-2">
-                               <div className="flex items-center gap-2">
-                                  <h4 className="text-[14.5px] font-bold text-slate-900">Batch Transfers</h4>
-                                  <span className="text-[9px] font-black tracking-widest text-[#008fcd] bg-blue-100 px-1.5 py-0.5 rounded uppercase font-sans animate-pulse">Try Live</span>
-                                </div>
-                               <p className="text-[12.5px] text-slate-500 mt-0.5 leading-relaxed">Send USDC to up to 100 wallets in a single transaction.</p>
-                            </div>
-                            <ChevronRight size={18} className="text-[#3FA2F6] self-center ml-auto group-hover:translate-x-1 transition-transform" />
-                         </div>
-                         
-                         <div className="flex gap-4 items-start p-4 bg-slate-50/50 border border-slate-100 rounded-2xl">
-                            <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200/50 flex items-center justify-center shrink-0 text-emerald-500">
-                               <Star size={18} />
-                            </div>
-                            <div className="flex-1">
-                               <h4 className="text-[14px] font-bold text-slate-800">Lower Gas Fees</h4>
-                               <p className="text-[12px] text-slate-500 mt-0.5">Arc Network optimizes batch executions to save transaction fees.</p>
-                            </div>
-                         </div>
-
-                         <div className="flex gap-4 items-start p-4 bg-slate-50/50 border border-slate-100 rounded-2xl">
-                            <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200/50 flex items-center justify-center shrink-0 text-[#005faa]">
-                               <Info size={18} />
-                            </div>
-                            <div className="flex-1">
-                               <h4 className="text-[14px] font-bold text-slate-800">Circle SDK Integration</h4>
-                               <p className="text-[12px] text-slate-500 mt-0.5">Automated batch signatures powered by Developer-Controlled Wallets.</p>
-                            </div>
-                         </div>
-                      </div>
-
-                      <div className="mt-8">
-                         <button 
-                           onClick={() => setMultiSendStep('form')}
-                           className="w-full bg-[#008fcd] text-white py-4 rounded-full font-bold text-[15px] shadow-[0_4px_14px_rgba(0,143,205,0.3)] hover:bg-[#007dba] active:scale-[0.98] transition-all"
-                         >
-                           Open Interactive Batch Form
-                         </button>
-                      </div>
-                   </div>
-                )}
-
-                {/* Step 2: Form Inputs Screen */}
-                {multiSendStep === 'form' && (
-                   <div className="px-5 flex flex-col text-left">
-                      <div className="mb-4">
-                         <h3 className="font-extrabold text-[18px] text-slate-800 tracking-tight">Create Batch Transfer</h3>
-                         <p className="text-xs text-slate-400 mt-0.5">Assign recipients & edit USDC transfer amounts.</p>
-                      </div>
-
-                      {/* Recipient Item Inputs List */}
-                      <div className="space-y-3 max-h-[220px] overflow-y-auto mb-4 pr-1">
-                         {recipients.map((recipient, idx) => (
-                            <div key={idx} className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-xl relative group">
-                               <div className="w-8 h-8 rounded-full bg-blue-100 text-[#005faa] flex items-center justify-center font-bold text-xs shrink-0">
-                                  {recipient.name.substring(0, 1).toUpperCase()}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                   <div className="flex items-center justify-between">
-                                      <p className="font-bold text-slate-800 text-[13px] truncate">{recipient.name}</p>
-                                      <span className="font-mono text-[10px] text-slate-400 truncate max-w-[100px] ml-2">{recipient.address}</span>
-                                   </div>
-                                   
-                                   {/* Editable amount inline! */}
-                                   <div className="flex items-center gap-1.5 mt-1">
-                                      <span className="text-[11px] font-semibold text-slate-400">Amount:</span>
-                                      <input 
-                                         type="number" 
-                                         value={recipient.amount} 
-                                         onChange={(e) => {
-                                            const val = e.target.value;
-                                            setRecipients(prev => prev.map((item, i) => i === idx ? { ...item, amount: val } : item));
-                                         }}
-                                         className="bg-white border border-slate-200 rounded px-1.5 py-0.5 text-[12px] font-bold text-slate-800 w-20 focus:outline-none focus:border-[#3FA2F6] font-mono"
-                                      />
-                                      <span className="text-[11px] font-bold text-slate-500">USDC</span>
-                                   </div>
-                                </div>
-                                <button 
-                                   onClick={() => removeRecipientItem(idx)}
-                                   className="text-slate-400 hover:text-red-500 transition-colors p-1"
-                                >
-                                   <Trash2 size={16} />
-                                </button>
-                            </div>
-                         ))}
-
-                         {recipients.length === 0 && (
-                            <p className="text-[12px] text-slate-400 text-center py-6 bg-slate-50 rounded-xl">No recipients in this batch. Add one below!</p>
-                         )}
-                      </div>
-
-                       {/* Add Inline Recipient Row */}
-                       <div className="bg-[#f8fafc] border border-slate-100 rounded-2xl p-4 mb-5 flex flex-col gap-3">
-                          <p className="text-[11px] font-extrabold text-[#005faa] uppercase tracking-wider">Quick Add Recipient</p>
-                          <div className="flex flex-col gap-2.5">
-                             <input 
-                                type="number" 
-                                placeholder="Amount (USDC)" 
-                                value={newAmount} 
-                                onChange={e => setNewAmount(e.target.value)}
-                                className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-[13px] font-semibold text-slate-800 focus:outline-none focus:border-[#3FA2F6] font-mono"
-                             />
-                             <div className="flex gap-2">
-                                <input 
-                                   type="text" 
-                                   placeholder="Arc Wallet Address (0x...)" 
-                                   value={newAddress} 
-                                   onChange={e => setNewAddress(e.target.value)}
-                                   className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-[13px] font-mono text-slate-800 flex-1 focus:outline-none focus:border-[#3FA2F6]"
-                                />
-                                <button 
-                                   onClick={addRecipientItem}
-                                   disabled={!newAddress || !newAmount}
-                                   className={`px-4 rounded-xl font-bold text-[13px] transition-all duration-300 active:scale-[0.95] shrink-0 ${
-                                      isAddedFeedback 
-                                         ? 'bg-green-600 text-white shadow-md shadow-green-500/20' 
-                                         : 'bg-[#005faa] text-white hover:bg-[#004780] disabled:opacity-50'
-                                   }`}
-                                >
-                                   {isAddedFeedback ? 'Added ✓' : '+ Add'}
-                                </button>
-                             </div>
-                          </div>
-                       </div>
-
-                      {/* Fee Calculator summary info */}
-                      <div className="bg-blue-50/50 border border-blue-100/30 rounded-2xl p-4 flex flex-col gap-1 text-[13px] mb-6">
-                         <div className="flex justify-between items-center text-slate-500 font-medium font-sans">
-                            <span>Total Recipients</span>
-                            <span className="font-bold text-slate-800">{recipients.length}</span>
-                         </div>
-                         <div className="flex justify-between items-center text-slate-500 font-medium font-sans">
-                            <span>Total Transaction Amount</span>
-                            <span className="font-mono font-bold text-slate-800">{recipients.reduce((acc, curr) => acc + parseFloat(curr.amount || '0'), 0).toFixed(2)} USDC</span>
-                         </div>
-                         <div className="flex justify-between items-center text-slate-500 font-medium mt-1 pt-1.5 border-t border-slate-200/40 font-sans">
-                            <span>Est. Gas Optimization Savings</span>
-                            <span className="text-emerald-500 font-bold font-mono">-92.50%</span>
-                         </div>
-                         <div className="flex justify-between items-center text-slate-500 font-medium font-sans">
-                            <span>Arc Gas Fee</span>
-                            <span className="text-emerald-600 font-bold font-mono">0.002 USDC</span>
-                         </div>
-                      </div>
-
-                      <button 
-                         onClick={startProcessing}
-                         disabled={recipients.length === 0}
-                         className="w-full bg-[#008fcd] text-white py-4 rounded-full font-bold text-[14px] shadow-[0_4px_14px_rgba(0,143,205,0.3)] hover:bg-[#007dba] active:scale-[0.98] transition-all disabled:opacity-50"
-                      >
-                         Execute Batch Send ({recipients.length} Wallets)
-                      </button>
-                   </div>
-                )}
-
-                {/* Step 3: Processing Sequence */}
-                {multiSendStep === 'processing' && (
-                   <div className="px-5 py-8 flex flex-col items-center text-center">
-                      <Loader2 className="animate-spin text-[#005faa] mb-6" size={48} />
-                      <h3 className="font-extrabold text-[18px] text-slate-900 tracking-tight">On-Chain Batch Processing</h3>
-                      <p className="text-[13px] text-slate-400 mt-1 max-w-[260px]">Please wait while Circle Developer Wallet validates multisig and signs execution payloads.</p>
-                      
-                      {/* Active Status Log Box */}
-                      <div className="w-full bg-slate-950 text-emerald-400 font-mono text-[11px] rounded-xl p-4 mt-8 text-left leading-relaxed shadow-inner uppercase min-h-[64px] border border-slate-900">
-                         <span className="text-slate-500 mr-1.5">$</span> 
-                         {processingStatus}
-                      </div>
-                   </div>
-                )}
-
-                {/* Step 4: Success Screen */}
-                {multiSendStep === 'success' && (
-                   <div className="px-5 py-4 text-center">
-                      <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-green-500 mb-4 mx-auto">
-                         <CheckCircle2 size={36} />
-                      </div>
-                      <h3 className="font-extrabold text-[20px] text-slate-900 tracking-tight">Batch Broadcast Successful</h3>
-                      <p className="text-[13px] text-slate-500 mt-1 max-w-[300px] mb-6 mx-auto leading-relaxed">
-                         Successfully distributed <span className="font-bold text-slate-800">{recipients.reduce((acc, curr) => acc + parseFloat(curr.amount || '0'), 0).toFixed(2)} USDC</span> to <span className="font-bold text-slate-800">{recipients.length} addresses</span> in a single on-chain transaction.
-                      </p>
-
-                      <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 text-left mb-8 flex flex-col gap-2 font-medium">
-                         <div className="flex justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200/50 pb-2 mb-1.5 font-sans">
-                            <span>Recipient Summary</span>
-                            <span>Amount</span>
-                         </div>
-                         {recipients.map((rec, idx) => (
-                            <div key={idx} className="flex justify-between items-center text-[13px]">
-                               <div className="flex flex-col">
-                                  <span className="font-bold text-slate-800">{rec.name}</span>
-                                  <span className="font-mono text-[10.5px] text-slate-400">{rec.address}</span>
-                               </div>
-                               <span className="font-mono font-bold text-slate-800">{parseFloat(rec.amount || '0').toFixed(2)} USDC</span>
-                            </div>
-                         ))}
-                         <div className="flex justify-between items-center text-[12.5px] border-t border-slate-200/50 pt-3 mt-1.5 font-sans">
-                            <span className="text-slate-500">Transaction ID (TxHash)</span>
-                            <span className="font-mono text-[#005faa] font-bold">0x1ba7...bc11</span>
-                         </div>
-                      </div>
-
-                      <button 
-                         onClick={() => {
-                            setIsMultiSendOpen(false);
-                            setMultiSendStep('info');
-                         }}
-                         className="w-full bg-[#005faa] text-white py-4 rounded-full font-bold text-[15px] shadow-[0_4px_14px_rgba(0,95,170,0.3)] hover:bg-[#004780] active:scale-[0.98] transition-all"
-                      >
-                         Dismiss Panel
-                      </button>
-                   </div>
-                )}
-             </div>
-          </div>
-       )}
     </div>
   );
 }

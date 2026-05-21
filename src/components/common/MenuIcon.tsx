@@ -1,8 +1,9 @@
 import React from 'react';
+import { IconRenderer } from './IconRenderer';
 
 export interface MenuIconProps {
   key?: string | number;
-  icon: React.ReactNode;
+  icon: string;
   label: string;
   color: string;
   badge?: string;
@@ -22,7 +23,9 @@ export function MenuIcon({ icon, label, color, badge, bgCircle, badgeColor = "bg
       `}>
         {isTextIcon ? (
            <span className={`font-black text-sm italic ${color}`}>{textIcon}</span>
-        ) : icon}
+        ) : (
+          <IconRenderer name={icon} size={24} />
+        )}
       </div>
       {badge && (
         <span className={`absolute -top-1 right-0 ${badgeColor} text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full shadow-sm z-10 border border-white`}>

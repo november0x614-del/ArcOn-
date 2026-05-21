@@ -3,15 +3,12 @@ import {
   ArrowLeft, 
   Search, 
   Headphones as HeadphonesIcon, 
-  LogIn, 
-  Bell, 
   UserCircle, 
   Mail, 
   Settings, 
   FileText, 
   Key, 
   RefreshCw, 
-  CreditCard as CardIcon, 
   ArrowUpRight, 
   Smartphone, 
   Fingerprint, 
@@ -21,8 +18,6 @@ import {
 
 interface SettingsScreenProps {
   onBack: () => void;
-  onInstantAccess?: () => void;
-  onPusatNotifikasi?: () => void;
   onNamaPanggilan?: () => void;
   onEmail?: () => void;
   onShowToast?: (msg: string) => void;
@@ -32,8 +27,6 @@ interface SettingsScreenProps {
 
 export function SettingsScreen({ 
   onBack, 
-  onInstantAccess, 
-  onPusatNotifikasi, 
   onNamaPanggilan, 
   onEmail,
   onShowToast,
