@@ -26,6 +26,8 @@ interface SettingsScreenProps {
   onNamaPanggilan?: () => void;
   onEmail?: () => void;
   onShowToast?: (msg: string) => void;
+  isBiometricVerified?: boolean;
+  onVerifyBiometric?: () => void;
 }
 
 export function SettingsScreen({ 
@@ -34,9 +36,15 @@ export function SettingsScreen({
   onPusatNotifikasi, 
   onNamaPanggilan, 
   onEmail,
-  onShowToast
+  onShowToast,
+  isBiometricVerified = true,
+  onVerifyBiometric
 }: SettingsScreenProps) {
   const handleNotImplemented = (featureInfo?: string) => {
+    if (featureInfo === 'Biometrics' && !isBiometricVerified && onVerifyBiometric) {
+        onVerifyBiometric();
+        return;
+    }
     if (onShowToast) {
        onShowToast(`Feature ${featureInfo || 'this'} is still in development.`);
     }
@@ -76,7 +84,13 @@ export function SettingsScreen({
             <span className="text-[12px] font-bold text-slate-500 tracking-wide uppercase">Wallet Security</span>
           </div>
           <div className="bg-white border-y border-slate-100 flex flex-col">
-            <SettingItem icon={<Fingerprint size={20} className="text-[#3FA2F6]" />} label="Biometric Auth" onClick={() => handleNotImplemented("Biometrics")} />
+            <SettingItem 
+              icon={<Fingerprint size={20} className="text-[#3FA2F6]" />} 
+              label="Biometric Auth" 
+              badge={isBiometricVerified ? "VERIFIED" : "ACTION NEEDED"} 
+              badgeColor={isBiometricVerified ? "emerald" : "red"} 
+              onClick={() => handleNotImplemented("Biometrics")} 
+            />
             <SettingItem icon={<Lock size={20} className="text-[#3FA2F6]" />} label="Change PIN / Password" onClick={() => handleNotImplemented("Change PIN")} />
             <SettingItem icon={<Key size={20} className="text-[#3FA2F6]" />} label="Recovery Phrase (Seed)" badge="IMPORTANT" onClick={() => handleNotImplemented("Recovery Phrase")} />
             <SettingItem icon={<Shield size={20} className="text-[#3FA2F6]" />} label="Export Private Key" isLast onClick={() => handleNotImplemented("Export Private Key")} />
@@ -115,11 +129,12 @@ interface SettingItemProps {
   icon: React.ReactNode;
   label: string;
   badge?: string;
+  badgeColor?: 'emerald' | 'red';
   isLast?: boolean;
   onClick?: () => void;
 }
 
-function SettingItem({ icon, label, badge, isLast, onClick }: SettingItemProps) {
+function SettingItem({ icon, label, badge, badgeColor = 'emerald', isLast, onClick }: SettingItemProps) {
   return (
     <button onClick={onClick} className={`w-full flex items-center justify-between px-4 py-3.5 hover:bg-slate-50 transition-colors ${!isLast ? 'border-b border-slate-100' : ''}`}>
       <div className="flex items-center gap-4">
@@ -128,7 +143,10 @@ function SettingItem({ icon, label, badge, isLast, onClick }: SettingItemProps) 
       </div>
       <div className="flex items-center gap-3">
         {badge && (
-          <span className="px-2 py-0.5 bg-emerald-55 text-emerald-600 text-[10px] font-bold rounded shadow-[inset_0_0_0_1px_rgba(52,211,153,0.3)]">
+          <span className={`px-2 py-0.5 text-[10px] font-bold rounded shadow-[inset_0_0_0_1px_rgba(0,0,0,0.1)] ${
+            badgeColor === 'emerald' ? 'bg-emerald-50 text-emerald-600 shadow-[inset_0_0_0_1px_rgba(52,211,153,0.3)]' : 
+            'bg-red-50 text-red-600 shadow-[inset_0_0_0_1px_rgba(248,113,113,0.3)]'
+          }`}>
             {badge}
           </span>
         )}

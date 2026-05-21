@@ -2,15 +2,18 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
-import React, { useState } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ManageFavoritesScreen, defaultSelectedShortcuts, defaultAvailableShortcuts } from './components/screens/ManageFavoritesScreen';
+import { ManageFavoritesScreen } from './components/screens/ManageFavoritesScreen';
 import { ConnectEWalletScreen } from './components/screens/ConnectEWalletScreen';
 import { PasswordScreen } from './components/screens/PasswordScreen';
+import { ForgotPasswordScreen } from './components/screens/ForgotPasswordScreen';
 import { LoginScreen } from './components/screens/LoginScreen';
 import { RegisterWeb3Screen } from './components/screens/RegisterWeb3Screen';
 import { RegisterSuccessScreen } from './components/screens/RegisterSuccessScreen';
 import { TopUpScreen } from './components/screens/TopUpScreen';
+import { ScanQRScreen } from './components/screens/ScanQRScreen';
+import { AIAgentScreen } from './components/screens/AIAgentScreen';
 import { SettingsScreen } from './components/screens/SettingsScreen';
 import { InstantAccessScreen } from './components/screens/InstantAccessScreen';
 import { PusatNotifikasiScreen } from './components/screens/PusatNotifikasiScreen';
@@ -28,44 +31,28 @@ import { AmountInputScreen } from './components/screens/AmountInputScreen';
 import { NewTransferScreen } from './components/screens/NewTransferScreen';
 import { TransferScreen } from './components/screens/TransferScreen';
 import { HomeScreen } from './components/screens/HomeScreen';
-import { ViewState, ShortcutItem } from './types';
-import { Check } from 'lucide-react';
+import { useApp } from './context/AppContext';
 
 export default function App() {
-  const [viewState, setViewState] = useState<ViewState>('splash');
-  const [registeredUser, setRegisteredUser] = useState<{username: string; email: string} | null>(null);
-  const [receiptSource, setReceiptSource] = useState<ViewState>('home');
-  const [selectedContact, setSelectedContact] = useState<any>(null);
-  const [transferAmount, setTransferAmount] = useState('0');
-  const userName = 'RAKYAN INUKERTAPATI';
-  const [selectedShortcuts, setSelectedShortcuts] = useState<ShortcutItem[]>(defaultSelectedShortcuts);
-  const [availableShortcuts, setAvailableShortcuts] = useState<ShortcutItem[]>(defaultAvailableShortcuts);
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('Settings saved successfully.');
-
-  const displayToast = (msg: string) => {
-    setToastMessage(msg);
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 3000);
-  };
+  const {
+    viewState, setViewState,
+    registeredUser, setRegisteredUser,
+    isBiometricVerified, setIsBiometricVerified,
+    receiptSource, setReceiptSource,
+    selectedContact, setSelectedContact,
+    transferAmount, setTransferAmount,
+    selectedShortcuts, setSelectedShortcuts,
+    availableShortcuts, setAvailableShortcuts,
+    displayToast
+  } = useApp();
+  
+  const userName = registeredUser?.username || 'RAKYAN INUKERTAPATI';
 
   return (
     <div className="bg-[#EAF3FA] sm:bg-slate-900 min-h-screen sm:p-4 md:p-8 flex items-center justify-center">
       {/* Responsive Device Frame */}
       <div className="w-full max-w-[400px] md:max-w-2xl lg:max-w-5xl xl:max-w-6xl h-[100dvh] sm:h-[850px] lg:h-[90vh] bg-[#EAF3FA] sm:rounded-[40px] relative shadow-2xl overflow-hidden flex flex-col sm:border-[8px] border-slate-800 animate-in fade-in duration-500">
         
-        {/* Toast Notification */}
-        {showToast && (
-          <div className="absolute top-8 left-1/2 -translate-x-1/2 w-[90%] max-w-[340px] z-[100] animate-in fade-in slide-in-from-top-4 duration-300">
-             <div className="bg-emerald-50 text-emerald-700 shadow-[0_4px_12px_rgba(0,0,0,0.08)] border border-emerald-100 rounded-[12px] px-4 py-3 flex items-center gap-3 w-full">
-                <div className="bg-emerald-500 w-5 h-5 rounded-full flex items-center justify-center shrink-0">
-                  <Check size={12} strokeWidth={3} className="text-white" />
-                </div>
-                <span className="text-[13px] font-bold tracking-tight">{toastMessage}</span>
-             </div>
-          </div>
-        )}
-
         <AnimatePresence mode="wait">
           <motion.div 
             key={viewState}
@@ -76,7 +63,12 @@ export default function App() {
             className="w-full h-full relative"
           >
             {viewState === 'splash' && (
-              <LoginScreen onLogin={() => setViewState('password')} onRegister={() => setViewState('register')} />
+              <LoginScreen 
+                hasIdentity={!!registeredUser}
+                onShowToast={displayToast}
+                onLogin={() => setViewState('password')} 
+                onRegister={() => setViewState('register')} 
+              />
             )}
             
             {viewState === 'register' && (
@@ -84,6 +76,8 @@ export default function App() {
                 onBack={() => setViewState('splash')} 
                 onComplete={(data) => {
                   setRegisteredUser(data);
+                  localStorage.setItem('arc_commerce_user', JSON.stringify(data));
+                  setIsBiometricVerified(data.isVerified);
                   setViewState('registerSuccess');
                 }} 
               />
@@ -100,8 +94,16 @@ export default function App() {
             {viewState === 'password' && (
               <PasswordScreen 
                 onBack={() => setViewState('splash')} 
-                onLogin={() => setViewState('home')} 
+                onLogin={() => {
+                  setIsBiometricVerified(true); // Simulate already verified if login with PIN
+                  setViewState('home')
+                }} 
+                onForgotPassword={() => setViewState('forgotPassword')}
               />
+            )}
+            
+            {viewState === 'forgotPassword' && (
+              <ForgotPasswordScreen onBack={() => setViewState('password')} />
             )}
             
             {viewState === 'settings' && (
@@ -112,6 +114,11 @@ export default function App() {
                 onNamaPanggilan={() => setViewState('namaPanggilan')} 
                 onEmail={() => setViewState('email')}
                 onShowToast={displayToast}
+                isBiometricVerified={isBiometricVerified}
+                onVerifyBiometric={() => {
+                  displayToast('Biometric verified successfully!');
+                  setIsBiometricVerified(true);
+                }}
               />
             )}
             
@@ -196,6 +203,20 @@ export default function App() {
               <TopUpScreen onBack={() => setViewState('home')} />
             )}
             
+            {viewState === 'scanQR' && (
+              <ScanQRScreen 
+                onBack={() => setViewState('home')}
+                onScanResult={(contact) => {
+                  setSelectedContact(contact);
+                  setViewState('amountInput');
+                }}
+              />
+            )}
+
+            {viewState === 'aiAgent' && (
+              <AIAgentScreen onBack={() => setViewState('home')} />
+            )}
+
             {viewState === 'transfer' && (
               <TransferScreen 
                 onBack={() => setViewState('home')} 
@@ -252,6 +273,8 @@ export default function App() {
                 userName={userName}
                 selectedShortcuts={selectedShortcuts}
                 onNavigate={(view) => setViewState(view)}
+                isBiometricVerified={isBiometricVerified}
+                onRequireVerification={() => setViewState('settings')}
               />
             )}
           </motion.div>

@@ -62,7 +62,7 @@ export function RegisterSuccessScreen({ username = 'Arcreal', email = 'arcreal@e
           onClick={onContinue}
           className="w-full bg-[#005faa] text-white font-bold py-[14px] rounded-full hover:bg-[#004780] transition-colors active:scale-[0.98]"
         >
-          Go to Home
+          Mulai Eksplorasi
         </button>
       </div>
     </div>

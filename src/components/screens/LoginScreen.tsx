@@ -4,9 +4,18 @@ import { Wallet, ShieldCheck, ChevronRight } from 'lucide-react';
 interface LoginScreenProps {
   onLogin: () => void;
   onRegister?: () => void;
+  hasIdentity?: boolean;
+  onShowToast?: (msg: string) => void;
 }
 
-export function LoginScreen({ onLogin, onRegister }: LoginScreenProps) {
+export function LoginScreen({ onLogin, onRegister, hasIdentity, onShowToast }: LoginScreenProps) {
+  const handleRegisterClick = () => {
+    if (hasIdentity) {
+      onShowToast?.("Identity/Wallet already exists on this device.");
+    } else if (onRegister) {
+      onRegister();
+    }
+  };
   return (
     <div className="w-full h-full bg-white relative flex flex-col justify-between overflow-hidden">
       {/* Top Graphic Area */}
@@ -45,10 +54,11 @@ export function LoginScreen({ onLogin, onRegister }: LoginScreenProps) {
           </button>
           
           <button 
-            onClick={onRegister}
-            className="w-full bg-blue-50 hover:bg-blue-100 text-[#3FA2F6] font-bold py-4 rounded-2xl transition-all flex justify-center items-center active:scale-[0.98] border-0"
+            onClick={handleRegisterClick}
+            className={`w-full font-bold py-4 rounded-2xl transition-all flex justify-center items-center active:scale-[0.98] border-0
+              ${hasIdentity ? 'bg-slate-50 text-slate-400 cursor-not-allowed opacity-80' : 'bg-blue-50 hover:bg-blue-100 text-[#3FA2F6]'}`}
           >
-            Create New Identity
+            {hasIdentity ? 'Identity Already Exists' : 'Create New Identity'}
           </button>
         </div>
 

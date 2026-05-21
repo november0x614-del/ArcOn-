@@ -4,9 +4,10 @@ import { ChevronLeft, Eye, EyeOff, ShieldCheck, Wallet } from 'lucide-react';
 interface PasswordScreenProps {
   onBack: () => void;
   onLogin: () => void;
+  onForgotPassword?: () => void;
 }
 
-export function PasswordScreen({ onBack, onLogin }: PasswordScreenProps) {
+export function PasswordScreen({ onBack, onLogin, onForgotPassword }: PasswordScreenProps) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
@@ -77,7 +78,10 @@ export function PasswordScreen({ onBack, onLogin }: PasswordScreenProps) {
             </button>
 
             <div className="mt-8 flex justify-center">
-                <button className="text-[#3FA2F6] font-semibold text-[13px] hover:text-blue-700 transition-colors">
+                <button 
+                  onClick={onForgotPassword}
+                  className="text-[#3FA2F6] font-semibold text-[13px] hover:text-blue-700 transition-colors"
+                >
                 Forgot password?
                 </button>
             </div>

@@ -125,6 +125,7 @@ export function TransferScreen({ onBack, onNewTransfer, onSelectContact }: Trans
   const [newAddress, setNewAddress] = useState('');
   const [newAmount, setNewAmount] = useState('');
   const [processingStatus, setProcessingStatus] = useState<string>('');
+  const [isAddedFeedback, setIsAddedFeedback] = useState(false);
 
   const addRecipientItem = () => {
     if (!newAddress || !newAmount) return;
@@ -137,6 +138,10 @@ export function TransferScreen({ onBack, onNewTransfer, onSelectContact }: Trans
     ]);
     setNewAddress('');
     setNewAmount('');
+    setIsAddedFeedback(true);
+    setTimeout(() => {
+      setIsAddedFeedback(false);
+    }, 1000);
   };
 
   const removeRecipientItem = (index: number) => {
@@ -606,9 +611,13 @@ export function TransferScreen({ onBack, onNewTransfer, onSelectContact }: Trans
                                 <button 
                                    onClick={addRecipientItem}
                                    disabled={!newAddress || !newAmount}
-                                   className="bg-[#005faa] text-white px-4 rounded-xl font-bold text-[13px] hover:bg-[#004780] transition-colors disabled:opacity-50 shrink-0"
+                                   className={`px-4 rounded-xl font-bold text-[13px] transition-all duration-300 active:scale-[0.95] shrink-0 ${
+                                      isAddedFeedback 
+                                         ? 'bg-green-600 text-white shadow-md shadow-green-500/20' 
+                                         : 'bg-[#005faa] text-white hover:bg-[#004780] disabled:opacity-50'
+                                   }`}
                                 >
-                                   + Add
+                                   {isAddedFeedback ? 'Added ✓' : '+ Add'}
                                 </button>
                              </div>
                           </div>
