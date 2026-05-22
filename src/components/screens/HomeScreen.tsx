@@ -288,7 +288,7 @@ export const HomeScreen = React.memo(({
       <div className="absolute top-0 left-0 right-0 h-[430px] md:h-[450px] bg-[#3FA2F6] rounded-b-[40px] md:rounded-b-[50px] z-0"></div>
 
       {/* Top Header */}
-      <header className="relative text-white px-5 md:px-8 lg:px-10 pt-6 md:pt-8 pb-3 flex justify-between items-center z-20 shrink-0">
+      <header className="relative text-white px-5 md:px-8 lg:px-10 pt-4 md:pt-8 pb-3 flex justify-between items-center z-20 shrink-0">
         <div className="flex items-center gap-3 cursor-pointer">
           <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-[#3FA2F6] font-[900] text-lg shadow-sm uppercase">
             {userName
