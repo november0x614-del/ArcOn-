@@ -181,7 +181,8 @@ export default function App() {
                   });
                   
                   if (error) {
-                    throw error;
+                    displayToast(error.message);
+                    return;
                   }
 
                   if (data.user) {

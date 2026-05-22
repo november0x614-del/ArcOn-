@@ -12,16 +12,12 @@ export function PasswordScreen({ onBack, onLogin, onForgotPassword }: PasswordSc
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleSubmit = async () => {
     if (!email || !password) return;
     setIsLoading(true);
-    setErrorMsg(null);
     try {
       await onLogin(email, password);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Login failed. Please check your credentials.');
     } finally {
       setIsLoading(false);
     }
@@ -60,12 +56,7 @@ export function PasswordScreen({ onBack, onLogin, onForgotPassword }: PasswordSc
         <div className="flex flex-col justify-center">
             <h2 className="text-[14px] font-bold text-slate-400 uppercase tracking-widest mb-6 text-center">Identity Authentication</h2>
             
-            <div className="space-y-4 mb-4">
-              {errorMsg && (
-                <div className="bg-red-50 border border-red-100 p-3 rounded-xl mb-2 animate-in fade-in slide-in-from-top-2">
-                  <p className="text-[12px] text-red-600 font-medium text-center">{errorMsg}</p>
-                </div>
-              )}
+            <div className="space-y-4 mb-8">
               <div className="w-full relative group">
                 <input 
                     type="email" 

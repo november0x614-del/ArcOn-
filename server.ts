@@ -85,10 +85,10 @@ async function startServer() {
       // 3. (Optional) Save to Supabase if userId is provided
       if (userId && process.env.SUPABASE_SERVICE_ROLE_KEY) {
         const { error } = await supabaseAdmin.from('user_wallets').insert({
-          supabase_uid: userId,
-          circle_wallet_id: wallet.id,
+          id: userId,
+          wallet_id: wallet.id,
           wallet_address: wallet.address,
-          circle_wallet_set_id: walletSet.id
+          wallet_set_id: walletSet.id
         });
         if (error) console.error("Failed mapping to Supabase:", error);
       }
