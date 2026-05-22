@@ -1,4 +1,5 @@
 import React from "react";
+import { ViewState } from "../../types";
 import { useApp } from "../../context/AppContext";
 import { LoginScreen } from "../screens/LoginScreen";
 import { RegisterWeb3Screen } from "../screens/RegisterWeb3Screen";
@@ -47,7 +48,7 @@ interface ViewRouterProps {
   setIsLoggingIn: (loading: boolean) => void;
 }
 
-export function ViewRouter({ isLoggingIn, loginEmail, setLoginEmail, setIsLoggingIn }: ViewRouterProps) {
+export const ViewRouter = React.memo(({ isLoggingIn, loginEmail, setLoginEmail, setIsLoggingIn }: ViewRouterProps) => {
   const {
     viewState,
     setViewState,
@@ -69,6 +70,8 @@ export function ViewRouter({ isLoggingIn, loginEmail, setLoginEmail, setIsLoggin
     fetchBalance,
     fetchTransactions
   } = useApp();
+
+  const onNavigate = React.useCallback((view: ViewState) => setViewState(view), [setViewState]);
 
   const userName = registeredUser?.username || "RAKYAN INUKERTAPATI";
 
@@ -400,9 +403,9 @@ export function ViewRouter({ isLoggingIn, loginEmail, setLoginEmail, setIsLoggin
         <HomeScreen
           userName={userName}
           selectedShortcuts={selectedShortcuts}
-          onNavigate={(view) => setViewState(view)}
+          onNavigate={onNavigate}
         />
       )}
     </>
   );
-}
+});

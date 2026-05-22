@@ -39,11 +39,11 @@ export interface HomeScreenProps {
   onNavigate: (view: ViewState) => void;
 }
 
-export function HomeScreen({
+export const HomeScreen = React.memo(({
   userName,
   selectedShortcuts,
   onNavigate,
-}: HomeScreenProps) {
+}: HomeScreenProps) => {
   const {
     transactions,
     visibleTokenCodes,
@@ -1218,4 +1218,4 @@ export function HomeScreen({
 
     </div>
   );
-}
+});
