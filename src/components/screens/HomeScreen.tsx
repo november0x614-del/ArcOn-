@@ -264,28 +264,28 @@ export const HomeScreen = React.memo(({
     return () => clearInterval(interval);
   }, []);
 
-  const formatPrice = (price: number) => {
+  const formatPrice = React.useCallback((price: number) => {
     if (price >= 1000) {
       return `$${price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
     return `$${price.toFixed(2)}`;
-  };
+  }, []);
 
-  const formatChange = (change: number, isDown: boolean) => {
+  const formatChange = React.useCallback((change: number, isDown: boolean) => {
     const absChange = Math.abs(change);
     const prefix = isDown ? "-" : "+";
     if (absChange >= 1000) {
       return `${prefix}${absChange.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
     return `${prefix}${absChange.toFixed(2)}`;
-  };
+  }, []);
 
 
 
   return (
     <div className="flex flex-col h-full bg-[#ecf5fc] font-sans relative overflow-hidden">
       {/* Background shape that covers the top half */}
-      <div className="absolute top-0 left-0 right-0 h-[430px] md:h-[450px] bg-[#3FA2F6] rounded-b-[40px] md:rounded-b-[50px] z-0"></div>
+      <div className="absolute top-0 left-0 right-0 h-[40vh] md:h-[450px] bg-[#3FA2F6] rounded-b-[40px] md:rounded-b-[50px] z-0"></div>
 
       {/* Top Header */}
       <header className="relative text-white px-5 md:px-8 lg:px-10 pt-4 md:pt-8 pb-3 flex justify-between items-center z-20 shrink-0">
