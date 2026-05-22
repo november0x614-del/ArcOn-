@@ -113,7 +113,6 @@ export function ViewRouter({ isLoggingIn, loginEmail, setLoginEmail, setIsLoggin
           isLoading={isLoggingIn}
           onLogin={async (email, password) => {
             setIsLoggingIn(true);
-
             const { error } = await supabase.auth.signInWithPassword({
               email,
               password
