@@ -87,7 +87,7 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
                 <div key={product.id} className="bg-white p-3 rounded-[20px] border border-slate-100 flex items-center shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-md transition-shadow group animate-in slide-in-from-bottom-[10px]" style={{ animationDelay: `${idx * 50}ms` }}>
                   <div className="w-[80px] h-[80px] rounded-[14px] overflow-hidden shrink-0 bg-slate-100 relative shadow-inner">
                     <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                    {!product.active && (
+                    {!(product as any).active && (
                        <div className="absolute inset-0 bg-white/70 backdrop-blur-[1px] flex items-center justify-center">
                          <span className="text-[9px] font-black tracking-wider bg-slate-800 text-white px-2 py-1 rounded">INACTIVE</span>
                        </div>
