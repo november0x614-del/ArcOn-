@@ -1,12 +1,23 @@
 import React, { useState } from "react";
 import { ArrowLeft, Copy, Check, Info, Scan } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
+import { useApp } from "../../context/AppContext";
 
 interface DepositQRScreenProps {
   onBack: () => void;
 }
 
 export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
+  const { 
+    registeredUser, 
+    displayToast, 
+    balance, 
+    setBalance, 
+    addTransaction, 
+    setViewState,
+    setSelectedContact,
+    setTransferAmount // Add this
+  } = useApp();
   const [copied, setCopied] = useState(false);
   const [amount, setAmount] = useState<string>("");
   const [isEditingAmount, setIsEditingAmount] = useState(false);
@@ -14,7 +25,35 @@ export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
   const [simStep, setSimStep] = useState(0);
   const [isScanningSim, setIsScanningSim] = useState(false);
   const [scanSimComplete, setScanSimComplete] = useState(false);
-  const address = "0x742d35Cc6634C0532925a3b844Bc454e4438f44e";
+  
+  const handleSimulateCamera = () => {
+    setIsScanningSim(true);
+    setScanSimComplete(false);
+    
+    // Simulate scan detection in 2 seconds
+    setTimeout(() => {
+      setScanSimComplete(true);
+      
+      // Navigate to amountInputScreen with mock contact data
+      const mockContact = {
+        id: 'mock-1',
+        letter: 'A',
+        name: 'ANNISA PATRIA',
+        network: 'EVM (Arc Testnet)',
+        account: '0x1A2bc...3c4A',
+        initials: 'AP'
+      };
+      
+      setTransferAmount(amount || '20'); // Set amount in context!
+      setSelectedContact(mockContact);
+      setViewState("amountInput");
+      
+      setIsScanningSim(false);
+      setScanSimComplete(false);
+    }, 2000);
+  };
+
+  const address = registeredUser?.walletAddress || "0x742d35Cc6634C0532925a3b844Bc454e4438f44e";
 
   React.useEffect(() => {
     if (isSimulating && simStep < 4) {
@@ -29,6 +68,43 @@ export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
     navigator.clipboard.writeText(address);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleSimulateWebhook = async () => {
+    setIsSimulating(true);
+    setSimStep(0);
+    
+    try {
+      const receiveAmount = parseFloat(amount) || 100;
+      
+      const response = await fetch('/api/webhook/simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          userId: registeredUser?.supabaseUid,
+          amount: receiveAmount
+        }),
+      });
+      
+      if (!response.ok) throw new Error('Simulation failed');
+      
+      // Update local state after simulation
+      setBalance(prev => prev + receiveAmount);
+      addTransaction({
+        type: 'receive',
+        title: `Received USDC`,
+        amount: `+${receiveAmount.toFixed(2)}`,
+        currency: 'USDC',
+        status: 'success',
+        txHash: `0x${Math.random().toString(16).slice(2, 10)}...${Math.random().toString(16).slice(2, 6)}`
+      });
+      
+      displayToast(`Successfully received ${receiveAmount} USDC`);
+    } catch (error) {
+      console.error(error);
+      displayToast("Simulation failed");
+      setIsSimulating(false);
+    }
   };
 
   return (
@@ -47,7 +123,7 @@ export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
           </h2>
         </div>
         <button
-          onClick={() => setIsSimulating(true)}
+          onClick={handleSimulateWebhook}
           className="bg-purple-100 text-purple-700 font-bold px-3 py-1.5 rounded-full text-[11px] uppercase tracking-wide hover:bg-purple-200 transition-colors"
           title="Simulate incoming hook from Arc Testnet"
         >
@@ -121,16 +197,8 @@ export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
           </div>
 
           <button
-            onClick={() => {
-              setIsScanningSim(true);
-              setScanSimComplete(false);
-              setTimeout(() => setScanSimComplete(true), 2000);
-              setTimeout(() => {
-                setIsScanningSim(false);
-                setScanSimComplete(false);
-              }, 3500);
-            }}
-            className="mb-6 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold px-4 py-2 rounded-xl text-[12px] flex items-center gap-2 transition-colors active:scale-95 border border-slate-200"
+            onClick={handleSimulateCamera}
+            className="mb-6 bg-white hover:bg-blue-50 text-blue-600 font-bold px-4 py-2.5 rounded-xl text-[12px] flex items-center gap-2 transition-all active:scale-95 border border-blue-100 shadow-sm hover:shadow"
           >
             <Scan size={14} /> Simulate Camera View
           </button>

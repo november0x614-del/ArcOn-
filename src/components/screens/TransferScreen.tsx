@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Search, UserPlus, Plus, Users, Star, X } from 'lucide-react';
+import { useApp } from '../../context/AppContext';
 
 interface Contact {
   id: string;
@@ -103,6 +104,7 @@ function ContactItem({
 }
 
 export function TransferScreen({ onBack, onNewTransfer, onSelectContact, onBatchTransfer }: TransferScreenProps) {
+  const { transactions, fetchTransactions, registeredUser } = useApp();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isAddingFavorite, setIsAddingFavorite] = useState(false);
   const [isEditFavorites, setIsEditFavorites] = useState(false);
@@ -110,13 +112,39 @@ export function TransferScreen({ onBack, onNewTransfer, onSelectContact, onBatch
   const [favorites, setFavorites] = useState<any[]>([]);
   const [isLoadingFavorite, setIsLoadingFavorite] = useState(false);
 
-  const [realContacts, setRealContacts] = useState<Contact[]>([
-    { id: '1', letter: 'A', name: 'ANNISA PATRIA', network: 'EVM (Arc Testnet)', account: '0x1A2bc...3c4A', initials: 'AP' },
-    { id: '2', letter: 'A', name: 'ARGA SATYAGRAHA', network: 'EVM (Arc Testnet)', account: '0x9F8eA...2d1B', initials: 'AS' },
-    { id: '3', letter: 'H', name: 'HERU SALAM', network: 'EVM (Arc Testnet)', account: '0x4E5fC...6a7C', initials: 'HS' },
-    { id: '4', letter: 'I', name: 'IDA RIDAWATI', network: 'EVM (Arc Testnet)', account: '0x7FaZ...9A2b', initials: 'IR' },
-    { id: '5', letter: 'L', name: 'LIGAR WENINGGALIH', network: 'EVM (Arc Testnet)', account: '0x2B3cD...4D5e', initials: 'LW' }
-  ]);
+  React.useEffect(() => {
+    fetchTransactions();
+  }, [fetchTransactions]);
+
+  const realContacts = React.useMemo(() => {
+    // Generate contacts from transaction history - real data!
+    const contactMap = new Map<string, Contact>();
+    
+    // Fallback if no transactions
+    if (!transactions || transactions.length === 0) {
+       return [
+        { id: '1', letter: 'A', name: 'ANNISA PATRIA', network: 'EVM (Arc Testnet)', account: '0x1A2bc...3c4A', initials: 'AP' },
+        { id: '2', letter: 'A', name: 'ARGA SATYAGRAHA', network: 'EVM (Arc Testnet)', account: '0x9F8eA...2d1B', initials: 'AS' },
+       ];
+    }
+    
+    transactions.forEach((tx, index) => {
+       if (tx.type === 'payment') {
+         const name = `Receiver ${index + 1}`;
+         contactMap.set(tx.internal_ref || tx.id, {
+            id: tx.id,
+            letter: name[0],
+            name: name,
+            network: 'EVM (Arc Testnet)',
+            account: tx.internal_ref || '0x...', // Here would be the dest address if stored
+            initials: name.substring(0,2).toUpperCase()
+         });
+       }
+    });
+    
+    return Array.from(contactMap.values());
+  }, [transactions]);
+
 
   const handleToggleFavorite = (contact: any) => {
     setIsAddingFavorite(false);

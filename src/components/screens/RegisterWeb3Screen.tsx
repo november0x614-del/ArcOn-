@@ -39,6 +39,17 @@ export function RegisterWeb3Screen({ onBack, onComplete }: RegisterWeb3ScreenPro
 
   const createWallet = async () => {
     if (isCreating) return;
+    
+    // Validasi Dasar Frontend
+    if (!email.includes('@')) {
+      setError('Format email tidak valid.');
+      return;
+    }
+    if (password.length < 6) {
+      setError('Password minimal 6 karakter.');
+      return;
+    }
+
     setIsCreating(true);
     setError(null);
     try {
@@ -47,9 +58,7 @@ export function RegisterWeb3Screen({ onBack, onComplete }: RegisterWeb3ScreenPro
         email,
         password,
         options: {
-          data: {
-            username: username
-          }
+          data: { username: username }
         }
       });
 
@@ -57,6 +66,7 @@ export function RegisterWeb3Screen({ onBack, onComplete }: RegisterWeb3ScreenPro
       const userId = authData.user?.id;
 
       // 2. Call backend to create Circle Wallet
+      // Status update untuk UX
       const response = await fetch('/api/wallets/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -71,30 +81,29 @@ export function RegisterWeb3Screen({ onBack, onComplete }: RegisterWeb3ScreenPro
         try {
           data = responseText ? JSON.parse(responseText) : null;
         } catch (e) {
-          console.error("JSON Parse Error:", e);
-          throw new Error(`Invalid JSON response: ${responseText.substring(0, 100)}`);
+          throw new Error('Gagal memproses respon server.');
         }
       } else {
         throw new Error(responseText || `Server error: ${response.status}`);
       }
       
       if (!response.ok) {
-         throw new Error(data?.error || `Request failed with status ${response.status}`);
+         throw new Error(data?.error || 'Pembuatan wallet gagal.');
       }
 
       onComplete({ 
-        username: username || 'Arcreal', 
-        email: email || 'user@example.com', 
+        username: username || 'User', 
+        email: email, 
         isVerified: willVerify,
         walletId: data.walletId,
         walletAddress: data.address,
         supabaseUid: userId,
-        registrationDate: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()
+        registrationDate: new Date().toLocaleDateString('id-ID')
       });
     } catch (err: any) {
       console.error("Wallet/Auth Creation Error:", err);
-      let msg = err.message || 'Failed to complete registration.';
-      if (msg.includes('rate limit')) msg = 'Supabase Rate Limit: Maksimal 2 email per jam.';
+      let msg = 'Maaf, terjadi kesalahan sistem. Silakan coba kembali.';
+      if (err.message.includes('rate limit')) msg = 'Terlalu banyak percobaan. Silakan coba lagi nanti.';
       setError(msg);
       setIsCreating(false);
     }

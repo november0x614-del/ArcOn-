@@ -4,10 +4,11 @@ import { CheckCircle2, User, Mail, Wallet } from 'lucide-react';
 interface RegisterSuccessScreenProps {
   username?: string;
   email?: string;
+  walletAddress?: string;
   onContinue: () => void;
 }
 
-export function RegisterSuccessScreen({ username = 'Arcreal', email = 'arcreal@example.com', onContinue }: RegisterSuccessScreenProps) {
+export function RegisterSuccessScreen({ username = 'Arcreal', email = 'arcreal@example.com', walletAddress = '0x00...0000', onContinue }: RegisterSuccessScreenProps) {
   return (
     <div className="w-full h-full bg-white relative flex flex-col justify-center text-center p-6 animate-in slide-in-from-right duration-300 z-50">
       <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6 mx-auto">
@@ -52,7 +53,7 @@ export function RegisterSuccessScreen({ username = 'Arcreal', email = 'arcreal@e
                   <span className="text-slate-400 text-[11px] font-bold uppercase tracking-wider">Arc Wallet Address</span>
                   <span className="text-[9px] font-bold text-[#005faa] bg-blue-100 px-1.5 py-0.5 rounded">TESTNET</span>
                </div>
-               <span className="font-mono font-medium text-slate-800 text-[13px] truncate mt-0.5">0x3a4f...8c91</span>
+               <span className="font-mono font-medium text-slate-800 text-[13px] truncate mt-0.5">{walletAddress}</span>
             </div>
          </div>
       </div>

@@ -1,15 +1,18 @@
-import React from 'react';
-import { Wallet, ShieldCheck, ChevronRight } from 'lucide-react';
+import React, { useState } from 'react';
+import { Wallet, ShieldCheck, ChevronRight, Loader2 } from 'lucide-react';
 
 interface LoginScreenProps {
-  onLogin: () => void;
+  onLogin: (email: string) => void;
   onRegister?: () => void;
   hasIdentity?: boolean;
   onShowToast?: (msg: string) => void;
+  isLoading?: boolean;
 }
 
-export function LoginScreen({ onLogin, onRegister, hasIdentity, onShowToast }: LoginScreenProps) {
+export function LoginScreen({ onLogin, onRegister, hasIdentity, onShowToast, isLoading }: LoginScreenProps) {
+  const [email, setEmail] = useState('');
   const handleRegisterClick = () => {
+    if (isLoading) return;
     if (hasIdentity) {
       onShowToast?.("Identity/Wallet already exists on this device.");
     } else if (onRegister) {
@@ -46,19 +49,37 @@ export function LoginScreen({ onLogin, onRegister, hasIdentity, onShowToast }: L
       <div className="flex-1 px-6 pt-8 pb-10 flex flex-col justify-end bg-white">
         
         <div className="flex flex-col gap-4">
+          <input 
+            type="email"
+            placeholder="Email"
+            value={email}
+            disabled={isLoading}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full bg-[#f8fafc] border-[1.5px] border-slate-200 rounded-2xl py-4 px-5 text-slate-800 text-[15px] font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-100/50 shadow-sm transition-all"
+          />
+
           <button 
-            onClick={onLogin}
-            className="w-full bg-[#3FA2F6] hover:bg-blue-600 text-white font-bold py-4 rounded-2xl transition-all shadow-[0_8px_20px_rgba(63,162,246,0.25)] flex justify-center items-center gap-2 active:scale-[0.98] border-0"
+            onClick={() => onLogin(email)}
+            disabled={isLoading || !email}
+            className={`w-full bg-[#3FA2F6] hover:bg-blue-600 text-white font-bold py-4 rounded-2xl transition-all shadow-[0_8px_20px_rgba(63,162,246,0.25)] flex justify-center items-center gap-2 active:scale-[0.98] border-0 ${isLoading || !email ? 'opacity-70 cursor-not-allowed' : ''}`}
           >
-            Access Account <ChevronRight size={18} strokeWidth={2.5} />
+            {isLoading ? (
+              <Loader2 size={18} className="animate-spin" />
+            ) : (
+              <>
+                Access Account <ChevronRight size={18} strokeWidth={2.5} />
+              </>
+            )}
           </button>
           
           <button 
             onClick={handleRegisterClick}
+            disabled={isLoading}
             className={`w-full font-bold py-4 rounded-2xl transition-all flex justify-center items-center active:scale-[0.98] border-0
-              ${hasIdentity ? 'bg-slate-50 text-slate-400 cursor-not-allowed opacity-80' : 'bg-blue-50 hover:bg-blue-100 text-[#3FA2F6]'}`}
+              ${hasIdentity ? 'bg-slate-50 text-slate-400 cursor-not-allowed opacity-80' : 'bg-blue-50 hover:bg-blue-100 text-[#3FA2F6]'}
+              ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
           >
-            {hasIdentity ? 'Identity Already Exists' : 'Create New Identity'}
+            {hasIdentity ? 'Identity Already Exists' : 'Sign Up'}
           </button>
         </div>
 

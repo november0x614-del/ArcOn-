@@ -106,9 +106,9 @@ export const useStore = create<AppState>()(
           console.error('Failed to fetch balance', error);
         }
       },
-      pnlValue: 0.86,
+      pnlValue: 0,
       setPnlValue: (value) => set({ pnlValue: value }),
-      pnlPercentage: 0.12,
+      pnlPercentage: 0,
       setPnlPercentage: (percentage) => set({ pnlPercentage: percentage }),
       transactions: [], // Start empty
       fetchTransactions: async () => {

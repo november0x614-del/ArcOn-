@@ -125,7 +125,7 @@ export function AccountDetailScreen({
               <div className="flex items-baseline gap-2 mb-4">
                 <span className="text-[42px] font-black tracking-tight leading-none">
                   {showBalance
-                    ? balance.toLocaleString("id-ID", {
+                    ? (balance || 0).toLocaleString("id-ID", {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                       })
@@ -270,10 +270,10 @@ export function AccountDetailScreen({
               </div>
               <div className="flex flex-col items-end">
                 <span className="font-bold text-[16px] text-slate-800">
-                  {balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {(balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
                 <span className="text-[12px] text-slate-400 font-medium tracking-wide">
-                  ~${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ~${(balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
             </div>

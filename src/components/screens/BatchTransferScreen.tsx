@@ -20,7 +20,7 @@ interface BatchTransferScreenProps {
 export function BatchTransferScreen({ onBack, contacts }: BatchTransferScreenProps) {
   const { balance, setBalance, addTransaction, displayToast } = useApp();
   const [multiSendStep, setMultiSendStep] = useState<'info' | 'form' | 'processing' | 'success'>('form');
-  const [recipients, setRecipients] = useState<{ address: string; name: string; amount: string }[]>([]);
+  const [recipients, setRecipients] = useState<{ id: string, address: string; name: string; amount: string }[]>([]);
   const [newAddress, setNewAddress] = useState('');
   const [newAmount, setNewAmount] = useState('');
   const [processingStatus, setProcessingStatus] = useState<string>('');
@@ -38,7 +38,7 @@ export function BatchTransferScreen({ onBack, contacts }: BatchTransferScreenPro
         ? `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`
         : addr;
         
-      return { address: formattedAddress, name, amount: newAmount };
+      return { id: `${addr}-${Date.now()}-${Math.random()}`, address: formattedAddress, name, amount: newAmount };
     });
 
     setRecipients(prev => [...prev, ...newItems]);
@@ -161,7 +161,7 @@ export function BatchTransferScreen({ onBack, contacts }: BatchTransferScreenPro
                    {/* Recipient Cards */}
                    <div className="space-y-3 mb-6">
                       {recipients.map((recipient, idx) => (
-                         <div key={idx} className="flex items-center gap-3 p-4 bg-white border border-slate-100 rounded-2xl shadow-sm relative group">
+                         <div key={recipient.id} className="flex items-center gap-3 p-4 bg-white border border-slate-100 rounded-2xl shadow-sm relative group">
                             <div className="w-10 h-10 rounded-full bg-blue-50 text-[#3FA2F6] flex items-center justify-center font-bold text-sm shrink-0">
                                {recipient.name.substring(0, 1).toUpperCase()}
                              </div>
@@ -329,8 +329,8 @@ export function BatchTransferScreen({ onBack, contacts }: BatchTransferScreenPro
                          <span>Payout</span>
                       </div>
                       <div className="space-y-4">
-                         {recipients.map((rec, idx) => (
-                            <div key={idx} className="flex justify-between items-center">
+                         {recipients.map((rec) => (
+                            <div key={rec.id} className="flex justify-between items-center">
                                <div className="flex flex-col">
                                   <span className="font-bold text-slate-900 text-[14px]">{rec.name}</span>
                                   <span className="font-mono text-[11px] text-slate-400">{rec.address}</span>

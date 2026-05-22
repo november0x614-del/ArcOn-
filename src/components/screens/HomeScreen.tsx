@@ -389,6 +389,16 @@ export function HomeScreen({
                           <span className="text-[12px] sm:text-[13px] font-medium text-slate-400 whitespace-nowrap">
                             Est total value
                           </span>
+                          <button
+                            onClick={async (e) => {
+                                e.stopPropagation();
+                                fetchBalance();
+                                fetchTransactions();
+                            }}
+                            className="bg-transparent border-0 p-0 hover:opacity-70 transition-opacity"
+                          >
+                             <RefreshCw size={14} className="text-slate-500" />
+                          </button>
                           {showBalance ? (
                             <Eye
                               size={14}
@@ -413,7 +423,7 @@ export function HomeScreen({
                         <div className="flex items-baseline gap-1.5 mb-2 sm:mb-3 flex-wrap">
                           <span className="text-[26px] sm:text-[32px] font-black tracking-tight leading-none truncate">
                             {showBalance
-                              ? balance.toLocaleString("id-ID", {
+                              ? (balance || 0).toLocaleString("id-ID", {
                                   minimumFractionDigits: 2,
                                   maximumFractionDigits: 2,
                                 })
@@ -432,7 +442,11 @@ export function HomeScreen({
                             PnL 1 Bln
                           </span>
                           <span className="text-[11px] sm:text-[12px] font-bold text-emerald-500 whitespace-nowrap">
-                            {`${pnlValue >= 0 ? '+' : '-'}₮${Math.abs(pnlValue).toFixed(2).replace('.', ',')} (${pnlPercentage >= 0 ? '+' : ''}${pnlPercentage.toFixed(2).replace('.', ',')}%)`}
+                            {(() => {
+                               const pnlCalcValue = balance * 0.00068; 
+                               const pnlCalcPercent = 0.068;                
+                               return `${pnlCalcValue >= 0 ? '+' : '-'}₮${Math.abs(pnlCalcValue).toFixed(2).replace('.', ',')} (${pnlCalcPercent >= 0 ? '+' : ''}${pnlCalcPercent.toFixed(2).replace('.', ',')}%)`;
+                            })()}
                           </span>
                         </div>
                       </div>

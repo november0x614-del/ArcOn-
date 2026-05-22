@@ -3,11 +3,13 @@ import { ChevronLeft, Eye, EyeOff, ShieldCheck, Wallet } from 'lucide-react';
 
 interface PasswordScreenProps {
   onBack: () => void;
-  onLogin: () => void;
+  email: string;
+  onLogin: (email: string, password: string) => void;
   onForgotPassword?: () => void;
+  isLoading?: boolean;
 }
 
-export function PasswordScreen({ onBack, onLogin, onForgotPassword }: PasswordScreenProps) {
+export function PasswordScreen({ onBack, email, onLogin, onForgotPassword, isLoading }: PasswordScreenProps) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
@@ -22,6 +24,7 @@ export function PasswordScreen({ onBack, onLogin, onForgotPassword }: PasswordSc
         {/* Back Button */}
         <button 
           onClick={onBack}
+          disabled={isLoading}
           className="absolute top-6 left-6 z-20 w-10 h-10 bg-black/10 rounded-full flex items-center justify-center text-white hover:bg-black/20 transition-colors backdrop-blur-sm border border-white/10"
         >
           <ChevronLeft size={24} strokeWidth={2.5} />
@@ -56,30 +59,35 @@ export function PasswordScreen({ onBack, onLogin, onForgotPassword }: PasswordSc
                 type={showPassword ? "text" : "password"} 
                 placeholder="Enter password"
                 value={password}
+                disabled={isLoading}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full bg-[#f8fafc] border-[1.5px] border-slate-200 focus:border-[#3FA2F6] rounded-2xl py-4 px-5 text-slate-800 text-[15px] font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-100/50 shadow-sm transition-all"
             />
             <button 
                 onClick={() => setShowPassword(!showPassword)}
+                disabled={isLoading}
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#3FA2F6] transition-colors p-1"
             >
                 {showPassword ? <Eye size={22} strokeWidth={2} /> : <EyeOff size={22} strokeWidth={2} />}
             </button>
             </div>
 
-            <button 
-            onClick={password.length > 0 ? onLogin : undefined}
+             <button 
+            onClick={() => password.length > 0 && !isLoading && onLogin(email, password)}
+            disabled={isLoading || password.length === 0}
             className={`w-full font-bold text-[15px] py-4 rounded-2xl transition-all duration-300 flex justify-center items-center gap-2 border-0 active:scale-[0.98]
-                ${password.length > 0 
+                ${password.length > 0 && !isLoading
                 ? 'bg-[#3FA2F6] text-white shadow-[0_8px_20px_rgba(63,162,246,0.25)] hover:bg-[#2b88d8]' 
-                : 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'}`}
+                : 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'}
+                ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
-            Login to Account
+            {isLoading ? 'Authenticating...' : 'Login to Account'}
             </button>
 
             <div className="mt-8 flex justify-center">
                 <button 
                   onClick={onForgotPassword}
+                  disabled={isLoading}
                   className="text-[#3FA2F6] font-semibold text-[13px] hover:text-blue-700 transition-colors"
                 >
                 Forgot password?

@@ -9,8 +9,8 @@ interface AmountInputScreenProps {
 }
 
 export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreenProps) {
-  const { sourceAccount } = useStore();
-  const [amount, setAmount] = useState('');
+  const { sourceAccount, transferAmount } = useStore();
+  const [amount, setAmount] = useState(transferAmount && transferAmount !== '0' ? transferAmount : '');
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSourceSelect, setShowSourceSelect] = useState(false);
 

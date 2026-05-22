@@ -114,10 +114,35 @@ async function startServer() {
   app.get("/api/balance/:userId", async (req, res) => {
     try {
       const { userId } = req.params;
-      // In a real app, integrate via Circle or fetch from Supabase
-      // For now, return a placeholder that supports fetching
-      res.json({ balance: 1250.50, currency: "USDC" });
+      
+      // 1. Get the wallet ID from Supabase
+      const { data: walletData, error: walletError } = await supabaseAdmin
+        .from('user_wallets')
+        .select('wallet_id')
+        .eq('id', userId)
+        .single();
+      
+      if (walletError || !walletData) {
+        // Fallback for demo
+        return res.json({ balance: 0, currency: "USDC" });
+      }
+
+      // 2. Query Circle API for balance
+      const client = getCircleClient();
+      console.log(`Fetching balance for wallet ID: ${walletData.wallet_id}`);
+      
+      const walletResponse = await client.getWallet({
+        id: walletData.wallet_id
+      });
+      
+      console.log("Wallet Response:", JSON.stringify(walletResponse, null, 2));
+      
+      const usdcBalance = walletResponse.data?.wallet?.tokenBalances?.find((b: any) => b.tokenSymbol === 'USDC')?.amount || '0';
+      console.log(`Parsed USDC Balance: ${usdcBalance}`);
+      
+      res.json({ balance: parseFloat(usdcBalance), currency: "USDC" });
     } catch (error: any) {
+      console.error("Balance fetch error:", error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -139,24 +164,128 @@ async function startServer() {
     }
   });
 
+  // Webhook Simulation Route (For Testnet testing only)
+  app.post("/api/webhook/simulate", async (req, res) => {
+    try {
+      const { userId, amount } = req.body;
+      console.log(`Simulating webhook for user ${userId}, amount ${amount}`);
+
+      // 1. Insert a transaction record
+      const { data, error } = await supabaseAdmin
+        .from('transactions')
+        .insert({
+          user_id: userId,
+          amount: amount,
+          type: 'receive',
+          status: 'success',
+          internal_ref: `sim_${crypto.randomBytes(8).toString('hex')}`
+        });
+
+      if (error) throw error;
+
+      res.status(200).json({ message: "Simulation successful" });
+    } catch (error: any) {
+      console.error("Simulation error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Swap Simulation Route (For Testnet testing only)
+  app.post("/api/swap/simulate", async (req, res) => {
+    try {
+      const { userId, amount, fromToken, toToken } = req.body;
+      console.log(`Simulating swap for user ${userId}, amount ${amount} ${fromToken} -> ${toToken}`);
+
+      // 1. Insert interaction records for the swap
+      const { data, error } = await supabaseAdmin
+        .from('transactions')
+        .insert({
+          user_id: userId,
+          amount: amount,
+          type: 'swap',
+          status: 'success',
+          internal_ref: `swap_${crypto.randomBytes(8).toString('hex')}`,
+          metadata: { fromToken, toToken }
+        });
+
+      if (error) throw error;
+
+      res.status(200).json({ message: "Swap executed successfully", txHash: `0xarc${crypto.randomBytes(4).toString('hex')}` });
+    } catch (error: any) {
+      console.error("Swap error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Webhook Route
+  // Public key cache
+  const publicKeyCache: Record<string, { publicKey: string, algorithm: string }> = {};
+
+  async function getCirclePublicKey(keyId: string): Promise<{ publicKey: string, algorithm: string }> {
+    if (publicKeyCache[keyId]) {
+      return publicKeyCache[keyId];
+    }
+    
+    // Fetch from Circle API
+    const response = await fetch(`https://api.circle.com/v1/notifications/publicKey/${keyId}`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${process.env.CIRCLE_API_KEY}`,
+        "Content-Type": "application/json"
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch public key from Circle: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const { publicKey, algorithm } = data.data;
+    
+    publicKeyCache[keyId] = { publicKey, algorithm };
+    return { publicKey, algorithm };
+  }
+
   app.post("/api/circle/webhook", express.raw({ type: "application/json" }), async (req, res) => {
     // 1. Verify Signature
-    const signature = req.headers['x-signature-ed25519'] as string;
-    const publicKey = process.env.CIRCLE_WEBHOOK_PUBLIC_KEY;
+    const signature = req.headers['x-circle-signature'] as string;
+    const keyId = req.headers['x-circle-key-id'] as string;
     
-    if (!signature || !publicKey) {
-      console.error("Missing signature or public key in webhook request");
+    if (!signature || !keyId) {
+      console.error("Missing signature or key ID in webhook request headers");
       return res.status(401).json({ error: "Unauthorized" });
     }
 
     try {
-      const isVerified = crypto.verify(
-        'ed25519',
-        req.body, // The raw body as Buffer
-        Buffer.from(publicKey, 'base64'),
-        Buffer.from(signature, 'base64')
-      );
+      const { publicKey, algorithm } = await getCirclePublicKey(keyId);
+      
+      // Determine signature verification method
+      let isVerified = false;
+      const keyBuffer = Buffer.from(publicKey, 'base64');
+      const signatureBuffer = Buffer.from(signature, 'base64');
+
+      if (algorithm === 'ED25519') {
+        isVerified = crypto.verify(
+          'ed25519',
+          req.body,
+          keyBuffer,
+          signatureBuffer
+        );
+      } else if (algorithm === 'ECDSA_SHA_256') {
+        // ECDSA verification
+        isVerified = crypto.verify(
+          'sha256',
+          req.body,
+          {
+            key: keyBuffer,
+            dsaEncoding: 'ieee-p1363' // Often needed for Circle's ECDSA
+          },
+          signatureBuffer
+        );
+      } else {
+        console.error(`Unsupported algorithm: ${algorithm}`);
+        return res.status(401).json({ error: "Unsupported algorithm" });
+      }
 
       if (!isVerified) {
         console.error("Invalid webhook signature");
@@ -171,12 +300,29 @@ async function startServer() {
     
     // 2. Process Payload
     try {
-      const payload = JSON.parse(req.body.toString());
-      console.log("Webhook payload processed:", JSON.stringify(payload));
-      
-      // Update transaction status in Supabase if needed
-      // ...
-      
+      const { type, data } = JSON.parse(req.body.toString());
+      console.log(`Webhook received: ${type}`);
+
+      // Circle transfers usually contain an ID that maps to our internal_ref
+      if (type === 'transfers.updated' || type === 'transfers.created') {
+        const transfer = data;
+        const internalRef = transfer.id;
+        // Map Circle status to our status
+        const newStatus = transfer.status === 'COMPLETE' ? 'success' : 
+                          transfer.status === 'FAILED' ? 'failed' : 'pending';
+
+        const { error } = await supabaseAdmin
+          .from('transactions')
+          .update({ status: newStatus })
+          .eq('internal_ref', internalRef);
+
+        if (error) {
+          console.error("Supabase update error:", error);
+        } else {
+          console.log(`Transaction ${internalRef} updated to ${newStatus}`);
+        }
+      }
+
       res.status(200).send("Accepted");
       
     } catch (error: any) {

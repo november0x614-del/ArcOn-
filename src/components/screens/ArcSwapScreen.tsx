@@ -7,12 +7,53 @@ interface ArcSwapScreenProps {
 }
 
 export function ArcSwapScreen({ onBack }: ArcSwapScreenProps) {
-  const { balance, setBalance, addTransaction } = useApp();
+  const { balance, setBalance, addTransaction, registeredUser } = useApp();
   const [swapFromAmount, setSwapFromAmount] = useState<string>("100");
   const [swapToToken, setSwapToToken] = useState<"ARC" | "AETH" | "AQR">("ARC");
   const [isSwapping, setIsSwapping] = useState<boolean>(false);
   const [swapSuccess, setSwapSuccess] = useState<boolean>(false);
   const [swapRate, setSwapRate] = useState<number>(0.12);
+
+  const handleSwap = async () => {
+    setIsSwapping(true);
+    
+    try {
+      const fromNum = Number(swapFromAmount);
+      
+      const response = await fetch('/api/swap/simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          userId: registeredUser?.supabaseUid,
+          amount: fromNum,
+          fromToken: 'USDC',
+          toToken: swapToToken
+        }),
+      });
+
+      if (!response.ok) throw new Error('Swap failed');
+
+      const data = await response.json();
+      
+      // Update local state after successful simulation
+      setBalance(balance - fromNum);
+      addTransaction({
+        type: "swap",
+        title: `Swap USDC to ${swapToToken}`,
+        amount: `-${fromNum.toFixed(2)}`,
+        currency: "USDC",
+        status: "success",
+        txHash: data.txHash,
+      });
+      
+      setSwapSuccess(true);
+    } catch (error) {
+      console.error(error);
+      // In a real app, show a toast here
+    } finally {
+      setIsSwapping(false);
+    }
+  };
 
   return (
     <div className="absolute inset-0 z-[60] bg-white flex flex-col animate-in slide-in-from-right duration-300">
@@ -110,23 +151,7 @@ export function ArcSwapScreen({ onBack }: ArcSwapScreenProps) {
 
         {!swapSuccess ? (
           <button
-            onClick={() => {
-              setIsSwapping(true);
-              setTimeout(() => {
-                setIsSwapping(false);
-                setSwapSuccess(true);
-                const fromNum = Number(swapFromAmount);
-                setBalance(balance - fromNum);
-                addTransaction({
-                  type: "swap",
-                  title: `Swap USDC to ${swapToToken}`,
-                  amount: `-${fromNum.toFixed(2)}`,
-                  currency: "USDC",
-                  status: "success",
-                  txHash: `0xarc${Math.floor(Math.random() * 9000) + 1000}`,
-                });
-              }, 1800);
-            }}
+            onClick={handleSwap}
             disabled={isSwapping || !swapFromAmount || Number(swapFromAmount) <= 0}
             className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:opacity-90 text-white font-bold text-[15px] py-4 rounded-2xl transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-md border-0 cursor-pointer"
           >
