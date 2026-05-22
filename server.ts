@@ -1,5 +1,6 @@
 import express from "express";
 import path from "path";
+import crypto from "crypto";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import { initiateDeveloperControlledWalletsClient } from "@circle-fin/developer-controlled-wallets";
@@ -106,6 +107,111 @@ async function startServer() {
         error: error.message || "Failed to create wallet",
         details: error.response?.data || null
       });
+    }
+  });
+
+  // Balance Route
+  app.get("/api/balance/:userId", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      // In a real app, integrate via Circle or fetch from Supabase
+      // For now, return a placeholder that supports fetching
+      res.json({ balance: 1250.50, currency: "USDC" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Transactions Route
+  app.get("/api/transactions/:userId", async (req, res) => {
+    try {
+      // Fetch from Supabase
+      const { data, error } = await supabaseAdmin
+        .from('transactions')
+        .select('*')
+        .eq('user_id', req.params.userId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Webhook Route
+  app.post("/api/circle/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+    // 1. Verify Signature
+    const signature = req.headers['x-signature-ed25519'] as string;
+    const publicKey = process.env.CIRCLE_WEBHOOK_PUBLIC_KEY;
+    
+    if (!signature || !publicKey) {
+      console.error("Missing signature or public key in webhook request");
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    try {
+      const isVerified = crypto.verify(
+        'ed25519',
+        req.body, // The raw body as Buffer
+        Buffer.from(publicKey, 'base64'),
+        Buffer.from(signature, 'base64')
+      );
+
+      if (!isVerified) {
+        console.error("Invalid webhook signature");
+        return res.status(401).json({ error: "Invalid signature" });
+      }
+      
+      console.log("Circle Webhook signature verified successfully");
+    } catch (err) {
+      console.error("Signature verification error:", err);
+      return res.status(401).json({ error: "Signature verification failed" });
+    }
+    
+    // 2. Process Payload
+    try {
+      const payload = JSON.parse(req.body.toString());
+      console.log("Webhook payload processed:", JSON.stringify(payload));
+      
+      // Update transaction status in Supabase if needed
+      // ...
+      
+      res.status(200).send("Accepted");
+      
+    } catch (error: any) {
+      console.error("Webhook processing error:", error);
+      res.status(500).json({ error: "Failed to process webhook" });
+    }
+  });
+
+  // Payment Route (Actual Implementation)
+  app.post("/api/payments/create", async (req, res) => {
+    try {
+      const { walletId, destinationAddress, amount, userId } = req.body;
+      const client = getCircleClient();
+      
+      // Initiate transfer
+      const response = await client.createTransfer({
+        walletId: walletId,
+        destinationAddress: destinationAddress,
+        amounts: [{ amount: amount, currency: "USD" }], // USDC is often denominated as USD in API
+        feeLevel: "MEDIUM",
+      });
+      
+      // Record in Supabase
+      await supabaseAdmin.from('transactions').insert({
+        user_id: userId,
+        amount: amount,
+        type: 'payment',
+        status: 'pending',
+        internal_ref: response.data?.transfer?.id
+      });
+      
+      res.json(response.data);
+    } catch (error: any) {
+      console.error("Payment Execution Error:", error);
+      res.status(500).json({ error: error.message });
     }
   });
 

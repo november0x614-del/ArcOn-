@@ -15,13 +15,13 @@ import {
   Lock, 
   Shield 
 } from 'lucide-react';
+import { useStore } from '../../store/useStore';
 
 interface SettingsScreenProps {
   onBack: () => void;
   onNamaPanggilan?: () => void;
   onEmail?: () => void;
   onShowToast?: (msg: string) => void;
-  isBiometricVerified?: boolean;
   onVerifyBiometric?: () => void;
 }
 
@@ -30,9 +30,17 @@ export function SettingsScreen({
   onNamaPanggilan, 
   onEmail,
   onShowToast,
-  isBiometricVerified = true,
   onVerifyBiometric
 }: SettingsScreenProps) {
+  const { 
+    isBiometricVerified, 
+    network, 
+    walletConnectSessions, 
+    contractAllowances,
+    registeredUser,
+    language
+  } = useStore();
+
   const handleNotImplemented = (featureInfo?: string) => {
     if (featureInfo === 'Biometrics' && !isBiometricVerified && onVerifyBiometric) {
         onVerifyBiometric();
@@ -65,9 +73,9 @@ export function SettingsScreen({
             <span className="text-[12px] font-bold text-slate-500 tracking-wide uppercase">Profile & Account</span>
           </div>
           <div className="bg-white border-y border-slate-100 flex flex-col">
-            <SettingItem icon={<UserCircle size={20} className="text-[#3FA2F6]" />} label="Nickname" onClick={onNamaPanggilan} />
-            <SettingItem icon={<Mail size={20} className="text-[#3FA2F6]" />} label="Registered Email" onClick={onEmail} />
-            <SettingItem icon={<Settings size={20} className="text-[#3FA2F6]" />} label="Language Preferences" isLast onClick={() => handleNotImplemented("Language Preferences")} />
+            <SettingItem icon={<UserCircle size={20} className="text-[#3FA2F6]" />} label="Nickname" badge={registeredUser?.username || "Not Set"} onClick={onNamaPanggilan} />
+            <SettingItem icon={<Mail size={20} className="text-[#3FA2F6]" />} label="Registered Email" badge={registeredUser?.email || "Not Set"} onClick={onEmail} />
+            <SettingItem icon={<Settings size={20} className="text-[#3FA2F6]" />} label="Language Preferences" badge={language} isLast onClick={() => handleNotImplemented("Language Preferences")} />
           </div>
         </div>
 
@@ -96,9 +104,9 @@ export function SettingsScreen({
             <span className="text-[12px] font-bold text-slate-500 tracking-wide uppercase">Network & Connections</span>
           </div>
           <div className="bg-white border-y border-slate-100 flex flex-col">
-            <SettingItem icon={<RefreshCw size={20} className="text-[#3FA2F6]" />} label="Network Settings" badge="ARC TESTNET" onClick={() => handleNotImplemented("Network Settings")} />
-            <SettingItem icon={<Smartphone size={20} className="text-[#3FA2F6]" />} label="WalletConnect Sessions" onClick={() => handleNotImplemented("WalletConnect")} />
-            <SettingItem icon={<FileText size={20} className="text-[#3FA2F6]" />} label="Contract Allowances" isLast onClick={() => handleNotImplemented("Contract Allowances")}/>
+            <SettingItem icon={<RefreshCw size={20} className="text-[#3FA2F6]" />} label="Network Settings" badge={network} onClick={() => handleNotImplemented("Network Settings")} />
+            <SettingItem icon={<Smartphone size={20} className="text-[#3FA2F6]" />} label="WalletConnect Sessions" badge={walletConnectSessions.toString()} onClick={() => handleNotImplemented("WalletConnect")} />
+            <SettingItem icon={<FileText size={20} className="text-[#3FA2F6]" />} label="Contract Allowances" badge={contractAllowances.toString()} isLast onClick={() => handleNotImplemented("Contract Allowances")}/>
           </div>
         </div>
 

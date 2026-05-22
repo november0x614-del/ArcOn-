@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ArrowLeft, CheckCircle2, Edit3, ChevronDown, ArrowRight, X } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Edit3, ChevronDown, ArrowRight, X, Delete } from 'lucide-react';
+import { useStore } from '../../store/useStore';
 
 interface AmountInputScreenProps {
   contact: any;
@@ -8,16 +9,21 @@ interface AmountInputScreenProps {
 }
 
 export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreenProps) {
+  const { sourceAccount } = useStore();
   const [amount, setAmount] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSourceSelect, setShowSourceSelect] = useState(false);
 
-  const sources = [
-    { id: '1', name: 'Savings NOW IDR', account: '1820014780589', balance: 'Rp 18.261.185', dec: '00', isArc: false },
-    { id: '2', name: 'USDC Checking', account: '0x742d...f44e', balance: '1,134', dec: '66 USDC', isArc: true },
-    { id: '3', name: 'Tabungan Rencana', account: '1820014780592', balance: 'Rp 5.000.000', dec: '00', isArc: false }
-  ];
-  const [selectedSource, setSelectedSource] = useState(sources[0]);
+  const currentSource = {
+    id: 'source-1',
+    name: sourceAccount.name,
+    account: sourceAccount.accountNumber,
+    balance: new Intl.NumberFormat('id-ID').format(sourceAccount.balance),
+    dec: '00',
+    isArc: false 
+  };
+  const [selectedSource, setSelectedSource] = useState(currentSource);
+  const sources = [currentSource];
 
   const handleNumpad = (num: string) => {
     if (num === 'backspace') {
@@ -86,20 +92,38 @@ export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreen
               <span className={`${selectedSource.isArc ? 'text-blue-600' : 'text-[#008fcd]'} font-bold text-[15px] mt-1.5 block text-left`}>{selectedSource.balance}<span className="text-[10px] align-top relative top-[2px]">{selectedSource.dec}</span></span>
             </div>
             
-            {/* The absolute right part containing the fake card image */}
-            {selectedSource.isArc ? (
-              <div className="absolute right-0 top-0 bottom-0 w-[45%] bg-[#ecf5fc] overflow-hidden -z-0 rounded-r-[12px] shadow-inner flex items-center justify-center border-l border-blue-50" style={{ clipPath: 'polygon(15% 0, 100% 0, 100% 100%, 0% 100%)' }}>
-                 <div className="text-[#3FA2F6] font-bold text-[28px] opacity-20 transform rotate-12 absolute right-1">USDC</div>
-              </div>
-            ) : (
-              <div className="absolute right-0 top-0 bottom-0 w-[45%] bg-[#dfcd99] overflow-hidden -z-0 rounded-r-[12px] shadow-inner" style={{ clipPath: 'polygon(15% 0, 100% 0, 100% 100%, 0% 100%)' }}>
-                 <img src="https://images.unsplash.com/photo-1541592102481-c75c87a2d4b7?auto=format&fit=crop&q=80&w=200&h=200" className="w-full h-full object-cover mix-blend-overlay opacity-50" alt="card bg" />
-                 <div className="absolute top-2 left-4 text-white drop-shadow-md">
-                   <span className="font-bold italic text-[14px]">mandiri</span>
+            {/* The absolute right part containing the wallet card style */}
+            <div className="absolute right-0 top-2 bottom-2 w-[40%] rounded-l-[16px] shadow-xl relative overflow-hidden shrink-0 flex flex-col justify-between p-2 bg-white border-l border-t border-b border-slate-100">
+               {/* Reference: Minimalist Background with Blue or Gold Accent based on card */}
+               <div className={`absolute top-0 right-0 w-[60%] h-[120%] border-[2px] ${selectedSource.isArc ? 'border-blue-600/10' : 'border-[#d4c085]/20'} rounded-full pointer-events-none rotate-12 translate-x-1/2 -translate-y-1/3`}></div>
+
+               <div className="flex justify-between items-start relative z-10">
+                 <div className="flex items-center gap-1">
+                   <div className={`w-2 h-2 rounded-[2px] ${selectedSource.isArc ? 'bg-blue-600' : 'bg-[#d4c085]'} flex items-center justify-center`}>
+                     <div className="w-1 h-1 rounded-full border-[1px] border-white"></div>
+                   </div>
+                   <span className="text-slate-900 font-bold text-[6px] tracking-tight italic select-none leading-none">arc</span>
                  </div>
-                 <div className="absolute bottom-2 right-2 text-white drop-shadow-md font-bold italic text-[12px]">VISA</div>
-              </div>
-            )}
+                 
+                 <div className="w-2.5 h-2.5 rounded-[2px] bg-slate-50 border border-slate-100 flex items-center justify-center">
+                    <div className="grid grid-cols-2 gap-[0.2px]">
+                       <div className="w-[1px] h-[1px] bg-slate-900 rounded-[0.2px]"></div>
+                       <div className="w-[1px] h-[1px] bg-slate-200 rounded-[0.2px]"></div>
+                    </div>
+                 </div>
+               </div>
+
+               <div className="flex flex-col relative z-10 mt-1">
+                  <span className="text-[7px] font-mono text-slate-900 tracking-wide font-medium leading-none truncate">
+                    {selectedSource.account.slice(0, 8)}
+                  </span>
+               </div>
+               
+               <div className="flex justify-between items-end relative z-10 mt-auto">
+                  <span className="text-slate-900 font-bold text-[6px] uppercase tracking-tighter leading-none">{selectedSource.name.slice(0, 8)}</span>
+                  <span className="text-[4px] font-mono text-slate-400 select-none">05/30</span>
+               </div>
+            </div>
           </div>
         </div>
 
@@ -149,7 +173,7 @@ export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreen
            <button onClick={() => handleNumpad('000')} className="h-12 bg-[#f8fafc] rounded-xl text-slate-700 font-semibold text-[18px] active:bg-slate-200 transition-colors flex items-center justify-center">000</button>
            <button onClick={() => handleNumpad('0')} className="h-12 bg-[#f8fafc] rounded-xl text-slate-700 font-semibold text-[20px] active:bg-slate-200 transition-colors flex items-center justify-center">0</button>
            <button onClick={() => handleNumpad('backspace')} className="h-12 bg-white rounded-xl flex items-center justify-center text-slate-400 active:bg-slate-100 transition-colors border border-slate-100">
-             <X size={24} strokeWidth={2.5} className="ml-1"/>
+             <Delete size={24} strokeWidth={2.5} className="ml-1"/>
            </button>
         </div>
       </div>

@@ -7,7 +7,6 @@ export type ViewState =
   | 'bayarVA' 
   | 'otherAccounts' 
   | 'password' 
-  | 'inputName' 
   | 'home' 
   | 'transfer' 
   | 'newTransfer' 
@@ -17,8 +16,6 @@ export type ViewState =
   | 'settings' 
   | 'inbox' 
   | 'accountDetail' 
-  | 'instantAccess' 
-  | 'pusatNotifikasi' 
   | 'namaPanggilan' 
   | 'email' 
   | 'manageFavorites' 
@@ -89,4 +86,11 @@ export interface Contact {
   name: string;
   number: string;
   avatar: string;
+}
+
+export interface SourceAccount {
+  name: string;
+  accountNumber: string;
+  balance: number;
+  currency: string;
 }

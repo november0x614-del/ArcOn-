@@ -45,7 +45,6 @@ import { BatchTransferScreen } from "./components/screens/BatchTransferScreen";
 import { WithdrawScreen } from "./components/screens/WithdrawScreen";
 import { BridgeScreen } from "./components/screens/BridgeScreen";
 import { useApp } from "./context/AppContext";
-import { supabase } from "./lib/supabaseClient";
 
 export default function App() {
   const {
@@ -69,60 +68,13 @@ export default function App() {
     displayToast,
     balance,
     setBalance,
+    fetchBalance,
     addTransaction
   } = useApp();
 
-  // Handle Supabase Auth Session
   React.useEffect(() => {
-    // Check active session on mount
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        handleUserSession(session.user);
-      }
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) {
-        handleUserSession(session.user);
-      } else {
-        setRegisteredUser(null);
-        localStorage.removeItem("arc_commerce_user");
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const handleUserSession = async (user: any) => {
-    try {
-      // Try to fetch wallet mapping from Supabase
-      const { data, error } = await supabase
-        .from('user_wallets')
-        .select('*')
-        .eq('supabase_uid', user.id)
-        .single();
-
-      if (data && !error) {
-        const userData = {
-          username: user.user_metadata?.username || user.email?.split('@')[0].toUpperCase(),
-          email: user.email,
-          isVerified: true,
-          walletId: data.circle_wallet_id,
-          walletAddress: data.wallet_address,
-          supabaseUid: user.id,
-          registrationDate: new Date(user.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()
-        };
-        setRegisteredUser(userData);
-        localStorage.setItem("arc_commerce_user", JSON.stringify(userData));
-        if (viewState === 'splash' || viewState === 'password') {
-          setViewState('home');
-        }
-      }
-    } catch (err) {
-      console.error("Error fetching session wallet:", err);
-    }
-  };
+    fetchBalance();
+  }, [fetchBalance]);
 
   const userName = registeredUser?.username || "RAKYAN INUKERTAPATI";
 
@@ -174,21 +126,9 @@ export default function App() {
             {viewState === "password" && (
               <PasswordScreen
                 onBack={() => setViewState("splash")}
-                onLogin={async (email, password) => {
-                  const { data, error } = await supabase.auth.signInWithPassword({ 
-                    email, 
-                    password 
-                  });
-                  
-                  if (error) {
-                    displayToast(error.message);
-                    return;
-                  }
-
-                  if (data.user) {
-                    setIsBiometricVerified(true);
-                    await handleUserSession(data.user);
-                  }
+                onLogin={() => {
+                  setIsBiometricVerified(true); // Simulate already verified if login with PIN
+                  setViewState("home");
                 }}
                 onForgotPassword={() => setViewState("forgotPassword")}
               />
@@ -204,7 +144,6 @@ export default function App() {
                 onNamaPanggilan={() => setViewState("namaPanggilan")}
                 onEmail={() => setViewState("email")}
                 onShowToast={displayToast}
-                isBiometricVerified={isBiometricVerified}
                 onVerifyBiometric={() => {
                   setViewState("biometricVerify");
                 }}
@@ -274,10 +213,7 @@ export default function App() {
             {viewState === "logout" && (
               <LogoutScreen
                 onBack={() => setViewState("home")}
-                onLogout={async () => {
-                  await supabase.auth.signOut();
-                  setViewState("splash");
-                }}
+                onLogout={() => setViewState("splash")}
               />
             )}
 
@@ -379,7 +315,7 @@ export default function App() {
               <AmountInputScreen
                 contact={selectedContact}
                 onBack={() => setViewState("transfer")}
-                onNext={(amount) => {
+                onNext={async (amount) => {
                   const numAmount = parseFloat(amount);
                   if (numAmount > balance) {
                     displayToast("Insufficient balance.");
@@ -389,8 +325,20 @@ export default function App() {
                   setTransferAmount(amount);
                   setViewState("processing");
                   
-                  setTimeout(() => {
-                    // Update global state
+                  try {
+                    const response = await fetch('/api/payments/create', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ 
+                        walletId: registeredUser?.walletId || 'default-wallet', 
+                        destinationAddress: selectedContact.account,
+                        amount: amount,
+                        userId: registeredUser?.supabaseUid 
+                      }),
+                    });
+                    
+                    if (!response.ok) throw new Error('Transfer failed');
+                    
                     setBalance(prev => prev - numAmount);
                     addTransaction({
                       type: 'transfer',
@@ -401,7 +349,11 @@ export default function App() {
                       txHash: `0x${Math.random().toString(16).slice(2, 10)}...${Math.random().toString(16).slice(2, 6)}`
                     });
                     setViewState("success");
-                  }, 1500);
+                  } catch (error) {
+                    console.error(error);
+                    displayToast("Transfer failed. Please try again.");
+                    setViewState("transfer");
+                  }
                 }}
               />
             )}

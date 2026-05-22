@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { ViewState, ShortcutItem, UserIdentity, Transaction } from '../types';
+import { ViewState, ShortcutItem, UserIdentity, Transaction, SourceAccount } from '../types';
 import { defaultSelectedShortcuts, defaultAvailableShortcuts } from '../components/screens/ManageFavoritesScreen';
+
+export type TransactionFilter = 'All' | 'Received' | 'Sent' | 'Swaps';
 
 interface AppState {
   // Navigation & UI
@@ -11,6 +13,8 @@ interface AppState {
   setReceiptSource: (source: ViewState) => void;
   showBalance: boolean;
   setShowBalance: (show: boolean) => void;
+  activeFilter: TransactionFilter;
+  setActiveFilter: (filter: TransactionFilter) => void;
   
   // User & Auth
   registeredUser: UserIdentity | null;
@@ -21,7 +25,13 @@ interface AppState {
   // Financials
   balance: number;
   setBalance: (balance: number | ((prev: number) => number)) => void;
+  fetchBalance: () => Promise<void>;
+  pnlValue: number;
+  setPnlValue: (value: number) => void;
+  pnlPercentage: number;
+  setPnlPercentage: (percentage: number) => void;
   transactions: Transaction[];
+  fetchTransactions: () => Promise<void>;
   addTransaction: (tx: Omit<Transaction, 'id' | 'timestamp'>) => void;
   selectedTransaction: Transaction | null;
   setSelectedTransaction: (tx: Transaction | null) => void;
@@ -45,7 +55,20 @@ interface AppState {
   // Toast
   toast: { message: string; visible: boolean };
   displayToast: (message: string) => void;
+
+  // Settings
+  language: string;
+  setLanguage: (lang: string) => void;
+  network: string;
+  setNetwork: (network: string) => void;
+  walletConnectSessions: number;
+  setWalletConnectSessions: (count: number) => void;
+  contractAllowances: number;
+  setContractAllowances: (count: number) => void;
+  sourceAccount: SourceAccount;
+  setSourceAccount: (account: SourceAccount) => void;
 }
+
 
 export const useStore = create<AppState>()(
   persist(
@@ -57,6 +80,8 @@ export const useStore = create<AppState>()(
       setReceiptSource: (source) => set({ receiptSource: source }),
       showBalance: false,
       setShowBalance: (show) => set({ showBalance: show }),
+      activeFilter: 'All',
+      setActiveFilter: (filter) => set({ activeFilter: filter }),
       
       // User States
       registeredUser: null,
@@ -65,18 +90,39 @@ export const useStore = create<AppState>()(
       setIsBiometricVerified: (verified) => set({ isBiometricVerified: verified }),
       
       // Financials
-      balance: 1134.66,
+      balance: 0,
       setBalance: (balance) => set((state) => ({ 
         balance: typeof balance === 'function' ? balance(state.balance) : balance 
       })),
-      transactions: [
-        {
-          id: 'tx-1', type: 'deposit', title: 'Top Up from Bank', amount: '+50.00', currency: 'USDC', timestamp: '2 hours ago', status: 'success', txHash: '0x8f...39a'
-        },
-        {
-           id: 'tx-2', type: 'purchase', title: 'Spotify Premium', amount: '-12.99', currency: 'USDC', timestamp: 'Yesterday', status: 'success', txHash: '0x2a...11f'
+      fetchBalance: async () => {
+        const user = useStore.getState().registeredUser;
+        if (!user?.supabaseUid) return;
+        
+        try {
+          const response = await fetch(`/api/balance/${user.supabaseUid}`);
+          const data = await response.json();
+          set({ balance: data.balance });
+        } catch (error) {
+          console.error('Failed to fetch balance', error);
         }
-      ],
+      },
+      pnlValue: 0.86,
+      setPnlValue: (value) => set({ pnlValue: value }),
+      pnlPercentage: 0.12,
+      setPnlPercentage: (percentage) => set({ pnlPercentage: percentage }),
+      transactions: [], // Start empty
+      fetchTransactions: async () => {
+        const user = useStore.getState().registeredUser;
+        if (!user?.supabaseUid) return;
+        
+        try {
+          const response = await fetch(`/api/transactions/${user.supabaseUid}`);
+          const data = await response.json();
+          set({ transactions: data });
+        } catch (error) {
+          console.error('Failed to fetch transactions', error);
+        }
+      },
       addTransaction: (tx) => set((state) => {
         const newTx: Transaction = {
           ...tx,
@@ -112,6 +158,22 @@ export const useStore = create<AppState>()(
         set({ toast: { message, visible: true } });
         setTimeout(() => set({ toast: { message: '', visible: false } }), 3000);
       },
+      // Settings
+      language: 'English',
+      setLanguage: (lang) => set({ language: lang }),
+      network: 'ARC TESTNET',
+      setNetwork: (net) => set({ network: net }),
+      walletConnectSessions: 0,
+      setWalletConnectSessions: (count) => set({ walletConnectSessions: count }),
+      contractAllowances: 0,
+      setContractAllowances: (count) => set({ contractAllowances: count }),
+      sourceAccount: {
+        name: 'Savings NOW IDR',
+        accountNumber: '1820014780589',
+        balance: 18261185,
+        currency: 'IDR'
+      },
+      setSourceAccount: (account) => set({ sourceAccount: account }),
     }),
     {
       name: 'arc-commerce-storage',
@@ -120,11 +182,19 @@ export const useStore = create<AppState>()(
         registeredUser: state.registeredUser,
         balance: state.balance,
         showBalance: state.showBalance,
+        activeFilter: state.activeFilter,
         visibleTokenCodes: state.visibleTokenCodes,
         readReceiptIds: state.readReceiptIds,
         transactions: state.transactions,
+        pnlValue: state.pnlValue,
+        pnlPercentage: state.pnlPercentage,
         selectedShortcuts: state.selectedShortcuts,
         availableShortcuts: state.availableShortcuts,
+        language: state.language,
+        network: state.network,
+        walletConnectSessions: state.walletConnectSessions,
+        contractAllowances: state.contractAllowances,
+        sourceAccount: state.sourceAccount,
       }),
     }
   )

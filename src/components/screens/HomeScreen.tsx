@@ -31,7 +31,6 @@ import {
   Zap,
   Lock,
   Bot,
-  QrCode,
   Check,
   X
 } from "lucide-react";
@@ -55,11 +54,20 @@ export function HomeScreen({
     showBalance,
     setShowBalance,
     balance,
+    pnlValue,
+    pnlPercentage,
     transactions,
     visibleTokenCodes,
     setVisibleTokenCodes,
-    registeredUser
+    registeredUser,
+    fetchBalance,
+    fetchTransactions
   } = useApp();
+
+  useEffect(() => {
+    fetchBalance();
+    fetchTransactions();
+  }, [fetchBalance, fetchTransactions]);
   const [activeRekeningTab, setActiveRekeningTab] = useState(0);
 
   const [currentPromoIndex, setCurrentPromoIndex] = useState(0);
@@ -424,7 +432,7 @@ export function HomeScreen({
                             PnL 1 Bln
                           </span>
                           <span className="text-[11px] sm:text-[12px] font-bold text-emerald-500 whitespace-nowrap">
-                            +₮0,86 (+0,12%)
+                            {`${pnlValue >= 0 ? '+' : '-'}₮${Math.abs(pnlValue).toFixed(2).replace('.', ',')} (${pnlPercentage >= 0 ? '+' : ''}${pnlPercentage.toFixed(2).replace('.', ',')}%)`}
                           </span>
                         </div>
                       </div>
@@ -867,45 +875,45 @@ export function HomeScreen({
 
               <div className="grid grid-cols-4 gap-y-5 gap-x-2">
                 {selectedShortcuts.map((item) => (
-                  <MenuIcon
-                    key={item.id}
-                    icon={item.icon}
-                    label={item.label}
-                    color={item.color}
-                    bgCircle={item.bgCircle}
-                    badge={item.badge}
-                    badgeColor={item.badgeColor}
-                    isTextIcon={item.isTextIcon}
-                    textIcon={item.textIcon}
-                    onClick={() => {
-                      if (
-                        item.label === "Transfer USDC On-chain" ||
-                        item.label === "Transfer USDC"
-                      )
-                        onNavigate("transfer");
-                      if (item.label === "Receive USDC") onNavigate("receive");
-                      if (item.label === "Request Payment")
-                        onNavigate("receive");
-                      if (item.label === "Pay with USDC") onNavigate("scanQR");
-                      if (item.label === "Swap Token") onNavigate("swap");
-                      if (item.label === "Deposit/Withdraw")
-                        onNavigate("depositOptions");
-                      if (item.label === "Top-up") onNavigate("topup");
-                      if (item.label === "Pay/VA") onNavigate("bayarVA");
-                      if (item.label === "DApp Browser")
-                        onNavigate("ecommerce");
-                      if (item.label === "Staking Pool")
-                        onNavigate("stablestake");
-                      if (item.label === "Withdraw")
-                        onNavigate("withdraw");
-                      if (item.label === "Bridge USDC")
-                        onNavigate("bridge");
-                      if (item.label === "Security & Limits")
-                        onNavigate("settings");
-                      if (item.label === "Transaction History")
-                        onNavigate("transactionHistory");
-                    }}
-                  />
+                    <MenuIcon
+                      key={item.id}
+                      icon={item.icon}
+                      label={item.label}
+                      color={item.color}
+                      bgCircle={item.bgCircle}
+                      badge={item.badge}
+                      badgeColor={item.badgeColor}
+                      isTextIcon={item.isTextIcon}
+                      textIcon={item.textIcon}
+                      onClick={() => {
+                        if (
+                          item.label === "Transfer USDC On-chain" ||
+                          item.label === "Transfer USDC"
+                        )
+                          onNavigate("transfer");
+                        if (item.label === "Receive USDC") onNavigate("receive");
+                        if (item.label === "Request Payment")
+                          onNavigate("receive");
+                        if (item.label === "Pay with USDC") onNavigate("scanQR");
+                        if (item.label === "Swap Token") onNavigate("swap");
+                        if (item.label === "Deposit/Withdraw")
+                          onNavigate("depositOptions");
+                        if (item.label === "Top-up") onNavigate("topup");
+                        if (item.label === "Pay/VA") onNavigate("bayarVA");
+                        if (item.label === "DApp Browser")
+                          onNavigate("ecommerce");
+                        if (item.label === "Staking Pool")
+                          onNavigate("stablestake");
+                        if (item.label === "Withdraw")
+                          onNavigate("withdraw");
+                        if (item.label === "Bridge USDC")
+                          onNavigate("bridge");
+                        if (item.label === "Security & Limits")
+                          onNavigate("settings");
+                        if (item.label === "Transaction History")
+                          onNavigate("transactionHistory");
+                      }}
+                    />
                 ))}
               </div>
 

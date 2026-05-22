@@ -41,7 +41,15 @@ export function AccountDetailScreen({
   userName = "ALEXANDER D"
 }: AccountDetailScreenProps) {
   const [activeTab, setActiveTab] = useState<'history' | 'token'>('history');
-  const { transactions, balance, showBalance, setShowBalance } = useApp();
+  const { transactions, balance, showBalance, setShowBalance, pnlValue, pnlPercentage, activeFilter, setActiveFilter } = useApp();
+
+  const filteredTransactions = transactions.filter((tx) => {
+    if (activeFilter === 'All') return true;
+    if (activeFilter === 'Received') return tx.type === 'deposit';
+    if (activeFilter === 'Sent') return ['withdraw', 'transfer', 'purchase'].includes(tx.type);
+    if (activeFilter === 'Swaps') return tx.type === 'swap';
+    return true;
+  });
 
   const getTxIcon = (type: string) => {
     switch (type) {
@@ -136,7 +144,7 @@ export function AccountDetailScreen({
                   PnL 1 Bln
                 </span>
                 <span className="text-[13px] font-bold text-emerald-400">
-                  +₮0,86 (+0,12%)
+                  {`${pnlValue >= 0 ? '+' : '-'}₮${Math.abs(pnlValue).toFixed(2).replace('.', ',')} (${pnlPercentage >= 0 ? '+' : ''}${pnlPercentage.toFixed(2).replace('.', ',')}%)`}
                 </span>
               </div>
             </div>
@@ -181,10 +189,15 @@ export function AccountDetailScreen({
           <>
             <div className="flex items-center px-4 py-3 shrink-0 justify-between">
                 <div className="flex gap-4 overflow-x-auto scrollbar-hide py-1 text-[13px] text-slate-500 font-medium">
-                  <button className="whitespace-nowrap px-1 text-slate-800 font-bold border-b-[2.5px] border-slate-800 pb-1">All</button>
-                  <button className="whitespace-nowrap px-1">Received</button>
-                  <button className="whitespace-nowrap px-1">Sent</button>
-                  <button className="whitespace-nowrap px-1">Swaps</button>
+                  {(['All', 'Received', 'Sent', 'Swaps'] as const).map((filter) => (
+                    <button
+                      key={filter}
+                      onClick={() => setActiveFilter(filter)}
+                      className={`whitespace-nowrap px-1 ${activeFilter === filter ? 'text-slate-800 font-bold border-b-[2.5px] border-slate-800 pb-1' : ''}`}
+                    >
+                      {filter}
+                    </button>
+                  ))}
                 </div>
                <div className="flex items-center gap-3 ml-2 shrink-0">
                   <button className="text-[#3FA2F6] bg-blue-50 p-2 rounded-full"><Search size={16} strokeWidth={2.5} /></button>
@@ -195,13 +208,13 @@ export function AccountDetailScreen({
             {/* Transactions List */}
             <div className="flex-1 overflow-y-auto px-4 pb-24 flex flex-col pt-2">
               <div className="flex flex-col gap-3 mt-2">
-                 {transactions.length === 0 ? (
+                 {filteredTransactions.length === 0 ? (
                    <div className="flex flex-col items-center justify-center p-12 text-center text-slate-400 mt-10">
                       <Clock size={48} className="mb-4 opacity-50" />
                       <p>No transactions found.</p>
                    </div>
                  ) : (
-                   transactions.map((tx) => (
+                   filteredTransactions.map((tx) => (
                      <div 
                        key={tx.id} 
                        onClick={() => {

@@ -9,23 +9,39 @@ CREATE TABLE public.user_wallets (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 2. Setup Row Level Security (RLS)
-ALTER TABLE public.user_wallets ENABLE ROW LEVEL SECURITY;
+-- 2. Create a transactions table to track payments
+CREATE TABLE public.transactions (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) NOT NULL,
+    amount DECIMAL NOT NULL,
+    type TEXT NOT NULL,
+    status TEXT NOT NULL,
+    internal_ref TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
 
--- 3. Users can read their own wallet data
+-- 3. Setup Row Level Security (RLS)
+ALTER TABLE public.user_wallets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
+
+-- 4. Users can read their own data
 CREATE POLICY "Users can view their own wallet" 
 ON public.user_wallets
 FOR SELECT 
 USING ( auth.uid() = id );
 
--- 4. Only Service Role (Server) can insert or update wallet mapping
+CREATE POLICY "Users can view their own transactions"
+ON public.transactions
+FOR SELECT
+USING ( auth.uid() = user_id );
+
+-- 5. Only Service Role (Server) can insert or update data
 CREATE POLICY "Service role can manage wallets"
 ON public.user_wallets
 FOR ALL
 USING ( auth.role() = 'service_role' );
 
--- NOTE: 
--- 1. Client-Side (Next.js/React) will just do `supabase.auth.signUp()`.
--- 2. Once signup is successful, it calls `/api/wallets/create` in Next/Express.
--- 3. `/api/wallets/create` calls Circle SDK -> gets wallet UUIDs.
--- 4. Server-Side inserts records into `user_wallets` using `SUPABASE_SERVICE_ROLE_KEY`.
+CREATE POLICY "Service role can manage transactions"
+ON public.transactions
+FOR ALL
+USING ( auth.role() = 'service_role' );
