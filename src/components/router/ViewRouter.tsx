@@ -1,5 +1,4 @@
 import React from "react";
-import { ViewState } from "../../types";
 import { useApp } from "../../context/AppContext";
 import { LoginScreen } from "../screens/LoginScreen";
 import { RegisterWeb3Screen } from "../screens/RegisterWeb3Screen";
@@ -48,7 +47,7 @@ interface ViewRouterProps {
   setIsLoggingIn: (loading: boolean) => void;
 }
 
-export const ViewRouter = React.memo(({ isLoggingIn, loginEmail, setLoginEmail, setIsLoggingIn }: ViewRouterProps) => {
+export function ViewRouter({ isLoggingIn, loginEmail, setLoginEmail, setIsLoggingIn }: ViewRouterProps) {
   const {
     viewState,
     setViewState,
@@ -70,8 +69,6 @@ export const ViewRouter = React.memo(({ isLoggingIn, loginEmail, setLoginEmail, 
     fetchBalance,
     fetchTransactions
   } = useApp();
-
-  const onNavigate = React.useCallback((view: ViewState) => setViewState(view), [setViewState]);
 
   const userName = registeredUser?.username || "RAKYAN INUKERTAPATI";
 
@@ -116,7 +113,6 @@ export const ViewRouter = React.memo(({ isLoggingIn, loginEmail, setLoginEmail, 
           isLoading={isLoggingIn}
           onLogin={async (email, password) => {
             setIsLoggingIn(true);
-
             const { error } = await supabase.auth.signInWithPassword({
               email,
               password
@@ -403,9 +399,9 @@ export const ViewRouter = React.memo(({ isLoggingIn, loginEmail, setLoginEmail, 
         <HomeScreen
           userName={userName}
           selectedShortcuts={selectedShortcuts}
-          onNavigate={onNavigate}
+          onNavigate={(view) => setViewState(view)}
         />
       )}
     </>
   );
-});
+}

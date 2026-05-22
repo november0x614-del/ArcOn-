@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion, useMotionValue, useSpring, useTransform } from 'motion/react';
 import { 
   ArrowLeft, 
   Send, 
@@ -10,13 +11,17 @@ import {
   ArrowUpRight, 
   Coins,
   Eye,
+  Lock,
+  Settings,
   ArrowDownToLine,
   ShoppingBag,
   RefreshCw,
   Clock,
   CheckCircle2,
   EyeOff,
-  ChevronDown
+  ChevronDown,
+  Copy,
+  Check
 } from 'lucide-react';
 import { useUnifiedBalanceKit } from '../../services/unified-balance-kit';
 import { useApp } from '../../context/AppContext';
