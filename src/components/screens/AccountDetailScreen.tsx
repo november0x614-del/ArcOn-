@@ -20,7 +20,6 @@ import {
   CheckCircle2,
   EyeOff,
   ChevronDown,
-  QrCode,
   Copy,
   Check
 } from 'lucide-react';
@@ -355,14 +354,11 @@ export function VirtualCard({ userName }: { userName: string }) {
   const [copied, setCopied] = useState(false);
   const { registeredUser } = useApp();
   
-  const displayAddress = registeredUser?.walletAddress || "0x742d35cc6634f44e";
-  const formattedAddress = displayAddress.startsWith('0x') ? displayAddress : `0x${displayAddress}`;
-  
-  // Format to chunks of 4 for the card display
-  const addressChunks = formattedAddress.match(/.{1,4}/g)?.slice(0, 4).join(' ') || formattedAddress;
+  const rawUid = (registeredUser?.supabaseUid || "8f7e-ffa1-0fb0-c52a").replace(/-/g, '').toUpperCase();
+  const formattedUid = rawUid.match(/.{1,4}/g)?.slice(0, 4).join(' ') || rawUid;
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(formattedAddress);
+    navigator.clipboard.writeText(registeredUser?.supabaseUid || "");
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -396,64 +392,79 @@ export function VirtualCard({ userName }: { userName: string }) {
   };
 
   return (
-    <div style={{ perspective: 1000 }} className="w-full">
-    <motion.div 
-      onPointerMove={handlePointerMove}
-      onPointerLeave={handlePointerLeave}
-      style={{
-        rotateX,
-        rotateY,
-        transformStyle: "preserve-3d"
-      }}
-      className="w-full aspect-[1.586/1] rounded-[24px] p-6 flex flex-col justify-between relative overflow-hidden shadow-2xl bg-[#1e293b]"
-    >
-        <div className="absolute inset-0 bg-gradient-to-br from-[#1e293b] via-[#0f172a] to-[#010307] z-0"></div>
-        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none"></div>
-        
-        {/* Top Section: Logo & QR */}
-        <div className="flex justify-between items-start z-10" style={{ transform: "translateZ(30px)" }}>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center p-1 shadow-lg border border-white/20">
-              <div className="w-full h-full rounded-full bg-slate-400"></div>
+    <div style={{ perspective: 1200 }} className="w-full max-w-[500px] mx-auto">
+      <motion.div 
+        onPointerMove={handlePointerMove}
+        onPointerLeave={handlePointerLeave}
+        style={{
+          rotateX,
+          rotateY,
+          transformStyle: "preserve-3d"
+        }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full aspect-[1.586/1] rounded-[24px] p-6 sm:p-10 flex flex-col justify-between relative overflow-hidden shadow-[0_15px_45px_-12px_rgba(0,0,0,0.12)] bg-white border border-slate-100 group"
+      >
+          {/* Reference: Minimalist Background with Blue Accent */}
+          <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[120%] border-[12px] border-blue-600/10 rounded-[100px] pointer-events-none rotate-12"></div>
+          <div className="absolute top-[10%] right-[-5%] w-[40%] h-[40%] border-[2px] border-blue-600/80 rounded-full pointer-events-none opacity-20"></div>
+
+          {/* Top Section: Logo */}
+          <div className="flex justify-between items-start z-10" style={{ transform: "translateZ(20px)" }}>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20">
+                <div className="w-3.5 h-3.5 rounded-full border-[2px] border-white"></div>
+              </div>
+              <span className="text-slate-900 font-bold text-[20px] tracking-tight select-none">arc</span>
+              <span className="text-blue-600 text-[10px] font-black italic mt-[-10px] ml-[-4px]">™</span>
             </div>
-            <span className="text-white font-black text-[22px] tracking-tighter italic font-mono lowercase">arc</span>
-          </div>
-
-          <div className="w-12 h-12 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-lg cursor-pointer hover:bg-white/15 transition-colors">
-            <QrCode size={22} className="text-white opacity-80" />
-          </div>
-        </div>
-        
-        {/* Middle Section: Address */}
-        <div className="flex flex-col z-10" style={{ transform: "translateZ(50px)" }}>
-           <button 
-             onClick={handleCopy}
-             className="flex flex-col items-start gap-1 group/copy active:scale-95 transition-transform"
-           >
-             <span className="text-white/30 text-[9px] font-black uppercase tracking-[0.2em] ml-1">Card Address</span>
-             <div className="flex items-center gap-3">
-               <p className="text-white font-mono text-[20px] sm:text-[24px] tracking-[0.05em] font-medium drop-shadow-2xl group-hover/copy:text-blue-200 transition-colors">
-                 {addressChunks}
-               </p>
-               <div className="bg-white/10 p-2 rounded-lg backdrop-blur-md opacity-40 group-hover/copy:opacity-100 transition-all">
-                 {copied ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} className="text-white" />}
+            
+            <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center border border-slate-100 opacity-50">
+              <div className="grid grid-cols-2 gap-0.5">
+                 <div className="w-1.5 h-1.5 rounded-[1px] bg-slate-300"></div>
+                 <div className="w-1.5 h-1.5 rounded-[1px] bg-slate-900"></div>
+                 <div className="w-1.5 h-1.5 rounded-[1px] bg-slate-900"></div>
+                 <div className="w-1.5 h-1.5 rounded-[1px] bg-slate-300"></div>
                </div>
-             </div>
-           </button>
-        </div>
+            </div>
+          </div>
+          
+          {/* Middle Section: Universal ID (Card Number) */}
+          <div className="flex flex-col z-10" style={{ transform: "translateZ(40px)" }}>
+             <button 
+               onClick={handleCopy}
+               className="flex flex-col items-start gap-1 group/copy active:scale-[0.98] transition-all"
+             >
+               <div className="flex items-center gap-3">
+                 <p className="text-slate-900 font-mono text-[22px] sm:text-[28px] tracking-[0.1em] font-medium drop-shadow-sm group-hover/copy:text-blue-600 transition-colors duration-300">
+                   {formattedUid}
+                 </p>
+                 <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-100 opacity-0 group-hover/copy:opacity-100 transition-all">
+                   {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} className="text-slate-400" />}
+                 </div>
+               </div>
+             </button>
+          </div>
 
-        {/* Bottom Section: User & Status */}
-        <div className="flex justify-between items-end z-10" style={{ transform: "translateZ(40px)" }}>
-           <div className="flex flex-col">
-              <span className="text-white/30 text-[9px] font-black uppercase tracking-[0.2em] mb-1">Card Holder</span>
-              <span className="text-white font-black text-[14px] uppercase tracking-wider">{userName}</span>
-           </div>
-           
-           <div className="flex flex-col items-end">
-              <span className="text-white/30 text-[9px] font-black uppercase tracking-[0.2em] mb-1">Registered Since</span>
-              <span className="text-white font-mono text-[13px] tracking-wider leading-none">21 MEI 2024</span>
-           </div>
-        </div>
+          {/* Bottom Section: Details */}
+          <div className="flex justify-between items-end z-10" style={{ transform: "translateZ(30px)" }}>
+             <div className="flex flex-col">
+                <span className="text-slate-900 font-bold text-[13px] sm:text-[15px] tracking-[0.05em] uppercase select-none">{userName}</span>
+             </div>
+             
+             <div className="flex gap-6 items-end">
+                <div className="flex flex-col items-end">
+                   <span className="text-slate-400 text-[7px] font-bold uppercase tracking-widest mb-1 select-none leading-none">Valid Thru</span>
+                   <span className="text-slate-900 font-mono text-[11px] sm:text-[13px] tracking-tight leading-none">05/30</span>
+                </div>
+                <div className="flex flex-col items-end">
+                   <span className="text-slate-400 text-[7px] font-bold uppercase tracking-widest mb-1 select-none leading-none">Since</span>
+                   <span className="text-slate-900 font-mono text-[11px] sm:text-[13px] tracking-tight leading-none">
+                     {registeredUser?.registrationDate?.split(' ').slice(1).join('/') || "05/26"}
+                   </span>
+                </div>
+             </div>
+          </div>
       </motion.div>
     </div>
   );

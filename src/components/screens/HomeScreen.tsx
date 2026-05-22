@@ -57,7 +57,8 @@ export function HomeScreen({
     balance,
     transactions,
     visibleTokenCodes,
-    setVisibleTokenCodes
+    setVisibleTokenCodes,
+    registeredUser
   } = useApp();
   const [activeRekeningTab, setActiveRekeningTab] = useState(0);
 
@@ -429,37 +430,40 @@ export function HomeScreen({
                       </div>
 
                       {/* Premium Virtual Card Art */}
-                      <div className="w-20 h-13 sm:w-24 sm:h-16 rounded-lg sm:rounded-xl border border-white/20 shadow-2xl relative overflow-hidden shrink-0 group-hover:scale-105 transition-transform duration-500 flex flex-col justify-between p-1.5 sm:p-2 bg-[#1e293b]">
-                        <div className="absolute inset-0 bg-gradient-to-br from-[#1e293b] via-[#111827] to-[#030712] z-0"></div>
-                        
+                      <div className="w-20 h-13 sm:w-24 sm:h-16 rounded-lg sm:rounded-xl border border-slate-100 shadow-xl relative overflow-hidden shrink-0 group-hover:scale-105 transition-transform duration-500 flex flex-col justify-between p-2 sm:p-2.5 bg-white">
+                        {/* Reference: Minimalist Background with Blue Accent */}
+                        <div className="absolute top-0 right-0 w-[50%] h-[120%] border-[2px] border-blue-600/10 rounded-full pointer-events-none rotate-12 translate-x-1/2 -translate-y-1/3"></div>
+
                         <div className="flex justify-between items-start relative z-10">
-                          <div className="flex items-center gap-0.5">
-                            <div className="w-2 h-2 rounded-full bg-white flex items-center justify-center p-[0.5px]">
-                              <div className="w-full h-full rounded-full bg-slate-600"></div>
+                          <div className="flex items-center gap-1">
+                            <div className="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-[2px] bg-blue-600 flex items-center justify-center">
+                              <div className="w-1 sm:w-1.5 h-1 sm:h-1.5 rounded-full border-[1px] border-white"></div>
                             </div>
-                            <span className="text-[5px] sm:text-[6px] font-black text-white italic font-mono leading-none">arc</span>
+                            <span className="text-slate-900 font-bold text-[5px] sm:text-[6px] tracking-tight italic select-none leading-none">arc</span>
+                            <span className="text-blue-600 text-[2.5px] sm:text-[3px] font-black mt-[-2px] ml-[-1px]">™</span>
                           </div>
                           
-                          <div className="bg-white/10 p-[1px] rounded-[1px] flex items-center justify-center">
-                             <QrCode size={6} className="text-white sm:w-2 w-1.5" />
+                          <div className="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-[2px] bg-slate-50 border border-slate-100 flex items-center justify-center">
+                             <div className="grid grid-cols-2 gap-[0.2px]">
+                                <div className="w-[0.8px] sm:w-[1px] h-[0.8px] sm:h-[1px] bg-slate-900 rounded-[0.2px]"></div>
+                                <div className="w-[0.8px] sm:w-[1px] h-[0.8px] sm:h-[1px] bg-slate-200 rounded-[0.2px]"></div>
+                             </div>
                           </div>
                         </div>
 
                         <div className="flex flex-col relative z-10 mt-0.5">
-                           <span className="text-[3px] sm:text-[4px] font-black text-white/80 uppercase tracking-widest truncate max-w-full">
-                             {userName}
+                           <span className="text-[5.5px] sm:text-[7px] font-mono text-slate-900 tracking-wide font-medium leading-none">
+                             {registeredUser?.supabaseUid ? `${registeredUser.supabaseUid.slice(0, 4)} ${registeredUser.supabaseUid.slice(4, 8)}` : "UID-NONE"}
                            </span>
-                           <p className="text-[5px] sm:text-[6px] font-mono text-white tracking-widest leading-none mt-1 opacity-90">
-                             0x742d...f44e
-                           </p>
                         </div>
                         
                         <div className="flex justify-between items-end relative z-10 mt-auto">
-                           <div className="flex flex-col items-start">
-                             <span className="text-[2.5px] sm:text-[3px] font-black text-white/30 uppercase tracking-tighter">Registered Since</span>
-                             <span className="text-[3.5px] sm:text-[4.5px] font-mono text-white/50 leading-none">21 MEI 24</span>
+                           <div className="flex flex-col items-start leading-none gap-0.5">
+                             <span className="text-slate-900 font-bold text-[4.5px] sm:text-[6px] uppercase tracking-tighter leading-none">{userName}</span>
                            </div>
-                           <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-blue-500/20 blur-[1px]"></div>
+                           <div className="flex flex-col items-end leading-none">
+                             <span className="text-[2.5px] sm:text-[3.5px] font-mono text-slate-400 select-none">05/30</span>
+                           </div>
                         </div>
                       </div>
                     </div>

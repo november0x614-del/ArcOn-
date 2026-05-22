@@ -3,11 +3,19 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import { initiateDeveloperControlledWalletsClient } from "@circle-fin/developer-controlled-wallets";
+import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
 
 dotenv.config();
 
+const supabaseAdmin = createClient(
+  process.env.VITE_SUPABASE_URL || "",
+  process.env.SUPABASE_SERVICE_ROLE_KEY || "",
+  { auth: { autoRefreshToken: false, persistSession: false } }
+);
+
 // Lazy initialization of Circle Client
+
 let circleClient: any = null;
 
 function getCircleClient() {
@@ -45,8 +53,9 @@ async function startServer() {
   });
 
   // Circle Wallet Routes
-  app.post("/api/wallets/create", async (_req, res) => {
+  app.post("/api/wallets/create", async (req, res) => {
     try {
+      const { userId } = req.body;
       console.log("Creating new wallet for Arc Testnet...");
       const client = getCircleClient();
       
@@ -71,6 +80,17 @@ async function startServer() {
       const wallet = walletResponse.data?.wallets?.[0];
       if (!wallet) {
         throw new Error("Wallet creation failed: no wallets array returned from Circle");
+      }
+
+      // 3. (Optional) Save to Supabase if userId is provided
+      if (userId && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        const { error } = await supabaseAdmin.from('user_wallets').insert({
+          supabase_uid: userId,
+          circle_wallet_id: wallet.id,
+          wallet_address: wallet.address,
+          circle_wallet_set_id: walletSet.id
+        });
+        if (error) console.error("Failed mapping to Supabase:", error);
       }
 
       console.log(`Wallet created successfully: ${wallet.address}`);

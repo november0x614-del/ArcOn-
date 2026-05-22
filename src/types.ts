@@ -62,6 +62,9 @@ export interface UserIdentity {
   email: string;
   isVerified: boolean;
   registrationDate?: string;
+  walletId?: string;
+  walletAddress?: string;
+  supabaseUid?: string;
 }
 
 export interface Transaction {

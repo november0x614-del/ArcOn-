@@ -45,6 +45,7 @@ import { BatchTransferScreen } from "./components/screens/BatchTransferScreen";
 import { WithdrawScreen } from "./components/screens/WithdrawScreen";
 import { BridgeScreen } from "./components/screens/BridgeScreen";
 import { useApp } from "./context/AppContext";
+import { supabase } from "./lib/supabaseClient";
 
 export default function App() {
   const {
@@ -70,6 +71,58 @@ export default function App() {
     setBalance,
     addTransaction
   } = useApp();
+
+  // Handle Supabase Auth Session
+  React.useEffect(() => {
+    // Check active session on mount
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        handleUserSession(session.user);
+      }
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        handleUserSession(session.user);
+      } else {
+        setRegisteredUser(null);
+        localStorage.removeItem("arc_commerce_user");
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleUserSession = async (user: any) => {
+    try {
+      // Try to fetch wallet mapping from Supabase
+      const { data, error } = await supabase
+        .from('user_wallets')
+        .select('*')
+        .eq('supabase_uid', user.id)
+        .single();
+
+      if (data && !error) {
+        const userData = {
+          username: user.user_metadata?.username || user.email?.split('@')[0].toUpperCase(),
+          email: user.email,
+          isVerified: true,
+          walletId: data.circle_wallet_id,
+          walletAddress: data.wallet_address,
+          supabaseUid: user.id,
+          registrationDate: new Date(user.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()
+        };
+        setRegisteredUser(userData);
+        localStorage.setItem("arc_commerce_user", JSON.stringify(userData));
+        if (viewState === 'splash' || viewState === 'password') {
+          setViewState('home');
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching session wallet:", err);
+    }
+  };
 
   const userName = registeredUser?.username || "RAKYAN INUKERTAPATI";
 
@@ -121,9 +174,20 @@ export default function App() {
             {viewState === "password" && (
               <PasswordScreen
                 onBack={() => setViewState("splash")}
-                onLogin={() => {
-                  setIsBiometricVerified(true); // Simulate already verified if login with PIN
-                  setViewState("home");
+                onLogin={async (email, password) => {
+                  const { data, error } = await supabase.auth.signInWithPassword({ 
+                    email, 
+                    password 
+                  });
+                  
+                  if (error) {
+                    throw error;
+                  }
+
+                  if (data.user) {
+                    setIsBiometricVerified(true);
+                    await handleUserSession(data.user);
+                  }
                 }}
                 onForgotPassword={() => setViewState("forgotPassword")}
               />
@@ -209,7 +273,10 @@ export default function App() {
             {viewState === "logout" && (
               <LogoutScreen
                 onBack={() => setViewState("home")}
-                onLogout={() => setViewState("splash")}
+                onLogout={async () => {
+                  await supabase.auth.signOut();
+                  setViewState("splash");
+                }}
               />
             )}
 
