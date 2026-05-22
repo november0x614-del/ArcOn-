@@ -41,17 +41,12 @@ export default function App() {
              body: JSON.stringify({ userId: user.id })
            });
            
-           console.log("Wallet creation response status:", createRes.status);
            if (createRes.ok) {
              const newData = await createRes.json();
-             console.log("Wallet created:", newData);
              walletInfo = { 
                wallet_id: newData.walletId, 
                wallet_address: newData.address 
              };
-           } else {
-             const errorData = await createRes.json();
-             console.error("Wallet creation failed:", errorData);
            }
          } catch (createErr) {
            console.error("Failed to auto-create wallet:", createErr);

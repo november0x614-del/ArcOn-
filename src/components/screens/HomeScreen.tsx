@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ViewState, ShortcutItem } from "../../types";
 import { useApp } from "../../context/AppContext";
+import { useUSDCBalance } from "../../services/unified-balance-kit/hooks";
 import { MenuIcon } from "../common/MenuIcon";
 import { StockRow } from "../common/StockRow";
 import { ProductCard } from "../common/ProductCard";
@@ -12,6 +13,9 @@ import {
   Mail,
   Settings,
   ChevronRight,
+  ChevronDown,
+  Eye,
+  EyeOff,
   Settings2,
   Wallet,
   ShoppingBag,
@@ -45,15 +49,21 @@ export function HomeScreen({
   onNavigate,
 }: HomeScreenProps) {
   const {
+    showBalance,
+    setShowBalance,
     transactions,
     visibleTokenCodes,
     setVisibleTokenCodes,
+    registeredUser,
     fetchTransactions,
+    pnlValue,
+    pnlPercentage,
     readReceiptIds
   } = useApp();
 
   const unreadCount = transactions.filter((tx) => !readReceiptIds.includes(tx.id)).length;
   
+  const { formattedBalance, refreshBalance } = useUSDCBalance();
   const { fetchBalance } = useApp(); // Keep for PnL calculation
 
 
