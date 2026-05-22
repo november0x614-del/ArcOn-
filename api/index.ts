@@ -17,14 +17,31 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
-const rawBackendUrl = process.env.VITE_SUPABASE_URL || "";
-const cleanUrl = rawBackendUrl.replace(/\/rest\/v1\/?$/, '').replace(/\/$/, '');
+let supabaseAdminInstance: any = null;
 
-const supabaseAdmin = createClient(
-  cleanUrl,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || "",
-  { auth: { autoRefreshToken: false, persistSession: false } }
-);
+function getSupabaseAdmin() {
+  if (!supabaseAdminInstance) {
+    const rawBackendUrl = process.env.VITE_SUPABASE_URL || "";
+    const cleanUrl = rawBackendUrl.replace(/\/rest\/v1\/?$/, '').replace(/\/$/, '');
+    
+    if (!cleanUrl || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error("Missing VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables.");
+    }
+
+    supabaseAdminInstance = createClient(
+      cleanUrl,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    );
+  }
+  return supabaseAdminInstance;
+}
+
+const supabaseAdmin: any = new Proxy({}, {
+  get: (_target, prop) => {
+    return getSupabaseAdmin()[prop];
+  }
+});
 
 // Lazy initialization of Circle Client
 let circleClient: any = null;
@@ -70,11 +87,15 @@ app.post("/api/wallets/create", async (req, res) => {
     console.log("Checking if wallet exists...");
     
     if (userId && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      const { data: existingWallet } = await supabaseAdmin
+      const { data: existingWallet, error: fetchError } = await supabaseAdmin
         .from('user_wallets')
         .select('*')
         .eq('id', userId)
         .single();
+        
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error("Supabase fetch error:", fetchError);
+      }
         
       if (existingWallet) {
         console.log(`Wallet already exists: ${existingWallet.wallet_address}`);
@@ -148,7 +169,14 @@ app.get("/api/debug-wallet/:userId", async (req, res) => {
       .eq('id', userId)
       .single();
     
-    if (error) throw error;
+    if (error && error.code !== 'PGRST116') {
+      throw error;
+    }
+    
+    if (!data) {
+      return res.status(404).json({ error: "Wallet not found" });
+    }
+    
     res.json(data);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -166,6 +194,10 @@ app.get("/api/balance/:userId", async (req, res) => {
       .select('wallet_id')
       .eq('id', userId)
       .single();
+    
+    if (walletError && walletError.code !== 'PGRST116') {
+       console.error("Error fetching wallet ID:", walletError);
+    }
     
     let baseBalance = 0;
     let tokenBalances = [];
