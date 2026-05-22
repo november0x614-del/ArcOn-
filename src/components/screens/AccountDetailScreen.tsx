@@ -23,7 +23,9 @@ import {
   Copy,
   Check
 } from 'lucide-react';
+import { useUnifiedBalanceKit } from '../../services/unified-balance-kit';
 import { useApp } from '../../context/AppContext';
+import { UIDCard } from '../common/UIDCard';
 
 interface AccountDetailScreenProps {
   onBack: () => void;
@@ -33,7 +35,7 @@ interface AccountDetailScreenProps {
   userName?: string;
 }
 
-export function AccountDetailScreen({ 
+export function AccountDetailScreen({                
   onBack, 
   onTransfer, 
   onReceive,
@@ -41,7 +43,10 @@ export function AccountDetailScreen({
   userName = "ALEXANDER D"
 }: AccountDetailScreenProps) {
   const [activeTab, setActiveTab] = useState<'history' | 'token'>('history');
-  const { transactions, balance, showBalance, setShowBalance, pnlValue, pnlPercentage, activeFilter, setActiveFilter } = useApp();
+  const [showUID, setShowUID] = useState(false);
+  const { transactions, showBalance, setShowBalance, pnlValue, pnlPercentage, activeFilter, setActiveFilter } = useApp();
+  const kit = useUnifiedBalanceKit();
+  const balance = kit.unifiedBalance.getBalance();
 
   const filteredTransactions = transactions.filter((tx) => {
     if (activeFilter === 'All') return true;
@@ -123,14 +128,12 @@ export function AccountDetailScreen({
               </div>
 
               <div className="flex items-baseline gap-2 mb-4">
-                <span className="text-[42px] font-black tracking-tight leading-none">
-                  {showBalance
-                    ? (balance || 0).toLocaleString("id-ID", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })
-                    : "••••••"}
-                </span>
+                <div className="flex flex-col items-start gap-0.5">
+                  <span className="text-[42px] font-black tracking-tight leading-none text-white">
+                    {kit.unifiedBalance.getFormattedBalance()}
+                  </span>
+                  <span className="bg-white/20 text-white text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full">Unified</span>
+                </div>
                 <div className="flex items-center gap-1">
                   <span className="text-[16px] font-black text-slate-200">
                     USDC
@@ -144,7 +147,7 @@ export function AccountDetailScreen({
                   PnL 1 Bln
                 </span>
                 <span className="text-[13px] font-bold text-emerald-400">
-                  {`${pnlValue >= 0 ? '+' : '-'}₮${Math.abs(pnlValue).toFixed(2).replace('.', ',')} (${pnlPercentage >= 0 ? '+' : ''}${pnlPercentage.toFixed(2).replace('.', ',')}%)`}
+                  {`${pnlValue >= 0 ? '+' : '-'}${Math.abs(pnlValue).toFixed(2).replace('.', ',')} (${pnlPercentage >= 0 ? '+' : ''}${pnlPercentage.toFixed(2).replace('.', ',')}%)`}
                 </span>
               </div>
             </div>
@@ -318,32 +321,18 @@ export function AccountDetailScreen({
             <div className="w-12 h-1.5 bg-slate-200 rounded-full mt-4 mb-6"></div>
             
             <div className="px-6 w-full flex flex-col items-center">
-              <h3 className="font-bold text-[18px] text-slate-800 mb-6">Your Virtual Card</h3>
+              <h3 className="font-bold text-[18px] text-slate-800 mb-6">Your UID Card</h3>
               
               {/* Card Design */}
-              <VirtualCard userName={userName} />
+              <UIDCard userName={userName} isBlurred={!showUID} />
               
               {/* Card Actions */}
-              <div className="flex justify-around w-full mt-8 border-t border-slate-100 pt-6">
-                <div className="flex flex-col items-center gap-2 cursor-pointer group">
-                  <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-[#3FA2F6] group-active:scale-95 transition-transform">
-                    <Eye size={20} />
+              <div className="flex justify-center w-full mt-8 border-t border-slate-100 pt-6">
+                <div onClick={() => setShowUID(!showUID)} className="flex flex-col items-center gap-2 cursor-pointer group">
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-transform group-active:scale-95 ${showUID ? 'bg-slate-100 text-slate-600' : 'bg-blue-50 text-[#3FA2F6]'}`}>
+                    {showUID ? <EyeOff size={20} /> : <Eye size={20} />}
                   </div>
-                  <span className="text-[12px] font-medium text-slate-600">View CVC</span>
-                </div>
-                
-                <div className="flex flex-col items-center gap-2 cursor-pointer group">
-                  <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-600 group-active:scale-95 transition-transform border border-slate-200">
-                    <Lock size={20} />
-                  </div>
-                  <span className="text-[12px] font-medium text-slate-600">Block</span>
-                </div>
-                
-                <div className="flex flex-col items-center gap-2 cursor-pointer group">
-                  <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-600 group-active:scale-95 transition-transform border border-slate-200">
-                    <Settings size={20} />
-                  </div>
-                  <span className="text-[12px] font-medium text-slate-600">Set Limit</span>
+                  <span className="text-[12px] font-medium text-slate-600">{showUID ? 'Hide UID' : 'View UID'}</span>
                 </div>
               </div>
 
@@ -361,126 +350,6 @@ interface DetailActionButtonProps {
   badge?: string;
   onClick?: () => void;
   isGlow?: boolean;
-}
-
-export function VirtualCard({ userName }: { userName: string }) {
-  const [copied, setCopied] = useState(false);
-  const { registeredUser } = useApp();
-  
-  const rawUid = (registeredUser?.supabaseUid || "8f7e-ffa1-0fb0-c52a").replace(/-/g, '').toUpperCase();
-  const formattedUid = rawUid.match(/.{1,4}/g)?.slice(0, 4).join(' ') || rawUid;
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(registeredUser?.supabaseUid || "");
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-
-  const mouseXSpring = useSpring(x, { stiffness: 300, damping: 20 });
-  const mouseYSpring = useSpring(y, { stiffness: 300, damping: 20 });
-
-  const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["15deg", "-15deg"]);
-  const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-15deg", "15deg"]);
-  
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const width = rect.width;
-    const height = rect.height;
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-    
-    const xPct = mouseX / width - 0.5;
-    const yPct = mouseY / height - 0.5;
-    
-    x.set(xPct);
-    y.set(yPct);
-  };
-
-  const handlePointerLeave = () => {
-    x.set(0);
-    y.set(0);
-  };
-
-  return (
-    <div style={{ perspective: 1200 }} className="w-full max-w-[500px] mx-auto">
-      <motion.div 
-        onPointerMove={handlePointerMove}
-        onPointerLeave={handlePointerLeave}
-        style={{
-          rotateX,
-          rotateY,
-          transformStyle: "preserve-3d"
-        }}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full aspect-[1.586/1] rounded-[24px] p-6 sm:p-10 flex flex-col justify-between relative overflow-hidden shadow-[0_15px_45px_-12px_rgba(0,0,0,0.12)] bg-white border border-slate-100 group"
-      >
-          {/* Reference: Minimalist Background with Blue Accent */}
-          <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[120%] border-[12px] border-blue-600/10 rounded-[100px] pointer-events-none rotate-12"></div>
-          <div className="absolute top-[10%] right-[-5%] w-[40%] h-[40%] border-[2px] border-blue-600/80 rounded-full pointer-events-none opacity-20"></div>
-
-          {/* Top Section: Logo */}
-          <div className="flex justify-between items-start z-10" style={{ transform: "translateZ(20px)" }}>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20">
-                <div className="w-3.5 h-3.5 rounded-full border-[2px] border-white"></div>
-              </div>
-              <span className="text-slate-900 font-bold text-[20px] tracking-tight select-none">arc</span>
-              <span className="text-blue-600 text-[10px] font-black italic mt-[-10px] ml-[-4px]">™</span>
-            </div>
-            
-            <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center border border-slate-100 opacity-50">
-              <div className="grid grid-cols-2 gap-0.5">
-                 <div className="w-1.5 h-1.5 rounded-[1px] bg-slate-300"></div>
-                 <div className="w-1.5 h-1.5 rounded-[1px] bg-slate-900"></div>
-                 <div className="w-1.5 h-1.5 rounded-[1px] bg-slate-900"></div>
-                 <div className="w-1.5 h-1.5 rounded-[1px] bg-slate-300"></div>
-               </div>
-            </div>
-          </div>
-          
-          {/* Middle Section: Universal ID (Card Number) */}
-          <div className="flex flex-col z-10" style={{ transform: "translateZ(40px)" }}>
-             <button 
-               onClick={handleCopy}
-               className="flex flex-col items-start gap-1 group/copy active:scale-[0.98] transition-all"
-             >
-               <div className="flex items-center gap-3">
-                 <p className="text-slate-900 font-mono text-[22px] sm:text-[28px] tracking-[0.1em] font-medium drop-shadow-sm group-hover/copy:text-blue-600 transition-colors duration-300">
-                   {formattedUid}
-                 </p>
-                 <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-100 opacity-0 group-hover/copy:opacity-100 transition-all">
-                   {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} className="text-slate-400" />}
-                 </div>
-               </div>
-             </button>
-          </div>
-
-          {/* Bottom Section: Details */}
-          <div className="flex justify-between items-end z-10" style={{ transform: "translateZ(30px)" }}>
-             <div className="flex flex-col">
-                <span className="text-slate-900 font-bold text-[13px] sm:text-[15px] tracking-[0.05em] uppercase select-none">{userName}</span>
-             </div>
-             
-             <div className="flex gap-6 items-end">
-                <div className="flex flex-col items-end">
-                   <span className="text-slate-400 text-[7px] font-bold uppercase tracking-widest mb-1 select-none leading-none">Valid Thru</span>
-                   <span className="text-slate-900 font-mono text-[11px] sm:text-[13px] tracking-tight leading-none">05/30</span>
-                </div>
-                <div className="flex flex-col items-end">
-                   <span className="text-slate-400 text-[7px] font-bold uppercase tracking-widest mb-1 select-none leading-none">Since</span>
-                   <span className="text-slate-900 font-mono text-[11px] sm:text-[13px] tracking-tight leading-none">
-                     {registeredUser?.registrationDate?.split(' ').slice(1).join('/') || "05/26"}
-                   </span>
-                </div>
-             </div>
-          </div>
-      </motion.div>
-    </div>
-  );
 }
 
 function DetailActionButton({ icon, label, badge, onClick, isGlow }: DetailActionButtonProps) {

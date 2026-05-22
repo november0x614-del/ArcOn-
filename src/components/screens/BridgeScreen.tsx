@@ -16,14 +16,14 @@ const NETWORKS = [
 ];
 
 export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
-  const { balance, setBalance, addTransaction, displayToast } = useApp();
+  const { balance, fetchBalance, fetchTransactions, displayToast, registeredUser } = useApp();
   const [step, setStep] = useState<'form' | 'processing' | 'success'>('form');
   const [amount, setAmount] = useState('');
   const [fromNetwork, setFromNetwork] = useState(NETWORKS[0]);
   const [toNetwork, setToNetwork] = useState(NETWORKS[1]);
   const [showNetworkSelect, setShowNetworkSelect] = useState<'from' | 'to' | null>(null);
 
-  const handleBridge = () => {
+  const handleBridge = async () => {
     const numAmount = parseFloat(amount);
     if (!amount || isNaN(numAmount) || numAmount <= 0) {
       displayToast("Please enter a valid amount.");
@@ -36,18 +36,29 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
 
     setStep('processing');
     
-    setTimeout(() => {
-      setBalance(prev => prev - numAmount);
-      addTransaction({
-        type: 'transfer',
-        title: `Bridge to ${toNetwork.name}`,
-        amount: `-${numAmount.toFixed(2)}`,
-        currency: 'USDC',
-        status: 'success',
-        txHash: `0x${Math.random().toString(16).slice(2, 10)}...`
+    try {
+      const response = await fetch('/api/bridge/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: registeredUser?.supabaseUid,
+          amount: amount,
+          fromNetwork: fromNetwork.name,
+          toNetwork: toNetwork.name
+        })
       });
+      
+      if (!response.ok) throw new Error("Bridge failed");
+      
+      await fetchBalance();
+      await fetchTransactions();
+      
       setStep('success');
-    }, 3000);
+    } catch (error) {
+       console.error("Bridge failed", error);
+       displayToast("Bridge failed");
+       setStep('form');
+    }
   };
 
   if (step === 'processing') {

@@ -1,6 +1,7 @@
 import React from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "./context/AppContext";
+import { useStore } from "./store/useStore";
 import { supabase } from "./lib/supabaseClient";
 import { ViewRouter } from "./components/router/ViewRouter";
 
@@ -11,12 +12,75 @@ export default function App() {
     viewState,
     setViewState,
     fetchBalance,
+    fetchTransactions,
+    registeredUser,
+    setRegisteredUser,
+    resetState
   } = useApp();
+
+  const handleUserSession = React.useCallback(async (user: any) => {
+    try {
+      let walletInfo: any = null;
+      
+      try {
+        const response = await fetch(`/api/debug-wallet/${user.id}`);
+        if (response.ok) {
+          walletInfo = await response.json();
+        }
+      } catch (err) {
+        console.warn("Failed fetching wallet mapping, trying to provision...", err);
+      }
+      
+      // Auto-Create Wallet on Login if missing (Recovery Mode)
+      if (!walletInfo || !walletInfo.wallet_id) {
+         console.log("No wallet found, provisioning new deterministic wallet via Circle...");
+         try {
+           const createRes = await fetch('/api/wallets/create', {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify({ userId: user.id })
+           });
+           
+           if (createRes.ok) {
+             const newData = await createRes.json();
+             walletInfo = { 
+               wallet_id: newData.walletId, 
+               wallet_address: newData.address 
+             };
+           }
+         } catch (createErr) {
+           console.error("Failed to auto-create wallet:", createErr);
+         }
+      }
+
+      setRegisteredUser({
+        username: user.user_metadata?.full_name || 'Arc User',
+        email: user.email || '',
+        isVerified: true,
+        walletId: walletInfo?.wallet_id || '',
+        walletAddress: walletInfo?.wallet_address || '',
+        supabaseUid: user.id,
+        registrationDate: new Date(user.created_at).toLocaleDateString('id-ID')
+      });
+      
+      // Navigate to home only if not already in a logged in screen or processing a login/signup
+      const currentView = useStore.getState().viewState;
+      if (currentView === 'splash' || currentView === 'password') {
+        setViewState("home");
+      }
+    } catch (e) {
+      console.error(e);
+      const currentView = useStore.getState().viewState;
+      if (currentView === 'splash' || currentView === 'password') {
+        setViewState("home");
+      }
+    }
+  }, [setRegisteredUser, setViewState]);
 
   React.useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        setViewState("home");
+        handleUserSession(session.user);
       }
     });
 
@@ -24,18 +88,21 @@ export default function App() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
-        setViewState("home");
+        handleUserSession(session.user);
       } else {
-        setViewState("splash");
+        resetState();
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [setViewState]);
+  }, [handleUserSession, resetState]);
 
   React.useEffect(() => {
-    fetchBalance();
-  }, [fetchBalance]);
+    if (registeredUser?.supabaseUid) {
+      fetchBalance();
+      fetchTransactions();
+    }
+  }, [registeredUser?.supabaseUid, fetchBalance, fetchTransactions]);
 
   return (
     <div className="bg-[#EAF3FA] sm:bg-slate-900 min-h-screen sm:p-4 md:p-8 flex items-center justify-center">

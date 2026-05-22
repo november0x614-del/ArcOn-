@@ -7,7 +7,7 @@ interface ArcSwapScreenProps {
 }
 
 export function ArcSwapScreen({ onBack }: ArcSwapScreenProps) {
-  const { balance, setBalance, addTransaction, registeredUser } = useApp();
+  const { fetchBalance, fetchTransactions, registeredUser } = useApp();
   const [swapFromAmount, setSwapFromAmount] = useState<string>("100");
   const [swapToToken, setSwapToToken] = useState<"ARC" | "AETH" | "AQR">("ARC");
   const [isSwapping, setIsSwapping] = useState<boolean>(false);
@@ -20,7 +20,7 @@ export function ArcSwapScreen({ onBack }: ArcSwapScreenProps) {
     try {
       const fromNum = Number(swapFromAmount);
       
-      const response = await fetch('/api/swap/simulate', {
+      const response = await fetch('/api/swap/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -33,18 +33,11 @@ export function ArcSwapScreen({ onBack }: ArcSwapScreenProps) {
 
       if (!response.ok) throw new Error('Swap failed');
 
-      const data = await response.json();
+      await response.json();
       
-      // Update local state after successful simulation
-      setBalance(balance - fromNum);
-      addTransaction({
-        type: "swap",
-        title: `Swap USDC to ${swapToToken}`,
-        amount: `-${fromNum.toFixed(2)}`,
-        currency: "USDC",
-        status: "success",
-        txHash: data.txHash,
-      });
+      // Update data from backend
+      await fetchBalance();
+      await fetchTransactions();
       
       setSwapSuccess(true);
     } catch (error) {

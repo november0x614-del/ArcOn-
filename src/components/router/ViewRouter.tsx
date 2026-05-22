@@ -36,7 +36,6 @@ import { SuccessScreen } from "../screens/SuccessScreen";
 import { BatchTransferScreen } from "../screens/BatchTransferScreen";
 import { WithdrawScreen } from "../screens/WithdrawScreen";
 import { BridgeScreen } from "../screens/BridgeScreen";
-import { BiometricVerifyScreen } from "../screens/BiometricVerifyScreen";
 import { TransactionHistoryScreen } from "../screens/TransactionHistoryScreen";
 import { HomeScreen } from "../screens/HomeScreen";
 import { supabase } from "../../lib/supabaseClient";
@@ -54,8 +53,6 @@ export function ViewRouter({ isLoggingIn, loginEmail, setLoginEmail, setIsLoggin
     setViewState,
     registeredUser,
     setRegisteredUser,
-    isBiometricVerified,
-    setIsBiometricVerified,
     receiptSource,
     setReceiptSource,
     selectedContact,
@@ -69,8 +66,8 @@ export function ViewRouter({ isLoggingIn, loginEmail, setLoginEmail, setIsLoggin
     setSelectedTransaction,
     displayToast,
     balance,
-    setBalance,
-    addTransaction
+    fetchBalance,
+    fetchTransactions
   } = useApp();
 
   const userName = registeredUser?.username || "RAKYAN INUKERTAPATI";
@@ -95,11 +92,6 @@ export function ViewRouter({ isLoggingIn, loginEmail, setLoginEmail, setIsLoggin
           onBack={() => setViewState("splash")}
           onComplete={(data) => {
             setRegisteredUser(data);
-            localStorage.setItem(
-              "arc_commerce_user",
-              JSON.stringify(data),
-            );
-            setIsBiometricVerified(data.isVerified);
             setViewState("registerSuccess");
           }}
         />
@@ -133,7 +125,6 @@ export function ViewRouter({ isLoggingIn, loginEmail, setLoginEmail, setIsLoggin
             }
             
             setIsLoggingIn(false);
-            setIsBiometricVerified(true);
             setViewState("home");
           }}
           onForgotPassword={() => setViewState("forgotPassword")}
@@ -150,9 +141,6 @@ export function ViewRouter({ isLoggingIn, loginEmail, setLoginEmail, setIsLoggin
           onNamaPanggilan={() => setViewState("namaPanggilan")}
           onEmail={() => setViewState("email")}
           onShowToast={displayToast}
-          onVerifyBiometric={() => {
-            setViewState("biometricVerify");
-          }}
         />
       )}
 
@@ -219,7 +207,9 @@ export function ViewRouter({ isLoggingIn, loginEmail, setLoginEmail, setIsLoggin
       {viewState === "logout" && (
         <LogoutScreen
           onBack={() => setViewState("home")}
-          onLogout={() => setViewState("splash")}
+          onLogout={async () => {
+            await supabase.auth.signOut();
+          }}
         />
       )}
 
@@ -346,15 +336,8 @@ export function ViewRouter({ isLoggingIn, loginEmail, setLoginEmail, setIsLoggin
               
               if (!response.ok) throw new Error('Transfer failed');
               
-              setBalance(prev => prev - numAmount);
-              addTransaction({
-                type: 'transfer',
-                title: `Transfer to ${selectedContact.name}`,
-                amount: `-${numAmount.toFixed(2)}`,
-                currency: 'USDC',
-                status: 'success',
-                txHash: `0x${Math.random().toString(16).slice(2, 10)}...${Math.random().toString(16).slice(2, 6)}`
-              });
+              await fetchBalance();
+              await fetchTransactions();
               setViewState("success");
             } catch (error) {
               console.error(error);
@@ -408,17 +391,6 @@ export function ViewRouter({ isLoggingIn, loginEmail, setLoginEmail, setIsLoggin
         />
       )}
 
-      {viewState === "biometricVerify" && (
-        <BiometricVerifyScreen
-          onVerify={() => {
-            setIsBiometricVerified(true);
-            displayToast("Biometric authentication successful");
-            setViewState("home");
-          }}
-          onCancel={() => setViewState("home")}
-        />
-      )}
-
       {viewState === "transactionHistory" && (
         <TransactionHistoryScreen onBack={() => setViewState("home")} />
       )}
@@ -428,8 +400,6 @@ export function ViewRouter({ isLoggingIn, loginEmail, setLoginEmail, setIsLoggin
           userName={userName}
           selectedShortcuts={selectedShortcuts}
           onNavigate={(view) => setViewState(view)}
-          isBiometricVerified={isBiometricVerified}
-          onRequireVerification={() => setViewState("biometricVerify")}
         />
       )}
     </>

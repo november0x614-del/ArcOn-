@@ -1,19 +1,17 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Search, ShoppingBag, Heart, Wallet, CheckCircle2, Copy, ShieldCheck } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { BiometricVerifyScreen } from './BiometricVerifyScreen';
 
 interface EcommerceScreenProps {
   onBack: () => void;
 }
 
 export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
-  const { balance, setBalance, addTransaction, displayToast } = useApp();
+  const { balance, fetchBalance, fetchTransactions, displayToast, registeredUser } = useApp();
   const [viewState, setViewState] = useState<'list' | 'detail' | 'checkout' | 'success'>('list');
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'preparing' | 'broadcasting' | 'settling'>('idle');
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
-  const [showBiometric, setShowBiometric] = useState(false);
   const [transactionMetadata, setTransactionMetadata] = useState<any>(null);
   const [showHapticFlash, setShowHapticFlash] = useState(false);
 
@@ -38,75 +36,65 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
         displayToast("Insufficient USDC balance.");
         return;
     }
-    if (Number(selectedProduct.price) > 100) {
-       setShowBiometric(true);
-    } else {
-       executePurchase();
-    }
+    executePurchase();
   };
 
-  const executePurchase = () => {
+  const executePurchase = async () => {
     setIsPurchasing(true);
     setPaymentStatus('preparing');
     
-    // Step 1: Initialize Smart Contract Interaction
-    setTimeout(() => {
+    try {
+      const price = Number(selectedProduct.price);
+      const serviceFee = price * 0.015; // 1.5% App Profit
+      const totalToPay = price + serviceFee;
+      
       setPaymentStatus('broadcasting');
       
-      // Step 2: Protocol Level Settlement (Escrow Lock)
-      setTimeout(() => {
-        setPaymentStatus('settling');
-        
-        // Step 3: Final confirmation (Fee Split & Delivery)
-        setTimeout(() => {
-          // Visual Haptic Effect
-          setShowHapticFlash(true);
-          setTimeout(() => setShowHapticFlash(false), 600);
+      const response = await fetch('/api/purchase/execute', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({
+           userId: registeredUser?.supabaseUid,
+           amount: totalToPay,
+           product: selectedProduct.name
+         })
+      });
+      
+      if (!response.ok) throw new Error("Purchase failed");
+      
+      const data = await response.json();
+      setPaymentStatus('settling');
+      
+      await fetchBalance();
+      await fetchTransactions();
 
-          setIsPurchasing(false);
-          setPaymentStatus('idle');
-          setViewState('success');
-          
-          const price = Number(selectedProduct.price);
-          const serviceFee = price * 0.015; // 1.5% App Profit
-          const totalToPay = price + serviceFee;
-          
-          setBalance((prev: number) => prev - totalToPay);
-          
-          const txHash = `0x${Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join('')}`;
-          const voucherCode = selectedProduct.category === 'Subscription' 
-            ? 'AUTO_ACTIVATE_SYD_' + Math.random().toString(36).substring(2, 10).toUpperCase()
-            : Array.from({length: 4}, () => Math.random().toString(36).substring(3, 7).toUpperCase()).join('-');
+      setShowHapticFlash(true);
+      setTimeout(() => setShowHapticFlash(false), 600);
 
-          setTransactionMetadata({
-            txHash,
-            date: new Date().toISOString(),
-            merchantBase: '0x32F9...41cA',
-            voucherCode,
-            serviceFee: serviceFee.toFixed(2),
-            totalPaid: totalToPay.toFixed(2)
-          });
+      setIsPurchasing(false);
+      setPaymentStatus('idle');
+      setViewState('success');
+      
+      const voucherCode = selectedProduct.category === 'Subscription' 
+        ? 'AUTO_ACTIVATE_SYD_' + Math.random().toString(36).substring(2, 10).toUpperCase()
+        : Array.from({length: 4}, () => Math.random().toString(36).substring(3, 7).toUpperCase()).join('-');
 
-          addTransaction({
-             type: 'purchase',
-             title: selectedProduct.name,
-             amount: `-${totalToPay.toFixed(2)}`,
-             currency: 'USDC',
-             status: 'success',
-             txHash,
-             metadata: {
-               voucherCode,
-               productCategory: selectedProduct.category,
-               instructions: selectedProduct.category === 'Subscription' 
-                 ? "Akun Anda telah diaktifkan secara otomatis via Arc Smart Contract." 
-                 : "Gunakan kode ini di aplikasi resmi penyedia layanan."
-             }
-          });
-          
-          displayToast("Payment Confirmed on Arc Testnet! 🎉");
-        }, 1200);
-      }, 1000);
-    }, 800);
+      setTransactionMetadata({
+        txHash: data.txHash,
+        date: new Date().toISOString(),
+        merchantBase: '0x32F9...41cA',
+        voucherCode,
+        serviceFee: serviceFee.toFixed(2),
+        totalPaid: totalToPay.toFixed(2)
+      });
+      
+      displayToast("Payment Confirmed on Arc Testnet! 🎉");
+    } catch(err) {
+      console.error(err);
+      setIsPurchasing(false);
+      setPaymentStatus('idle');
+      displayToast("Purchase failed");
+    }
   };
 
   if (viewState === 'success') {
@@ -405,17 +393,6 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
         </div>
       )}
 
-      {showBiometric && (
-         <div className="absolute inset-0 z-[70]">
-            <BiometricVerifyScreen 
-               onVerify={() => {
-                  setShowBiometric(false);
-                  executePurchase();
-               }}
-               onCancel={() => setShowBiometric(false)}
-            />
-         </div>
-      )}
       {showHapticFlash && (
         <div className="fixed inset-0 z-[1000] bg-emerald-400/20 pointer-events-none animate-in fade-in out-fade-out duration-300"></div>
       )}

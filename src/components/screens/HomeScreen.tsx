@@ -2,10 +2,12 @@ import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ViewState, ShortcutItem } from "../../types";
 import { useApp } from "../../context/AppContext";
+import { useUSDCBalance } from "../../services/unified-balance-kit/hooks";
 import { MenuIcon } from "../common/MenuIcon";
 import { StockRow } from "../common/StockRow";
 import { ProductCard } from "../common/ProductCard";
 import { NavItem } from "../common/NavItem";
+import { WalletCard } from "../common/WalletCard";
 import {
   LogOut,
   Mail,
@@ -39,34 +41,43 @@ export interface HomeScreenProps {
   userName: string;
   selectedShortcuts: ShortcutItem[];
   onNavigate: (view: ViewState) => void;
-  isBiometricVerified?: boolean;
-  onRequireVerification?: () => void;
 }
 
 export function HomeScreen({
   userName,
   selectedShortcuts,
   onNavigate,
-  isBiometricVerified = true,
-  onRequireVerification,
 }: HomeScreenProps) {
   const {
     showBalance,
     setShowBalance,
-    balance,
-    pnlValue,
-    pnlPercentage,
     transactions,
     visibleTokenCodes,
     setVisibleTokenCodes,
     registeredUser,
-    fetchBalance,
-    fetchTransactions
+    fetchTransactions,
+    pnlValue,
+    pnlPercentage,
+    readReceiptIds
   } = useApp();
+
+  const unreadCount = transactions.filter((tx) => !readReceiptIds.includes(tx.id)).length;
+  
+  const { formattedBalance, refreshBalance } = useUSDCBalance();
+  const { fetchBalance } = useApp(); // Keep for PnL calculation
+
 
   useEffect(() => {
     fetchBalance();
     fetchTransactions();
+    
+    // Refresh when user returns to the app
+    const handleFocus = () => {
+      fetchBalance();
+      fetchTransactions();
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, [fetchBalance, fetchTransactions]);
   const [activeRekeningTab, setActiveRekeningTab] = useState(0);
 
@@ -171,11 +182,6 @@ export function HomeScreen({
   const [showTieredAccessAlert, setShowTieredAccessAlert] = useState(false);
 
   const startSimulation = () => {
-    if (Number(simAmount) > 100 && !isBiometricVerified) {
-      setShowTieredAccessAlert(true);
-      return;
-    }
-
     const timestamp = new Date().toISOString().split("T")[1].slice(0, 8);
     setSimStep(1);
     setSimStatus("running");
@@ -374,125 +380,7 @@ export function HomeScreen({
               <AnimatePresence mode="wait">
                 {activeRekeningTab === 0 && (
                   /* My Wallet Card (Visual Look) */
-                  <motion.div
-                    key="tab-0"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2 }}
-                    className="bg-gradient-to-br from-[#1e293b] to-[#0f172a] rounded-[24px] p-4 sm:p-5 text-white shadow-xl relative overflow-hidden mb-3 border border-white/10 cursor-pointer transition-all active:scale-[0.98] group"
-                    onClick={() => onNavigate("accountDetail")}
-                  >
-                    <div className="flex justify-between items-center z-10 relative gap-3">
-                      <div className="flex flex-col text-left flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-[12px] sm:text-[13px] font-medium text-slate-400 whitespace-nowrap">
-                            Est total value
-                          </span>
-                          <button
-                            onClick={async (e) => {
-                                e.stopPropagation();
-                                fetchBalance();
-                                fetchTransactions();
-                            }}
-                            className="bg-transparent border-0 p-0 hover:opacity-70 transition-opacity"
-                          >
-                             <RefreshCw size={14} className="text-slate-500" />
-                          </button>
-                          {showBalance ? (
-                            <Eye
-                              size={14}
-                              className="text-slate-500 shrink-0"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setShowBalance(false);
-                              }}
-                            />
-                          ) : (
-                            <EyeOff
-                              size={14}
-                              className="text-slate-500 shrink-0"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setShowBalance(true);
-                              }}
-                            />
-                          )}
-                        </div>
-
-                        <div className="flex items-baseline gap-1.5 mb-2 sm:mb-3 flex-wrap">
-                          <span className="text-[26px] sm:text-[32px] font-black tracking-tight leading-none truncate">
-                            {showBalance
-                              ? (balance || 0).toLocaleString("id-ID", {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                })
-                              : "••••••"}
-                          </span>
-                          <div className="flex items-center gap-1">
-                            <span className="text-[12px] sm:text-[13px] font-black text-slate-200">
-                              USDC
-                            </span>
-                            <ChevronDown size={12} className="text-slate-400" />
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-[11px] sm:text-[12px] text-slate-400 border-b border-dashed border-slate-600 pb-0.5 whitespace-nowrap">
-                            PnL 1 Bln
-                          </span>
-                          <span className="text-[11px] sm:text-[12px] font-bold text-emerald-500 whitespace-nowrap">
-                            {(() => {
-                               const pnlCalcValue = balance * 0.00068; 
-                               const pnlCalcPercent = 0.068;                
-                               return `${pnlCalcValue >= 0 ? '+' : '-'}₮${Math.abs(pnlCalcValue).toFixed(2).replace('.', ',')} (${pnlCalcPercent >= 0 ? '+' : ''}${pnlCalcPercent.toFixed(2).replace('.', ',')}%)`;
-                            })()}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Premium Virtual Card Art */}
-                      <div className="w-20 h-13 sm:w-24 sm:h-16 rounded-lg sm:rounded-xl border border-slate-100 shadow-xl relative overflow-hidden shrink-0 group-hover:scale-105 transition-transform duration-500 flex flex-col justify-between p-2 sm:p-2.5 bg-white">
-                        {/* Reference: Minimalist Background with Blue Accent */}
-                        <div className="absolute top-0 right-0 w-[50%] h-[120%] border-[2px] border-blue-600/10 rounded-full pointer-events-none rotate-12 translate-x-1/2 -translate-y-1/3"></div>
-
-                        <div className="flex justify-between items-start relative z-10">
-                          <div className="flex items-center gap-1">
-                            <div className="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-[2px] bg-blue-600 flex items-center justify-center">
-                              <div className="w-1 sm:w-1.5 h-1 sm:h-1.5 rounded-full border-[1px] border-white"></div>
-                            </div>
-                            <span className="text-slate-900 font-bold text-[5px] sm:text-[6px] tracking-tight italic select-none leading-none">arc</span>
-                            <span className="text-blue-600 text-[2.5px] sm:text-[3px] font-black mt-[-2px] ml-[-1px]">™</span>
-                          </div>
-                          
-                          <div className="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-[2px] bg-slate-50 border border-slate-100 flex items-center justify-center">
-                             <div className="grid grid-cols-2 gap-[0.2px]">
-                                <div className="w-[0.8px] sm:w-[1px] h-[0.8px] sm:h-[1px] bg-slate-900 rounded-[0.2px]"></div>
-                                <div className="w-[0.8px] sm:w-[1px] h-[0.8px] sm:h-[1px] bg-slate-200 rounded-[0.2px]"></div>
-                             </div>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col relative z-10 mt-0.5">
-                           <span className="text-[5.5px] sm:text-[7px] font-mono text-slate-900 tracking-wide font-medium leading-none">
-                             {registeredUser?.supabaseUid ? `${registeredUser.supabaseUid.slice(0, 4)} ${registeredUser.supabaseUid.slice(4, 8)}` : "UID-NONE"}
-                           </span>
-                        </div>
-                        
-                        <div className="flex justify-between items-end relative z-10 mt-auto">
-                           <div className="flex flex-col items-start leading-none gap-0.5">
-                             <span className="text-slate-900 font-bold text-[4.5px] sm:text-[6px] uppercase tracking-tighter leading-none">{userName}</span>
-                           </div>
-                           <div className="flex flex-col items-end leading-none">
-                             <span className="text-[2.5px] sm:text-[3.5px] font-mono text-slate-400 select-none">05/30</span>
-                           </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Minimalist Graphic Element */}
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/5 blur-[60px] rounded-full -translate-y-12 translate-x-12 pointer-events-none"></div>
-                  </motion.div>
+                  <WalletCard userName={userName} onNavigate={() => onNavigate("accountDetail")} />
                 )}
 
                 {activeRekeningTab === 1 && (
@@ -1198,9 +1086,11 @@ export function HomeScreen({
             label="Messages"
             onClick={() => onNavigate("inbox")}
             badge={
-              <span className="absolute -top-2 -right-2 h-4 min-w-4 flex items-center justify-center bg-red-500 text-white text-[9px] font-bold px-1 rounded-full border-2 border-white">
-                {transactions.length}
-              </span>
+              unreadCount > 0 ? (
+                <span className="absolute -top-2 -right-2 h-4 min-w-4 flex items-center justify-center bg-red-500 text-white text-[9px] font-bold px-1 rounded-full border-2 border-white">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              ) : undefined
             }
           />
           <div className="w-[50px] md:w-[60px] shrink-0"></div>{" "}
@@ -1257,9 +1147,7 @@ export function HomeScreen({
               <button
                 onClick={() => {
                   setShowTieredAccessAlert(false);
-                  if (onRequireVerification) {
-                    onRequireVerification();
-                  }
+                  onNavigate("settings");
                 }}
                 className="w-full bg-[#005faa] text-white font-bold py-3.5 rounded-full text-[14px] hover:bg-[#004780] transition-colors"
               >

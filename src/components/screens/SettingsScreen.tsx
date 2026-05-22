@@ -11,7 +11,6 @@ import {
   RefreshCw, 
   ArrowUpRight, 
   Smartphone, 
-  Fingerprint, 
   Lock, 
   Shield 
 } from 'lucide-react';
@@ -22,18 +21,15 @@ interface SettingsScreenProps {
   onNamaPanggilan?: () => void;
   onEmail?: () => void;
   onShowToast?: (msg: string) => void;
-  onVerifyBiometric?: () => void;
 }
 
 export function SettingsScreen({ 
   onBack, 
   onNamaPanggilan, 
   onEmail,
-  onShowToast,
-  onVerifyBiometric
+  onShowToast
 }: SettingsScreenProps) {
   const { 
-    isBiometricVerified, 
     network, 
     walletConnectSessions, 
     contractAllowances,
@@ -42,10 +38,6 @@ export function SettingsScreen({
   } = useStore();
 
   const handleNotImplemented = (featureInfo?: string) => {
-    if (featureInfo === 'Biometrics' && !isBiometricVerified && onVerifyBiometric) {
-        onVerifyBiometric();
-        return;
-    }
     if (onShowToast) {
        onShowToast(`Feature ${featureInfo || 'this'} is still in development.`);
     }
@@ -85,13 +77,6 @@ export function SettingsScreen({
             <span className="text-[12px] font-bold text-slate-500 tracking-wide uppercase">Wallet Security</span>
           </div>
           <div className="bg-white border-y border-slate-100 flex flex-col">
-            <SettingItem 
-              icon={<Fingerprint size={20} className="text-[#3FA2F6]" />} 
-              label="Biometric Auth" 
-              badge={isBiometricVerified ? "VERIFIED" : "ACTION NEEDED"} 
-              badgeColor={isBiometricVerified ? "emerald" : "red"} 
-              onClick={() => handleNotImplemented("Biometrics")} 
-            />
             <SettingItem icon={<Lock size={20} className="text-[#3FA2F6]" />} label="Change PIN / Password" onClick={() => handleNotImplemented("Change PIN")} />
             <SettingItem icon={<Key size={20} className="text-[#3FA2F6]" />} label="Recovery Phrase (Seed)" badge="IMPORTANT" onClick={() => handleNotImplemented("Recovery Phrase")} />
             <SettingItem icon={<Shield size={20} className="text-[#3FA2F6]" />} label="Export Private Key" isLast onClick={() => handleNotImplemented("Export Private Key")} />

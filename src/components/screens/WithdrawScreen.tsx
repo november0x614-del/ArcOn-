@@ -8,13 +8,13 @@ interface WithdrawScreenProps {
 }
 
 export function WithdrawScreen({ onBack, onSuccess }: WithdrawScreenProps) {
-  const { balance, setBalance, addTransaction, displayToast } = useApp();
+  const { balance, fetchBalance, fetchTransactions, displayToast, registeredUser } = useApp();
   const [step, setStep] = useState<'form' | 'processing' | 'success'>('form');
   const [amount, setAmount] = useState('');
   const [selectedBank] = useState('Central Asia Bank (BCA)');
   const [accountNumber] = useState('8830192831');
 
-  const handleWithdraw = () => {
+  const handleWithdraw = async () => {
     const numAmount = parseFloat(amount);
     if (!amount || isNaN(numAmount) || numAmount <= 0) {
       displayToast("Please enter a valid amount.");
@@ -27,18 +27,28 @@ export function WithdrawScreen({ onBack, onSuccess }: WithdrawScreenProps) {
 
     setStep('processing');
     
-    setTimeout(() => {
-      setBalance(prev => prev - numAmount);
-      addTransaction({
-        type: 'withdraw',
-        title: `Withdraw to ${selectedBank.split(' ')[0]}`,
-        amount: `-${numAmount.toFixed(2)}`,
-        currency: 'USDC',
-        status: 'success',
-        txHash: `0x${Math.random().toString(16).slice(2, 10)}...`
-      });
-      setStep('success');
-    }, 2000);
+    try {
+       const response = await fetch('/api/withdraw/execute', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({
+           userId: registeredUser?.supabaseUid,
+           amount: amount,
+           bank: selectedBank
+         })
+       });
+       
+       if (!response.ok) throw new Error("Withdraw failed");
+       
+       await fetchBalance();
+       await fetchTransactions();
+       
+       setStep('success');
+    } catch(err) {
+       console.error("Withdraw Error", err);
+       displayToast("Withdraw failed");
+       setStep('form');
+    }
   };
 
   if (step === 'processing') {

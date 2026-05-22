@@ -1,16 +1,29 @@
+import { verifyAndProcessWebhook } from "./src/services/webhookHandler";
+import { logAuditEvent } from "./src/services/auditLogger";
 import express from "express";
 import path from "path";
-import crypto from "crypto";
+import * as crypto from "crypto";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import { initiateDeveloperControlledWalletsClient } from "@circle-fin/developer-controlled-wallets";
 import { createClient } from "@supabase/supabase-js";
-import dotenv from "dotenv";
+import * as dotenv from "dotenv";
 
 dotenv.config();
 
+process.on('uncaughtException', (err) => {
+  console.error('Unhandled Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+const rawBackendUrl = process.env.VITE_SUPABASE_URL || "";
+const cleanUrl = rawBackendUrl.replace(/\/rest\/v1\/?$/, '').replace(/\/$/, '');
+
 const supabaseAdmin = createClient(
-  process.env.VITE_SUPABASE_URL || "",
+  cleanUrl,
   process.env.SUPABASE_SERVICE_ROLE_KEY || "",
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
@@ -57,6 +70,25 @@ async function startServer() {
   app.post("/api/wallets/create", async (req, res) => {
     try {
       const { userId } = req.body;
+      console.log("Checking if wallet exists...");
+      
+      if (userId && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        const { data: existingWallet } = await supabaseAdmin
+          .from('user_wallets')
+          .select('*')
+          .eq('id', userId)
+          .single();
+          
+        if (existingWallet) {
+          console.log(`Wallet already exists: ${existingWallet.wallet_address}`);
+          return res.json({
+            walletId: existingWallet.wallet_id,
+            address: existingWallet.wallet_address,
+            walletSetId: existingWallet.wallet_set_id
+          });
+        }
+      }
+
       console.log("Creating new wallet for Arc Testnet...");
       const client = getCircleClient();
       
@@ -85,7 +117,7 @@ async function startServer() {
 
       // 3. (Optional) Save to Supabase if userId is provided
       if (userId && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-        const { error } = await supabaseAdmin.from('user_wallets').insert({
+        const { error } = await supabaseAdmin.from('user_wallets').upsert({
           id: userId,
           wallet_id: wallet.id,
           wallet_address: wallet.address,
@@ -110,6 +142,23 @@ async function startServer() {
     }
   });
 
+  // Debug Route: Get wallet details
+  app.get("/api/debug-wallet/:userId", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { data, error } = await supabaseAdmin
+        .from('user_wallets')
+        .select('wallet_id, wallet_address')
+        .eq('id', userId)
+        .single();
+      
+      if (error) throw error;
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Balance Route
   app.get("/api/balance/:userId", async (req, res) => {
     try {
@@ -122,25 +171,63 @@ async function startServer() {
         .eq('id', userId)
         .single();
       
-      if (walletError || !walletData) {
-        // Fallback for demo
-        return res.json({ balance: 0, currency: "USDC" });
+      let baseBalance = 0;
+      let tokenBalances = [];
+      let walletId = walletData?.wallet_id;
+
+      if (!walletError && walletId) {
+        // Query Circle API for balance
+        const client = getCircleClient();
+        console.log(`Fetching balance for wallet ID: ${walletId}`);
+        
+        try {
+          const balanceResponse = await client.getWalletTokenBalance({
+            id: walletId
+          });
+          
+          if (balanceResponse?.data?.tokenBalances) {
+              tokenBalances = balanceResponse.data.tokenBalances;
+              console.log(`Wallet ID: ${walletId}`);
+              console.log(`Token Balances: ${JSON.stringify(tokenBalances)}`);
+          } else {
+              console.log("No wallet token balances in response");
+          }
+          
+          // Look for USDC or USDC-like token
+          const usdcToken = tokenBalances.find((b: any) => 
+            b.token?.symbol === 'USDC' || b.token?.name?.includes('USDC')
+          );
+          baseBalance = parseFloat(usdcToken?.amount || '0');
+          console.log(`Parsed USDC Balance from Circle: ${baseBalance}`);
+        } catch (e) {
+          console.error("Circle API balance fetch failed", e);
+        }
+      } else {
+        console.log("No wallet found, returning 0 fallback");
       }
 
-      // 2. Query Circle API for balance
-      const client = getCircleClient();
-      console.log(`Fetching balance for wallet ID: ${walletData.wallet_id}`);
+      // Add Simulated balances (from webhook simulator) to reflect in UI
+      const { data: simData } = await supabaseAdmin
+        .from('transactions')
+        .select('amount')
+        .eq('user_id', userId)
+        .eq('status', 'success')
+        .like('internal_ref', 'sim_%');
+
+      let simBalance = 0;
+      if (simData && simData.length > 0) {
+        simBalance = simData.reduce((acc, curr) => acc + parseFloat(curr.amount || '0'), 0);
+        console.log(`Simulated Balance Added: ${simBalance}`);
+      }
       
-      const walletResponse = await client.getWallet({
-        id: walletData.wallet_id
+      const totalBalance = baseBalance + simBalance;
+
+      // Return all balances for debugging purposes
+      res.json({ 
+        balance: totalBalance, 
+        currency: "USDC",
+        allBalances: tokenBalances
       });
-      
-      console.log("Wallet Response:", JSON.stringify(walletResponse, null, 2));
-      
-      const usdcBalance = walletResponse.data?.wallet?.tokenBalances?.find((b: any) => b.tokenSymbol === 'USDC')?.amount || '0';
-      console.log(`Parsed USDC Balance: ${usdcBalance}`);
-      
-      res.json({ balance: parseFloat(usdcBalance), currency: "USDC" });
     } catch (error: any) {
       console.error("Balance fetch error:", error);
       res.status(500).json({ error: error.message });
@@ -171,7 +258,7 @@ async function startServer() {
       console.log(`Simulating webhook for user ${userId}, amount ${amount}`);
 
       // 1. Insert a transaction record
-      const { data, error } = await supabaseAdmin
+      const { error } = await supabaseAdmin
         .from('transactions')
         .insert({
           user_id: userId,
@@ -190,173 +277,237 @@ async function startServer() {
     }
   });
 
-  // Swap Simulation Route (For Testnet testing only)
-  app.post("/api/swap/simulate", async (req, res) => {
+  // Swap Real Execution
+  app.post("/api/swap/execute", async (req, res) => {
     try {
       const { userId, amount, fromToken, toToken } = req.body;
-      console.log(`Simulating swap for user ${userId}, amount ${amount} ${fromToken} -> ${toToken}`);
+      
+      const { data: walletData } = await supabaseAdmin
+        .from('user_wallets').select('wallet_id').eq('id', userId).single();
+      if (!walletData?.wallet_id) throw new Error("No wallet found");
 
-      // 1. Insert interaction records for the swap
-      const { data, error } = await supabaseAdmin
-        .from('transactions')
-        .insert({
+      const client = getCircleClient();
+      const dexAddress = "0x3333333333333333333333333333333333333333"; // Placeholder DEX router
+
+      const response = await client.createTransaction({
+        walletId: walletData.wallet_id,
+        destinationAddress: dexAddress,
+        amount: [amount.toString()],
+        fee: { type: "level", config: { feeLevel: "LOW" } },
+        tokenAddress: "",
+        blockchain: "ARC-TESTNET"
+      } as any);
+
+      const { error } = await supabaseAdmin.from('transactions').insert({
           user_id: userId,
-          amount: amount,
+          amount: `-${parseFloat(amount).toFixed(2)}`,
           type: 'swap',
-          status: 'success',
-          internal_ref: `swap_${crypto.randomBytes(8).toString('hex')}`,
-          metadata: { fromToken, toToken }
-        });
+          status: 'pending',
+          internal_ref: response.data?.id || `req_${crypto.randomBytes(8).toString('hex')}`,
+          metadata: { fromToken, toToken, real: true }
+      });
 
       if (error) throw error;
-
-      res.status(200).json({ message: "Swap executed successfully", txHash: `0xarc${crypto.randomBytes(4).toString('hex')}` });
+      res.status(200).json({ message: "Swap queued", txId: response.data?.id });
     } catch (error: any) {
-      console.error("Swap error:", error);
+      console.error("Swap Error", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Real Bridge Execution (Placeholder destination)
+  app.post("/api/bridge/execute", async (req, res) => {
+    try {
+      const { userId, amount, fromNetwork, toNetwork } = req.body;
+      
+      const { data: walletData } = await supabaseAdmin
+        .from('user_wallets').select('wallet_id').eq('id', userId).single();
+      
+      if (!walletData?.wallet_id) throw new Error("No wallet found");
+
+      const client = getCircleClient();
+      // Dummy bridge smart contract address:
+      const bridgeAddress = "0x0000000000000000000000000000000000000000";
+
+      const response = await client.createTransaction({
+        walletId: walletData.wallet_id,
+        destinationAddress: bridgeAddress,
+        amount: [amount.toString()],
+        fee: { type: "level", config: { feeLevel: "LOW" } },
+        tokenAddress: "",
+        blockchain: "ARC-TESTNET"
+      } as any);
+
+      const { error } = await supabaseAdmin.from('transactions').insert({
+        user_id: userId,
+        amount: `-${parseFloat(amount).toFixed(2)}`,
+        type: 'transfer',
+        status: 'pending',
+        internal_ref: response.data?.id || `req_${crypto.randomBytes(8).toString('hex')}`,
+        metadata: { fromNetwork, toNetwork, real: true }
+      });
+
+      if (error) throw error;
+      res.status(200).json({ message: "Bridge transfer queued", txId: response.data?.id });
+    } catch (error: any) {
+      console.error("Bridge execute error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Real Withdraw Execution (Burn / Treasury destination)
+  app.post("/api/withdraw/execute", async (req, res) => {
+    try {
+      const { userId, amount, bank } = req.body;
+
+      const { data: walletData } = await supabaseAdmin
+        .from('user_wallets').select('wallet_id').eq('id', userId).single();
+      if (!walletData?.wallet_id) throw new Error("No wallet found");
+
+      const client = getCircleClient();
+      const treasuryAddress = "0x1111111111111111111111111111111111111111"; // Placeholder
+
+      const response = await client.createTransaction({
+        walletId: walletData.wallet_id,
+        destinationAddress: treasuryAddress,
+        amount: [amount.toString()],
+        fee: { type: "level", config: { feeLevel: "LOW" } },
+        tokenAddress: "",
+        blockchain: "ARC-TESTNET"
+      } as any);
+
+      const { error } = await supabaseAdmin.from('transactions').insert({
+          user_id: userId,
+          amount: `-${parseFloat(amount).toFixed(2)}`,
+          type: 'withdraw',
+          status: 'pending',
+          internal_ref: response.data?.id || `req_${crypto.randomBytes(8).toString('hex')}`,
+          metadata: { bank, real: true }
+      });
+
+      if (error) throw error;
+      res.status(200).json({ message: "Withdraw queued", txId: response.data?.id });
+    } catch (error: any) {
+      console.error("Withdraw Error", error);
       res.status(500).json({ error: error.message });
     }
   });
 
   // Webhook Route
-  // Public key cache
-  const publicKeyCache: Record<string, { publicKey: string, algorithm: string }> = {};
-
-  async function getCirclePublicKey(keyId: string): Promise<{ publicKey: string, algorithm: string }> {
-    if (publicKeyCache[keyId]) {
-      return publicKeyCache[keyId];
-    }
-    
-    // Fetch from Circle API
-    const response = await fetch(`https://api.circle.com/v1/notifications/publicKey/${keyId}`, {
-      method: "GET",
-      headers: {
-        "Authorization": `Bearer ${process.env.CIRCLE_API_KEY}`,
-        "Content-Type": "application/json"
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch public key from Circle: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    const { publicKey, algorithm } = data.data;
-    
-    publicKeyCache[keyId] = { publicKey, algorithm };
-    return { publicKey, algorithm };
-  }
-
   app.post("/api/circle/webhook", express.raw({ type: "application/json" }), async (req, res) => {
-    // 1. Verify Signature
-    const signature = req.headers['x-circle-signature'] as string;
-    const keyId = req.headers['x-circle-key-id'] as string;
-    
-    if (!signature || !keyId) {
-      console.error("Missing signature or key ID in webhook request headers");
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-
-    try {
-      const { publicKey, algorithm } = await getCirclePublicKey(keyId);
-      
-      // Determine signature verification method
-      let isVerified = false;
-      const keyBuffer = Buffer.from(publicKey, 'base64');
-      const signatureBuffer = Buffer.from(signature, 'base64');
-
-      if (algorithm === 'ED25519') {
-        isVerified = crypto.verify(
-          'ed25519',
-          req.body,
-          keyBuffer,
-          signatureBuffer
-        );
-      } else if (algorithm === 'ECDSA_SHA_256') {
-        // ECDSA verification
-        isVerified = crypto.verify(
-          'sha256',
-          req.body,
-          {
-            key: keyBuffer,
-            dsaEncoding: 'ieee-p1363' // Often needed for Circle's ECDSA
-          },
-          signatureBuffer
-        );
-      } else {
-        console.error(`Unsupported algorithm: ${algorithm}`);
-        return res.status(401).json({ error: "Unsupported algorithm" });
-      }
-
-      if (!isVerified) {
-        console.error("Invalid webhook signature");
-        return res.status(401).json({ error: "Invalid signature" });
-      }
-      
-      console.log("Circle Webhook signature verified successfully");
-    } catch (err) {
-      console.error("Signature verification error:", err);
-      return res.status(401).json({ error: "Signature verification failed" });
-    }
-    
-    // 2. Process Payload
-    try {
-      const { type, data } = JSON.parse(req.body.toString());
-      console.log(`Webhook received: ${type}`);
-
-      // Circle transfers usually contain an ID that maps to our internal_ref
-      if (type === 'transfers.updated' || type === 'transfers.created') {
-        const transfer = data;
-        const internalRef = transfer.id;
-        // Map Circle status to our status
-        const newStatus = transfer.status === 'COMPLETE' ? 'success' : 
-                          transfer.status === 'FAILED' ? 'failed' : 'pending';
-
-        const { error } = await supabaseAdmin
-          .from('transactions')
-          .update({ status: newStatus })
-          .eq('internal_ref', internalRef);
-
-        if (error) {
-          console.error("Supabase update error:", error);
-        } else {
-          console.log(`Transaction ${internalRef} updated to ${newStatus}`);
-        }
-      }
-
-      res.status(200).send("Accepted");
-      
-    } catch (error: any) {
-      console.error("Webhook processing error:", error);
-      res.status(500).json({ error: "Failed to process webhook" });
-    }
+      await verifyAndProcessWebhook(req, res, supabaseAdmin);
   });
 
-  // Payment Route (Actual Implementation)
+
+
+// Payment Route (Actual Implementation)
   app.post("/api/payments/create", async (req, res) => {
     try {
       const { walletId, destinationAddress, amount, userId } = req.body;
       const client = getCircleClient();
       
+      // Audit Log for critical transfers
+      if (parseFloat(amount) > 100) {
+        await logAuditEvent(supabaseAdmin, userId, 'TRANSFER_HIGH_VALUE', { 
+            amount, 
+            destinationAddress 
+        });
+      }
+
       // Initiate transfer
-      const response = await client.createTransfer({
+      const response = await client.createTransaction({
         walletId: walletId,
         destinationAddress: destinationAddress,
-        amounts: [{ amount: amount, currency: "USD" }], // USDC is often denominated as USD in API
-        feeLevel: "MEDIUM",
-      });
+        amount: [amount.toString()],
+        fee: { type: "level", config: { feeLevel: "LOW" } },
+        tokenAddress: "",
+        blockchain: "ARC-TESTNET"
+      } as any);
       
       // Record in Supabase
       await supabaseAdmin.from('transactions').insert({
         user_id: userId,
-        amount: amount,
-        type: 'payment',
+        amount: `-${amount}`,
+        type: 'transfer',
         status: 'pending',
-        internal_ref: response.data?.transfer?.id
+        internal_ref: response.data?.id || `req_${crypto.randomBytes(8).toString('hex')}`
       });
       
       res.json(response.data);
     } catch (error: any) {
       console.error("Payment Execution Error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Batch Payment Route
+  app.post("/api/payments/batch", async (req, res) => {
+    try {
+      const { walletId, recipients, userId } = req.body;
+      const client = getCircleClient();
+      
+      const responses = [];
+      for (const rec of recipients) {
+         const response = await client.createTransaction({
+           walletId: walletId,
+           destinationAddress: rec.address,
+           amount: [rec.amount.toString()],
+           fee: { type: "level", config: { feeLevel: "LOW" } },
+           tokenAddress: "",
+           blockchain: "ARC-TESTNET"
+         } as any);
+         
+         await supabaseAdmin.from('transactions').insert({
+            user_id: userId,
+            amount: `-${rec.amount}`,
+            type: 'transfer',
+            status: 'pending',
+            internal_ref: response.data?.id || `req_${crypto.randomBytes(8).toString('hex')}`
+         });
+         responses.push(response.data);
+      }
+      
+      res.json({ success: true, transfers: responses });
+    } catch (error: any) {
+      console.error("Batch Payment Execution Error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Real Purchase Execution (Merchant destination)
+  app.post("/api/purchase/execute", async (req, res) => {
+    try {
+      const { userId, amount, product } = req.body;
+
+      const { data: walletData } = await supabaseAdmin
+        .from('user_wallets').select('wallet_id').eq('id', userId).single();
+      if (!walletData?.wallet_id) throw new Error("No wallet found");
+
+      const client = getCircleClient();
+      const merchantAddress = "0x2222222222222222222222222222222222222222"; // Placeholder merchant
+
+      const response = await client.createTransaction({
+        walletId: walletData.wallet_id,
+        destinationAddress: merchantAddress,
+        amount: [amount.toString()],
+        fee: { type: "level", config: { feeLevel: "LOW" } },
+        tokenAddress: "",
+        blockchain: "ARC-TESTNET"
+      } as any);
+
+      const { error } = await supabaseAdmin.from('transactions').insert({
+          user_id: userId,
+          amount: `-${parseFloat(amount).toFixed(2)}`,
+          type: 'purchase',
+          status: 'pending',
+          internal_ref: response.data?.id || `req_${crypto.randomBytes(8).toString('hex')}`,
+          metadata: { product, real: true }
+      });
+
+      if (error) throw error;
+      res.status(200).json({ message: "Purchase queued", txId: response.data?.id });
+    } catch (error: any) {
+      console.error("Purchase error", error);
       res.status(500).json({ error: error.message });
     }
   });

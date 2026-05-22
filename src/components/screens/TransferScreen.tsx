@@ -104,7 +104,7 @@ function ContactItem({
 }
 
 export function TransferScreen({ onBack, onNewTransfer, onSelectContact, onBatchTransfer }: TransferScreenProps) {
-  const { transactions, fetchTransactions, registeredUser } = useApp();
+  const { transactions, fetchTransactions } = useApp();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isAddingFavorite, setIsAddingFavorite] = useState(false);
   const [isEditFavorites, setIsEditFavorites] = useState(false);
@@ -363,7 +363,6 @@ export function TransferScreen({ onBack, onNewTransfer, onSelectContact, onBatch
                  </p>
                  <button 
                    onClick={() => {
-                      setRealContacts(prev => prev.filter(c => !selectedContacts.includes(c.id)));
                       setFavorites(prev => prev.filter(f => !selectedContacts.includes(f.id)));
                       setSelectedContacts([]);
                       setShowDeleteModal(false);

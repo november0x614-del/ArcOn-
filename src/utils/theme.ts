@@ -1,0 +1,41 @@
+export const THEME_STYLES = {
+  default: {
+    walletBg: "bg-gradient-to-br from-[#1e293b] to-[#0f172a]",
+    cardBg: "bg-gradient-to-br from-[#334155] to-[#1e293b]",
+    accentBorder: "border-blue-500/20",
+    glow: "bg-blue-500/10",
+    textColor: "text-white",
+    subText: "text-slate-400",
+    currencyText: "text-slate-200",
+    pnlBorder: "border-slate-600",
+    uidText: "text-white",
+    uidSubText: "text-slate-400",
+    borderClass: "border-white/10"
+  },
+  premium: {
+    walletBg: "bg-gradient-to-br from-[#f8f5ed] to-[#e8ddbe]",
+    cardBg: "bg-gradient-to-br from-[#fffefc] to-[#f5ebd5]",
+    accentBorder: "border-[#d4c085]/40",
+    glow: "bg-[#d4c085]/40",
+    textColor: "text-slate-900",
+    subText: "text-slate-600",
+    currencyText: "text-slate-800",
+    pnlBorder: "border-slate-300",
+    uidText: "text-slate-900",
+    uidSubText: "text-slate-500",
+    borderClass: "border-slate-200"
+  },
+  emerald: {
+    walletBg: "bg-gradient-to-br from-[#f0f9f4] to-[#cce8d9]",
+    cardBg: "bg-gradient-to-br from-[#ffffff] to-[#e0f5ea]",
+    accentBorder: "border-emerald-500/30",
+    glow: "bg-emerald-500/40",
+    textColor: "text-slate-900",
+    subText: "text-emerald-700/80",
+    currencyText: "text-emerald-900",
+    pnlBorder: "border-emerald-300/50",
+    uidText: "text-slate-900",
+    uidSubText: "text-emerald-700/80",
+    borderClass: "border-emerald-200"
+  }
+};

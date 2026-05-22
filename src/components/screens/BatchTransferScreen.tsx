@@ -18,7 +18,7 @@ interface BatchTransferScreenProps {
 }
 
 export function BatchTransferScreen({ onBack, contacts }: BatchTransferScreenProps) {
-  const { balance, setBalance, addTransaction, displayToast } = useApp();
+  const { balance, fetchBalance, fetchTransactions, displayToast, registeredUser } = useApp();
   const [multiSendStep, setMultiSendStep] = useState<'info' | 'form' | 'processing' | 'success'>('form');
   const [recipients, setRecipients] = useState<{ id: string, address: string; name: string; amount: string }[]>([]);
   const [newAddress, setNewAddress] = useState('');
@@ -54,7 +54,7 @@ export function BatchTransferScreen({ onBack, contacts }: BatchTransferScreenPro
     setRecipients(prev => prev.filter((_, i) => i !== index));
   };
 
-  const startProcessing = () => {
+  const startProcessing = async () => {
     const totalAmount = recipients.reduce((acc, curr) => acc + parseFloat(curr.amount || '0'), 0);
     
     if (totalAmount > balance) {
@@ -64,33 +64,33 @@ export function BatchTransferScreen({ onBack, contacts }: BatchTransferScreenPro
 
     setMultiSendStep('processing');
     setProcessingStatus('Packaging transaction inputs...');
-    setTimeout(() => {
-      setProcessingStatus('Circle SDK - Requesting authorized multisig signatures...');
-    }, 1200);
-    setTimeout(() => {
-      setProcessingStatus('Broadcasting batch transaction payload to Arc Testnet...');
-    }, 2500);
-    setTimeout(() => {
-      // Finalize global state
-      setBalance(prev => prev - totalAmount);
-      
-      // Add transaction record (grouping as one batch record or multiple)
-      // Usually in history we want to see the batch or individual. 
-      // User said "global state history akan muncul disini" (will appear here).
-      // Let's add them as individual transfers for better visibility in history.
-      recipients.forEach(rec => {
-        addTransaction({
-          type: 'transfer',
-          title: `Transfer to ${rec.name}`,
-          amount: `-${parseFloat(rec.amount).toFixed(2)}`,
-          currency: 'USDC',
-          status: 'success',
-          txHash: `0x${Math.random().toString(16).slice(2, 10)}...${Math.random().toString(16).slice(2, 6)}`
-        });
+    
+    try {
+      setProcessingStatus('Executing batch transaction on Arc Testnet via Circle SDK...');
+      const response = await fetch('/api/payments/batch', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            userId: registeredUser?.supabaseUid,
+            walletId: registeredUser?.walletId,
+            recipients: recipients
+          })
       });
       
+      if (!response.ok) throw new Error("Batch transfer failed");
+      
+      setProcessingStatus('Broadcasting successfully completed.');
+      
+      // Update global state
+      await fetchBalance();
+      await fetchTransactions();
+      
       setMultiSendStep('success');
-    }, 3800);
+    } catch (error) {
+       console.error("Batch send failed", error);
+       displayToast("Batch transfer failed.");
+       setMultiSendStep('form');
+    }
   };
 
   return (

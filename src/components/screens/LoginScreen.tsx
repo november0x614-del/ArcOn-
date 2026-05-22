@@ -9,13 +9,11 @@ interface LoginScreenProps {
   isLoading?: boolean;
 }
 
-export function LoginScreen({ onLogin, onRegister, hasIdentity, onShowToast, isLoading }: LoginScreenProps) {
+export function LoginScreen({ onLogin, onRegister, isLoading }: LoginScreenProps) {
   const [email, setEmail] = useState('');
   const handleRegisterClick = () => {
     if (isLoading) return;
-    if (hasIdentity) {
-      onShowToast?.("Identity/Wallet already exists on this device.");
-    } else if (onRegister) {
+    if (onRegister) {
       onRegister();
     }
   };
@@ -75,11 +73,10 @@ export function LoginScreen({ onLogin, onRegister, hasIdentity, onShowToast, isL
           <button 
             onClick={handleRegisterClick}
             disabled={isLoading}
-            className={`w-full font-bold py-4 rounded-2xl transition-all flex justify-center items-center active:scale-[0.98] border-0
-              ${hasIdentity ? 'bg-slate-50 text-slate-400 cursor-not-allowed opacity-80' : 'bg-blue-50 hover:bg-blue-100 text-[#3FA2F6]'}
+            className={`w-full font-bold py-4 rounded-2xl transition-all flex justify-center items-center active:scale-[0.98] border-0 bg-blue-50 hover:bg-blue-100 text-[#3FA2F6]
               ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
           >
-            {hasIdentity ? 'Identity Already Exists' : 'Sign Up'}
+            Sign Up
           </button>
         </div>
 

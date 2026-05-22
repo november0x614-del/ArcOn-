@@ -10,10 +10,9 @@ interface DepositQRScreenProps {
 export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
   const { 
     registeredUser, 
-    displayToast, 
-    balance, 
-    setBalance, 
-    addTransaction, 
+    displayToast,  
+    fetchBalance,
+    fetchTransactions,
     setViewState,
     setSelectedContact,
     setTransferAmount // Add this
@@ -53,7 +52,7 @@ export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
     }, 2000);
   };
 
-  const address = registeredUser?.walletAddress || "0x742d35Cc6634C0532925a3b844Bc454e4438f44e";
+  const address = registeredUser?.walletAddress || "No Wallet Created Yet";
 
   React.useEffect(() => {
     if (isSimulating && simStep < 4) {
@@ -88,16 +87,9 @@ export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
       
       if (!response.ok) throw new Error('Simulation failed');
       
-      // Update local state after simulation
-      setBalance(prev => prev + receiveAmount);
-      addTransaction({
-        type: 'receive',
-        title: `Received USDC`,
-        amount: `+${receiveAmount.toFixed(2)}`,
-        currency: 'USDC',
-        status: 'success',
-        txHash: `0x${Math.random().toString(16).slice(2, 10)}...${Math.random().toString(16).slice(2, 6)}`
-      });
+      // Update data from backend
+      await fetchBalance();
+      await fetchTransactions();
       
       displayToast(`Successfully received ${receiveAmount} USDC`);
     } catch (error) {

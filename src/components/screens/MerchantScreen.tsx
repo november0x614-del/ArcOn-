@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Box, PlusCircle, BarChart3, Settings, MoreVertical, Search, Wallet, TrendingUp, Tags, Download, Eye, ExternalLink } from 'lucide-react';
+import { useApp } from '../../context/AppContext';
 
 interface MerchantScreenProps {
   onBack: () => void;
 }
 
 export function MerchantScreen({ onBack }: MerchantScreenProps) {
+  const { registeredUser } = useApp();
+  const address = registeredUser?.walletAddress || "No Wallet Created Yet";
   const [activeTab, setActiveTab] = useState<'products' | 'dashboard' | 'settings'>('products');
   
   const [products] = useState([
@@ -211,7 +214,7 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
                      <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">CONNECTED</span>
                    </div>
                    <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 shadow-inner">
-                     <span className="text-[13px] font-mono font-medium text-slate-600 truncate flex-1 leading-none">0x742d...f44e</span>
+                     <span className="text-[13px] font-mono font-medium text-slate-600 truncate flex-1 leading-none">{address}</span>
                      <ExternalLink size={14} className="text-slate-400 ml-2 shrink-0" />
                    </div>
                 </div>
