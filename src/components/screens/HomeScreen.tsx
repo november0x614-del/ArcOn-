@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ViewState, ShortcutItem } from "../../types";
 import { useApp } from "../../context/AppContext";
-import { useUSDCBalance } from "../../services/unified-balance-kit/hooks";
 import { MenuIcon } from "../common/MenuIcon";
 import { StockRow } from "../common/StockRow";
 import { ProductCard } from "../common/ProductCard";
@@ -13,9 +12,6 @@ import {
   Mail,
   Settings,
   ChevronRight,
-  ChevronDown,
-  Eye,
-  EyeOff,
   Settings2,
   Wallet,
   ShoppingBag,
@@ -43,27 +39,21 @@ export interface HomeScreenProps {
   onNavigate: (view: ViewState) => void;
 }
 
-export function HomeScreen({
+export const HomeScreen = React.memo(({
   userName,
   selectedShortcuts,
   onNavigate,
-}: HomeScreenProps) {
+}: HomeScreenProps) => {
   const {
-    showBalance,
-    setShowBalance,
     transactions,
     visibleTokenCodes,
     setVisibleTokenCodes,
-    registeredUser,
     fetchTransactions,
-    pnlValue,
-    pnlPercentage,
     readReceiptIds
   } = useApp();
 
   const unreadCount = transactions.filter((tx) => !readReceiptIds.includes(tx.id)).length;
   
-  const { formattedBalance, refreshBalance } = useUSDCBalance();
   const { fetchBalance } = useApp(); // Keep for PnL calculation
 
 
@@ -274,31 +264,31 @@ export function HomeScreen({
     return () => clearInterval(interval);
   }, []);
 
-  const formatPrice = (price: number) => {
+  const formatPrice = React.useCallback((price: number) => {
     if (price >= 1000) {
       return `$${price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
     return `$${price.toFixed(2)}`;
-  };
+  }, []);
 
-  const formatChange = (change: number, isDown: boolean) => {
+  const formatChange = React.useCallback((change: number, isDown: boolean) => {
     const absChange = Math.abs(change);
     const prefix = isDown ? "-" : "+";
     if (absChange >= 1000) {
       return `${prefix}${absChange.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
     return `${prefix}${absChange.toFixed(2)}`;
-  };
+  }, []);
 
 
 
   return (
     <div className="flex flex-col h-full bg-[#ecf5fc] font-sans relative overflow-hidden">
       {/* Background shape that covers the top half */}
-      <div className="absolute top-0 left-0 right-0 h-[430px] md:h-[450px] bg-[#3FA2F6] rounded-b-[40px] md:rounded-b-[50px] z-0"></div>
+      <div className="absolute top-0 left-0 right-0 h-[40vh] md:h-[450px] bg-[#3FA2F6] rounded-b-[40px] md:rounded-b-[50px] z-0"></div>
 
       {/* Top Header */}
-      <header className="relative text-white px-5 md:px-8 lg:px-10 pt-6 md:pt-8 pb-3 flex justify-between items-center z-20 shrink-0">
+      <header className="relative text-white px-5 md:px-8 lg:px-10 pt-4 md:pt-8 pb-3 flex justify-between items-center z-20 shrink-0">
         <div className="flex items-center gap-3 cursor-pointer">
           <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-[#3FA2F6] font-[900] text-lg shadow-sm uppercase">
             {userName
@@ -1228,4 +1218,4 @@ export function HomeScreen({
 
     </div>
   );
-}
+});
