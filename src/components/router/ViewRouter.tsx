@@ -1,4 +1,5 @@
 import React from "react";
+import { motion, AnimatePresence } from "motion/react";
 import { ViewState } from "../../types";
 import { useApp } from "../../context/AppContext";
 import { LoginScreen } from "../screens/LoginScreen";
@@ -76,8 +77,16 @@ export const ViewRouter = React.memo(({ isLoggingIn, loginEmail, setLoginEmail, 
   const userName = registeredUser?.username || "RAKYAN INUKERTAPATI";
 
   return (
-    <>
-      {viewState === "splash" && (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={viewState}
+        initial={{ opacity: 0, y: 3 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -3 }}
+        transition={{ duration: 0.1, ease: "easeInOut" }}
+        className="w-full h-full flex flex-col"
+      >
+        {viewState === "splash" && (
         <LoginScreen
           hasIdentity={!!registeredUser}
           onShowToast={displayToast}
@@ -406,6 +415,7 @@ export const ViewRouter = React.memo(({ isLoggingIn, loginEmail, setLoginEmail, 
           onNavigate={onNavigate}
         />
       )}
-    </>
+      </motion.div>
+    </AnimatePresence>
   );
 });

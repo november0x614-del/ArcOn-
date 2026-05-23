@@ -12,7 +12,7 @@ interface WalletCardProps {
   userName: string;
 }
 
-export function WalletCard({ onNavigate, onClick, className = "", userName }: WalletCardProps) {
+export const WalletCard = React.memo(function WalletCard({ onNavigate, onClick, className = "", userName }: WalletCardProps) {
   const {
     showBalance,
     setShowBalance,
@@ -138,4 +138,4 @@ export function WalletCard({ onNavigate, onClick, className = "", userName }: Wa
       <div className={`absolute top-0 right-0 w-32 h-32 ${styles.glow} blur-[60px] rounded-full -translate-y-12 translate-x-12 pointer-events-none`}></div>
     </div>
   );
-}
+});

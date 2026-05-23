@@ -10,7 +10,7 @@ interface StockRowProps {
   isDown: boolean;
 }
 
-export function StockRow({ code, name, price, change, percent, isDown }: StockRowProps) {
+export const StockRow = React.memo(function StockRow({ code, name, price, change, percent, isDown }: StockRowProps) {
   const [flash, setFlash] = React.useState<'up' | 'down' | null>(null);
   const prevPriceRef = React.useRef(price);
 
@@ -45,4 +45,4 @@ export function StockRow({ code, name, price, change, percent, isDown }: StockRo
       </div>
     </div>
   );
-}
+});
