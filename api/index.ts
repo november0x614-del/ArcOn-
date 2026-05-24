@@ -4,6 +4,8 @@ import express from "express";
 import * as crypto from "crypto";
 import { GoogleGenAI } from "@google/genai";
 import { initiateDeveloperControlledWalletsClient } from "@circle-fin/developer-controlled-wallets";
+import * as SwapKit from '@circle-fin/swap-kit';
+import { createCircleWalletsAdapter } from '@circle-fin/adapter-circle-wallets';
 import { createClient } from "@supabase/supabase-js";
 import * as dotenv from "dotenv";
 
@@ -302,32 +304,42 @@ app.post("/api/swap/execute", async (req, res) => {
     const { userId, amount, fromToken, toToken } = req.body;
     
     const { data: walletData } = await supabaseAdmin
-      .from('user_wallets').select('wallet_id').eq('id', userId).single();
+      .from('user_wallets').select('wallet_id, wallet_address').eq('id', userId).single();
     if (!walletData?.wallet_id) throw new Error("No wallet found");
 
-    const client = getCircleClient();
-    const dexAddress = "0x3333333333333333333333333333333333333333";
-
-    const response = await client.createTransaction({
-      walletId: walletData.wallet_id,
-      destinationAddress: dexAddress,
-      amount: [amount.toString()],
-      fee: { type: "level", config: { feeLevel: "LOW" } },
-      tokenAddress: "",
-      blockchain: "ARC-TESTNET"
-    } as any);
+    // 1. Initialize KIT
+    const context = SwapKit.createSwapKitContext({});
+    const adapter = createCircleWalletsAdapter({
+       apiKey: process.env.CIRCLE_API_KEY,
+       entitySecret: process.env.CIRCLE_ENTITY_SECRET,
+    });
+    
+    // 2. Perform Swap
+    const result: any = await SwapKit.swap(context, {
+      from: { 
+        adapter, 
+        chain: "Arc_Testnet", 
+        address: walletData.wallet_address 
+      },
+      tokenIn: fromToken === 'ARC' ? 'NATIVE' : fromToken,
+      tokenOut: toToken === 'ARC' ? 'NATIVE' : toToken,
+      amountIn: amount.toString(),
+      config: {
+        kitKey: process.env.KIT_KEY as string,
+      },
+    });
 
     const { error } = await supabaseAdmin.from('transactions').insert({
         user_id: userId,
         amount: `-${parseFloat(amount).toFixed(2)}`,
         type: 'swap',
-        status: 'pending',
-        internal_ref: response.data?.id || `req_${crypto.randomBytes(8).toString('hex')}`,
+        status: 'success', // As per result of swap
+        internal_ref: result.txId || result.id || `req_${crypto.randomBytes(8).toString('hex')}`,
         metadata: { fromToken, toToken, real: true }
     });
 
     if (error) throw error;
-    res.status(200).json({ message: "Swap queued", txId: response.data?.id });
+    res.status(200).json({ message: "Swap executed", txId: result.txId || result.id });
   } catch (error: any) {
     console.error("Swap Error", error);
     res.status(500).json({ error: error.message });

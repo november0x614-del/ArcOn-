@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, ChevronDown, ArrowLeftRight, RefreshCw, Check, Zap, Search, X } from 'lucide-react';
+import { useStore } from '../../store/useStore';
 
 interface SwapScreenProps {
   onBack: () => void;
@@ -7,9 +8,8 @@ interface SwapScreenProps {
 
 const TOKENS = [
   { symbol: 'USDC', name: 'USD Coin', balance: '1,134.66', color: 'bg-[#2775ca]', type: 'Stablecoin' },
-  { symbol: 'ARC', name: 'Arc Token', balance: '0.00', color: 'bg-gradient-to-tr from-orange-400 to-orange-500', type: 'Native Layer-1' },
-  { symbol: 'ETH', name: 'Ethereum', balance: '0.00', color: 'bg-[#627eea]', type: 'Layer-1 Token' },
-  { symbol: 'WBTC', name: 'Wrapped BTC', balance: '0.00', color: 'bg-[#f7931a]', type: 'Wrapped Token' },
+  { symbol: 'EURC', name: 'Euro Coin', balance: '0.00', color: 'bg-blue-600', type: 'Stablecoin' },
+  { symbol: 'cirBTC', name: 'Circular BTC', balance: '0.00', color: 'bg-[#f7931a]', type: 'Wrapped Token' },
 ];
 
 export function SwapScreen({ onBack }: SwapScreenProps) {
@@ -18,9 +18,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
   const [isSwapping, setIsSwapping] = useState(false);
   const [swapFinished, setSwapFinished] = useState(false);
   const [exchangeRate, setExchangeRate] = useState(0.9852);
-  const [balance, setBalance] = useState(1134.66);
-
-  // Modal states
+  
   const [showTokenSelector, setShowTokenSelector] = useState<'from' | 'to' | null>(null);
   const [fromToken, setFromToken] = useState(TOKENS[0]);
   const [toToken, setToToken] = useState(TOKENS[1]);
@@ -43,7 +41,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
       if (fromToken.symbol === toToken.symbol) {
          setToAmount(fromAmount);
       } else {
-         const rate = fromToken.symbol === 'USDC' && toToken.symbol === 'ARC' ? exchangeRate : (1 / exchangeRate); // Simplistic simulated cross-rates
+         const rate = exchangeRate; // Simplistic simulated cross-rates
          setToAmount((parseFloat(fromAmount) * (fromToken.symbol === 'USDC' || toToken.symbol === 'USDC' ? rate : 1)).toFixed(4));
       }
     } else {
@@ -51,16 +49,45 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
     }
   }, [fromAmount, exchangeRate, fromToken, toToken]);
 
-  const handleSwap = () => {
+  const registeredUser = useStore((state) => state.registeredUser);
+  const balance = useStore((state) => state.balance);
+  const setBalance = useStore((state) => state.setBalance);
+  const fetchBalance = useStore((state) => state.fetchBalance);
+
+  useEffect(() => {
+    fetchBalance();
+  }, [fetchBalance]);
+
+  const handleSwap = async () => {
+    if (!registeredUser?.supabaseUid) return;
     setIsSwapping(true);
-    setTimeout(() => {
+    
+    try {
+      const response = await fetch('/api/swap/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: registeredUser.supabaseUid,
+          amount: parseFloat(fromAmount),
+          fromToken: fromToken.symbol,
+          toToken: toToken.symbol
+        }),
+      });
+
+      if (!response.ok) throw new Error('Swap failed');
+
+      const data = await response.json();
       setIsSwapping(false);
       setSwapFinished(true);
-      setTxHash(`0x${Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join('')}`);
+      setTxHash(data.txId);
       if (fromToken.symbol === 'USDC') {
-         setBalance(prev => prev - parseFloat(fromAmount || '0'));
+        setBalance(prev => prev - parseFloat(fromAmount || '0'));
       }
-    }, 3500);
+    } catch (error) {
+      console.error(error);
+      setIsSwapping(false);
+      // Optional: show error message
+    }
   };
 
   const flipTokens = () => {
@@ -142,6 +169,11 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
               {fromToken.symbol === 'USDC' && (
                  <span className="text-[12px] font-bold text-slate-500 flex items-center gap-1">
                    Balance: {balance.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                 </span>
+              )}
+              {fromToken.symbol !== 'USDC' && (
+                 <span className="text-[12px] font-bold text-slate-500 flex items-center gap-1">
+                   Balance: {fromToken.balance}
                  </span>
               )}
             </div>

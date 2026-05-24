@@ -95,7 +95,7 @@ export const useStore = create<AppState>()(
         try {
           const response = await fetch(`/api/balance/${user.supabaseUid}`);
           if (!response.ok) {
-            console.error(`Balance fetch failed with status: ${response.status}`);
+            console.error(`Balance fetch failed with status: ${response.status}, text: ${await response.text()}`);
             return;
           }
           const text = await response.text();
@@ -132,7 +132,7 @@ export const useStore = create<AppState>()(
         try {
           const response = await fetch(`/api/transactions/${user.supabaseUid}`);
           if (!response.ok) {
-            console.error(`Transactions fetch failed with status: ${response.status}`);
+            console.error(`Transactions fetch failed with status: ${response.status}, text: ${await response.text()}`);
             return;
           }
           const text = await response.text();
