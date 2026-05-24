@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, ArrowLeftRight, CheckCircle2, Loader2, ChevronRight, Info, AlertCircle, Globe } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useApp } from '../../context/AppContext';
+import { ArcAppKitAdapter } from '../../services/arc-app-kit/adapter';
 
 interface BridgeScreenProps {
   onBack: () => void;
@@ -37,18 +38,11 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
     setStep('processing');
     
     try {
-      const response = await fetch('/api/bridge/execute', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: registeredUser?.supabaseUid,
-          amount: amount,
-          fromNetwork: fromNetwork.name,
-          toNetwork: toNetwork.name
-        })
-      });
-      
-      if (!response.ok) throw new Error("Bridge failed");
+      const result = await ArcAppKitAdapter.executeBridge(
+        numAmount,
+        fromNetwork.name,
+        toNetwork.name
+      );
       
       await fetchBalance();
       await fetchTransactions();

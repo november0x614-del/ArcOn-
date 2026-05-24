@@ -37,6 +37,59 @@ export const ArcAppKitAdapter = {
         if (!response.ok) throw new Error('Transfer failed');
         return await response.json();
     },
-    
-    // Additional methods (bridge, etc.) can be added here
+
+    async executeBridge(amount: number, fromNetwork: string, toNetwork: string) {
+        const { registeredUser } = useStore.getState();
+        if (!registeredUser?.supabaseUid) throw new Error("User not registered");
+
+        const response = await fetch('/api/bridge/execute', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: registeredUser.supabaseUid,
+                amount,
+                fromNetwork,
+                toNetwork
+            }),
+        });
+
+        if (!response.ok) throw new Error('Bridge failed');
+        return await response.json();
+    },
+
+    async executeWithdraw(amount: number, bank: string) {
+        const { registeredUser } = useStore.getState();
+        if (!registeredUser?.supabaseUid) throw new Error("User not registered");
+
+        const response = await fetch('/api/withdraw/execute', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: registeredUser.supabaseUid,
+                amount,
+                bank
+            }),
+        });
+
+        if (!response.ok) throw new Error('Withdraw failed');
+        return await response.json();
+    },
+
+    async executePurchase(amount: number, product: string) {
+        const { registeredUser } = useStore.getState();
+        if (!registeredUser?.supabaseUid) throw new Error("User not registered");
+
+        const response = await fetch('/api/purchase/execute', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: registeredUser.supabaseUid,
+                amount,
+                product
+            }),
+        });
+
+        if (!response.ok) throw new Error('Purchase failed');
+        return await response.json();
+    },
 };
