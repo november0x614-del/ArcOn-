@@ -2,15 +2,6 @@ import React, { useState } from 'react';
 import { ArrowLeft, Search, UserPlus, Plus, Users, Star, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
-interface Contact {
-  id: string;
-  letter: string;
-  name: string;
-  network: string;
-  account: string;
-  initials: string;
-}
-
 interface TransferScreenProps {
   onBack: () => void;
   onNewTransfer: () => void;
@@ -65,7 +56,7 @@ function ContactItem({
       {(isExpanded || isManageContacts) && (
         <div 
           onClick={isAddingFavorite ? undefined : (isManageContacts ? onSelectManage : onSelect)}
-          className={`-mx-5 px-5 mt-[-10px] pt-5 pb-3 ${isManageContacts ? 'pl-[24px] bg-white border-b border-slate-50 pb-[10px]' : 'pl-[74px] bg-[#f1f5f9] hover:bg-[#e2e8f0] shadow-inner'} overflow-visible ${(!isAddingFavorite && !isManageContacts) ? 'cursor-pointer' : ''} transition-colors relative z-0 flex justify-between items-center ${isManageContacts ? 'cursor-pointer' : ''}`}
+          className={`-mx-5 px-5 mt-[-10px] pt-5 pb-3 ${isManageContacts ? 'pl-[24px] bg-white border-b border-slate-50 pb-[10px]' : 'pl-[74px] bg-[#f1f5f9] hover:bg-[#e2e8f0] shadow-inner'} overflow-hidden ${(!isAddingFavorite && !isManageContacts) ? 'cursor-pointer' : ''} transition-colors relative z-0 flex justify-between items-center ${isManageContacts ? 'cursor-pointer' : ''}`}
         >
            <div className={`flex items-center ${isManageContacts ? 'gap-3' : ''}`}>
              {isManageContacts && (
@@ -75,14 +66,16 @@ function ContactItem({
              )}
              <div className="text-left">
                <p className={`font-bold text-[14px] ${isManageContacts ? 'text-slate-600' : 'text-slate-800'}`}>{network}</p>
-               <p className={`text-[13px] font-medium mt-0.5 tracking-wide ${isManageContacts ? 'text-slate-400' : 'text-slate-505'}`}>{address}</p>
+               <p className={`text-[13px] font-medium mt-0.5 tracking-wide ${isManageContacts ? 'text-slate-400' : 'text-slate-505'}`}>
+                 {address.length > 20 ? `${address.substring(0, 10)}...${address.substring(address.length - 8)}` : address}
+               </p>
              </div>
            </div>
            
            {isAddingFavorite && (
              <button 
                onClick={(e) => { e.stopPropagation(); onToggleFavorite?.(); }} 
-               className="p-2 mr-6 z-10 hover:scale-110 transition-transform active:scale-95 border-0 bg-transparent flex items-center justify-center cursor-pointer"
+               className="p-2 mr-2 z-10 hover:scale-110 transition-transform active:scale-95 border-0 bg-transparent flex items-center justify-center cursor-pointer"
              >
                {isFavorite ? (
                  <Star className="text-yellow-400 fill-yellow-400" size={24} />
@@ -104,92 +97,19 @@ function ContactItem({
 }
 
 export function TransferScreen({ onBack, onNewTransfer, onSelectContact, onBatchTransfer }: TransferScreenProps) {
-  const { transactions, fetchTransactions } = useApp();
+  const { contacts, fetchTransactions } = useApp();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isAddingFavorite, setIsAddingFavorite] = useState(false);
   const [isEditFavorites, setIsEditFavorites] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<any | null>(null);
   const [favorites, setFavorites] = useState<any[]>([]);
   const [isLoadingFavorite, setIsLoadingFavorite] = useState(false);
-  const [deletedContactIds, setDeletedContactIds] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem('deleted_contact_ids');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const saveDeletedContactIds = (ids: string[]) => {
-    setDeletedContactIds(ids);
-    try {
-      localStorage.setItem('deleted_contact_ids', JSON.stringify(ids));
-    } catch (e) {
-      console.error(e);
-    }
-  };
 
   React.useEffect(() => {
     fetchTransactions();
   }, [fetchTransactions]);
 
-  const realContacts = React.useMemo(() => {
-    // Generate contacts from transaction history - real data!
-    const contactMap = new Map<string, Contact>();
-    
-    // Default base contacts
-    const defaultContacts: Contact[] = [
-      { id: '1', letter: 'A', name: 'ANNISA PATRIA', network: 'EVM (Arc Testnet)', account: '0x1A2bc2f35497B6CEAc40eEb29037C9F306633c4A', initials: 'AP' },
-      { id: '2', letter: 'A', name: 'ARGA SATYAGRAHA', network: 'EVM (Arc Testnet)', account: '0x9F8eA5260cc7C3A899986326Eee2eEBE4fBe2d1B', initials: 'AS' },
-    ];
-    
-    defaultContacts.forEach(c => {
-      contactMap.set(c.account.toLowerCase(), c);
-    });
-    
-    if (transactions && transactions.length > 0) {
-      transactions.forEach((tx) => {
-        if (tx.type === 'transfer') {
-          const recipientAddress = tx.metadata?.destinationAddress;
-          const recipientName = tx.metadata?.recipientName;
-          
-          if (recipientAddress && recipientName) {
-            const cleanAddr = recipientAddress.trim();
-            const initials = recipientName.trim() 
-              ? recipientName.trim().split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() 
-              : '??';
-              
-            contactMap.set(cleanAddr.toLowerCase(), {
-              id: tx.id || cleanAddr,
-              letter: recipientName.trim()[0]?.toUpperCase() || '?',
-              name: recipientName.toUpperCase(),
-              network: 'EVM (Arc Testnet)',
-              account: cleanAddr,
-              initials: initials
-            });
-          }
-        } else if (tx.type === 'payment') {
-          const recipientAddress = tx.metadata?.destinationAddress || tx.internal_ref || '0x...';
-          const recipientName = tx.metadata?.recipientName || `Receiver ${tx.id.substring(0, 4)}`;
-          const cleanAddr = recipientAddress.trim();
-          const initials = recipientName.trim()
-            ? recipientName.trim().split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()
-            : '??';
-            
-          contactMap.set(cleanAddr.toLowerCase(), {
-            id: tx.id,
-            letter: recipientName.trim()[0]?.toUpperCase() || '?',
-            name: recipientName.toUpperCase(),
-            network: 'EVM (Arc Testnet)',
-            account: cleanAddr,
-            initials: initials
-          });
-        }
-      });
-    }
-    
-    return Array.from(contactMap.values()).filter(c => !deletedContactIds.includes(c.id));
-  }, [transactions, deletedContactIds]);
+  const realContacts = contacts;
 
 
   const handleToggleFavorite = (contact: any) => {
@@ -409,8 +329,6 @@ export function TransferScreen({ onBack, onNewTransfer, onSelectContact, onBatch
                  </p>
                  <button 
                    onClick={() => {
-                      const newlyDeleted = [...deletedContactIds, ...selectedContacts];
-                      saveDeletedContactIds(newlyDeleted);
                       setFavorites(prev => prev.filter(f => !selectedContacts.includes(f.id)));
                       setSelectedContacts([]);
                       setShowDeleteModal(false);
