@@ -5,9 +5,8 @@ import express from "express";
 import * as crypto from "crypto";
 import { initiateDeveloperControlledWalletsClient } from "@circle-fin/developer-controlled-wallets";
 import { createClient } from "@supabase/supabase-js";
-import * as dotenv from "dotenv";
 
-dotenv.config();
+// Note: Removed dotenv.config() as Vercel injects environment variables directly.
 
 process.on('uncaughtException', (err) => {
   console.error('Unhandled Exception:', err);
@@ -455,10 +454,8 @@ app.get("/api/tokens", async (_req, res) => {
 });
 
 // AI Route
-app.post("/api/chat", async (req, res) => {
+app.post("/api/chat", async (_req, res) => {
   try {
-    const { message, history, localContext } = req.body;
-    
     // Always provide simulation response
     res.json({ reply: "(Simulasi) Halo! Saya adalah asisten virtual Arc untuk membantu Anda dengan USDC di Arc Testnet." });
   } catch (error: any) {
