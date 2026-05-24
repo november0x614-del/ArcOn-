@@ -104,8 +104,8 @@ export async function performOnChainAction(
         amount: `-${amount.toFixed(2)}`,
         type: action,
         status: 'pending',
-        internal_ref: result.txHash,
-        metadata: { ...metadata, real: true, explorerUrl: result.explorerUrl }
+        internal_ref: String(result.txHash || ""),
+        metadata: { ...metadata, real: true, explorerUrl: String(result.explorerUrl || "") }
     });
 
     if (error) throw error;
