@@ -84,8 +84,6 @@ export interface Transaction {
     merchantId?: string;
     fromToken?: string;
     toToken?: string;
-    destinationAddress?: string;
-    recipientName?: string;
   };
 }
 

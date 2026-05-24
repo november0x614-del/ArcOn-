@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, ChevronDown, ArrowLeftRight, RefreshCw, Check, Zap, Search, X } from 'lucide-react';
+import { useUSDCBalance } from '../../services/unified-balance-kit/hooks';
 import { useApp } from '../../context/AppContext';
 
 interface SwapScreenProps {
@@ -7,122 +8,135 @@ interface SwapScreenProps {
 }
 
 const TOKENS = [
-  { symbol: 'USDC', name: 'USD Coin', balance: '1,134.66', color: 'bg-[#2775ca]', type: 'Stablecoin' },
-  { symbol: 'EURC', name: 'Euro Coin', balance: '0.00', color: 'bg-[#a3a3a3]', type: 'Stablecoin' },
-  { symbol: 'USYC', name: 'USD Yield Coin', balance: '0.00', color: 'bg-[#0070f3]', type: 'Stablecoin' },
-  { symbol: 'NATIVE', name: 'Arc Token', balance: '0.00', color: 'bg-gradient-to-tr from-orange-400 to-orange-500', type: 'Native Layer-1' },
-  { symbol: 'ETH', name: 'Ethereum', balance: '0.00', color: 'bg-[#627eea]', type: 'Layer-1 Token' },
-  { symbol: 'WBTC', name: 'Wrapped BTC', balance: '0.00', color: 'bg-[#f7931a]', type: 'Wrapped Token' },
+  { symbol: 'USDC', name: 'USD Coin', balance: '0.00', color: 'bg-[#2775ca]', type: 'Stablecoin' },
+  { symbol: 'EURC', name: 'EURC', balance: '0.00', color: 'bg-gradient-to-tr from-blue-400 to-blue-500', type: 'Stablecoin' },
+  { symbol: 'cirBTC', name: 'Circle BTC', balance: '0.00', color: 'bg-[#f7931a]', type: 'Wrapped Token' },
 ];
 
 export function SwapScreen({ onBack }: SwapScreenProps) {
-  const { registeredUser, balances, fetchBalances, fetchTransactions } = useApp();
+  const { registeredUser, fetchBalance, fetchTransactions, allBalances } = useApp();
   const [fromAmount, setFromAmount] = useState('');
   const [toAmount, setToAmount] = useState('0');
-  const [isSwapping, setIsSwapping] = useState(false);
   const [swapFinished, setSwapFinished] = useState(false);
-  const [exchangeRate, setExchangeRate] = useState(0.9852);
+  const [exchangeRate, setExchangeRate] = useState(0.9852); // Fallback init rate
+  const { balance } = useUSDCBalance();
+  const [slippage, setSlippage] = useState(0.5); 
+  const [gasFee, setGasFee] = useState('Free on Arc Testnet');
+  const [isEstimating, setIsEstimating] = useState(false);
+  const [swapStatus, setSwapStatus] = useState<'idle' | 'processing' | 'success' | 'failed'>('idle'); 
 
-  useEffect(() => {
-    fetchBalances();
-  }, [fetchBalances]);
-
-  // Merge static TOKENS with real balances
-  const tokens = TOKENS.map(t => ({
-    ...t,
-    balance: balances[t.symbol] || 0
-  }));
   // Modal states
   const [showTokenSelector, setShowTokenSelector] = useState<'from' | 'to' | null>(null);
-  const [fromToken, setFromToken] = useState(tokens[0]);
-  const [toToken, setToToken] = useState(tokens[1]);
+  
+  // Helper to get balance for a token
+  const getTokenBalance = (symbol: string) => {
+      if (symbol === 'USDC') return balance.toFixed(2);
+      const tokenBalance = allBalances.find(b => b.token?.symbol === symbol);
+      return tokenBalance ? parseFloat(tokenBalance.amount).toFixed(2) : '0.00';
+  };
+
+  const [fromToken, setFromToken] = useState({ ...TOKENS[0], balance: getTokenBalance(TOKENS[0].symbol) });
+  const [toToken, setToToken] = useState({ ...TOKENS[1], balance: getTokenBalance(TOKENS[1].symbol) });
   const [searchToken, setSearchToken] = useState('');
   const [txHash, setTxHash] = useState('');
 
-  const [swapError, setSwapError] = useState<string | null>(null);
-
+  // Update balances when allBalances changes
   useEffect(() => {
-    // Live rate simulation
-    const interval = setInterval(() => {
-      setExchangeRate(prev => {
-        const change = (Math.random() - 0.5) * 0.01;
-        return parseFloat((prev + change).toFixed(4));
-      });
-    }, 4000);
-    return () => clearInterval(interval);
-  }, []);
+     setFromToken(prev => ({ ...prev, balance: getTokenBalance(prev.symbol) }));
+     setToToken(prev => ({ ...prev, balance: getTokenBalance(prev.symbol) }));
+  }, [allBalances, balance]);
 
+  // Estimate hook with debounce
   useEffect(() => {
-    const fetchEstimate = async () => {
-       if (!fromAmount || parseFloat(fromAmount) <= 0 || !registeredUser) return;
-       try {
-         const response = await fetch('/api/swap/estimate', {
-           method: 'POST',
-           headers: { 'Content-Type': 'application/json' },
-           body: JSON.stringify({
-             userId: registeredUser.supabaseUid,
-             amount: fromAmount,
-             fromToken: fromToken.symbol,
-             toToken: toToken.symbol
-           }),
-         });
-         if (!response.ok) {
-           const errData = await response.json().catch(() => ({}));
-           throw new Error(errData.error || "Estimation unsupported or pair invalid");
-         }
-         const data = await response.json();
-         setToAmount(data.estimatedOutput?.amount || data.estimatedOutput?.toString() || '0.00');
-       } catch (e: any) {
-         console.error("Estimate failed", e);
-       }
-    };
-    
-    // Only fetch if tokens are different
-    if (fromToken.symbol !== toToken.symbol) {
-        fetchEstimate();
+    if (!fromAmount || parseFloat(fromAmount) <= 0) {
+      setToAmount('0');
+      return;
     }
-  }, [fromAmount, fromToken, toToken, registeredUser]);
+
+    if (fromToken.symbol === toToken.symbol) {
+       setToAmount(fromAmount);
+       return;
+    }
+
+    setIsEstimating(true);
+    const timeoutId = setTimeout(async () => {
+      try {
+        const response = await fetch('/api/estimate-swap', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            userId: registeredUser?.supabaseUid,
+            amount: fromAmount,
+            fromToken: fromToken.symbol,
+            toToken: toToken.symbol
+          }),
+        });
+
+        if (!response.ok) throw new Error('Estimate failed');
+        const data = await response.json();
+        
+        setToAmount(data.estimatedOutput);
+        
+        // Update exchange rate based on actual estimate
+        if (parseFloat(fromAmount) > 0 && parseFloat(data.estimatedOutput) > 0) {
+            setExchangeRate(parseFloat(data.estimatedOutput) / parseFloat(fromAmount));
+        }
+
+        // Format fees
+        if (data.fees && data.fees.length > 0) {
+            const feeStr = data.fees.map((f: any) => `${f.amount} ${f.token}`).join(', ');
+            setGasFee(feeStr);
+        } else {
+            setGasFee('Free on Arc Testnet');
+        }
+      } catch (error) {
+         console.error("Failed to estimate swap:", error);
+         // Fallback simulate
+         const rate = fromToken.symbol === 'USDC' && toToken.symbol === 'EURC' ? 0.9852 : (1 / 0.9852);
+         setToAmount((parseFloat(fromAmount) * rate).toFixed(4));
+         setGasFee('Free on Arc Testnet');
+      } finally {
+        setIsEstimating(false);
+      }
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [fromAmount, fromToken.symbol, toToken.symbol, registeredUser]);
 
   const handleSwap = async () => {
-    if (!registeredUser) return;
-    setSwapError(null);
-    setIsSwapping(true);
+    setSwapStatus('processing');
     try {
-      const response = await fetch('/api/swap/execute', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: registeredUser.supabaseUid,
-          amount: fromAmount,
-          fromToken: fromToken.symbol,
-          toToken: toToken.symbol
-        }),
-      });
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error || "Swap failed");
-      }
-      
-      const data = await response.json();
-      
-      setIsSwapping(false);
-      setSwapFinished(true);
-      setTxHash(data.txId);
-      
-      // Refresh balances
-      await fetchBalances();
-      await fetchTransactions();
-    } catch (e: any) {
-      console.error(e);
-      setIsSwapping(false);
-      const msg = e.message.toLowerCase();
-      if (msg.includes('liquidity')) {
-        setSwapError("Insufficient liquidity for this swap. Try a smaller amount.");
-      } else if (msg.includes('slippage')) {
-        setSwapError("Swap failed: High slippage. Please try again later.");
-      } else {
-        setSwapError("Swap failed: " + e.message);
-      }
+        const response = await fetch('/api/swap/execute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            userId: registeredUser?.supabaseUid,
+            amount: fromAmount,
+            fromToken: fromToken.symbol,
+            toToken: toToken.symbol
+          }),
+        });
+
+        if (!response.ok) throw new Error('Swap failed');
+
+        const data = await response.json();
+        setTxHash(data.txId);
+        
+        // Update user state
+        await fetchBalance();
+        await fetchTransactions();
+        
+        setSwapStatus('success');
+        setSwapFinished(true);
+        
+        // Reset status
+        setTimeout(() => {
+          setSwapStatus('idle');
+          setSwapFinished(false);
+        }, 5000);
+    } catch (e) {
+        setSwapStatus('failed');
+        setTimeout(() => setSwapStatus('idle'), 3000);
     }
   };
 
@@ -165,7 +179,14 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
                    <div className="w-full h-[1px] bg-slate-200 my-2"></div>
                    <div className="flex justify-between items-center">
                       <span className="text-[12px] text-slate-400">Tx Hash</span>
-                      <span className="text-[12px] font-mono text-blue-500 truncate max-w-[120px]">{txHash}</span>
+                      <a 
+  href={`https://testnet.arcscan.app/tx/${txHash}`} 
+  target="_blank" 
+  rel="noopener noreferrer" 
+  className="text-[12px] font-mono text-blue-500 truncate max-w-[120px] hover:underline"
+>
+  {txHash}
+</a>
                    </div>
                    <div className="flex justify-between items-center">
                       <span className="text-[12px] text-slate-400">Network</span>
@@ -199,11 +220,11 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
         {/* Swap Box Container */}
         <div className="relative mb-6">
           {/* From */}
-          <div className={`bg-white p-5 rounded-[24px] shadow-sm border transition-all duration-300 relative z-10 ${isSwapping ? 'border-blue-400/50 shadow-blue-100/50 opacity-80' : 'border-slate-200 focus-within:border-slate-400'}`}>
+          <div className={`bg-white p-5 rounded-[24px] shadow-sm border transition-all duration-300 relative z-10 ${swapStatus === 'processing' ? 'border-blue-400/50 shadow-blue-100/50 opacity-80' : 'border-slate-200 focus-within:border-slate-400'}`}>
             <div className="flex justify-between items-center mb-4">
               <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">You Pay</span>
               <span className="text-[12px] font-bold text-slate-500 flex items-center gap-1">
-                Balance: {fromToken.balance.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                 Balance: {fromToken.balance}
               </span>
             </div>
             <div className="flex flex-col gap-4">
@@ -212,12 +233,12 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
                   type="number"
                   value={fromAmount}
                   onChange={(e) => setFromAmount(e.target.value)}
-                  disabled={isSwapping}
+                  disabled={swapStatus === 'processing'}
                   className="w-[140px] bg-transparent border-none outline-none text-[36px] font-extrabold text-slate-800 placeholder:text-slate-200 disabled:opacity-50"
                   placeholder="0"
                 />
                 <button 
-                  onClick={() => !isSwapping && setShowTokenSelector('from')}
+                  onClick={() => swapStatus !== 'processing' && setShowTokenSelector('from')}
                   className="flex items-center gap-2 bg-slate-50 border border-slate-200 hover:bg-slate-100 transition-colors px-3 py-2 rounded-full shrink-0 h-10"
                 >
                    <div className={`w-6 h-6 rounded-full ${fromToken.color} flex items-center justify-center text-white text-[8px] font-bold shrink-0 shadow-sm`}>
@@ -236,10 +257,10 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
           </div>
 
           {/* Swap Swap Button */}
-          <div className={`absolute left-1/2 top-[calc(50%-20px)] z-20 transform -translate-x-1/2 transition-transform duration-500 ${isSwapping ? 'rotate-180' : ''}`}>
+          <div className={`absolute left-1/2 top-[calc(50%-20px)] z-20 transform -translate-x-1/2 transition-transform duration-500 ${swapStatus === 'processing' ? 'rotate-180' : ''}`}>
              <button 
                onClick={flipTokens}
-               disabled={isSwapping}
+               disabled={swapStatus === 'processing'}
                className="w-10 h-10 bg-white rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.05)] border-4 border-slate-50 flex items-center justify-center text-slate-500 hover:text-slate-800 hover:scale-105 active:scale-95 transition-all group disabled:opacity-50"
              >
                <ArrowLeftRight size={16} className="rotate-90 group-hover:rotate-[-90deg] transition-transform duration-500" />
@@ -247,23 +268,23 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
           </div>
 
           {/* To */}
-          <div className={`bg-white p-5 rounded-[24px] shadow-sm border mt-1.5 transition-all duration-300 relative z-10 ${isSwapping ? 'border-orange-400/50 shadow-orange-100/50 opacity-80' : 'border-slate-200 gap-2'}`}>
+          <div className={`bg-white p-5 rounded-[24px] shadow-sm border mt-1.5 transition-all duration-300 relative z-10 ${swapStatus === 'processing' ? 'border-orange-400/50 shadow-orange-100/50 opacity-80' : 'border-slate-200 gap-2'}`}>
             <div className="flex justify-between items-center mb-4">
               <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">You Receive</span>
               <span className="text-[12px] font-bold text-slate-500 flex items-center gap-1">
-                Balance: {toToken.balance.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                 Balance: {toToken.balance}
               </span>
             </div>
             <div className="flex flex-col gap-4">
               <div className="flex justify-between items-center">
                 <div className="flex-1">
-                  <span className={`text-[36px] font-extrabold ${toAmount === '0' ? 'text-slate-300' : 'text-slate-800'} transition-opacity ${isSwapping ? 'opacity-50' : 'opacity-100'}`}>
+                  <span className={`text-[36px] font-extrabold ${toAmount === '0' ? 'text-slate-300' : 'text-slate-800'} transition-opacity ${swapStatus === 'processing' || isEstimating ? 'opacity-50' : 'opacity-100'}`}>
                     {toAmount}
                   </span>
                 </div>
                 <button 
-                  onClick={() => !isSwapping && setShowTokenSelector('to')}
-                  className="flex items-center gap-2 bg-slate-50 border border-slate-200 hover:bg-slate-100 transition-colors px-3 py-2 rounded-full shrink-0 h-10"
+                  onClick={() => (swapStatus !== 'processing' && !isEstimating) && setShowTokenSelector('to')}
+                  className={`flex items-center gap-2 bg-slate-50 border border-slate-200 transition-colors px-3 py-2 rounded-full shrink-0 h-10 ${isEstimating ? 'opacity-50' : 'hover:bg-slate-100'}`}
                 >
                    <div className={`w-6 h-6 rounded-full ${toToken.color} flex items-center justify-center text-white text-[8px] font-bold shrink-0 shadow-sm`}>
                      {toToken.symbol.substring(0,4)}
@@ -288,43 +309,54 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
               <span className="text-[13px] text-slate-500">Live Rate</span>
               <span className="text-[13px] font-bold text-slate-800 flex items-center gap-1">
                 <Zap size={14} className="text-yellow-500" /> 
-                1 {fromToken.symbol} = {fromToken.symbol === 'USDC' && toToken.symbol === 'ARC' ? exchangeRate : (1 / exchangeRate).toFixed(4)} {toToken.symbol}
+                1 {fromToken.symbol} = {exchangeRate.toFixed(4)} {toToken.symbol}
               </span>
            </div>
-           <div className="flex justify-between items-center mb-3">
+           <div className="flex justify-between items-center mb-2">
               <span className="text-[13px] text-slate-500">Slippage Tolerance</span>
-              <span className="text-[13px] font-bold text-slate-800">Auto (0.5%)</span>
+              <div className="flex gap-2">
+                {[0.1, 0.5, 1.0].map(s => (
+                   <button key={s} onClick={() => setSlippage(s)} className={`text-[12px] font-bold px-2 py-1 rounded transition-colors ${slippage === s ? 'bg-blue-100 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}>
+                      {s}%
+                   </button>
+                ))}
+              </div>
            </div>
            <div className="w-full h-[1px] border-b border-dashed border-slate-200 my-3"></div>
            <div className="flex justify-between items-center">
-              <span className="text-[13px] text-slate-500">Network Fee</span>
-              <span className="text-[12px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded w-fit">Free (Sponsored via Paymaster)</span>
+              <span className="text-[13px] text-slate-500">{gasFee !== 'Free on Arc Testnet' ? 'Network & Custom Fee' : 'Network Fee (Est.)'}</span>
+              <span className="text-[12px] font-bold text-slate-800">{isEstimating ? 'Calculating...' : gasFee}</span>
            </div>
         </div>
 
         <div className="mt-auto pb-4">
-          {swapError && (
-             <div className="bg-red-50 border border-red-200 p-4 rounded-xl text-red-600 text-[13px] font-medium mb-4 animate-in fade-in">
-                {swapError}
-             </div>
-          )}
           <button 
-            disabled={!fromAmount || parseFloat(fromAmount) === 0 || isSwapping || (parseFloat(fromAmount) > parseFloat(fromToken.balance.toString().replace(/,/g, ''))) || fromToken.symbol === toToken.symbol}
+            disabled={!fromAmount || parseFloat(fromAmount) === 0 || swapStatus === 'processing' || isEstimating || (fromToken.symbol === 'USDC' && parseFloat(fromAmount) > balance) || fromToken.symbol === toToken.symbol}
             onClick={handleSwap}
             className={`w-full font-bold py-4 rounded-full transition-all flex items-center justify-center gap-3 text-[15px] active:scale-95
-              ${(!fromAmount || parseFloat(fromAmount) === 0 || (parseFloat(fromAmount) > parseFloat(fromToken.balance.toString().replace(/,/g, ''))) || fromToken.symbol === toToken.symbol)
+              ${(!fromAmount || parseFloat(fromAmount) === 0 || isEstimating || (fromToken.symbol === 'USDC' && parseFloat(fromAmount) > balance) || fromToken.symbol === toToken.symbol)
                 ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                : !isSwapping ? 'bg-slate-900 text-white shadow-lg hover:bg-slate-800' : 'bg-slate-800 text-white shadow-xl scale-[0.98]'
+                : swapStatus !== 'processing' ? 'bg-slate-900 text-white shadow-lg hover:bg-slate-800' : 'bg-slate-800 text-white shadow-xl scale-[0.98]'
               }`}
           >
-            {isSwapping ? (
+            {isEstimating ? (
+              <>
+                <RefreshCw size={20} className="animate-spin text-slate-400" />
+                Estimating...
+              </>
+            ) : swapStatus === 'processing' ? (
               <>
                 <RefreshCw size={20} className="animate-spin text-slate-300" />
                 Processing Swap...
               </>
+            ) : swapStatus === 'failed' ? (
+               <>
+                 <X size={20} className="text-white" />
+                 Swap Failed
+               </>
             ) : fromToken.symbol === toToken.symbol ? (
               'Invalid Pair'
-            ) : (parseFloat(fromAmount) > parseFloat(fromToken.balance.toString().replace(/,/g, ''))) ? (
+            ) : fromToken.symbol === 'USDC' && parseFloat(fromAmount) > balance ? (
               'Insufficient Balance'
             ) : (
               'Review Swap'
@@ -359,12 +391,12 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
                 Popular Tokens
               </div>
               <div className="flex flex-col">
-                {tokens.filter(t => t.name.toLowerCase().includes(searchToken.toLowerCase()) || t.symbol.toLowerCase().includes(searchToken.toLowerCase())).map((token) => (
+                {TOKENS.filter(t => t.name.toLowerCase().includes(searchToken.toLowerCase()) || t.symbol.toLowerCase().includes(searchToken.toLowerCase())).map((token) => (
                    <button 
                      key={token.symbol}
                      onClick={() => {
-                        if (showTokenSelector === 'from') setFromToken(token);
-                        if (showTokenSelector === 'to') setToToken(token);
+                        if (showTokenSelector === 'from') setFromToken({ ...token, balance: getTokenBalance(token.symbol) });
+                        if (showTokenSelector === 'to') setToToken({ ...token, balance: getTokenBalance(token.symbol) });
                         setShowTokenSelector(null);
                      }}
                      className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors active:bg-slate-100 text-left border-b border-slate-50 last:border-0"
@@ -379,7 +411,9 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
                         </div>
                      </div>
                      <div className="text-right">
-                        <div className="font-bold text-slate-800">{token.balance}</div>
+                        <div className="font-bold text-slate-800">
+                          {getTokenBalance(token.symbol)}
+                        </div>
                      </div>
                    </button>
                 ))}
