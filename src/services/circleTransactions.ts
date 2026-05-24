@@ -68,9 +68,13 @@ export async function executeTransaction(
     type: string,
     metadata: any
 ) {
+    console.log("executeTransaction called for user:", userId, "amount:", amount, "type:", type, "metadata:", metadata);
     const { data: walletData } = await supabaseAdmin
         .from('user_wallets').select('wallet_id, wallet_address').eq('id', userId).single();
-    if (!walletData?.wallet_id || !walletData?.wallet_address) throw new Error("No wallet found");
+    
+    console.log("Wallet Data from Supabase:", walletData);
+    
+    if (!walletData?.wallet_id || !walletData?.wallet_address) throw new Error(`No wallet found or missing address. Data: ${JSON.stringify(walletData)}`);
 
     const kit = new AppKit();
     const adapter = createCircleWalletsAdapter({
@@ -79,28 +83,35 @@ export async function executeTransaction(
     });
 
     // Perform the swap using AppKit
-    const result = await kit.swap({
-        from: { adapter, chain: "Arc_Testnet", address: walletData.wallet_address },
-        tokenIn: metadata.fromToken,
-        tokenOut: metadata.toToken,
-        amountIn: amount.toString(),
-        config: {
-            kitKey: process.env.KIT_KEY as string,
-        },
-    });
+    console.log("Calling kit.swap with:", { chain: "Arc_Testnet", address: walletData.wallet_address, tokenIn: metadata.fromToken, tokenOut: metadata.toToken, amountIn: amount.toString() });
+    try {
+        const result = await kit.swap({
+            from: { adapter, chain: "Arc_Testnet", address: walletData.wallet_address },
+            tokenIn: metadata.fromToken,
+            tokenOut: metadata.toToken,
+            amountIn: amount.toString(),
+            config: {
+                kitKey: process.env.KIT_KEY as string,
+            },
+        });
+        console.log("Swap result:", result);
 
-    const { error } = await supabaseAdmin.from('transactions').insert({
-        user_id: userId,
-        amount: `-${amount.toFixed(2)}`,
-        type: type,
-        status: 'pending',
-        internal_ref: result.txHash,
-        metadata: { ...metadata, real: true, explorerUrl: result.explorerUrl }
-    });
+        const { error } = await supabaseAdmin.from('transactions').insert({
+            user_id: userId,
+            amount: `-${amount.toFixed(2)}`,
+            type: type,
+            status: 'pending',
+            internal_ref: result.txHash,
+            metadata: { ...metadata, real: true, explorerUrl: result.explorerUrl }
+        });
 
-    if (error) throw error;
-    
-    return {
-        txId: result.txHash
-    };
+        if (error) throw error;
+        
+        return {
+            txId: result.txHash
+        };
+    } catch (err) {
+        console.error("Critical error in executeTransaction for user", userId, ":", err);
+        throw err;
+    }
 }
