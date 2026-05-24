@@ -4,7 +4,6 @@ import { useApp } from "../../context/AppContext";
 import { useUSDCBalance } from "../../services/unified-balance-kit/hooks";
 import { UIDCardTheme } from "../../types";
 import { THEME_STYLES } from "../../utils/theme";
-import { formatCurrency } from "../../lib/utils";
 
 interface WalletCardProps {
   onNavigate?: () => void;
@@ -64,8 +63,8 @@ export const WalletCard = React.memo(function WalletCard({ onNavigate, onClick, 
           </div>
 
           <div className="flex items-baseline gap-1.5 mb-2 sm:mb-3 flex-wrap">
-            <span className="text-[26px] sm:text-[32px] font-black tracking-tight leading-none truncate font-mono">
-              {showBalance ? formatCurrency(formattedBalance.replace(',', '.'), '') : '******'}
+            <span className="text-[26px] sm:text-[32px] font-black tracking-tight leading-none truncate">
+              {showBalance ? (formattedBalance || '0,00') : '******'}
             </span>
             <div className="flex items-center gap-1 bg-white/10 px-1.5 py-0.5 rounded-md">
               <span className={`text-[11px] sm:text-[12px] font-black ${styles.currencyText}`}>
@@ -78,8 +77,10 @@ export const WalletCard = React.memo(function WalletCard({ onNavigate, onClick, 
             <span className={`text-[11px] sm:text-[12px] ${styles.subText} border-b border-dashed ${styles.pnlBorder} pb-0.5 whitespace-nowrap`}>
               PnL
             </span>
-            <span className="text-[11px] sm:text-[12px] font-bold text-emerald-500 whitespace-nowrap font-mono">
-              {`${pnlValue >= 0 ? '+' : '-'}${formatCurrency(Math.abs(pnlValue), '')} (${pnlPercentage >= 0 ? '+' : ''}${pnlPercentage.toFixed(2).replace('.', ',')}%)`}
+            <span className="text-[11px] sm:text-[12px] font-bold text-emerald-500 whitespace-nowrap">
+              {(() => {
+                return `${pnlValue >= 0 ? '+' : '-'}${Math.abs(pnlValue).toFixed(2).replace('.', ',')} (${pnlPercentage >= 0 ? '+' : ''}${pnlPercentage.toFixed(2).replace('.', ',')}%)`;
+              })()}
             </span>
           </div>
         </div>

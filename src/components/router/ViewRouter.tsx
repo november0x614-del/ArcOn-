@@ -69,18 +69,12 @@ export const ViewRouter = React.memo(({ isLoggingIn, loginEmail, setLoginEmail, 
     displayToast,
     balance,
     fetchBalance,
-    fetchTransactions,
-    contacts,
-    fetchContacts
+    fetchTransactions
   } = useApp();
-
-  React.useEffect(() => {
-    fetchContacts();
-  }, [fetchContacts]);
 
   const onNavigate = React.useCallback((view: ViewState) => setViewState(view), [setViewState]);
 
-  const userName = registeredUser?.username || "PENGGUNA ARC";
+  const userName = registeredUser?.username || "RAKYAN INUKERTAPATI";
 
   return (
     <AnimatePresence mode="wait">
@@ -342,24 +336,15 @@ export const ViewRouter = React.memo(({ isLoggingIn, loginEmail, setLoginEmail, 
             setViewState("processing");
             
             try {
-              // Ensure we use the full address if it was accidentally truncated in UI
-              let finalAddress = selectedContact.account?.trim() || '';
-              if (finalAddress.includes('...')) {
-                const match = contacts.find(c => 
-                  c.account.toLowerCase().startsWith(finalAddress.split('...')[0].toLowerCase()) && 
-                  c.account.toLowerCase().endsWith(finalAddress.split('...')[1].toLowerCase())
-                );
-                if (match) finalAddress = match.account;
-              }
-
               const response = await fetch('/api/payments/create', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                   walletId: registeredUser?.walletId || 'default-wallet', 
-                  destinationAddress: finalAddress,
+                  destinationAddress: selectedContact.account,
                   amount: amount,
-                  userId: registeredUser?.supabaseUid 
+                  userId: registeredUser?.supabaseUid,
+                  recipientName: selectedContact.name
                 }),
               });
               
@@ -396,7 +381,13 @@ export const ViewRouter = React.memo(({ isLoggingIn, loginEmail, setLoginEmail, 
       {viewState === "batchTransfer" && (
         <BatchTransferScreen
           onBack={() => setViewState("transfer")}
-          contacts={contacts}
+          contacts={registeredUser ? [
+            { id: '1', letter: 'A', name: 'ANNISA PATRIA', network: 'EVM (Arc Testnet)', account: '0x1A2bc2f35497B6CEAc40eEb29037C9F306633c4A', initials: 'AP' },
+            { id: '2', letter: 'A', name: 'ARGA SATYAGRAHA', network: 'EVM (Arc Testnet)', account: '0x9F8eA5260cc7C3A899986326Eee2eEBE4fBe2d1B', initials: 'AS' },
+            { id: '3', letter: 'H', name: 'HERU SALAM', network: 'EVM (Arc Testnet)', account: '0x4E5fC6061989F4e44A142ce7904b779De8906a7C', initials: 'HS' },
+            { id: '4', letter: 'I', name: 'IDA RIDAWATI', network: 'EVM (Arc Testnet)', account: '0x7FaD6519E0dCe8A5ee94178bcdeEfFF1C1De9A2b', initials: 'IR' },
+            { id: '5', letter: 'L', name: 'LIGAR WENINGGALIH', network: 'EVM (Arc Testnet)', account: '0x2B3cDd95F72395FA4CFFb454e4c27279cfFF4D5e', initials: 'LW' }
+          ] : []}
         />
       )}
 

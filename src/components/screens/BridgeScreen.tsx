@@ -19,8 +19,6 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
   const { balance, fetchBalance, fetchTransactions, displayToast, registeredUser } = useApp();
   const [step, setStep] = useState<'form' | 'processing' | 'success'>('form');
   const [amount, setAmount] = useState('');
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [bridgeResult, setBridgeResult] = useState<any>(null);
   const [fromNetwork, setFromNetwork] = useState(NETWORKS[0]);
   const [toNetwork, setToNetwork] = useState(NETWORKS[1]);
   const [showNetworkSelect, setShowNetworkSelect] = useState<'from' | 'to' | null>(null);
@@ -37,7 +35,6 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
     }
 
     setStep('processing');
-    setErrorMsg(null);
     
     try {
       const response = await fetch('/api/bridge/execute', {
@@ -51,22 +48,15 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
         })
       });
       
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || "Bridge failed");
-      }
-      
-      setBridgeResult(data.result);
+      if (!response.ok) throw new Error("Bridge failed");
       
       await fetchBalance();
       await fetchTransactions();
       
       setStep('success');
-    } catch (error: any) {
+    } catch (error) {
        console.error("Bridge failed", error);
-       setErrorMsg(error.message);
-       displayToast(error.message || "Bridge failed");
+       displayToast("Bridge failed");
        setStep('form');
     }
   };
@@ -106,33 +96,14 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
         <p className="text-slate-500 text-[15px] mb-8 leading-relaxed">
           Your bridge of <span className="font-extrabold text-slate-900">{parseFloat(amount).toFixed(2)} USDC</span> from <span className="font-bold text-slate-700">{fromNetwork.name}</span> to <span className="font-bold text-slate-700">{toNetwork.name}</span> has been broadcasted.
         </p>
-        <div className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-8 text-left space-y-3">
-           <div className="flex justify-between items-center">
-              <span className="text-[12px] font-bold text-slate-400">Status</span>
-              <span className="text-[12px] font-bold text-emerald-600 flex items-center gap-1">
-                 <CheckCircle2 size={12} /> Complete
-              </span>
+        <div className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-8 text-left">
+           <div className="flex justify-between items-center mb-2">
+              <span className="text-[12px] font-bold text-slate-400">Transaction ID</span>
+              <span className="text-[12px] font-mono font-bold text-[#3FA2F6]">0x1a2b...3c4d</span>
            </div>
-           {bridgeResult?.steps?.map((s: any, i: number) => (
-             <div key={i} className="flex justify-between items-center">
-                <span className="text-[12px] font-medium text-slate-500 capitalize">{s.name} Step</span>
-                {s.txHash ? (
-                   <a 
-                     href={s.data?.explorerUrl || `https://testnet.arcscan.app/tx/${s.txHash}`} 
-                     target="_blank" 
-                     rel="noreferrer"
-                     className="text-[11px] font-mono text-[#3FA2F6] hover:underline"
-                   >
-                     {s.txHash.substring(0,6)}...{s.txHash.substring(s.txHash.length-4)}
-                   </a>
-                ) : (
-                   <span className="text-[11px] font-mono text-slate-400">Processing</span>
-                )}
-             </div>
-           ))}
-           <div className="flex justify-between items-center pt-2 border-t border-slate-100 font-bold">
-              <span className="text-[12px] text-slate-400">Final Confirmation</span>
-              <span className="text-[12px] text-emerald-600">Verified</span>
+           <div className="flex justify-between items-center">
+              <span className="text-[12px] font-bold text-slate-400">Estimated Arrival</span>
+              <span className="text-[12px] font-bold text-emerald-600">~2-5 Minutes</span>
            </div>
         </div>
         <button 
@@ -156,28 +127,6 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto p-5 pb-32 scrollbar-hide">
-        {errorMsg && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl text-left">
-            <div className="flex gap-2 text-red-600 mb-1">
-              <AlertCircle size={16} className="shrink-0 mt-0.5" />
-              <span className="text-[14px] font-bold">Bridge Error</span>
-            </div>
-            <p className="text-[13px] text-red-500 leading-tight">
-              {errorMsg}
-            </p>
-            {(errorMsg.includes("BALANCE") || errorMsg.includes("faucet") || errorMsg.includes("native")) && (
-              <a 
-                href="https://faucet.circle.com/" 
-                target="_blank" 
-                rel="noreferrer"
-                className="inline-block mt-3 text-[12px] font-bold text-red-600 hover:underline"
-              >
-                Get Testnet USDC & Gas from Circle Faucet →
-              </a>
-            )}
-          </div>
-        )}
-
         {/* Network Selection Dashboard */}
         <div className="bg-white rounded-[28px] p-6 shadow-sm border border-slate-100 mb-6 flex flex-col gap-6 relative">
           
