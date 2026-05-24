@@ -1,5 +1,5 @@
-import { verifyAndProcessWebhook } from "../src/services/webhookHandler.js";
-import { logAuditEvent } from "../src/services/auditLogger.js";
+import { verifyAndProcessWebhook } from "../src/services/webhookHandler";
+import { logAuditEvent } from "../src/services/auditLogger";
 import express from "express";
 import * as crypto from "crypto";
 import { AppKit, BridgeChain, Blockchain } from "@circle-fin/app-kit";
