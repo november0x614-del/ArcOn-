@@ -1,6 +1,5 @@
-import { AppKit, BridgeChain } from "@circle-fin/app-kit";
-import { createCircleWalletsAdapter } from "@circle-fin/adapter-circle-wallets";
 import { initiateDeveloperControlledWalletsClient } from "@circle-fin/developer-controlled-wallets";
+import * as crypto from "crypto";
 
 const getCircleClient = () => {
     const apiKey = process.env.CIRCLE_API_KEY;
@@ -60,57 +59,41 @@ export async function createWallet(supabaseAdmin: any, userId: string) {
     };
 }
 
-export async function performOnChainAction(
+export async function executeTransaction(
     supabaseAdmin: any,
     userId: string,
-    action: 'swap' | 'send',
     amount: number,
+    destinationAddress: string,
+    type: string,
     metadata: any
 ) {
     const { data: walletData } = await supabaseAdmin
-        .from('user_wallets').select('wallet_id, wallet_address').eq('id', userId).single();
-    if (!walletData?.wallet_id || !walletData?.wallet_address) throw new Error("No wallet found");
+        .from('user_wallets').select('wallet_id').eq('id', userId).single();
+    if (!walletData?.wallet_id) throw new Error("No wallet found");
 
-    const kit = new AppKit();
-    const adapter = createCircleWalletsAdapter({
-        apiKey: process.env.CIRCLE_API_KEY as string,
-        entitySecret: process.env.CIRCLE_ENTITY_SECRET as string,
-    });
+    const client = getCircleClient();
 
-    let result: any;
-    if (action === 'swap') {
-        result = await kit.swap({
-            from: { adapter, chain: "Arc_Testnet", address: walletData.wallet_address },
-            tokenIn: metadata.fromToken,
-            tokenOut: metadata.toToken,
-            amountIn: amount.toString(),
-            config: {
-                kitKey: process.env.KIT_KEY as string,
-            },
-        });
-    } else {
-        const sendParams = {
-            from: { adapter, chain: BridgeChain.Arc_Testnet, address: walletData.wallet_address },
-            to: metadata.destinationAddress,
-            amount: amount.toString(),
-            token: metadata.token || "USDC",
-        };
-        await kit.estimateSend(sendParams);
-        result = await kit.send(sendParams);
-    }
+    const response = await client.createTransaction({
+        walletId: walletData.wallet_id,
+        destinationAddress: destinationAddress,
+        amount: [amount.toString()],
+        fee: { type: "level", config: { feeLevel: "LOW" } },
+        tokenAddress: metadata.tokenAddress || "",
+        blockchain: "ARC-TESTNET"
+    } as any);
 
     const { error } = await supabaseAdmin.from('transactions').insert({
         user_id: userId,
         amount: `-${amount.toFixed(2)}`,
-        type: action,
+        type: type,
         status: 'pending',
-        internal_ref: result.txHash,
-        metadata: { ...metadata, real: true, explorerUrl: result.explorerUrl }
+        internal_ref: response.data?.id || `req_${crypto.randomBytes(8).toString('hex')}`,
+        metadata: { ...metadata, real: true }
     });
 
     if (error) throw error;
     
     return {
-        txId: result.txHash
+        txId: response.data?.id
     };
 }
