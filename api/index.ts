@@ -305,6 +305,9 @@ app.post("/api/swap/execute", async (req, res) => {
     
     const { data: walletData } = await supabaseAdmin
       .from('user_wallets').select('wallet_id, wallet_address').eq('id', userId).single();
+    
+    console.log("Swap walletData:", JSON.stringify(walletData));
+    
     if (!walletData?.wallet_id) throw new Error("No wallet found");
 
     // 1. Initialize KIT
@@ -342,6 +345,19 @@ app.post("/api/swap/execute", async (req, res) => {
     res.status(200).json({ message: "Swap executed", txId: result.txId || result.id });
   } catch (error: any) {
     console.error("Swap Error", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Swap Quote Route
+app.post("/api/swap/quote", async (req, res) => {
+  try {
+    const { amount } = req.body;
+    
+    // Placeholder quote until SDK method is identified
+    res.status(200).json({ amountOut: (parseFloat(amount) * 0.99).toFixed(4) });
+  } catch (error: any) {
+    console.error("Swap Quote Error", error);
     res.status(500).json({ error: error.message });
   }
 });
