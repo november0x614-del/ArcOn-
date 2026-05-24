@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, ChevronDown, ArrowLeftRight, RefreshCw, Check, Zap, Search, X } from 'lucide-react';
 import { useStore } from '../../store/useStore';
+import { ArcAppKitAdapter } from '../../services/arc-app-kit/adapter';
 
 interface SwapScreenProps {
   onBack: () => void;
@@ -60,24 +61,12 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
     setSwapFinished(false);
 
     try {
-      const response = await fetch('/api/swap/execute', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: registeredUser.supabaseUid,
-          amount: parseFloat(fromAmount),
-          fromToken: fromToken.symbol,
-          toToken: toToken.symbol
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Swap failed');
-      }
-
-      const result = await response.json();
+      const result = await ArcAppKitAdapter.executeSwap(
+        parseFloat(fromAmount),
+        fromToken.symbol,
+        toToken.symbol
+      );
+      
       setTxHash(result.txId);
       setIsSwapping(false);
       setSwapFinished(true);
