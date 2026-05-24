@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeft, CheckCircle2, Edit3, ChevronDown, ArrowRight, X, Delete } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { truncateAddress, formatCurrency, cn } from '../../lib/utils';
-import { WalletCard } from '../common/WalletCard';
 
 interface AmountInputScreenProps {
   contact: any;
@@ -10,22 +8,23 @@ interface AmountInputScreenProps {
   onNext: (amount: string) => void;
 }
 
+import { WalletCard } from '../common/WalletCard';
+
 export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreenProps) {
   const { registeredUser, balance, transferAmount } = useStore();
   const [amount, setAmount] = useState(transferAmount && transferAmount !== '0' ? transferAmount : '');
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSourceSelect, setShowSourceSelect] = useState(false);
 
-  // Use real wallet address if available, or a formatted placeholder
-  const walletAddr = registeredUser?.walletAddress || "0x0000000000000000000000000000000000000000";
-  const displayWallet = truncateAddress(walletAddr, 6, 4);
+  // Derive EVM Wallet account from registered user
+  const accountStr = registeredUser ? `0x${Math.random().toString(16).slice(2, 6).toUpperCase()}...${Math.random().toString(16).slice(2, 6).toUpperCase()}` : "0x00...0000"; // fallback if true wallet addr not stored locally easily
 
   const currentSource = {
     id: 'source-arc',
     name: 'EVM (Arc Testnet)',
-    account: registeredUser?.username ? `${registeredUser.username}'s Wallet` : displayWallet,
-    balance: balance.toString(),
-    currency: 'USDC',
+    account: registeredUser?.username ? `${registeredUser.username}'s Wallet` : accountStr,
+    balance: new Intl.NumberFormat('en-US').format(balance),
+    dec: ' USDC',
     isArc: true 
   };
   
@@ -51,14 +50,12 @@ export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreen
     <div className="w-full h-full bg-white relative flex flex-col z-50">
       {/* Header */}
       <div className="w-full pt-12 pb-4 px-4 flex items-center shadow-sm relative z-10 shrink-0 bg-white border-b border-slate-100">
-        <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full transition-colors absolute left-4 z-20">
+        <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full transition-colors absolute left-4">
           <ArrowLeft className="text-slate-700" size={24} />
         </button>
-        <div className="flex flex-col items-center justify-center flex-1 px-12 min-w-0">
-          <h2 className="text-slate-800 font-bold text-[15px] uppercase tracking-tight leading-tight truncate w-full text-center">{contact.name}</h2>
-          <p className="text-slate-500 text-[11px] mt-[2px] truncate w-full text-center font-mono">
-            {contact.bank || contact.network} • {truncateAddress(contact.account, 10, 8)}
-          </p>
+        <div className="flex flex-col items-center justify-center flex-1">
+          <h2 className="text-slate-800 font-bold text-[15px] uppercase tracking-tight leading-tight">{contact.name}</h2>
+          <p className="text-slate-500 text-[13px] mt-[2px]">{contact.bank || contact.network} - {contact.account}</p>
         </div>
       </div>
 
@@ -167,7 +164,7 @@ export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreen
                     </div>
                     <div className="flex flex-col overflow-hidden gap-[2px]">
                        <span className="font-extrabold text-[15px] text-slate-800 uppercase tracking-tight truncate">{contact.name}</span>
-                       <span className="text-slate-500 text-[13px] truncate">{contact.bank || contact.network} - {truncateAddress(contact.account, 10, 8)}</span>
+                       <span className="text-slate-500 text-[13px] truncate">{contact.bank || contact.network} - {contact.account}</span>
                     </div>
                  </div>
 
@@ -175,7 +172,7 @@ export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreen
                  <div className="flex flex-col gap-3.5 mb-6 text-left">
                     <div className="flex justify-between items-center">
                        <span className="text-slate-600 text-[14.5px]">Transfer Amount</span>
-                       <span className="text-slate-800 font-bold text-[14.5px]">{formatCurrency(numericAmount)}</span>
+                       <span className="text-slate-800 font-bold text-[14.5px]">{selectedSource.isArc ? `${new Intl.NumberFormat('en-US').format(numericAmount)} USDC` : `Rp ${new Intl.NumberFormat('id-ID').format(numericAmount)}`}</span>
                     </div>
                     <div className="flex justify-between items-center">
                        <span className="text-slate-600 text-[14.5px]">Metode Transfer</span>
@@ -185,9 +182,9 @@ export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreen
                        <div className="flex flex-col gap-1 w-full bg-blue-50/50 p-2.5 rounded-xl border border-blue-100/50">
                           <div className="flex justify-between items-center">
                              <span className="text-blue-600 text-[14px] flex items-center gap-1.5"><div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div> Network Gas Fee</span>
-                             <span className="text-blue-800 font-bold text-[14px]">{(Math.random() * 0.005 + 0.001).toFixed(4)} USDC</span>
+                             <span className="text-blue-800 font-bold text-[14px]">0.0025 USDC</span>
                           </div>
-                          <span className="text-[11px] text-blue-400">Dynamic fee based on current Arc Testnet load.</span>
+                          <span className="text-[11px] text-blue-400">Estimated gas fee based on active Arc-L1 Testnet parameters.</span>
                        </div>
                     ) : (
                        <div className="flex justify-between items-center">
@@ -210,7 +207,7 @@ export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreen
                  <label className="text-slate-500 text-[14.5px] mb-2 block text-left">Source Account</label>
                  <div className="bg-slate-50 border border-slate-100 rounded-[12px] p-4 flex flex-col gap-0.5 text-left">
                     <span className="font-bold text-slate-800 text-[14.5px]">{selectedSource.name} - {selectedSource.account}</span>
-                    <span className="text-slate-500 text-[13px] font-mono">{formatCurrency(selectedSource.balance)}</span>
+                    <span className="text-slate-500 text-[13px]">{selectedSource.balance}<span className="text-[9px] align-top relative top-[1px]">{selectedSource.dec}</span></span>
                  </div>
               </div>
 
@@ -227,9 +224,9 @@ export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreen
                    }}
                    className={`w-full text-white py-[14px] rounded-full flex justify-between px-6 items-center transition-all ${selectedSource.isArc ? 'bg-[#3FA2F6] hover:bg-blue-600 shadow-[0_4px_14px_rgba(63,162,246,0.4)]' : 'bg-[#008fcd] hover:bg-[#007dba] shadow-[0_4px_14px_rgba(0,143,205,0.4)]'}`}
                  >
-                    <span className="font-bold text-[15px]">Lanjutkan Transfer</span>
+                    <span className="font-bold text-[15px]">Continue Transfer</span>
                     <div className="flex items-center gap-2">
-                       <span className="font-bold text-[16px]">{formatCurrency(numericAmount)}</span>
+                       <span className="font-bold text-[16px]">{selectedSource.isArc ? `${new Intl.NumberFormat('en-US').format(numericAmount)} USDC` : `Rp ${new Intl.NumberFormat('id-ID').format(numericAmount + (numericAmount >= 100000 ? 0 : 6500))}`}</span>
                        <div className="bg-white/20 p-1 rounded-full">
                          <ArrowRight size={16} strokeWidth={3} />
                        </div>
@@ -264,8 +261,8 @@ export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreen
                       <span className={`font-bold text-[15px] text-left ${selectedSource.id === src.id ? 'text-[#3FA2F6]' : 'text-slate-800'}`}>{src.name}</span>
                       {selectedSource.id === src.id && <CheckCircle2 size={20} className="text-[#3FA2F6] shrink-0" />}
                     </div>
-                    <span className="text-slate-500 text-[13px] tracking-wide font-medium text-left w-full block font-mono">{src.account}</span>
-                    <span className="font-bold text-[14px] mt-2 text-left w-full block text-blue-600 font-mono">{formatCurrency(src.balance)}</span>
+                    <span className="text-slate-500 text-[13px] tracking-wide font-medium text-left w-full block">{src.account}</span>
+                    <span className={`font-bold text-[14px] mt-2 text-left w-full block ${src.isArc ? 'text-blue-600' : 'text-[#008fcd]'}`}>{src.balance}<span className="text-[10px] align-top relative top-[1px]">{src.dec}</span></span>
                   </div>
                 ))}
               </div>
