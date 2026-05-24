@@ -1,7 +1,7 @@
 import { useStore } from "../../store/useStore";
 
 export const ArcAppKitAdapter = {
-    async executeSwap(amount: number, fromToken: string, toToken: string) {
+    async executeSwap(amount: number, fromToken: string, toToken: string, tokenAddress: string) {
         const { registeredUser } = useStore.getState();
         if (!registeredUser?.supabaseUid) throw new Error("User not registered");
 
@@ -12,7 +12,8 @@ export const ArcAppKitAdapter = {
                 userId: registeredUser.supabaseUid,
                 amount,
                 fromToken,
-                toToken
+                toToken,
+                tokenAddress
             }),
         });
         
@@ -93,18 +94,24 @@ export const ArcAppKitAdapter = {
         return await response.json();
     },
 
-    async getBalance(token: string) {
+    async getBalance() {
         const { registeredUser } = useStore.getState();
         if (!registeredUser?.supabaseUid) throw new Error("User not registered");
 
-        const response = await fetch(`/api/wallet/balance?token=${token}&userId=${registeredUser.supabaseUid}`);
+        const response = await fetch(`/api/balance/${registeredUser.supabaseUid}`);
         if (!response.ok) throw new Error('Failed to fetch balance');
-        return await response.json(); // Expected format: { balance: number }
+        return await response.json(); // Expected format: { balance: number, realBalance: number, simulatedBalance: number }
     },
 
     async getLiveRate(fromToken: string, toToken: string) {
         const response = await fetch(`/api/rates?from=${fromToken}&to=${toToken}`);
         if (!response.ok) throw new Error('Failed to fetch rate');
         return await response.json(); // Expected format: { rate: number }
+    },
+
+    async getTokens() {
+        const response = await fetch(`/api/tokens`);
+        if (!response.ok) throw new Error('Failed to fetch tokens');
+        return await response.json();
     },
 };

@@ -78,7 +78,7 @@ export async function executeTransaction(
         destinationAddress: destinationAddress,
         amount: [amount.toString()],
         fee: { type: "level", config: { feeLevel: "LOW" } },
-        tokenAddress: "",
+        tokenAddress: metadata.tokenAddress || "",
         blockchain: "ARC-TESTNET"
     } as any);
 
