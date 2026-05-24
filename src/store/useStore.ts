@@ -96,6 +96,7 @@ export const useStore = create<AppState>()(
           const response = await fetch(`/api/balance/${user.supabaseUid}`);
           if (!response.ok) {
             console.error(`Balance fetch failed with status: ${response.status}`);
+            useStore.getState().displayToast("Failed to fetch balance");
             return;
           }
           const text = await response.text();
@@ -118,6 +119,7 @@ export const useStore = create<AppState>()(
           set({ balance: newBalance, pnlValue, pnlPercentage });
         } catch (error) {
           console.error('Failed to fetch balance', error);
+          useStore.getState().displayToast("Failed to fetch balance - Network or API Error");
         }
       },
       pnlValue: 0,
@@ -152,7 +154,8 @@ export const useStore = create<AppState>()(
               currency: 'USDC',
               timestamp: new Date(tx.created_at).toLocaleString(),
               status: tx.status,
-              txHash: tx.metadata?.txHash
+              txHash: tx.metadata?.txHash,
+              metadata: tx.metadata
             };
           });
           

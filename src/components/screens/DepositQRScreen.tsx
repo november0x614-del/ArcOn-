@@ -20,6 +20,8 @@ export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
   const [copied, setCopied] = useState(false);
   const [amount, setAmount] = useState<string>("");
   const [isEditingAmount, setIsEditingAmount] = useState(false);
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [simStep, setSimStep] = useState(0);
   const [isScanningSim, setIsScanningSim] = useState(false);
   const [scanSimComplete, setScanSimComplete] = useState(false);
   
@@ -37,7 +39,7 @@ export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
         letter: 'A',
         name: 'ANNISA PATRIA',
         network: 'EVM (Arc Testnet)',
-        account: '0x1A2bc...3c4A',
+        account: '0x1A2bc2f35497B6CEAc40eEb29037C9F306633c4A',
         initials: 'AP'
       };
       
@@ -53,15 +55,48 @@ export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
   const address = registeredUser?.walletAddress || "No Wallet Created Yet";
 
   React.useEffect(() => {
-    if (isScanningSim && !scanSimComplete) {
-      // Simulate scan
+    if (isSimulating && simStep < 4) {
+      const timer = setTimeout(() => {
+        setSimStep((prev) => prev + 1);
+      }, 2000);
+      return () => clearTimeout(timer);
     }
-  }, [isScanningSim, scanSimComplete]);
+  }, [isSimulating, simStep]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(address);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleSimulateWebhook = async () => {
+    setIsSimulating(true);
+    setSimStep(0);
+    
+    try {
+      const receiveAmount = parseFloat(amount) || 100;
+      
+      const response = await fetch('/api/webhook/simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          userId: registeredUser?.supabaseUid,
+          amount: receiveAmount
+        }),
+      });
+      
+      if (!response.ok) throw new Error('Simulation failed');
+      
+      // Update data from backend
+      await fetchBalance();
+      await fetchTransactions();
+      
+      displayToast(`Successfully received ${receiveAmount} USDC`);
+    } catch (error) {
+      console.error(error);
+      displayToast("Simulation failed");
+      setIsSimulating(false);
+    }
   };
 
   return (
@@ -79,6 +114,13 @@ export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
             Receive Payment
           </h2>
         </div>
+        <button
+          onClick={handleSimulateWebhook}
+          className="bg-purple-100 text-purple-700 font-bold px-3 py-1.5 rounded-full text-[11px] uppercase tracking-wide hover:bg-purple-200 transition-colors"
+          title="Simulate incoming hook from Arc Testnet"
+        >
+          Simulate Webhook
+        </button>
       </div>
 
       <div className="flex-1 p-6 flex flex-col items-center overflow-y-auto pb-24">
@@ -225,7 +267,73 @@ export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
       </div>
 
       {/* Webhook Simulation Overlay */}
-      {/* Simulation removed */}
+      {isSimulating && (
+        <div className="absolute inset-0 bg-slate-900/60 z-[100] flex flex-col justify-end">
+          <div className="bg-slate-900 h-2/3 rounded-t-[32px] w-full p-6 flex flex-col items-center">
+            <h3 className="text-white font-bold text-[18px] mb-2 flex flex-col items-center">
+              <div className="w-12 h-12 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center mb-3 border border-purple-500/30">
+                <span className="animate-pulse">⚡</span>
+              </div>
+              Webhook Monitor
+            </h3>
+            <p className="text-[12px] text-slate-400 text-center mb-6 max-w-[280px]">
+              Listening for POST request on <code>/api/circle/webhook</code>{" "}
+              from Arc Testnet...
+            </p>
+
+            <div className="w-full bg-black/40 rounded-xl p-4 flex-1 overflow-y-auto flex flex-col gap-3 font-mono text-[11px] text-left">
+              {simStep >= 1 && (
+                <div className="text-green-400 animate-in fade-in slide-in-from-bottom flex items-start gap-2">
+                  <span className="text-green-500 shrink-0">➜</span>
+                  <span>
+                    [ON-CHAIN] Transaction detected on Arc Testnet Ledger.
+                    Status: Pending.
+                  </span>
+                </div>
+              )}
+              {simStep >= 2 && (
+                <div className="text-purple-400 animate-in fade-in slide-in-from-bottom flex items-start gap-2">
+                  <span className="text-purple-500 shrink-0">➜</span>
+                  <span>
+                    [CIRCLE] Sending payload to webhook webhook_sig_verified.
+                  </span>
+                </div>
+              )}
+              {simStep >= 3 && (
+                <div className="text-blue-400 animate-in fade-in slide-in-from-bottom flex items-start gap-2">
+                  <span className="text-blue-500 shrink-0">➜</span>
+                  <span>
+                    [SERVER] POST /api/circle/webhook - Signature Valid.
+                    Settling locally.
+                  </span>
+                </div>
+              )}
+              {simStep >= 4 && (
+                <div className="text-emerald-400 animate-in fade-in slide-in-from-bottom flex items-start gap-2">
+                  <span className="text-emerald-500 shrink-0">➜</span>
+                  <span>
+                    [DATABASE] Balance updated. +{amount ? amount : "100"} USDC
+                    Received! 🎉
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {simStep >= 4 && (
+              <button
+                onClick={() => {
+                  setIsSimulating(false);
+                  setSimStep(0);
+                  onBack();
+                }}
+                className="mt-6 bg-white text-slate-900 font-bold py-3 px-8 rounded-full w-full"
+              >
+                Close & View Balance
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       <style>{`
          @keyframes scan {

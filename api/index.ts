@@ -191,6 +191,7 @@ app.get("/api/debug-wallet/:userId", async (req, res) => {
 app.get("/api/balance/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
+    console.log(`Balance API called for user: ${userId}`);
     
     // 1. Get the wallet ID from Supabase
     const { data: walletData, error: walletError } = await supabaseAdmin
@@ -201,20 +202,23 @@ app.get("/api/balance/:userId", async (req, res) => {
     
     if (walletError && walletError.code !== 'PGRST116') {
        console.error("Error fetching wallet ID:", walletError);
+       throw walletError;
     }
     
     let baseBalance = 0;
     let tokenBalances = [];
     let walletId = walletData?.wallet_id;
+    console.log(`Wallet data for user ${userId}:`, walletData);
 
     if (!walletError && walletId) {
       const client = getCircleClient();
-      console.log(`Fetching balance for wallet ID: ${walletId}`);
+      console.log(`Fetching balance from Circle for wallet ID: ${walletId}`);
       
       try {
         const balanceResponse = await client.getWalletTokenBalance({
           id: walletId
         });
+        console.log(`Circle balance response for ${walletId}:`, JSON.stringify(balanceResponse.data));
         
         if (balanceResponse?.data?.tokenBalances) {
             tokenBalances = balanceResponse.data.tokenBalances;
@@ -226,7 +230,10 @@ app.get("/api/balance/:userId", async (req, res) => {
         baseBalance = parseFloat(usdcToken?.amount || '0');
       } catch (e) {
         console.error("Circle API balance fetch failed", e);
+        throw e;
       }
+    } else {
+        console.warn(`No wallet found for user: ${userId}`);
     }
 
     // Add Simulated balances (from webhook simulator) to reflect in UI
@@ -302,32 +309,44 @@ app.post("/api/swap/execute", async (req, res) => {
     const { userId, amount, fromToken, toToken } = req.body;
     
     const { data: walletData } = await supabaseAdmin
-      .from('user_wallets').select('wallet_id').eq('id', userId).single();
+      .from('user_wallets').select('wallet_id, wallet_address').eq('id', userId).single();
     if (!walletData?.wallet_id) throw new Error("No wallet found");
 
-    const client = getCircleClient();
-    const dexAddress = "0x3333333333333333333333333333333333333333";
+    // Basic implementation using AppKit
+    // Note: ensure KIT_KEY is set in environment
+    const { AppKit } = await import("@circle-fin/app-kit");
+    const { createCircleWalletsAdapter } = await import("@circle-fin/adapter-circle-wallets");
+    const kit = new AppKit();
 
-    const response = await client.createTransaction({
-      walletId: walletData.wallet_id,
-      destinationAddress: dexAddress,
-      amount: [amount.toString()],
-      fee: { type: "level", config: { feeLevel: "LOW" } },
-      tokenAddress: "",
-      blockchain: "ARC-TESTNET"
-    } as any);
+    const adapter = createCircleWalletsAdapter({
+        apiKey: process.env.CIRCLE_API_KEY as string,
+        entitySecret: process.env.CIRCLE_ENTITY_SECRET as string,
+    });
+
+    const result = await kit.swap({
+      from: { 
+        adapter, 
+        chain: "Arc_Testnet" 
+      },
+      tokenIn: fromToken,
+      tokenOut: toToken,
+      amountIn: amount,
+      config: {
+        kitKey: process.env.KIT_KEY as string,
+      },
+    });
 
     const { error } = await supabaseAdmin.from('transactions').insert({
         user_id: userId,
         amount: `-${parseFloat(amount).toFixed(2)}`,
         type: 'swap',
-        status: 'pending',
-        internal_ref: response.data?.id || `req_${crypto.randomBytes(8).toString('hex')}`,
-        metadata: { fromToken, toToken, real: true }
+        status: 'success',
+        internal_ref: (result as any).id || `req_${crypto.randomBytes(8).toString('hex')}`,
+        metadata: { fromToken, toToken, result: JSON.stringify(result) }
     });
 
     if (error) throw error;
-    res.status(200).json({ message: "Swap queued", txId: response.data?.id });
+    res.status(200).json({ message: "Swap executed", txId: (result as any).id });
   } catch (error: any) {
     console.error("Swap Error", error);
     res.status(500).json({ error: error.message });
@@ -419,7 +438,7 @@ app.post("/api/circle/webhook", express.raw({ type: "application/json" }), async
 // Payment Route
 app.post("/api/payments/create", async (req, res) => {
   try {
-    const { walletId, destinationAddress, amount, userId } = req.body;
+    const { walletId, destinationAddress, amount, userId, recipientName } = req.body;
     const client = getCircleClient();
     
     // Audit Log for critical transfers
@@ -446,7 +465,12 @@ app.post("/api/payments/create", async (req, res) => {
       amount: `-${amount}`,
       type: 'transfer',
       status: 'pending',
-      internal_ref: response.data?.id || `req_${crypto.randomBytes(8).toString('hex')}`
+      internal_ref: response.data?.id || `req_${crypto.randomBytes(8).toString('hex')}`,
+      metadata: { 
+        recipientName: recipientName || "EVM Account", 
+        destinationAddress: destinationAddress,
+        real: true 
+      }
     });
     
     res.json(response.data);
@@ -462,28 +486,83 @@ app.post("/api/payments/batch", async (req, res) => {
     const { walletId, recipients, userId } = req.body;
     const client = getCircleClient();
     
-    const responses = [];
+    // Log batch initiation audit trail
+    const totalAmount = recipients.reduce((sum: number, r: any) => sum + parseFloat(r.amount || "0"), 0);
+    if (totalAmount > 500) {
+      await logAuditEvent(supabaseAdmin, userId, 'BATCH_TRANSFER_HIGH_VALUE', { 
+          totalAmount, 
+          recipientCount: recipients.length
+      });
+    }
+
+    const responses = [] as any[];
+    let successCount = 0;
+    let failureCount = 0;
+
     for (const rec of recipients) {
-       const response = await client.createTransaction({
-         walletId: walletId,
-         destinationAddress: rec.address,
-         amount: [rec.amount.toString()],
-         fee: { type: "level", config: { feeLevel: "LOW" } },
-         tokenAddress: "",
-         blockchain: "ARC-TESTNET"
-       } as any);
-       
-       await supabaseAdmin.from('transactions').insert({
-          user_id: userId,
-          amount: `-${rec.amount}`,
-          type: 'transfer',
-          status: 'pending',
-          internal_ref: response.data?.id || `req_${crypto.randomBytes(8).toString('hex')}`
-       });
-       responses.push(response.data);
+       try {
+         const response = await client.createTransaction({
+           walletId: walletId,
+           destinationAddress: rec.address,
+           amount: [rec.amount.toString()],
+           fee: { type: "level", config: { feeLevel: "LOW" } },
+           tokenAddress: "",
+           blockchain: "ARC-TESTNET"
+         } as any);
+         
+         await supabaseAdmin.from('transactions').insert({
+            user_id: userId,
+            amount: `-${rec.amount}`,
+            type: 'transfer',
+            status: 'pending',
+            internal_ref: response.data?.id || `req_${crypto.randomBytes(8).toString('hex')}`,
+            metadata: {
+              recipientName: rec.name || "EVM Account",
+              destinationAddress: rec.address,
+              real: true
+            }
+         });
+         
+         responses.push({
+           address: rec.address,
+           amount: rec.amount,
+           status: 'success',
+           txId: response.data?.id
+         });
+         successCount++;
+       } catch (txError: any) {
+         console.error(`Failed to process batch recipient: ${rec.address}`, txError);
+         
+         // Record failed transaction locally to keep user ledger complete & consistent
+         await supabaseAdmin.from('transactions').insert({
+            user_id: userId,
+            amount: `-${rec.amount}`,
+            type: 'transfer',
+            status: 'failed',
+            internal_ref: `failed_${crypto.randomBytes(8).toString('hex')}`,
+            metadata: {
+              recipientName: rec.name || "EVM Account",
+              destinationAddress: rec.address,
+              real: true
+            }
+         });
+
+         responses.push({
+           address: rec.address,
+           amount: rec.amount,
+           status: 'failed',
+           error: txError.message || "Unknown transaction error"
+         });
+         failureCount++;
+       }
     }
     
-    res.json({ success: true, transfers: responses });
+    res.json({ 
+      success: successCount > 0, 
+      successCount, 
+      failureCount, 
+      transfers: responses 
+    });
   } catch (error: any) {
     console.error("Batch Payment Execution Error:", error);
     res.status(500).json({ error: error.message });

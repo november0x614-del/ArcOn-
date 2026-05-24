@@ -137,7 +137,7 @@ export const HomeScreen = React.memo(({
         logMsg = `[${timestamp}] [CLIENT-SIDE] Memulai pesanan baru untuk "${simProduct}" senilai ${simAmount} USDC. Tidak ada secret key yang diakses oleh dApp client!`;
         break;
       case 2:
-        logMsg = `[${timestamp}] [SERVER-SIDE] Panggil APIs backend '/api/order'. Intelektualitas Circle SDK (@circle-fin/developer-controlled-wallets) dieksekusi seutuhnya di server-side agar kunci entitas tetap aman.`;
+        logMsg = `[${timestamp}] [SERVER-SIDE] Panggil APIs backend '/api/order'. Intelektualitas Circle SDK (@circle-fin/developer-controlled-wallets) dieksekusi seutuhnya di server-side agar CIRCLE_ENTITY_SECRET tetap aman.`;
         break;
       case 3:
         logMsg = `[${timestamp}] [ON-CHAIN] Transaksi senilai ${simAmount} USDC disiarkan langsung ke Arc Testnet L1 Ledger. Token gas menggunakan native USDC (No separate gas coin needed!).`;
@@ -149,7 +149,7 @@ export const HomeScreen = React.memo(({
         logMsg = `[${timestamp}] [SERVER-SIDE] Node.js memvalidasi Webhook Signature Header secara kriptografis menggunakan public keys Circle. Hasil verifikasi signature: AUTHENTIC / VALID.`;
         break;
       case 6:
-        logMsg = `[${timestamp}] [DATABASE] Transaksi divalidasi. Menggunakan kredensial admin di Backend untuk mengupdate kuota kredit database Supabase bagi user secara asinkron. Transaksi sukses! 🎉`;
+        logMsg = `[${timestamp}] [DATABASE] Transaksi divalidasi. Menggunakan SUPABASE_SECRET_KEY di Backend untuk mengupdate kuota kredit database Supabase bagi user secara asinkron. Transaksi sukses! 🎉`;
         break;
     }
     setSimLogs((prev) => [...prev, logMsg]);
@@ -339,7 +339,6 @@ export const HomeScreen = React.memo(({
                 {[
                   { name: "My Wallet", icon: <Wallet size={20} /> },
                   { name: "E-commerce", icon: <ShoppingBag size={20} /> },
-                  { name: "Simulation", icon: <Zap size={20} /> },
                 ].map((tab, i) => (
                   <div
                     key={tab.name}
@@ -407,7 +406,7 @@ export const HomeScreen = React.memo(({
                   </motion.div>
                 )}
 
-                {activeRekeningTab === 2 && (
+                {false && (
                   /* Interactive L1 Transaction Flow Simulator */
                   <motion.div
                     key="tab-3"

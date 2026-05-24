@@ -343,7 +343,8 @@ export const ViewRouter = React.memo(({ isLoggingIn, loginEmail, setLoginEmail, 
                   walletId: registeredUser?.walletId || 'default-wallet', 
                   destinationAddress: selectedContact.account,
                   amount: amount,
-                  userId: registeredUser?.supabaseUid 
+                  userId: registeredUser?.supabaseUid,
+                  recipientName: selectedContact.name
                 }),
               });
               
@@ -381,11 +382,11 @@ export const ViewRouter = React.memo(({ isLoggingIn, loginEmail, setLoginEmail, 
         <BatchTransferScreen
           onBack={() => setViewState("transfer")}
           contacts={registeredUser ? [
-            { id: '1', letter: 'A', name: 'ANNISA PATRIA', network: 'EVM (Arc Testnet)', account: '0x1A2bc...3c4A', initials: 'AP' },
-            { id: '2', letter: 'A', name: 'ARGA SATYAGRAHA', network: 'EVM (Arc Testnet)', account: '0x9F8eA...2d1B', initials: 'AS' },
-            { id: '3', letter: 'H', name: 'HERU SALAM', network: 'EVM (Arc Testnet)', account: '0x4E5fC...6a7C', initials: 'HS' },
-            { id: '4', letter: 'I', name: 'IDA RIDAWATI', network: 'EVM (Arc Testnet)', account: '0x7FaZ...9A2b', initials: 'IR' },
-            { id: '5', letter: 'L', name: 'LIGAR WENINGGALIH', network: 'EVM (Arc Testnet)', account: '0x2B3cD...4D5e', initials: 'LW' }
+            { id: '1', letter: 'A', name: 'ANNISA PATRIA', network: 'EVM (Arc Testnet)', account: '0x1A2bc2f35497B6CEAc40eEb29037C9F306633c4A', initials: 'AP' },
+            { id: '2', letter: 'A', name: 'ARGA SATYAGRAHA', network: 'EVM (Arc Testnet)', account: '0x9F8eA5260cc7C3A899986326Eee2eEBE4fBe2d1B', initials: 'AS' },
+            { id: '3', letter: 'H', name: 'HERU SALAM', network: 'EVM (Arc Testnet)', account: '0x4E5fC6061989F4e44A142ce7904b779De8906a7C', initials: 'HS' },
+            { id: '4', letter: 'I', name: 'IDA RIDAWATI', network: 'EVM (Arc Testnet)', account: '0x7FaD6519E0dCe8A5ee94178bcdeEfFF1C1De9A2b', initials: 'IR' },
+            { id: '5', letter: 'L', name: 'LIGAR WENINGGALIH', network: 'EVM (Arc Testnet)', account: '0x2B3cDd95F72395FA4CFFb454e4c27279cfFF4D5e', initials: 'LW' }
           ] : []}
         />
       )}

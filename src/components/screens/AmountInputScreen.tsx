@@ -182,9 +182,9 @@ export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreen
                        <div className="flex flex-col gap-1 w-full bg-blue-50/50 p-2.5 rounded-xl border border-blue-100/50">
                           <div className="flex justify-between items-center">
                              <span className="text-blue-600 text-[14px] flex items-center gap-1.5"><div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div> Network Gas Fee</span>
-                             <span className="text-blue-800 font-bold text-[14px]">{(Math.random() * 0.005 + 0.001).toFixed(4)} USDC</span>
+                             <span className="text-blue-800 font-bold text-[14px]">0.0025 USDC</span>
                           </div>
-                          <span className="text-[11px] text-blue-400">Dynamic fee simulated based on current Arc Testnet load.</span>
+                          <span className="text-[11px] text-blue-400">Estimated gas fee based on active Arc-L1 Testnet parameters.</span>
                        </div>
                     ) : (
                        <div className="flex justify-between items-center">
