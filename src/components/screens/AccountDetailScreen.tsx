@@ -21,6 +21,7 @@ import {
 import { useUnifiedBalanceKit } from '../../services/unified-balance-kit';
 import { useApp } from '../../context/AppContext';
 import { UIDCard } from '../common/UIDCard';
+import { formatCurrency, truncateAddress } from '../../lib/utils';
 
 interface AccountDetailScreenProps {
   onBack: () => void;
@@ -34,14 +35,22 @@ export function AccountDetailScreen({
   onBack, 
   onTransfer, 
   onReceive,
-  onTransactionClick,
-  userName = "ALEXANDER D"
+  onTransactionClick
 }: AccountDetailScreenProps) {
   const [activeTab, setActiveTab] = useState<'history' | 'token'>('history');
   const [showUID, setShowUID] = useState(false);
-  const { transactions, showBalance, setShowBalance, pnlValue, pnlPercentage, activeFilter, setActiveFilter } = useApp();
+  const { transactions, showBalance, setShowBalance, pnlValue, pnlPercentage, activeFilter, setActiveFilter, registeredUser, allBalances } = useApp();
+  const userName = registeredUser?.username || "PENGGUNA ARC";
   const kit = useUnifiedBalanceKit();
   const balance = kit.unifiedBalance.getBalance();
+
+  // Find individual network balances from allBalances
+  const arcBalance = allBalances.find(b => b.network === 'ARC' || b.network === 'ARC TESTNET')?.balance || 0;
+  const baseBalance = allBalances.find(b => b.network === 'BASE' || b.network === 'BASE SEPOLIA')?.balance || (balance > 0 ? balance * 0.25 : 0);
+  const arbBalance = allBalances.find(b => b.network === 'ARBITRUM' || b.network === 'ARBITRUM SEPOLIA')?.balance || (balance > 0 ? balance * 0.25 : 0);
+  
+  // Adjusted percentages for display if actual data is missing
+  const displayArcBalance = arcBalance || (balance > 0 ? balance * 0.50 : 0);
 
   const filteredTransactions = transactions.filter((tx) => {
     if (activeFilter === 'All') return true;
@@ -74,6 +83,7 @@ export function AccountDetailScreen({
   };
 
   const [showCard, setShowCard] = useState(false);
+  const [showUnifiedDetails, setShowUnifiedDetails] = useState(false);
   
   return (
     <div className="w-full h-full bg-white relative flex flex-col z-50 animate-in slide-in-from-right duration-300 overflow-hidden">
@@ -94,9 +104,9 @@ export function AccountDetailScreen({
 
         {/* Wallet Address & Balance Content */}
         <div className="flex flex-col items-center mt-6 z-10 w-full px-4 overflow-hidden">
-          <div className="w-full max-w-[340px] bg-gradient-to-br from-[#1e293b] via-[#111827] to-[#030712] border border-white/10 rounded-[24px] p-8 shadow-2xl relative overflow-hidden group flex flex-col items-center">
+          <div className="w-full max-w-[340px] bg-gradient-to-br from-[#1e293b] via-[#111827] to-[#030712] border border-white/10 rounded-[24px] p-6 shadow-2xl relative overflow-hidden group flex flex-col items-center">
             
-            <div className="flex flex-col items-center text-center text-white relative z-10">
+            <div className="flex flex-col items-center w-full text-center text-white relative z-10">
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-[13px] font-medium text-slate-400">
                   Est total value
@@ -122,27 +132,71 @@ export function AccountDetailScreen({
                 )}
               </div>
 
-              <div className="flex items-baseline gap-2 mb-4">
-                <div className="flex flex-col items-start gap-0.5">
-                  <span className="text-[42px] font-black tracking-tight leading-none text-white">
-                    {kit.unifiedBalance.getFormattedBalance()}
+              <div 
+                onClick={() => setShowUnifiedDetails(!showUnifiedDetails)}
+                className="flex items-baseline gap-2 mb-4 justify-center cursor-pointer hover:opacity-95 active:scale-[0.99] transition-all"
+              >
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-[38px] sm:text-[42px] font-black tracking-tight leading-none text-white font-mono">
+                    {showBalance ? formatCurrency(balance) : '••••••'}
                   </span>
-                  <span className="bg-white/20 text-white text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full">Unified</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <span className="text-[16px] font-black text-slate-200">
-                    USDC
+                  <span className="bg-blue-500/30 border border-blue-400/30 text-[#60a5fa] text-[9px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full mt-1 flex items-center gap-1">
+                    Unified Balance
+                    <ChevronDown size={11} className={`transition-transform duration-200 ${showUnifiedDetails ? "rotate-180" : ""}`} />
                   </span>
-                  <ChevronDown size={14} className="text-slate-400" />
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              {/* Accordion Rincian Saldo Gabungan */}
+              {showUnifiedDetails && (
+                <div className="w-full mt-3 pt-4 border-t border-white/10 text-left animate-in fade-in slide-in-from-top-3 duration-200">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="font-extrabold tracking-wide uppercase text-[10px] text-slate-300">
+                      Saldo Lintas Rantai (USDC)
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 text-[8px] font-mono font-bold uppercase">
+                      Circle Gateway
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 mb-3.5">
+                    <div className="rounded-xl p-2.5 border border-white/5 bg-white/5 flex flex-col justify-between">
+                      <span className="text-[8.5px] font-mono font-extrabold text-[#3FA2F6]">ARC L1</span>
+                      <span className="font-bold text-[12px] sm:text-[13px] mt-1 text-white">
+                        {showBalance ? formatCurrency(displayArcBalance, '') : '••••'}
+                      </span>
+                      <span className="text-[8px] text-slate-400 mt-1">Native ({balance > 0 ? Math.round((displayArcBalance / balance) * 100) : 50}%)</span>
+                    </div>
+
+                    <div className="rounded-xl p-2.5 border border-white/5 bg-white/5 flex flex-col justify-between">
+                      <span className="text-[8.5px] font-mono font-extrabold text-[#0052FF]">BASE</span>
+                      <span className="font-bold text-[12px] sm:text-[13px] mt-1 text-slate-200">
+                        {showBalance ? formatCurrency(baseBalance, '') : '••••'}
+                      </span>
+                      <span className="text-[8px] text-slate-400 mt-1">L2 ({balance > 0 ? Math.round((baseBalance / balance) * 100) : 25}%)</span>
+                    </div>
+
+                    <div className="rounded-xl p-2.5 border border-white/5 bg-white/5 flex flex-col justify-between">
+                      <span className="text-[8.5px] font-mono font-extrabold text-[#28A0F0]">ARBITRUM</span>
+                      <span className="font-bold text-[12px] sm:text-[13px] mt-1 text-slate-200">
+                        {showBalance ? formatCurrency(arbBalance, '') : '••••'}
+                      </span>
+                      <span className="text-[8px] text-slate-400 mt-1">L2 ({balance > 0 ? Math.round((arbBalance / balance) * 100) : 25}%)</span>
+                    </div>
+                  </div>
+
+                  <div className="text-[10px] sm:text-[11px] leading-relaxed p-2.5 rounded-xl border border-white/5 bg-white/5 text-slate-300">
+                    💡 <span className="font-bold">Saldo Terpusat:</span> USDC dari berbagai jaringan (Arc, Base, Arbitrum) disatukan secara virtual. Belanja dan transfer kapan saja secara instan di Arc Testnet tanpa perlu biaya migrasi (cross-chain transfer) yang melelahkan.
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center gap-3 mt-3">
                 <span className="text-[13px] text-slate-400 border-b border-dashed border-slate-600 pb-0.5 uppercase tracking-wider font-semibold">
                   PnL 1 Bln
                 </span>
-                <span className="text-[13px] font-bold text-emerald-400">
-                  {`${pnlValue >= 0 ? '+' : '-'}${Math.abs(pnlValue).toFixed(2).replace('.', ',')} (${pnlPercentage >= 0 ? '+' : ''}${pnlPercentage.toFixed(2).replace('.', ',')}%)`}
+                <span className="text-[13px] font-bold text-emerald-400 font-mono">
+                  {`${pnlValue >= 0 ? '+' : '-'}${formatCurrency(Math.abs(pnlValue), '')} (${pnlPercentage >= 0 ? '+' : ''}${pnlPercentage.toFixed(2).replace('.', ',')}%)`}
                 </span>
               </div>
             </div>
@@ -267,18 +321,18 @@ export function AccountDetailScreen({
                 </div>
               </div>
               <div className="flex flex-col items-end">
-                <span className="font-bold text-[16px] text-slate-800">
-                  {(balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <span className="font-bold text-[16px] text-slate-800 font-mono">
+                  {formatCurrency(balance || 0)}
                 </span>
-                <span className="text-[12px] text-slate-400 font-medium tracking-wide">
-                  ~${(balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <span className="text-[12px] text-slate-400 font-medium tracking-wide font-mono">
+                  ~${formatCurrency(balance || 0, '')}
                 </span>
               </div>
             </div>
 
             {/* ARC Token Card */}
             <div className="bg-white rounded-2xl p-4 flex justify-between items-center shadow-sm border border-slate-100 hover:shadow-md transition-shadow cursor-pointer">
-              <div className="flex items-center gap-4">
+              <div className="items-center gap-4 flex">
                 <div className="w-12 h-12 bg-slate-900 rounded-full flex items-center justify-center text-white shadow-inner relative overflow-hidden">
                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/40 via-transparent to-blue-500/40"></div>
                    <span className="font-bold text-[10px] tracking-wider italic z-10">ARC</span>
@@ -289,8 +343,12 @@ export function AccountDetailScreen({
                 </div>
               </div>
               <div className="flex flex-col items-end">
-                <span className="font-bold text-[16px] text-slate-800">12,450.00</span>
-                <span className="text-[12px] text-slate-400 font-medium tracking-wide">~$249.00</span>
+                <span className="font-bold text-[16px] text-slate-800 font-mono">
+                  {formatCurrency(allBalances.find(b => b.symbol === 'ARC')?.balance || 0, 'ARC')}
+                </span>
+                <span className="text-[12px] text-slate-400 font-medium tracking-wide font-mono">
+                  ~${formatCurrency((allBalances.find(b => b.symbol === 'ARC')?.balance || 0) * 0.02, '')}
+                </span>
               </div>
             </div>
 

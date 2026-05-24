@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
@@ -7,37 +7,8 @@ interface ReceiveQRISScreenProps {
 }
 
 export function ReceiveQRISScreen({ onBack }: ReceiveQRISScreenProps) {
-  const { registeredUser, displayToast, fetchBalance, fetchTransactions } = useApp();
+  const { registeredUser } = useApp();
   const userName = registeredUser?.username || "Arc User";
-  const [isSimulating, setIsSimulating] = useState(false);
-
-  const handleSimulatePayment = async () => {
-    setIsSimulating(true);
-    try {
-      const receiveAmount = 10; // Mock amount for QRIS simulation
-      
-      const response = await fetch('/api/webhook/simulate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          userId: registeredUser?.supabaseUid,
-          amount: receiveAmount
-        }),
-      });
-      
-      if (!response.ok) throw new Error('Simulation failed');
-      
-      await fetchBalance();
-      await fetchTransactions();
-      
-      displayToast(`Successfully received ${receiveAmount} USDC via QRIS`);
-      onBack();
-    } catch (error) {
-      console.error(error);
-      displayToast("Simulation failed");
-      setIsSimulating(false);
-    }
-  };
 
   return (
     <div className="absolute inset-0 z-[60] bg-[#1a202c] flex flex-col animate-in slide-in-from-right duration-300">
@@ -85,14 +56,6 @@ export function ReceiveQRISScreen({ onBack }: ReceiveQRISScreenProps) {
             Tunjukkan kode QR ini untuk menerima pembayaran dari m-Banking
             atau e-Wallet manapun.
           </p>
-
-          <button
-            className="w-full bg-[#ed1b24] text-white font-bold py-3 rounded-xl text-[14px] hover:bg-red-700 transition-colors border-0 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
-            onClick={handleSimulatePayment}
-            disabled={isSimulating}
-          >
-            {isSimulating ? "Processing..." : "Simulasikan QRIS"}
-          </button>
         </div>
       </div>
     </div>

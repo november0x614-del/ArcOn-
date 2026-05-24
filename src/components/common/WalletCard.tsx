@@ -1,9 +1,10 @@
 import React from 'react';
-import { RefreshCw, Eye, EyeOff, ChevronDown } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { useUSDCBalance } from "../../services/unified-balance-kit/hooks";
 import { UIDCardTheme } from "../../types";
 import { THEME_STYLES } from "../../utils/theme";
+import { formatCurrency } from "../../lib/utils";
 
 interface WalletCardProps {
   onNavigate?: () => void;
@@ -21,7 +22,7 @@ export const WalletCard = React.memo(function WalletCard({ onNavigate, onClick, 
     registeredUser,
   } = useApp();
 
-  const { formattedBalance, refreshBalance } = useUSDCBalance();
+  const { formattedBalance } = useUSDCBalance();
 
   const currentTheme: Exclude<UIDCardTheme, undefined> = registeredUser?.uidTheme || 'default';
   const styles = THEME_STYLES[currentTheme];
@@ -41,15 +42,6 @@ export const WalletCard = React.memo(function WalletCard({ onNavigate, onClick, 
             <span className={`text-[12px] sm:text-[13px] font-medium ${styles.subText} whitespace-nowrap`}>
               Est total value
             </span>
-            <button
-              onClick={async (e) => {
-                e.stopPropagation();
-                refreshBalance();
-              }}
-              className="bg-transparent border-0 p-2 cursor-pointer hover:opacity-70 transition-opacity"
-            >
-              <RefreshCw size={16} className={styles.subText} />
-            </button>
             {showBalance ? (
               <Eye
                 size={14}
@@ -72,14 +64,13 @@ export const WalletCard = React.memo(function WalletCard({ onNavigate, onClick, 
           </div>
 
           <div className="flex items-baseline gap-1.5 mb-2 sm:mb-3 flex-wrap">
-            <span className="text-[26px] sm:text-[32px] font-black tracking-tight leading-none truncate">
-              {showBalance ? (formattedBalance || '0,00') : '******'}
+            <span className="text-[26px] sm:text-[32px] font-black tracking-tight leading-none truncate font-mono">
+              {showBalance ? formatCurrency(formattedBalance.replace(',', '.'), '') : '******'}
             </span>
-            <div className="flex items-center gap-1">
-              <span className={`text-[12px] sm:text-[13px] font-black ${styles.currencyText}`}>
+            <div className="flex items-center gap-1 bg-white/10 px-1.5 py-0.5 rounded-md">
+              <span className={`text-[11px] sm:text-[12px] font-black ${styles.currencyText}`}>
                 USDC
               </span>
-              <ChevronDown size={12} className={styles.subText} />
             </div>
           </div>
 
@@ -87,10 +78,8 @@ export const WalletCard = React.memo(function WalletCard({ onNavigate, onClick, 
             <span className={`text-[11px] sm:text-[12px] ${styles.subText} border-b border-dashed ${styles.pnlBorder} pb-0.5 whitespace-nowrap`}>
               PnL
             </span>
-            <span className="text-[11px] sm:text-[12px] font-bold text-emerald-500 whitespace-nowrap">
-              {(() => {
-                return `${pnlValue >= 0 ? '+' : '-'}${Math.abs(pnlValue).toFixed(2).replace('.', ',')} (${pnlPercentage >= 0 ? '+' : ''}${pnlPercentage.toFixed(2).replace('.', ',')}%)`;
-              })()}
+            <span className="text-[11px] sm:text-[12px] font-bold text-emerald-500 whitespace-nowrap font-mono">
+              {`${pnlValue >= 0 ? '+' : '-'}${formatCurrency(Math.abs(pnlValue), '')} (${pnlPercentage >= 0 ? '+' : ''}${pnlPercentage.toFixed(2).replace('.', ',')}%)`}
             </span>
           </div>
         </div>

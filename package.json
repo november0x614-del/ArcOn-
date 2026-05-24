@@ -12,11 +12,15 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "@circle-fin/adapter-circle-wallets": "^1.3.1",
+    "@circle-fin/app-kit": "^1.6.1",
     "@circle-fin/developer-controlled-wallets": "^10.3.1",
+    "@circle-fin/swap-kit": "^1.2.2",
     "@google/genai": "^1.29.0",
     "@supabase/supabase-js": "^2.106.1",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
+    "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
     "lucide-react": "^0.546.0",
@@ -24,6 +28,8 @@
     "qrcode.react": "^4.2.0",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
+    "tailwind-merge": "^3.6.0",
+    "viem": "^2.50.4",
     "vite": "^6.2.3",
     "zustand": "^5.0.13"
   },
