@@ -7,47 +7,75 @@ interface SwapScreenProps {
   onBack: () => void;
 }
 
-const TOKENS = [
-  { symbol: 'USDC', name: 'USD Coin', balance: '1,134.66', color: 'bg-[#2775ca]', type: 'Stablecoin' },
-  { symbol: 'ARC', name: 'Arc Token', balance: '0.00', color: 'bg-gradient-to-tr from-orange-400 to-orange-500', type: 'Native Layer-1' },
-  { symbol: 'ETH', name: 'Ethereum', balance: '0.00', color: 'bg-[#627eea]', type: 'Layer-1 Token' },
-  { symbol: 'WBTC', name: 'Wrapped BTC', balance: '0.00', color: 'bg-[#f7931a]', type: 'Wrapped Token' },
-];
-
 export function SwapScreen({ onBack }: SwapScreenProps) {
   const { registeredUser, setBalance: updateStoreBalance } = useStore();
   const [fromAmount, setFromAmount] = useState('');
   const [toAmount, setToAmount] = useState('0');
   const [isSwapping, setIsSwapping] = useState(false);
   const [swapFinished, setSwapFinished] = useState(false);
-  const [exchangeRate, setExchangeRate] = useState(0.9852);
-  const [balance, setBalance] = useState(1134.66);
+  const [exchangeRate, setExchangeRate] = useState(0);
+  const [realBalance, setRealBalance] = useState(0); 
+  const [allBalances, setAllBalances] = useState<any[]>([]); 
+  const [tokens, setTokens] = useState<any[]>([]);
 
   // Modal states
   const [showTokenSelector, setShowTokenSelector] = useState<'from' | 'to' | null>(null);
-  const [fromToken, setFromToken] = useState(TOKENS[0]);
-  const [toToken, setToToken] = useState(TOKENS[1]);
+  const [fromToken, setFromToken] = useState<any | null>(null);
+  const [toToken, setToToken] = useState<any | null>(null);
   const [searchToken, setSearchToken] = useState('');
   const [txHash, setTxHash] = useState('');
 
   useEffect(() => {
-    // Live rate simulation
-    const interval = setInterval(() => {
-      setExchangeRate(prev => {
-        const change = (Math.random() - 0.5) * 0.01;
-        return parseFloat((prev + change).toFixed(4));
-      });
-    }, 4000);
+    const fetchData = async () => {
+      try {
+         // Get tokens
+         const newTokens = await ArcAppKitAdapter.getTokens();
+         setTokens(newTokens);
+         if (!fromToken && newTokens.length > 0) setFromToken(newTokens[0]);
+         if (!toToken && newTokens.length > 1) setToToken(newTokens[1]);
+
+         // Get real balance
+         const { balance: newBalance, realBalance: newRealBalance, allBalances: newAllBalances } = await ArcAppKitAdapter.getBalance();
+         setRealBalance(newRealBalance); 
+         setAllBalances(newAllBalances); 
+         updateStoreBalance(newBalance);
+
+         // Get real rate
+         if (fromToken && toToken) {
+             const { rate: newRate } = await ArcAppKitAdapter.getLiveRate(fromToken.symbol, toToken.symbol);
+             setExchangeRate(newRate);
+         }
+      } catch (err) {
+         console.error("Failed to fetch data", err);
+      }
+    };
+    
+    fetchData();
+    const interval = setInterval(fetchData, 10000); // Poll every 10 seconds
     return () => clearInterval(interval);
-  }, []);
+  }, []); // Run on mount
+
+  useEffect(() => {
+      // Update rate when tokens change
+      if (fromToken && toToken) {
+           ArcAppKitAdapter.getLiveRate(fromToken.symbol, toToken.symbol).then(res => setExchangeRate(res.rate));
+      }
+  }, [fromToken, toToken]);
+
+  // Helper to get token balance from allBalances
+  const getTokenBalance = (symbol: string) => {
+    const tokenBalance = allBalances.find((b: any) => 
+        b.token?.symbol === symbol || b.token?.name?.includes(symbol)
+    );
+    return tokenBalance ? parseFloat(tokenBalance.amount || '0') : 0;
+  };
 
   useEffect(() => {
     if (fromAmount) {
-      if (fromToken.symbol === toToken.symbol) {
+      if (fromToken?.symbol === toToken?.symbol) {
          setToAmount(fromAmount);
       } else {
-         const rate = fromToken.symbol === 'USDC' && toToken.symbol === 'ARC' ? exchangeRate : (1 / exchangeRate); // Simplistic simulated cross-rates
-         setToAmount((parseFloat(fromAmount) * (fromToken.symbol === 'USDC' || toToken.symbol === 'USDC' ? rate : 1)).toFixed(4));
+         setToAmount((parseFloat(fromAmount) * exchangeRate).toFixed(4));
       }
     } else {
       setToAmount('0');
@@ -56,6 +84,12 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
 
   const handleSwap = async () => {
     if (!registeredUser?.supabaseUid) return;
+    
+    // Check real balance for actual swap
+    if (parseFloat(fromAmount) > realBalance) {
+        useStore.getState().displayToast("Insufficient real balance!");
+        return;
+    }
 
     setIsSwapping(true);
     setSwapFinished(false);
@@ -63,8 +97,8 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
     try {
       const result = await ArcAppKitAdapter.executeSwap(
         parseFloat(fromAmount),
-        fromToken.symbol,
-        toToken.symbol
+        fromToken?.symbol || '',
+        toToken?.symbol || ''
       );
       
       setTxHash(result.txId);
@@ -72,8 +106,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
       setSwapFinished(true);
       
       // Update balance if needed
-      if (fromToken.symbol === 'USDC') {
-         setBalance(prev => prev - parseFloat(fromAmount || '0'));
+      if (fromToken?.symbol === 'USDC') {
          updateStoreBalance(prev => prev - parseFloat(fromAmount || '0'));
       }
     } catch (error) {
@@ -113,11 +146,11 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
                 <div className="w-full bg-slate-50 rounded-2xl p-5 mb-8 border border-slate-100 space-y-4 text-left">
                    <div className="flex justify-between items-center">
                       <span className="text-[13px] text-slate-500">Paid</span>
-                      <span className="font-bold text-slate-800">{fromAmount} {fromToken.symbol}</span>
+                      <span className="font-bold text-slate-800">{fromAmount} {fromToken?.symbol || ''}</span>
                    </div>
                    <div className="flex justify-between items-center">
                       <span className="text-[13px] text-slate-500">Received</span>
-                      <span className="font-bold text-green-600">+{toAmount} {toToken.symbol}</span>
+                      <span className="font-bold text-green-600">+{toAmount} {toToken?.symbol || ''}</span>
                    </div>
                    <div className="w-full h-[1px] bg-slate-200 my-2"></div>
                    <div className="flex justify-between items-center">
@@ -159,11 +192,9 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
           <div className={`bg-white p-5 rounded-[24px] shadow-sm border transition-all duration-300 relative z-10 ${isSwapping ? 'border-blue-400/50 shadow-blue-100/50 opacity-80' : 'border-slate-200 focus-within:border-slate-400'}`}>
             <div className="flex justify-between items-center mb-4">
               <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">You Pay</span>
-              {fromToken.symbol === 'USDC' && (
-                 <span className="text-[12px] font-bold text-slate-500 flex items-center gap-1">
-                   Balance: {balance.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                 </span>
-              )}
+              <span className="text-[12px] font-bold text-slate-500 flex items-center gap-1">
+                Balance: {getTokenBalance(fromToken?.symbol || '').toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+              </span>
             </div>
             <div className="flex flex-col gap-4">
               <div className="flex justify-between items-center">
@@ -179,10 +210,10 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
                   onClick={() => !isSwapping && setShowTokenSelector('from')}
                   className="flex items-center gap-2 bg-slate-50 border border-slate-200 hover:bg-slate-100 transition-colors px-3 py-2 rounded-full shrink-0 h-10"
                 >
-                   <div className={`w-6 h-6 rounded-full ${fromToken.color} flex items-center justify-center text-white text-[8px] font-bold shrink-0 shadow-sm`}>
-                     {fromToken.symbol.substring(0,4)}
+                   <div className={`w-6 h-6 rounded-full ${fromToken?.color || 'bg-slate-300'} flex items-center justify-center text-white text-[8px] font-bold shrink-0 shadow-sm`}>
+                     {fromToken?.symbol.substring(0,4) || ''}
                    </div>
-                   <span className="font-bold text-slate-800 text-[14px]">{fromToken.symbol}</span>
+                   <span className="font-bold text-slate-800 text-[14px]">{fromToken?.symbol || ''}</span>
                    <ChevronDown size={16} className="text-slate-400" />
                 </button>
               </div>
@@ -209,6 +240,9 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
           <div className={`bg-white p-5 rounded-[24px] shadow-sm border mt-1.5 transition-all duration-300 relative z-10 ${isSwapping ? 'border-orange-400/50 shadow-orange-100/50 opacity-80' : 'border-slate-200 gap-2'}`}>
             <div className="flex justify-between items-center mb-4">
               <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">You Receive</span>
+              <span className="text-[12px] font-bold text-slate-500 flex items-center gap-1">
+                Balance: {getTokenBalance(toToken?.symbol || '').toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+              </span>
             </div>
             <div className="flex flex-col gap-4">
               <div className="flex justify-between items-center">
@@ -221,10 +255,10 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
                   onClick={() => !isSwapping && setShowTokenSelector('to')}
                   className="flex items-center gap-2 bg-slate-50 border border-slate-200 hover:bg-slate-100 transition-colors px-3 py-2 rounded-full shrink-0 h-10"
                 >
-                   <div className={`w-6 h-6 rounded-full ${toToken.color} flex items-center justify-center text-white text-[8px] font-bold shrink-0 shadow-sm`}>
-                     {toToken.symbol.substring(0,4)}
+                   <div className={`w-6 h-6 rounded-full ${toToken?.color || 'bg-slate-300'} flex items-center justify-center text-white text-[8px] font-bold shrink-0 shadow-sm`}>
+                     {toToken?.symbol.substring(0,4) || ''}
                    </div>
-                   <span className="font-bold text-slate-800 text-[14px]">{toToken.symbol}</span>
+                   <span className="font-bold text-slate-800 text-[14px]">{toToken?.symbol || ''}</span>
                    <ChevronDown size={16} className="text-slate-400" />
                 </button>
               </div>
@@ -244,7 +278,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
               <span className="text-[13px] text-slate-500">Live Rate</span>
               <span className="text-[13px] font-bold text-slate-800 flex items-center gap-1">
                 <Zap size={14} className="text-yellow-500" /> 
-                1 {fromToken.symbol} = {fromToken.symbol === 'USDC' && toToken.symbol === 'ARC' ? exchangeRate : (1 / exchangeRate).toFixed(4)} {toToken.symbol}
+                1 {fromToken?.symbol || ''} = {fromToken?.symbol === 'USDC' && toToken?.symbol === 'ARC' ? exchangeRate : (1 / (exchangeRate || 1)).toFixed(4)} {toToken?.symbol || ''}
               </span>
            </div>
            <div className="flex justify-between items-center mb-3">
@@ -260,10 +294,10 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
 
         <div className="mt-auto pb-4">
           <button 
-            disabled={!fromAmount || parseFloat(fromAmount) === 0 || isSwapping || (fromToken.symbol === 'USDC' && parseFloat(fromAmount) > balance) || fromToken.symbol === toToken.symbol}
+            disabled={!fromAmount || parseFloat(fromAmount) === 0 || isSwapping || (fromToken?.symbol === 'USDC' && parseFloat(fromAmount) > realBalance) || fromToken?.symbol === toToken?.symbol}
             onClick={handleSwap}
             className={`w-full font-bold py-4 rounded-full transition-all flex items-center justify-center gap-3 text-[15px] active:scale-95
-              ${(!fromAmount || parseFloat(fromAmount) === 0 || (fromToken.symbol === 'USDC' && parseFloat(fromAmount) > balance) || fromToken.symbol === toToken.symbol)
+              ${(!fromAmount || parseFloat(fromAmount) === 0 || (fromToken?.symbol === 'USDC' && parseFloat(fromAmount) > realBalance) || fromToken?.symbol === toToken?.symbol)
                 ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
                 : !isSwapping ? 'bg-slate-900 text-white shadow-lg hover:bg-slate-800' : 'bg-slate-800 text-white shadow-xl scale-[0.98]'
               }`}
@@ -273,9 +307,9 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
                 <RefreshCw size={20} className="animate-spin text-slate-300" />
                 Processing Swap...
               </>
-            ) : fromToken.symbol === toToken.symbol ? (
+            ) : fromToken?.symbol === toToken?.symbol ? (
               'Invalid Pair'
-            ) : fromToken.symbol === 'USDC' && parseFloat(fromAmount) > balance ? (
+            ) : fromToken?.symbol === 'USDC' && parseFloat(fromAmount) > realBalance ? (
               'Insufficient Balance'
             ) : (
               'Review Swap'
@@ -310,7 +344,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
                 Popular Tokens
               </div>
               <div className="flex flex-col">
-                {TOKENS.filter(t => t.name.toLowerCase().includes(searchToken.toLowerCase()) || t.symbol.toLowerCase().includes(searchToken.toLowerCase())).map((token) => (
+                {tokens.filter(t => t.name.toLowerCase().includes(searchToken.toLowerCase()) || t.symbol.toLowerCase().includes(searchToken.toLowerCase())).map((token) => (
                    <button 
                      key={token.symbol}
                      onClick={() => {
@@ -330,7 +364,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
                         </div>
                      </div>
                      <div className="text-right">
-                        <div className="font-bold text-slate-800">{token.balance}</div>
+                        <div className="font-bold text-slate-800">{getTokenBalance(token.symbol).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
                      </div>
                    </button>
                 ))}

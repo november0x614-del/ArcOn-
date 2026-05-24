@@ -187,23 +187,11 @@ app.get("/api/balance/:userId", async (req, res) => {
       }
     }
 
-    // Add Simulated balances (from webhook simulator) to reflect in UI
-    const { data: simData } = await supabaseAdmin
-      .from('transactions')
-      .select('amount')
-      .eq('user_id', userId)
-      .eq('status', 'success')
-      .like('internal_ref', 'sim_%');
-
-    let simBalance = 0;
-    if (simData && simData.length > 0) {
-      simBalance = simData.reduce((acc, curr) => acc + parseFloat(curr.amount || '0'), 0);
-    }
+    // (Removed simulated balances)
     
-    const totalBalance = baseBalance + simBalance;
-
     res.json({ 
-      balance: totalBalance, 
+      balance: baseBalance, 
+      realBalance: baseBalance,
       currency: "USDC",
       allBalances: tokenBalances
     });
@@ -448,6 +436,22 @@ app.post("/api/purchase/execute", async (req, res) => {
     console.error("Purchase error", error);
     res.status(500).json({ error: error.message });
   }
+});
+
+// Rates Route
+app.get("/api/rates", async (_req, res) => {
+  // Simple simulation for now
+  res.json({ rate: 0.9852 });
+});
+
+// Tokens Route
+app.get("/api/tokens", async (_req, res) => {
+  // Return the list of supported tokens
+  res.json([
+    { symbol: 'USDC', name: 'USD Coin', color: 'bg-[#2775ca]', type: 'Stablecoin' },
+    { symbol: 'EURC', name: 'Euro Coin', color: 'bg-[#0055ff]', type: 'Stablecoin' },
+    { symbol: 'cirBTC', name: 'Circle Bitcoin', color: 'bg-[#f7931a]', type: 'Wrapped Token' },
+  ]);
 });
 
 // AI Route

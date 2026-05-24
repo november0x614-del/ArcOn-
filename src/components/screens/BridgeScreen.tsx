@@ -17,7 +17,7 @@ const NETWORKS = [
 ];
 
 export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
-  const { balance, fetchBalance, fetchTransactions, displayToast, registeredUser } = useApp();
+  const { balance, fetchBalance, fetchTransactions, displayToast } = useApp();
   const [step, setStep] = useState<'form' | 'processing' | 'success'>('form');
   const [amount, setAmount] = useState('');
   const [fromNetwork, setFromNetwork] = useState(NETWORKS[0]);
@@ -38,7 +38,7 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
     setStep('processing');
     
     try {
-      const result = await ArcAppKitAdapter.executeBridge(
+      await ArcAppKitAdapter.executeBridge(
         numAmount,
         fromNetwork.name,
         toNetwork.name
