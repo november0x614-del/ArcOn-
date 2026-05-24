@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, ChevronDown, ArrowLeftRight, RefreshCw, Check, Zap, Search, X } from 'lucide-react';
-import { useApp } from '../../context/AppContext';
 
 interface SwapScreenProps {
   onBack: () => void;
@@ -14,12 +13,12 @@ const TOKENS = [
 ];
 
 export function SwapScreen({ onBack }: SwapScreenProps) {
-  const { registeredUser, balance, fetchBalance, fetchTransactions, displayToast } = useApp();
   const [fromAmount, setFromAmount] = useState('');
   const [toAmount, setToAmount] = useState('0');
   const [isSwapping, setIsSwapping] = useState(false);
   const [swapFinished, setSwapFinished] = useState(false);
   const [exchangeRate, setExchangeRate] = useState(0.9852);
+  const [balance, setBalance] = useState(1134.66);
 
   // Modal states
   const [showTokenSelector, setShowTokenSelector] = useState<'from' | 'to' | null>(null);
@@ -52,36 +51,16 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
     }
   }, [fromAmount, exchangeRate, fromToken, toToken]);
 
-  const handleSwap = async () => {
-    if (!registeredUser) return;
+  const handleSwap = () => {
     setIsSwapping(true);
-    try {
-      const response = await fetch('/api/swap/execute', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: registeredUser.supabaseUid,
-          amount: fromAmount,
-          fromToken: fromToken.symbol,
-          toToken: toToken.symbol
-        }),
-      });
-      if (!response.ok) throw new Error("Swap failed");
-      
-      const data = await response.json();
-      
+    setTimeout(() => {
       setIsSwapping(false);
       setSwapFinished(true);
-      setTxHash(data.txId);
-      
-      // Refresh balances
-      await fetchBalance();
-      await fetchTransactions();
-    } catch (e: any) {
-      console.error(e);
-      setIsSwapping(false);
-      displayToast("Swap failed: " + e.message);
-    }
+      setTxHash(`0x${Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join('')}`);
+      if (fromToken.symbol === 'USDC') {
+         setBalance(prev => prev - parseFloat(fromAmount || '0'));
+      }
+    }, 3500);
   };
 
   const flipTokens = () => {

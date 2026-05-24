@@ -209,9 +209,9 @@ export function BatchTransferScreen({ onBack, contacts }: BatchTransferScreenPro
                     {/* Input Tooling */}
                     <div className="bg-blue-50/50 border border-blue-100/50 rounded-[24px] p-5 mb-8 flex flex-col gap-4">
                         <div className="flex justify-between items-center w-full">
-                           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                              Quick Selection
-                           </span>
+                           <p className="text-[12px] font-black text-[#3FA2F6] uppercase tracking-widest flex items-center gap-2">
+                              <Plus size={14} strokeWidth={3} /> Quick Add Recipient
+                           </p>
                            <button
                               onClick={() => {
                                  setSelectedQuickAddIds([]);
