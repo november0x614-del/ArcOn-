@@ -293,12 +293,16 @@ app.post("/api/circle/webhook", express.raw({ type: "application/json" }), async
 app.post("/api/payments/create", async (req, res) => {
   try {
     const { walletId, destinationAddress, amount, userId, recipientName } = req.body;
+    const amountVal = parseFloat(amount);
+    if (isNaN(amountVal)) {
+      return res.status(400).json({ error: "Invalid amount" });
+    }
     const client = getCircleClient();
     
     // Audit Log for critical transfers
-    if (parseFloat(amount) > 100) {
+    if (amountVal > 100) {
       await logAuditEvent(supabaseAdmin, userId, 'TRANSFER_HIGH_VALUE', { 
-          amount, 
+          amount: amountVal, 
           destinationAddress 
       });
     }
@@ -307,7 +311,7 @@ app.post("/api/payments/create", async (req, res) => {
     const response = await client.createTransaction({
       walletId: walletId,
       destinationAddress: destinationAddress,
-      amount: [amount.toString()],
+      amount: [amountVal.toString()],
       fee: { type: "level", config: { feeLevel: "LOW" } },
       tokenAddress: "",
       blockchain: "ARC-TESTNET"
