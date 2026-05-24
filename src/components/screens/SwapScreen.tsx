@@ -1,21 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, ChevronDown, ArrowLeftRight, RefreshCw, Check, Zap, Search, X } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useStore } from '../../store/useStore';
 import { ArcAppKitAdapter } from '../../services/arc-app-kit/adapter';
+import { useBalances } from '../../hooks/useBalances';
 
 interface SwapScreenProps {
   onBack: () => void;
 }
 
 export function SwapScreen({ onBack }: SwapScreenProps) {
-  const { registeredUser, setBalance: updateStoreBalance } = useStore();
+  const { registeredUser } = useStore();
+  const queryClient = useQueryClient();
+  const { data: balanceData } = useBalances();
+  
   const [fromAmount, setFromAmount] = useState('');
   const [toAmount, setToAmount] = useState('0');
   const [isSwapping, setIsSwapping] = useState(false);
   const [swapFinished, setSwapFinished] = useState(false);
   const [exchangeRate, setExchangeRate] = useState(0);
-  const [realBalance, setRealBalance] = useState(0); 
-  const [allBalances, setAllBalances] = useState<any[]>([]); 
   const [tokens, setTokens] = useState<any[]>([]);
 
   // Modal states
@@ -25,35 +28,30 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
   const [searchToken, setSearchToken] = useState('');
   const [txHash, setTxHash] = useState('');
 
+  const getTokenData = (symbol: string) => {
+    return balanceData?.allBalances.find((b: any) => 
+        b.token?.symbol === symbol || b.token?.name?.includes(symbol)
+    );
+  };
+
+  const getTokenBalance = (symbol: string) => {
+    const tokenData = getTokenData(symbol);
+    return tokenData ? parseFloat(tokenData.amount || '0') : 0;
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchInitData = async () => {
       try {
-         // Get tokens
-         const newTokens = await ArcAppKitAdapter.getTokens();
-         setTokens(newTokens);
-         if (!fromToken && newTokens.length > 0) setFromToken(newTokens[0]);
-         if (!toToken && newTokens.length > 1) setToToken(newTokens[1]);
-
-         // Get real balance
-         const { balance: newBalance, realBalance: newRealBalance, allBalances: newAllBalances } = await ArcAppKitAdapter.getBalance();
-         setRealBalance(newRealBalance); 
-         setAllBalances(newAllBalances); 
-         updateStoreBalance(newBalance);
-
-         // Get real rate
-         if (fromToken && toToken) {
-             const { rate: newRate } = await ArcAppKitAdapter.getLiveRate(fromToken.symbol, toToken.symbol);
-             setExchangeRate(newRate);
-         }
+        const newTokens = await ArcAppKitAdapter.getTokens();
+        setTokens(newTokens);
+        if (!fromToken && newTokens.length > 0) setFromToken(newTokens[0]);
+        if (!toToken && newTokens.length > 1) setToToken(newTokens[1]);
       } catch (err) {
-         console.error("Failed to fetch data", err);
+        console.error("Failed to fetch initial data", err);
       }
     };
-    
-    fetchData();
-    const interval = setInterval(fetchData, 10000); // Poll every 10 seconds
-    return () => clearInterval(interval);
-  }, []); // Run on mount
+    fetchInitData();
+  }, []);
 
   useEffect(() => {
       // Update rate when tokens change
@@ -61,14 +59,6 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
            ArcAppKitAdapter.getLiveRate(fromToken.symbol, toToken.symbol).then(res => setExchangeRate(res.rate));
       }
   }, [fromToken, toToken]);
-
-  // Helper to get token balance from allBalances
-  const getTokenBalance = (symbol: string) => {
-    const tokenBalance = allBalances.find((b: any) => 
-        b.token?.symbol === symbol || b.token?.name?.includes(symbol)
-    );
-    return tokenBalance ? parseFloat(tokenBalance.amount || '0') : 0;
-  };
 
   useEffect(() => {
     if (fromAmount) {
@@ -85,9 +75,10 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
   const handleSwap = async () => {
     if (!registeredUser?.supabaseUid) return;
     
-    // Check real balance for actual swap
-    if (parseFloat(fromAmount) > realBalance) {
-        useStore.getState().displayToast("Insufficient real balance!");
+    // Check specific token balance for actual swap
+    const balance = getTokenBalance(fromToken?.symbol || '');
+    if (parseFloat(fromAmount) > balance) {
+        useStore.getState().displayToast("Insufficient balance!");
         return;
     }
 
@@ -98,17 +89,14 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
       const result = await ArcAppKitAdapter.executeSwap(
         parseFloat(fromAmount),
         fromToken?.symbol || '',
-        toToken?.symbol || ''
+        toToken?.symbol || '',
+        getTokenData(fromToken?.symbol || '')?.token?.tokenAddress || ''
       );
       
       setTxHash(result.txId);
       setIsSwapping(false);
       setSwapFinished(true);
-      
-      // Update balance if needed
-      if (fromToken?.symbol === 'USDC') {
-         updateStoreBalance(prev => prev - parseFloat(fromAmount || '0'));
-      }
+      queryClient.invalidateQueries({ queryKey: ['balances'] });
     } catch (error) {
       console.error(error);
       setIsSwapping(false);
@@ -155,7 +143,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
                    <div className="w-full h-[1px] bg-slate-200 my-2"></div>
                    <div className="flex justify-between items-center">
                       <span className="text-[12px] text-slate-400">Tx Hash</span>
-                      <span className="text-[12px] font-mono text-blue-500 truncate max-w-[120px]">{txHash}</span>
+                      <span className="text-[12px] font-mono text-blue-500 break-all">{txHash}</span>
                    </div>
                    <div className="flex justify-between items-center">
                       <span className="text-[12px] text-slate-400">Network</span>
@@ -294,10 +282,10 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
 
         <div className="mt-auto pb-4">
           <button 
-            disabled={!fromAmount || parseFloat(fromAmount) === 0 || isSwapping || (fromToken?.symbol === 'USDC' && parseFloat(fromAmount) > realBalance) || fromToken?.symbol === toToken?.symbol}
+            disabled={!fromAmount || parseFloat(fromAmount) === 0 || isSwapping || parseFloat(fromAmount) > getTokenBalance(fromToken?.symbol || '') || fromToken?.symbol === toToken?.symbol}
             onClick={handleSwap}
             className={`w-full font-bold py-4 rounded-full transition-all flex items-center justify-center gap-3 text-[15px] active:scale-95
-              ${(!fromAmount || parseFloat(fromAmount) === 0 || (fromToken?.symbol === 'USDC' && parseFloat(fromAmount) > realBalance) || fromToken?.symbol === toToken?.symbol)
+              ${(!fromAmount || parseFloat(fromAmount) === 0 || parseFloat(fromAmount) > getTokenBalance(fromToken?.symbol || '') || fromToken?.symbol === toToken?.symbol)
                 ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
                 : !isSwapping ? 'bg-slate-900 text-white shadow-lg hover:bg-slate-800' : 'bg-slate-800 text-white shadow-xl scale-[0.98]'
               }`}
@@ -309,7 +297,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
               </>
             ) : fromToken?.symbol === toToken?.symbol ? (
               'Invalid Pair'
-            ) : fromToken?.symbol === 'USDC' && parseFloat(fromAmount) > realBalance ? (
+            ) : parseFloat(fromAmount) > getTokenBalance(fromToken?.symbol || '') ? (
               'Insufficient Balance'
             ) : (
               'Review Swap'

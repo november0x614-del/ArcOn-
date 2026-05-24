@@ -1,7 +1,7 @@
 import { useStore } from "../../store/useStore";
 
 export const ArcAppKitAdapter = {
-    async executeSwap(amount: number, fromToken: string, toToken: string) {
+    async executeSwap(amount: number, fromToken: string, toToken: string, tokenAddress: string) {
         const { registeredUser } = useStore.getState();
         if (!registeredUser?.supabaseUid) throw new Error("User not registered");
 
@@ -12,7 +12,8 @@ export const ArcAppKitAdapter = {
                 userId: registeredUser.supabaseUid,
                 amount,
                 fromToken,
-                toToken
+                toToken,
+                tokenAddress
             }),
         });
         

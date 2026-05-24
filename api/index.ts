@@ -245,10 +245,10 @@ app.post("/api/webhook/simulate", async (req, res) => {
 // Swap Real Execution
 app.post("/api/swap/execute", async (req, res) => {
   try {
-    const { userId, amount, fromToken, toToken } = req.body;
+    const { userId, amount, fromToken, toToken, tokenAddress } = req.body;
     const dexAddress = "0x3333333333333333333333333333333333333333";
     
-    const result = await executeTransaction(supabaseAdmin, userId, amount, dexAddress, 'swap', { fromToken, toToken });
+    const result = await executeTransaction(supabaseAdmin, userId, amount, dexAddress, 'swap', { fromToken, toToken, tokenAddress });
     res.status(200).json({ message: "Swap queued", txId: result.txId });
   } catch (error: any) {
     console.error("Swap Error", error);

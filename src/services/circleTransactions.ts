@@ -1,5 +1,6 @@
+import { AppKit } from "@circle-fin/app-kit";
+import { createViemAdapterFromPrivateKey } from "@circle-fin/adapter-viem-v2";
 import { initiateDeveloperControlledWalletsClient } from "@circle-fin/developer-controlled-wallets";
-import * as crypto from "crypto";
 
 const getCircleClient = () => {
     const apiKey = process.env.CIRCLE_API_KEY;
@@ -59,41 +60,73 @@ export async function createWallet(supabaseAdmin: any, userId: string) {
     };
 }
 
+const getAppKit = () => {
+    const kitKey = process.env.KIT_KEY;
+    if (!kitKey) {
+        throw new Error("KIT_KEY is required for AppKit operations.");
+    }
+    return new AppKit();
+};
+
+// Note: For actual on-chain transaction execution, we keep the private key server-side.
+// DO NOT expose this to the frontend.
+const getAdapter = () => {
+    const privateKey = process.env.PRIVATE_KEY;
+    if (!privateKey) {
+        throw new Error("PRIVATE_KEY is required for AppKit adapters.");
+    }
+    return createViemAdapterFromPrivateKey({
+        privateKey: privateKey,
+    });
+};
+
 export async function executeTransaction(
     supabaseAdmin: any,
     userId: string,
     amount: number,
-    destinationAddress: string,
-    type: string,
+    _dexAddress: string, // Kept for compatibility, but AppKit handles routing
+    _type: string, // Kept for compatibility
     metadata: any
 ) {
-    const { data: walletData } = await supabaseAdmin
-        .from('user_wallets').select('wallet_id').eq('id', userId).single();
-    if (!walletData?.wallet_id) throw new Error("No wallet found");
+    console.log("Starting executeTransaction for user:", userId);
+    try {
+        const kit = getAppKit();
+        const adapter = getAdapter();
+        console.log("AppKit and Adapter initialized");
 
-    const client = getCircleClient();
+        // Perform the swap using AppKit
+        console.log("Initiating swap...");
+        const result = await kit.swap({
+            from: { adapter, chain: "Arc_Testnet" },
+            tokenIn: metadata.fromToken,
+            tokenOut: metadata.toToken,
+            amountIn: amount.toString(),
+            config: {
+                kitKey: process.env.KIT_KEY as string,
+            },
+        });
+        console.log("Swap completed successfully:", result.txHash);
 
-    const response = await client.createTransaction({
-        walletId: walletData.wallet_id,
-        destinationAddress: destinationAddress,
-        amount: [amount.toString()],
-        fee: { type: "level", config: { feeLevel: "LOW" } },
-        tokenAddress: "",
-        blockchain: "ARC-TESTNET"
-    } as any);
+        // Save to Supabase
+        const { error } = await supabaseAdmin.from('transactions').insert({
+            user_id: userId,
+            amount: `-${amount.toFixed(2)}`,
+            type: 'swap',
+            status: 'pending',
+            internal_ref: result.txHash, // This should be the on-chain hash
+            metadata: { ...metadata, real: true, explorerUrl: result.explorerUrl }
+        });
 
-    const { error } = await supabaseAdmin.from('transactions').insert({
-        user_id: userId,
-        amount: `-${amount.toFixed(2)}`,
-        type: type,
-        status: 'pending',
-        internal_ref: response.data?.id || `req_${crypto.randomBytes(8).toString('hex')}`,
-        metadata: { ...metadata, real: true }
-    });
+        if (error) {
+            console.error("Supabase insert error:", error);
+            throw error;
+        }
 
-    if (error) throw error;
-    
-    return {
-        txId: response.data?.id
-    };
+        return {
+            txId: result.txHash // Now returning the on-chain hash!
+        };
+    } catch (err: any) {
+        console.error("Critical error in executeTransaction:", err);
+        throw err;
+    }
 }
