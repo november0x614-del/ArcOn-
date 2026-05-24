@@ -462,8 +462,13 @@ app.post("/api/chat", async (req, res) => {
   try {
     const { message, history, localContext } = req.body;
     
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.json({ reply: "(Simulasi) Halo! Saya adalah asisten virtual Arc untuk membantu Anda dengan USDC di Arc Testnet. Karena API key tidak terdeteksi, saya hanya memberikan respon simulasi ini." });
+    }
+
     const ai = new GoogleGenAI({
-      apiKey: process.env.GEMINI_API_KEY,
+      apiKey: apiKey,
       httpOptions: {
         headers: { 'User-Agent': 'aistudio-build' }
       }
