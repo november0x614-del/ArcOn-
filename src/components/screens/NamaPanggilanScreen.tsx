@@ -9,7 +9,7 @@ interface NamaPanggilanScreenProps {
 export function NamaPanggilanScreen({ onBack }: NamaPanggilanScreenProps) {
   const { registeredUser, setRegisteredUser } = useApp();
   const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState(registeredUser?.username || 'RAKYAN INUKERTAPATI');
+  const [name, setName] = useState(registeredUser?.username || 'PENGGUNA ARC');
   const [showToast, setShowToast] = useState(false);
 
   const handleSave = () => {
@@ -85,7 +85,7 @@ export function NamaPanggilanScreen({ onBack }: NamaPanggilanScreenProps) {
             <div className="flex flex-col mt-2.5 px-1 items-start w-full">
               <span className="text-[12px] text-slate-500 font-medium">{name.length}/16</span>
               <button 
-                onClick={() => setName('RAKYAN INUKERTAPATI')}
+                onClick={() => setName('PENGGUNA ARC')}
                 className="w-max mt-3 border border-[#3FA2F6] text-[#3FA2F6] px-3 py-1.5 rounded-full text-[12px] font-bold hover:bg-blue-50 transition-colors"
               >
                 Use Full Name

@@ -13,8 +13,10 @@ interface SuccessScreenProps {
 }
 
 export function SuccessScreen({ amount, contact, onClose }: SuccessScreenProps) {
-  const targetName = contact?.name || "Fauzan";
-  const targetAccount = contact?.account || "0x8823...32a1";
+  const targetName = contact?.name || "Recipient";
+  const targetAccount = contact?.account && contact.account.length > 20 
+    ? `${contact.account.substring(0, 10)}...${contact.account.substring(contact.account.length - 8)}` 
+    : (contact?.account || "Arc Network");
 
   return (
     <div className="w-full h-full bg-white relative flex flex-col items-center pt-12 px-6 z-50 overflow-hidden animate-in fade-in duration-500">

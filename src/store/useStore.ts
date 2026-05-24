@@ -19,13 +19,12 @@ interface AppState {
   registeredUser: UserIdentity | null;
   setRegisteredUser: (user: UserIdentity | null) => void;
   
+  allBalances: any[];
+  setAllBalances: (balances: any[]) => void;
   // Financials
   balance: number;
   setBalance: (balance: number | ((prev: number) => number)) => void;
   fetchBalance: () => Promise<void>;
-  balances: Record<string, number>;
-  setBalances: (balances: Record<string, number>) => void;
-  fetchBalances: () => Promise<void>;
   pnlValue: number;
   setPnlValue: (value: number) => void;
   pnlPercentage: number;
@@ -46,6 +45,8 @@ interface AppState {
   setSelectedShortcuts: (shortcuts: ShortcutItem[]) => void;
   availableShortcuts: ShortcutItem[];
   setAvailableShortcuts: (shortcuts: ShortcutItem[]) => void;
+  contacts: any[];
+  fetchContacts: () => Promise<void>;
   selectedContact: any;
   setSelectedContact: (contact: any) => void;
   transferAmount: string;
@@ -87,6 +88,8 @@ export const useStore = create<AppState>()(
       setRegisteredUser: (user) => set({ registeredUser: user }),
       
       // Financials
+      allBalances: [],
+      setAllBalances: (balances) => set({ allBalances: balances }),
       balance: 0,
       setBalance: (balance) => set((state) => ({ 
         balance: typeof balance === 'function' ? balance(state.balance) : balance 
@@ -99,13 +102,13 @@ export const useStore = create<AppState>()(
           const response = await fetch(`/api/balance/${user.supabaseUid}`);
           if (!response.ok) {
             console.error(`Balance fetch failed with status: ${response.status}`);
-            useStore.getState().displayToast("Failed to fetch balance");
             return;
           }
           const text = await response.text();
           if (!text) return;
           const data = JSON.parse(text);
           const newBalance = data.balance || 0;
+          const allBalances = data.allBalances || [];
           
           const state = useStore.getState();
           let totalDeposit = 0;
@@ -119,29 +122,9 @@ export const useStore = create<AppState>()(
           const pnlValue = totalDeposit > 0 ? newBalance - totalDeposit : 0;
           const pnlPercentage = totalDeposit > 0 ? (pnlValue / totalDeposit) * 100 : 0;
 
-          set({ balance: newBalance, pnlValue, pnlPercentage });
+          set({ balance: newBalance, allBalances, pnlValue, pnlPercentage });
         } catch (error) {
           console.error('Failed to fetch balance', error);
-          useStore.getState().displayToast("Failed to fetch balance - Network or API Error");
-        }
-      },
-      balances: {},
-      setBalances: (balances) => set({ balances }),
-      fetchBalances: async () => {
-        const user = useStore.getState().registeredUser;
-        if (!user?.supabaseUid) return;
-        
-        try {
-          const response = await fetch(`/api/balances/${user.supabaseUid}`);
-          if (!response.ok) {
-            console.error(`Balances fetch failed with status: ${response.status}`);
-            return;
-          }
-          const balances = await response.json();
-          set({ balances });
-        } catch (error) {
-          console.error('Failed to fetch balances', error);
-          useStore.getState().displayToast("Failed to fetch balances - Network or API Error");
         }
       },
       pnlValue: 0,
@@ -176,8 +159,7 @@ export const useStore = create<AppState>()(
               currency: 'USDC',
               timestamp: new Date(tx.created_at).toLocaleString(),
               status: tx.status,
-              txHash: tx.metadata?.txHash,
-              metadata: tx.metadata
+              txHash: tx.metadata?.txHash
             };
           });
           
@@ -214,6 +196,17 @@ export const useStore = create<AppState>()(
       setSelectedShortcuts: (shortcuts) => set({ selectedShortcuts: shortcuts }),
       availableShortcuts: defaultAvailableShortcuts,
       setAvailableShortcuts: (shortcuts) => set({ availableShortcuts: shortcuts }),
+      contacts: [],
+      fetchContacts: async () => {
+        try {
+          const response = await fetch('/api/contacts');
+          if (!response.ok) return;
+          const data = await response.json();
+          set({ contacts: data });
+        } catch (error) {
+          console.error('Failed to fetch contacts', error);
+        }
+      },
       selectedContact: null,
       setSelectedContact: (contact) => set({ selectedContact: contact }),
       transferAmount: '0',
@@ -245,7 +238,6 @@ export const useStore = create<AppState>()(
         viewState: 'splash',
         registeredUser: null,
         balance: 0,
-        balances: {},
         transactions: [],
         pnlValue: 0,
         pnlPercentage: 0,

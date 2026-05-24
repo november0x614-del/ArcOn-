@@ -11,8 +11,8 @@ export function WithdrawScreen({ onBack, onSuccess }: WithdrawScreenProps) {
   const { balance, fetchBalance, fetchTransactions, displayToast, registeredUser } = useApp();
   const [step, setStep] = useState<'form' | 'processing' | 'success'>('form');
   const [amount, setAmount] = useState('');
-  const [selectedBank] = useState('Central Asia Bank (BCA)');
-  const [accountNumber] = useState('8830192831');
+  const [selectedBank] = useState('Arc Liquidity Bridge (Bank Settlement)');
+  const [accountNumber] = useState('•••• •••• 9283');
 
   const handleWithdraw = async () => {
     const numAmount = parseFloat(amount);
@@ -99,7 +99,7 @@ export function WithdrawScreen({ onBack, onSuccess }: WithdrawScreenProps) {
              </div>
              <div className="flex-1">
                 <p className="text-[14px] font-bold text-slate-800">{selectedBank}</p>
-                <p className="text-[12px] text-slate-500">{accountNumber} • RAKYAN I.</p>
+                <p className="text-[12px] text-slate-500">{accountNumber} • {registeredUser?.username?.split(' ')[0] || "PENGGUNA ARC"}.</p>
              </div>
              <ChevronRight size={18} className="text-slate-300" />
           </div>

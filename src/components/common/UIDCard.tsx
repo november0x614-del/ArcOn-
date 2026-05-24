@@ -12,15 +12,19 @@ interface UIDCardProps {
 export function UIDCard({ userName, isBlurred = false }: UIDCardProps) {
   const { registeredUser } = useApp();
   
-  const rawUid = (registeredUser?.supabaseUid || "8f7e-ffa1-0fb0-c52a").replace(/-/g, '').toUpperCase();
+  const rawUid = (registeredUser?.supabaseUid || "ARC-SYSTEM-USER").replace(/-/g, '').toUpperCase();
   const formattedUid = rawUid.match(/.{1,4}/g)?.slice(0, 4).join(' ') || rawUid;
 
   const currentTheme: Exclude<UIDCardTheme, undefined> = registeredUser?.uidTheme || 'default';
   const styles = THEME_STYLES[currentTheme];
 
-  const userRegDateStr = registeredUser?.registrationDate 
-    ? new Date(registeredUser.registrationDate).toLocaleDateString('en-US', { month: '2-digit', year: '2-digit' })
-    : "05/26";
+  const regDate = registeredUser?.registrationDate ? new Date(registeredUser.registrationDate) : new Date();
+  const userRegDateStr = regDate.toLocaleDateString('en-US', { month: '2-digit', year: '2-digit' });
+  
+  // Calculate valid thru as 5 years after registration
+  const validThruDate = new Date(regDate);
+  validThruDate.setFullYear(validThruDate.getFullYear() + 5);
+  const validThruStr = validThruDate.toLocaleDateString('en-US', { month: '2-digit', year: '2-digit' });
 
   const x = useMotionValue(0);
   const y = useMotionValue(0);
@@ -104,7 +108,7 @@ export function UIDCard({ userName, isBlurred = false }: UIDCardProps) {
              <div className="flex items-center gap-6">
                 <div className="flex flex-col items-end">
                   <span className={`text-[6px] ${styles.uidSubText} uppercase tracking-widest mb-0.5`}>Valid Thru</span>
-                  <span className={`text-[12px] font-mono ${styles.uidText}`}>05/30</span>
+                  <span className={`text-[12px] font-mono ${styles.uidText}`}>{validThruStr}</span>
                 </div>
                 <div className="flex flex-col items-end">
                   <span className={`text-[6px] ${styles.uidSubText} uppercase tracking-widest mb-0.5`}>Since</span>

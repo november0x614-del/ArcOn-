@@ -21,6 +21,7 @@ import {
 import { useUnifiedBalanceKit } from '../../services/unified-balance-kit';
 import { useApp } from '../../context/AppContext';
 import { UIDCard } from '../common/UIDCard';
+import { formatCurrency } from '../../lib/utils';
 
 interface AccountDetailScreenProps {
   onBack: () => void;
@@ -34,14 +35,22 @@ export function AccountDetailScreen({
   onBack, 
   onTransfer, 
   onReceive,
-  onTransactionClick,
-  userName = "ALEXANDER D"
+  onTransactionClick
 }: AccountDetailScreenProps) {
   const [activeTab, setActiveTab] = useState<'history' | 'token'>('history');
   const [showUID, setShowUID] = useState(false);
-  const { transactions, showBalance, setShowBalance, pnlValue, pnlPercentage, activeFilter, setActiveFilter } = useApp();
+  const { transactions, showBalance, setShowBalance, pnlValue, pnlPercentage, activeFilter, setActiveFilter, registeredUser, allBalances } = useApp();
+  const userName = registeredUser?.username || "PENGGUNA ARC";
   const kit = useUnifiedBalanceKit();
   const balance = kit.unifiedBalance.getBalance();
+
+  // Find individual network balances from allBalances
+  const arcBalance = allBalances.find(b => b.network === 'ARC' || b.network === 'ARC TESTNET')?.balance || 0;
+  const baseBalance = allBalances.find(b => b.network === 'BASE' || b.network === 'BASE SEPOLIA')?.balance || (balance > 0 ? balance * 0.25 : 0);
+  const arbBalance = allBalances.find(b => b.network === 'ARBITRUM' || b.network === 'ARBITRUM SEPOLIA')?.balance || (balance > 0 ? balance * 0.25 : 0);
+  
+  // Adjusted percentages for display if actual data is missing
+  const displayArcBalance = arcBalance || (balance > 0 ? balance * 0.50 : 0);
 
   const filteredTransactions = transactions.filter((tx) => {
     if (activeFilter === 'All') return true;
@@ -129,7 +138,7 @@ export function AccountDetailScreen({
               >
                 <div className="flex flex-col items-center gap-1">
                   <span className="text-[38px] sm:text-[42px] font-black tracking-tight leading-none text-white font-mono">
-                    {showBalance ? kit.unifiedBalance.getFormattedBalance() : '••••••'}
+                    {showBalance ? formatCurrency(balance) : '••••••'}
                   </span>
                   <span className="bg-blue-500/30 border border-blue-400/30 text-[#60a5fa] text-[9px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full mt-1 flex items-center gap-1">
                     Unified Balance
@@ -154,25 +163,25 @@ export function AccountDetailScreen({
                     <div className="rounded-xl p-2.5 border border-white/5 bg-white/5 flex flex-col justify-between">
                       <span className="text-[8.5px] font-mono font-extrabold text-[#3FA2F6]">ARC L1</span>
                       <span className="font-bold text-[12px] sm:text-[13px] mt-1 text-white">
-                        {showBalance ? `${(balance * 0.50).toFixed(2).replace('.', ',')}` : '••••'}
+                        {showBalance ? formatCurrency(displayArcBalance, '') : '••••'}
                       </span>
-                      <span className="text-[8px] text-slate-400 mt-1">Native (50%)</span>
+                      <span className="text-[8px] text-slate-400 mt-1">Native ({balance > 0 ? Math.round((displayArcBalance / balance) * 100) : 50}%)</span>
                     </div>
 
                     <div className="rounded-xl p-2.5 border border-white/5 bg-white/5 flex flex-col justify-between">
                       <span className="text-[8.5px] font-mono font-extrabold text-[#0052FF]">BASE</span>
                       <span className="font-bold text-[12px] sm:text-[13px] mt-1 text-slate-200">
-                        {showBalance ? `${(balance * 0.25).toFixed(2).replace('.', ',')}` : '••••'}
+                        {showBalance ? formatCurrency(baseBalance, '') : '••••'}
                       </span>
-                      <span className="text-[8px] text-slate-400 mt-1">L2 (25%)</span>
+                      <span className="text-[8px] text-slate-400 mt-1">L2 ({balance > 0 ? Math.round((baseBalance / balance) * 100) : 25}%)</span>
                     </div>
 
                     <div className="rounded-xl p-2.5 border border-white/5 bg-white/5 flex flex-col justify-between">
                       <span className="text-[8.5px] font-mono font-extrabold text-[#28A0F0]">ARBITRUM</span>
                       <span className="font-bold text-[12px] sm:text-[13px] mt-1 text-slate-200">
-                        {showBalance ? `${(balance * 0.25).toFixed(2).replace('.', ',')}` : '••••'}
+                        {showBalance ? formatCurrency(arbBalance, '') : '••••'}
                       </span>
-                      <span className="text-[8px] text-slate-400 mt-1">L2 (25%)</span>
+                      <span className="text-[8px] text-slate-400 mt-1">L2 ({balance > 0 ? Math.round((arbBalance / balance) * 100) : 25}%)</span>
                     </div>
                   </div>
 
@@ -186,8 +195,8 @@ export function AccountDetailScreen({
                 <span className="text-[13px] text-slate-400 border-b border-dashed border-slate-600 pb-0.5 uppercase tracking-wider font-semibold">
                   PnL 1 Bln
                 </span>
-                <span className="text-[13px] font-bold text-emerald-400">
-                  {`${pnlValue >= 0 ? '+' : '-'}${Math.abs(pnlValue).toFixed(2).replace('.', ',')} (${pnlPercentage >= 0 ? '+' : ''}${pnlPercentage.toFixed(2).replace('.', ',')}%)`}
+                <span className="text-[13px] font-bold text-emerald-400 font-mono">
+                  {`${pnlValue >= 0 ? '+' : '-'}${formatCurrency(Math.abs(pnlValue), '')} (${pnlPercentage >= 0 ? '+' : ''}${pnlPercentage.toFixed(2).replace('.', ',')}%)`}
                 </span>
               </div>
             </div>
@@ -312,18 +321,18 @@ export function AccountDetailScreen({
                 </div>
               </div>
               <div className="flex flex-col items-end">
-                <span className="font-bold text-[16px] text-slate-800">
-                  {(balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <span className="font-bold text-[16px] text-slate-800 font-mono">
+                  {formatCurrency(balance || 0)}
                 </span>
-                <span className="text-[12px] text-slate-400 font-medium tracking-wide">
-                  ~${(balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <span className="text-[12px] text-slate-400 font-medium tracking-wide font-mono">
+                  ~${formatCurrency(balance || 0, '')}
                 </span>
               </div>
             </div>
 
             {/* ARC Token Card */}
             <div className="bg-white rounded-2xl p-4 flex justify-between items-center shadow-sm border border-slate-100 hover:shadow-md transition-shadow cursor-pointer">
-              <div className="flex items-center gap-4">
+              <div className="items-center gap-4 flex">
                 <div className="w-12 h-12 bg-slate-900 rounded-full flex items-center justify-center text-white shadow-inner relative overflow-hidden">
                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/40 via-transparent to-blue-500/40"></div>
                    <span className="font-bold text-[10px] tracking-wider italic z-10">ARC</span>
@@ -334,8 +343,12 @@ export function AccountDetailScreen({
                 </div>
               </div>
               <div className="flex flex-col items-end">
-                <span className="font-bold text-[16px] text-slate-800">12,450.00</span>
-                <span className="text-[12px] text-slate-400 font-medium tracking-wide">~$249.00</span>
+                <span className="font-bold text-[16px] text-slate-800 font-mono">
+                  {formatCurrency(allBalances.find(b => b.symbol === 'ARC')?.balance || 0, 'ARC')}
+                </span>
+                <span className="text-[12px] text-slate-400 font-medium tracking-wide font-mono">
+                  ~${formatCurrency((allBalances.find(b => b.symbol === 'ARC')?.balance || 0) * 0.02, '')}
+                </span>
               </div>
             </div>
 

@@ -110,7 +110,7 @@ export function BayarVAScreen({ onBack }: BayarVAScreenProps) {
                <div className="p-5 space-y-4">
                   <div className="flex justify-between">
                      <span className="text-sm text-slate-500">Customer Name</span>
-                     <span className="text-sm font-bold text-slate-800">RAKYAN INUK</span>
+                     <span className="text-sm font-bold text-slate-800">PENGGUNA ARC</span>
                   </div>
                   <div className="flex justify-between">
                      <span className="text-sm text-slate-500">VA Number</span>
