@@ -3,7 +3,6 @@ import { logAuditEvent } from "../src/services/auditLogger.js";
 import { createWallet, performOnChainAction } from "../src/services/circleTransactions.js";
 import express from "express";
 import * as crypto from "crypto";
-import { GoogleGenAI } from "@google/genai";
 import { initiateDeveloperControlledWalletsClient } from "@circle-fin/developer-controlled-wallets";
 import { createClient } from "@supabase/supabase-js";
 import * as dotenv from "dotenv";
@@ -460,39 +459,8 @@ app.post("/api/chat", async (req, res) => {
   try {
     const { message, history, localContext } = req.body;
     
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return res.json({ reply: "(Simulasi) Halo! Saya adalah asisten virtual Arc untuk membantu Anda dengan USDC di Arc Testnet. Karena API key tidak terdeteksi, saya hanya memberikan respon simulasi ini." });
-    }
-
-    const ai = new GoogleGenAI({
-      apiKey: apiKey,
-      httpOptions: {
-        headers: { 'User-Agent': 'aistudio-build' }
-      }
-    });
-    
-    const contents = `
-You are Arc AI Agent, a helpful virtual assistant for Arc Commerce and Arc Testnet Wallet.
-You help users with USDC transactions on Arc Testnet, wallet management, checking transaction history (simulated context), and troubleshooting web3 payments.
-
-System State / Local Context (Latest data):
-${localContext || 'No current state context available.'}
-
-User History Context:
-${history.map((msg: any) => `${msg.sender}: ${msg.text}`).join('\n')}
-
-New User Message: ${message}
-
-Please respond concisely and helpfully in Indonesian. Use the system state context to answer questions about balances or recent transactions directly.
-`;
-
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: contents,
-    });
-
-    res.json({ reply: response.text });
+    // Always provide simulation response
+    res.json({ reply: "(Simulasi) Halo! Saya adalah asisten virtual Arc untuk membantu Anda dengan USDC di Arc Testnet." });
   } catch (error: any) {
     console.error(error);
     res.status(500).json({ error: error.message || 'Failed to generate response' });
