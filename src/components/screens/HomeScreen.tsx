@@ -7,7 +7,6 @@ import { StockRow } from "../common/StockRow";
 import { ProductCard } from "../common/ProductCard";
 import { NavItem } from "../common/NavItem";
 import { WalletCard } from "../common/WalletCard";
-import { formatCurrency } from "../../lib/utils";
 import {
   LogOut,
   Mail,
@@ -23,9 +22,12 @@ import {
   Home,
   Box,
   Coins,
+  Globe,
   ShieldCheck,
   Gamepad2,
   RefreshCw,
+  Zap,
+  Lock,
   Bot,
   Check,
   X
@@ -47,11 +49,12 @@ export const HomeScreen = React.memo(({
     visibleTokenCodes,
     setVisibleTokenCodes,
     fetchTransactions,
-    readReceiptIds,
-    fetchBalance
+    readReceiptIds
   } = useApp();
 
   const unreadCount = transactions.filter((tx) => !readReceiptIds.includes(tx.id)).length;
+  
+  const { fetchBalance } = useApp(); // Keep for PnL calculation
 
 
   useEffect(() => {
@@ -70,6 +73,8 @@ export const HomeScreen = React.memo(({
 
   const [currentPromoIndex, setCurrentPromoIndex] = useState(0);
   const promoScrollRef = useRef<HTMLDivElement>(null);
+
+  // Dapps Simulation States
 
   const handlePromoScroll = () => {
     if (promoScrollRef.current) {
@@ -102,6 +107,85 @@ export const HomeScreen = React.memo(({
     }, 4000);
     return () => clearInterval(interval);
   }, [currentPromoIndex]);
+
+  // ==========================================
+  // TRANSACTION FLOW SIMULATOR STATES & TICKERS
+  // ==========================================
+  const [simStep, setSimStep] = useState<number>(0); // 0: Idle, 1 to 6
+  const [simAmount, setSimAmount] = useState<string>("25");
+  const [simProduct, setSimProduct] = useState<string>(
+    "Kredit Komputasi Cloud",
+  );
+  const [simStatus, setSimStatus] = useState<
+    "idle" | "running" | "success" | "paused"
+  >("idle");
+  const [simLogs, setSimLogs] = useState<string[]>([]);
+
+  const runNextSimStep = (currentStep: number) => {
+    const nextStep = currentStep + 1;
+    if (nextStep > 6) {
+      setSimStatus("success");
+      return;
+    }
+    setSimStep(nextStep);
+
+    // Simulasikan pesan log sesuai step dengan menekankan panduan keamanan server-side yang ketat
+    const timestamp = new Date().toISOString().split("T")[1].slice(0, 8);
+    let logMsg = "";
+    switch (nextStep) {
+      case 1:
+        logMsg = `[${timestamp}] [CLIENT-SIDE] Memulai pesanan baru untuk "${simProduct}" senilai ${simAmount} USDC. Tidak ada secret key yang diakses oleh dApp client!`;
+        break;
+      case 2:
+        logMsg = `[${timestamp}] [SERVER-SIDE] Panggil APIs backend '/api/order'. Intelektualitas Circle SDK (@circle-fin/developer-controlled-wallets) dieksekusi seutuhnya di server-side agar kunci entitas tetap aman.`;
+        break;
+      case 3:
+        logMsg = `[${timestamp}] [ON-CHAIN] Transaksi senilai ${simAmount} USDC disiarkan langsung ke Arc Testnet L1 Ledger. Token gas menggunakan native USDC (No separate gas coin needed!).`;
+        break;
+      case 4:
+        logMsg = `[${timestamp}] [WEBHOOK] Settlement sukses. Platform Web3 Circle meneruskan payload HTTP POST ke Ngrok public agent: 'https://xxx.ngrok.app/api/circle/webhook'.`;
+        break;
+      case 5:
+        logMsg = `[${timestamp}] [SERVER-SIDE] Node.js memvalidasi Webhook Signature Header secara kriptografis menggunakan public keys Circle. Hasil verifikasi signature: AUTHENTIC / VALID.`;
+        break;
+      case 6:
+        logMsg = `[${timestamp}] [DATABASE] Transaksi divalidasi. Menggunakan kredensial admin di Backend untuk mengupdate kuota kredit database Supabase bagi user secara asinkron. Transaksi sukses! 🎉`;
+        break;
+    }
+    setSimLogs((prev) => [...prev, logMsg]);
+  };
+
+  useEffect(() => {
+    let timeout: any;
+    if (simStatus === "running" && simStep > 0 && simStep < 6) {
+      timeout = setTimeout(() => {
+        runNextSimStep(simStep);
+      }, 2000);
+    } else if (simStatus === "running" && simStep === 6) {
+      timeout = setTimeout(() => {
+        setSimStatus("success");
+      }, 1200);
+    }
+    return () => clearTimeout(timeout);
+  }, [simStatus, simStep]);
+
+  const [showTieredAccessAlert, setShowTieredAccessAlert] = useState(false);
+
+  const startSimulation = () => {
+    const timestamp = new Date().toISOString().split("T")[1].slice(0, 8);
+    setSimStep(1);
+    setSimStatus("running");
+    setSimLogs([
+      `[${timestamp}] [SYSTEM] Menyiapkan alur transaksi e-commerce native-stablecoin di Arc Testnet...`,
+      `[${timestamp}] [CLIENT-SIDE] Memulai pesanan baru untuk "${simProduct}" senilai ${simAmount} USDC. Tidak ada secret key yang diakses oleh dApp client!`,
+    ]);
+  };
+
+  const resetSimulation = () => {
+    setSimStep(0);
+    setSimStatus("idle");
+    setSimLogs([]);
+  };
 
   const [marketTokens, setMarketTokens] = useState([
     {
@@ -181,13 +265,19 @@ export const HomeScreen = React.memo(({
   }, []);
 
   const formatPrice = React.useCallback((price: number) => {
-    return formatCurrency(price, '$');
+    if (price >= 1000) {
+      return `$${price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+    return `$${price.toFixed(2)}`;
   }, []);
 
   const formatChange = React.useCallback((change: number, isDown: boolean) => {
     const absChange = Math.abs(change);
     const prefix = isDown ? "-" : "+";
-    return `${prefix}${formatCurrency(absChange, '')}`;
+    if (absChange >= 1000) {
+      return `${prefix}${absChange.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+    return `${prefix}${absChange.toFixed(2)}`;
   }, []);
 
 
@@ -249,6 +339,7 @@ export const HomeScreen = React.memo(({
                 {[
                   { name: "My Wallet", icon: <Wallet size={20} /> },
                   { name: "E-commerce", icon: <ShoppingBag size={20} /> },
+                  { name: "Simulation", icon: <Zap size={20} /> },
                 ].map((tab, i) => (
                   <div
                     key={tab.name}
@@ -313,6 +404,341 @@ export const HomeScreen = React.memo(({
                       />
                       <ChevronRight size={20} className="text-[#3FA2F6]" />
                     </div>
+                  </motion.div>
+                )}
+
+                {activeRekeningTab === 2 && (
+                  /* Interactive L1 Transaction Flow Simulator */
+                  <motion.div
+                    key="tab-3"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.3 }}
+                    className="bg-white rounded-[24px] p-5 border border-slate-200/60 shadow-sm mb-3 text-left font-sans flex flex-col gap-4 mx-4 lg:mx-0"
+                  >
+                    {/* Header */}
+                    <div className="flex justify-between items-start border-b border-slate-100 pb-3">
+                      <div>
+                        <h3 className="font-bold text-[16px] text-slate-800 flex items-center gap-1.5 leading-snug">
+                          <Zap
+                            size={18}
+                            className="text-[#3FA2F6] animate-pulse"
+                          />
+                          Simulasi Alur Transaksi Arc Commerce
+                        </h3>
+                        <p className="text-[11.5px] text-slate-500 mt-1">
+                          Interactive visualizer of the native-stablecoin Circle
+                          Web3 architecture on Arc Testnet L1.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Config Form - Only active if simulation is Idle */}
+                    {simStep === 0 ? (
+                      <div className="bg-slate-50/70 p-3.5 rounded-2xl border border-slate-100 flex flex-col gap-3">
+                        <span className="text-[11px] font-bold text-slate-400 tracking-wider uppercase">
+                          Konfigurasi Pembelian
+                        </span>
+                        <div className="grid grid-cols-2 gap-3.5">
+                          <div className="flex flex-col gap-1 text-left">
+                            <label className="text-[11px] font-semibold text-slate-500 font-sans">
+                              Pilih Produk
+                            </label>
+                            <select
+                              value={simProduct}
+                              onChange={(e) => setSimProduct(e.target.value)}
+                              className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-[12.5px] font-semibold text-slate-700 outline-none focus:border-[#3FA2F6] cursor-pointer"
+                            >
+                              <option value="Kredit Server L1">
+                                Kredit Server L1
+                              </option>
+                              <option value="Abonemen Premium">
+                                Abonemen Premium
+                              </option>
+                              <option value="Game Item - ArcBird Keys">
+                                Game Item - ArcBird Keys
+                              </option>
+                              <option value="Hardware Node Miner">
+                                Hardware Node Miner
+                              </option>
+                            </select>
+                          </div>
+                          <div className="flex flex-col gap-1 text-left">
+                            <label className="text-[11px] font-semibold text-slate-500 font-sans">
+                              Harga (USDC)
+                            </label>
+                            <input
+                              type="number"
+                              value={simAmount}
+                              onChange={(e) => setSimAmount(e.target.value)}
+                              className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-[12.5px] font-mono font-semibold text-slate-700 outline-none focus:border-[#3FA2F6]"
+                              placeholder="25"
+                              min="1"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Security Advisory Badges */}
+                        <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-3 flex gap-2.5 items-start">
+                          <Lock
+                            size={15}
+                            className="text-amber-600 mt-0.5 shrink-0"
+                          />
+                          <div className="flex flex-col gap-0.5 text-left font-sans">
+                            <p className="text-[11px] font-bold text-amber-800">
+                              Prinsip Keamanan Server-Side (Critical!)
+                            </p>
+                            <p className="text-[10px] text-amber-700 leading-normal">
+                              Dalam arsitektur{" "}
+                              <strong className="text-amber-900">
+                                Circle Web3
+                              </strong>
+                              , pemanggilan API, kunci privat{" "}
+                              <code className="bg-amber-100 px-1 py-0.2 rounded text-red-600 font-mono">
+                                SUPABASE_SECRET_KEY
+                              </code>
+                              , dan{" "}
+                              <code className="bg-amber-100 px-1 py-0.2 rounded text-red-600 font-mono">
+                                CIRCLE_ENTITY_SECRET
+                              </code>{" "}
+                              <strong>WAJIB</strong> dijalankan seutuhnya di
+                              Server-Side (API Routes / Server Actions) dan
+                              dilarang terekspos di browser client.
+                            </p>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={startSimulation}
+                          className="w-full bg-[#3FA2F6] hover:bg-[#328fdc] text-white font-bold py-2.5 rounded-xl text-[13.5px] transition-all flex items-center justify-center gap-2 border-0 shadow-sm cursor-pointer"
+                        >
+                          <Zap size={14} /> Mulai Simulasi Transaksi L1
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-4">
+                        {/* Interactive Map Nodes */}
+                        <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100/60 flex flex-col gap-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider font-sans">
+                              Step-by-Step Flow Map
+                            </span>
+                            <span className="text-[11px] font-bold text-slate-400 font-mono">
+                              Step {simStep} dari 6
+                            </span>
+                          </div>
+
+                          {/* Linear Steps Container */}
+                          <div className="flex flex-col gap-3.5 relative">
+                            {/* Connector background line */}
+                            <div className="absolute left-4 top-4 bottom-4 w-[2px] bg-slate-200 z-0"></div>
+
+                            {/* Dynamic colored connector line based on current step */}
+                            <div
+                              className="absolute left-4 top-4 w-[2px] bg-blue-500 z-0 transition-all duration-300"
+                              style={{
+                                height: `${((simStep - 1) / 5) * 88}%`,
+                                maxHeight: "100%",
+                              }}
+                            ></div>
+
+                            {/* Step Nodes */}
+                            {[
+                              {
+                                step: 1,
+                                label: "User Orders Checkout",
+                                source: "Client App",
+                                desc: `Inisiasi pesanan senilai ${simAmount} USDC`,
+                                icon: <ShoppingBag size={14} />,
+                              },
+                              {
+                                step: 2,
+                                label: "Call Circle APIs",
+                                source: "Secure Routing",
+                                desc: "@circle-fin/developer-controlled-wallets init",
+                                icon: <Lock size={14} />,
+                              },
+                              {
+                                step: 3,
+                                label: "Arc USDC L1 Payment",
+                                source: "Network L1",
+                                desc: `Token gas native berbasis USDC`,
+                                icon: <Coins size={14} />,
+                              },
+                              {
+                                step: 4,
+                                label: "Circle Webhook Callback",
+                                source: "API Portal",
+                                desc: "Settle notification dikirim asinkron via Ngrok",
+                                icon: <Globe size={14} />,
+                              },
+                              {
+                                step: 5,
+                                label: "Signature Verification",
+                                source: "Backend Server",
+                                desc: "Memvalidasi Circle-Signature header kriptografis",
+                                icon: <ShieldCheck size={14} />,
+                              },
+                              {
+                                step: 6,
+                                label: "Supabase Data Sync",
+                                source: "Database Sync",
+                                desc: "Sinkronisasi pulsa/kredit user di database",
+                                icon: <Box size={14} />,
+                              },
+                            ].map((node) => {
+                              const isCompleted =
+                                simStep > node.step || simStatus === "success";
+                              const isActive =
+                                simStep === node.step &&
+                                simStatus === "running";
+
+                              return (
+                                <div
+                                  key={node.step}
+                                  className="flex gap-4 items-start relative z-10 text-left"
+                                >
+                                  <div
+                                    className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all shrink-0 ${
+                                      isCompleted
+                                        ? "bg-emerald-500 border-emerald-500 text-white"
+                                        : isActive
+                                          ? "bg-blue-100 border-[#3FA2F6] text-[#3FA2F6] animate-pulse ring-4 ring-blue-50"
+                                          : "bg-white border-slate-200 text-slate-400"
+                                    }`}
+                                  >
+                                    {isCompleted ? (
+                                      <span className="font-bold text-[12px]">
+                                        ✓
+                                      </span>
+                                    ) : (
+                                      node.icon
+                                    )}
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <p
+                                        className={`text-[12.5px] font-bold ${isActive ? "text-blue-600" : isCompleted ? "text-emerald-700" : "text-slate-700"} font-sans`}
+                                      >
+                                        {node.label}
+                                      </p>
+                                      <span className="text-[9px] font-semibold text-slate-400 tracking-wider uppercase px-1.5 py-0.2 bg-slate-100 rounded leading-none">
+                                        {node.source}
+                                      </span>
+                                    </div>
+                                    <p className="text-[11px] text-slate-500 font-sans mt-0.5 leading-snug">
+                                      {node.desc}
+                                    </p>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Simulated Terminal Live Console */}
+                        <div className="bg-slate-900 rounded-xl p-3.5 font-mono text-[10.5px] text-slate-300 text-left h-[140px] overflow-y-auto flex flex-col gap-1 shadow-inner relative border border-slate-800">
+                          <div className="absolute right-3 top-2.5 text-[8.5px] font-bold text-slate-500 uppercase tracking-widest bg-slate-950 px-1.5 py-0.5 rounded leading-none select-none">
+                            Dev Server Console
+                          </div>
+
+                          {simLogs.map((log, i) => {
+                            let colorClass = "text-slate-300";
+                            if (log.includes("[CLIENT-SIDE]"))
+                              colorClass = "text-sky-300";
+                            if (log.includes("[SERVER-SIDE]"))
+                              colorClass = "text-amber-300 font-medium";
+                            if (log.includes("[ON-CHAIN]"))
+                              colorClass = "text-yellow-250";
+                            if (log.includes("[WEBHOOK]"))
+                              colorClass = "text-indigo-300";
+                            if (log.includes("[DATABASE]"))
+                              colorClass = "text-emerald-300";
+                            if (log.includes("[SYSTEM]"))
+                              colorClass = "text-slate-400 italic";
+
+                            return (
+                              <div
+                                key={i}
+                                className={`leading-normal break-words ${colorClass}`}
+                              >
+                                {log}
+                              </div>
+                            );
+                          })}
+
+                          {simStatus === "running" && (
+                            <div className="text-[#3FA2F6] flex items-center gap-1.5 animate-pulse mt-1 select-none font-sans text-[11px]">
+                              <span className="w-1.5 h-1.5 bg-[#3FA2F6] rounded-full animate-ping"></span>
+                              Memproses transaksional... server bekerja asinkron
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Simulation Controls */}
+                        <div className="flex flex-col gap-2.5">
+                          {simStatus === "success" ? (
+                            <div className="w-full flex flex-col gap-2.5 mt-1">
+                              <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-center flex flex-col items-center justify-center animate-in zoom-in-95 duration-200">
+                                <span className="text-emerald-800 font-bold text-[13px] flex items-center gap-1.5 leading-snug font-sans">
+                                  <ShieldCheck
+                                    size={16}
+                                    className="text-emerald-600"
+                                  />
+                                  Simulasi Pembayaran Berhasil!
+                                </span>
+                                <p className="text-[10px] text-slate-500 leading-normal font-sans mt-1">
+                                  Alur asinkron Circle Webhook dialihkan via
+                                  Ngrok ke Supabase DB berhasil mensinkronisasi
+                                  data kredit pengguna dengan signature valid.
+                                </p>
+                              </div>
+                              <button
+                                onClick={resetSimulation}
+                                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2.5 rounded-xl text-[13px] transition-colors border-0 cursor-pointer font-sans"
+                              >
+                                Ulangi Simulasi Baru
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex gap-2 w-full font-sans">
+                              <button
+                                onClick={() => {
+                                  if (simStatus === "running") {
+                                    setSimStatus("paused");
+                                  } else {
+                                    setSimStatus("running");
+                                  }
+                                }}
+                                className={`flex-1 ${simStatus === "running" ? "bg-amber-500 hover:bg-amber-600" : "bg-[#3FA2F6] hover:bg-[#328fdc]"} text-white font-bold py-2 px-3 rounded-lg text-[13px] border-0 cursor-pointer transition-colors`}
+                              >
+                                {simStatus === "running"
+                                  ? "Pause Auto-Play"
+                                  : "Mulai Auto-Play"}
+                              </button>
+
+                              <button
+                                onClick={() => runNextSimStep(simStep)}
+                                disabled={
+                                  simStatus === "running" || simStep >= 6
+                                }
+                                className="bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:opacity-40 font-bold py-2 px-4 rounded-lg text-[13px] border-0 cursor-pointer transition-all"
+                              >
+                                Langkah Manual →
+                              </button>
+
+                              <button
+                                onClick={resetSimulation}
+                                className="bg-red-50 hover:bg-red-100 text-red-600 font-bold py-2 px-3 rounded-lg text-[13px] border-0 cursor-pointer transition-all"
+                              >
+                                Reset
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -688,7 +1114,45 @@ export const HomeScreen = React.memo(({
         </div>
       </div>
 
-{/* Deposit/Withdraw Initial Modal */}
+      {/* Deposit/Withdraw Initial Modal */}
+      {/* Step-Up Authentication (Tiered Access) Modal */}
+      {showTieredAccessAlert && (
+        <div className="absolute inset-0 z-[160] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            onClick={() => setShowTieredAccessAlert(false)}
+          ></div>
+          <div className="bg-white rounded-3xl p-6 w-full relative z-10 animate-in zoom-in-95 duration-300 shadow-2xl flex flex-col items-center text-center">
+            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4">
+              <ShieldCheck size={32} className="text-red-500" />
+            </div>
+            <h3 className="font-bold text-[18px] text-slate-800 leading-tight">
+              Step-Up Authentication Required
+            </h3>
+            <p className="text-[13px] text-slate-500 mt-2 mb-6 font-sans">
+              Untuk transaksi bernilai tinggi di atas 100 USDC atau cash-out,
+              verifikasi biometrik tambahan diperlukan (Tiered Access).
+            </p>
+            <div className="flex flex-col gap-2 w-full">
+              <button
+                onClick={() => {
+                  setShowTieredAccessAlert(false);
+                  onNavigate("settings");
+                }}
+                className="w-full bg-[#005faa] text-white font-bold py-3.5 rounded-full text-[14px] hover:bg-[#004780] transition-colors"
+              >
+                Verifikasi Sekarang
+              </button>
+              <button
+                onClick={() => setShowTieredAccessAlert(false)}
+                className="w-full bg-slate-100 text-slate-600 font-bold py-3.5 rounded-full text-[14px] hover:bg-slate-200 transition-colors"
+              >
+                Batalkan Transaksi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Manage Token Markets Modal */}
       {showManageMarketModal && (

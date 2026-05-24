@@ -18,7 +18,7 @@ export function FaucetScreen({ onBack }: FaucetScreenProps) {
 
     setStatus('loading');
     
-    // Faucet network request
+    // Simulate faucet network request
     setTimeout(() => {
       setStatus('success');
       setTxHash('0x9a3f...4b8d');

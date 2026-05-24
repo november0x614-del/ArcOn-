@@ -19,8 +19,6 @@ interface AppState {
   registeredUser: UserIdentity | null;
   setRegisteredUser: (user: UserIdentity | null) => void;
   
-  allBalances: any[];
-  setAllBalances: (balances: any[]) => void;
   // Financials
   balance: number;
   setBalance: (balance: number | ((prev: number) => number)) => void;
@@ -45,8 +43,6 @@ interface AppState {
   setSelectedShortcuts: (shortcuts: ShortcutItem[]) => void;
   availableShortcuts: ShortcutItem[];
   setAvailableShortcuts: (shortcuts: ShortcutItem[]) => void;
-  contacts: any[];
-  fetchContacts: () => Promise<void>;
   selectedContact: any;
   setSelectedContact: (contact: any) => void;
   transferAmount: string;
@@ -88,8 +84,6 @@ export const useStore = create<AppState>()(
       setRegisteredUser: (user) => set({ registeredUser: user }),
       
       // Financials
-      allBalances: [],
-      setAllBalances: (balances) => set({ allBalances: balances }),
       balance: 0,
       setBalance: (balance) => set((state) => ({ 
         balance: typeof balance === 'function' ? balance(state.balance) : balance 
@@ -108,7 +102,6 @@ export const useStore = create<AppState>()(
           if (!text) return;
           const data = JSON.parse(text);
           const newBalance = data.balance || 0;
-          const allBalances = data.allBalances || [];
           
           const state = useStore.getState();
           let totalDeposit = 0;
@@ -122,7 +115,7 @@ export const useStore = create<AppState>()(
           const pnlValue = totalDeposit > 0 ? newBalance - totalDeposit : 0;
           const pnlPercentage = totalDeposit > 0 ? (pnlValue / totalDeposit) * 100 : 0;
 
-          set({ balance: newBalance, allBalances, pnlValue, pnlPercentage });
+          set({ balance: newBalance, pnlValue, pnlPercentage });
         } catch (error) {
           console.error('Failed to fetch balance', error);
         }
@@ -196,17 +189,6 @@ export const useStore = create<AppState>()(
       setSelectedShortcuts: (shortcuts) => set({ selectedShortcuts: shortcuts }),
       availableShortcuts: defaultAvailableShortcuts,
       setAvailableShortcuts: (shortcuts) => set({ availableShortcuts: shortcuts }),
-      contacts: [],
-      fetchContacts: async () => {
-        try {
-          const response = await fetch('/api/contacts');
-          if (!response.ok) return;
-          const data = await response.json();
-          set({ contacts: data });
-        } catch (error) {
-          console.error('Failed to fetch contacts', error);
-        }
-      },
       selectedContact: null,
       setSelectedContact: (contact) => set({ selectedContact: contact }),
       transferAmount: '0',

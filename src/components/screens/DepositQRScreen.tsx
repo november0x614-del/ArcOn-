@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ArrowLeft, Copy, Check, Info } from "lucide-react";
+import { ArrowLeft, Copy, Check, Info, Scan } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useApp } from "../../context/AppContext";
 
@@ -10,12 +10,53 @@ interface DepositQRScreenProps {
 export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
   const { 
     registeredUser, 
+    displayToast,  
+    fetchBalance,
+    fetchTransactions,
+    setViewState,
+    setSelectedContact,
+    setTransferAmount // Add this
   } = useApp();
   const [copied, setCopied] = useState(false);
   const [amount, setAmount] = useState<string>("");
   const [isEditingAmount, setIsEditingAmount] = useState(false);
+  const [isScanningSim, setIsScanningSim] = useState(false);
+  const [scanSimComplete, setScanSimComplete] = useState(false);
   
+  const handleSimulateCamera = () => {
+    setIsScanningSim(true);
+    setScanSimComplete(false);
+    
+    // Simulate scan detection in 2 seconds
+    setTimeout(() => {
+      setScanSimComplete(true);
+      
+      // Navigate to amountInputScreen with mock contact data
+      const mockContact = {
+        id: 'mock-1',
+        letter: 'A',
+        name: 'ANNISA PATRIA',
+        network: 'EVM (Arc Testnet)',
+        account: '0x1A2bc...3c4A',
+        initials: 'AP'
+      };
+      
+      setTransferAmount(amount || '20'); // Set amount in context!
+      setSelectedContact(mockContact);
+      setViewState("amountInput");
+      
+      setIsScanningSim(false);
+      setScanSimComplete(false);
+    }, 2000);
+  };
+
   const address = registeredUser?.walletAddress || "No Wallet Created Yet";
+
+  React.useEffect(() => {
+    if (isScanningSim && !scanSimComplete) {
+      // Simulate scan
+    }
+  }, [isScanningSim, scanSimComplete]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(address);
@@ -70,7 +111,47 @@ export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
                 excavate: true,
               }}
             />
+
+            {/* Scan Simulator Overlay */}
+            {isScanningSim && (
+              <div className="absolute inset-0 bg-slate-900/80 z-20 flex items-center justify-center backdrop-blur-sm animate-in fade-in duration-300 rounded-[28px]">
+                {/* Camera Reticle Brackets */}
+                <div
+                  className={`absolute top-4 left-4 w-8 h-8 border-t-[3px] border-l-[3px] rounded-tl-xl transition-colors duration-300 ${scanSimComplete ? "border-green-400 shadow-[inset_4px_4px_10px_-4px_rgba(74,222,128,0.5)]" : "border-blue-400"}`}
+                ></div>
+                <div
+                  className={`absolute top-4 right-4 w-8 h-8 border-t-[3px] border-r-[3px] rounded-tr-xl transition-colors duration-300 ${scanSimComplete ? "border-green-400 shadow-[inset_-4px_4px_10px_-4px_rgba(74,222,128,0.5)]" : "border-blue-400"}`}
+                ></div>
+                <div
+                  className={`absolute bottom-4 left-4 w-8 h-8 border-b-[3px] border-l-[3px] rounded-bl-xl transition-colors duration-300 ${scanSimComplete ? "border-green-400 shadow-[inset_4px_-4px_10px_-4px_rgba(74,222,128,0.5)]" : "border-blue-400"}`}
+                ></div>
+                <div
+                  className={`absolute bottom-4 right-4 w-8 h-8 border-b-[3px] border-r-[3px] rounded-br-xl transition-colors duration-300 ${scanSimComplete ? "border-green-400 shadow-[inset_-4px_-4px_10px_-4px_rgba(74,222,128,0.5)]" : "border-blue-400"}`}
+                ></div>
+
+                {/* Scanning Laser Line */}
+                {!scanSimComplete && (
+                  <div className="w-[85%] h-[2px] bg-blue-400 shadow-[0_0_12px_3px_#60A5FA] absolute left-[7.5%] top-[10%] animate-[scan_1.5s_ease-in-out_infinite]"></div>
+                )}
+
+                {/* Success Detection Box */}
+                {scanSimComplete && (
+                  <div className="w-[140px] h-[140px] border-2 border-green-400/50 bg-green-500/10 rounded-2xl flex items-center justify-center animate-in zoom-in spin-in-12 duration-500 shadow-[0_0_20px_0_rgba(74,222,128,0.2)]">
+                    <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center shadow-lg text-white">
+                      <Check size={24} strokeWidth={3} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
+
+          <button
+            onClick={handleSimulateCamera}
+            className="mb-6 bg-white hover:bg-blue-50 text-blue-600 font-bold px-4 py-2.5 rounded-xl text-[12px] flex items-center gap-2 transition-all active:scale-95 border border-blue-100 shadow-sm hover:shadow"
+          >
+            <Scan size={14} /> Simulate Camera View
+          </button>
 
           {/* Set Amount Input */}
           <div className="w-full mb-6">
@@ -144,7 +225,16 @@ export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
       </div>
 
       {/* Webhook Simulation Overlay */}
+      {/* Simulation removed */}
 
+      <style>{`
+         @keyframes scan {
+            0%, 100% { top: 10%; opacity: 0; }
+            20% { opacity: 1; }
+            50% { top: 90%; opacity: 1; }
+            80% { opacity: 0; }
+         }
+      `}</style>
     </div>
   );
 }

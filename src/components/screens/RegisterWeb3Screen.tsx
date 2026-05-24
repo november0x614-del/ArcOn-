@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Wallet, Eye, EyeOff, ShieldCheck, Lock, CheckCircle2, AlertCircle } from 'lucide-react';
-import { motion } from 'motion/react';
+import { ArrowLeft, Wallet, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 
 interface RegisterWeb3ScreenProps {
@@ -132,199 +131,105 @@ export function RegisterWeb3Screen({ onBack, onComplete }: RegisterWeb3ScreenPro
   }, [step]);
 
   return (
-    <div className="w-full h-full bg-white relative flex flex-col z-50 overflow-hidden font-sans">
-      {/* Background Gradients (Atmospheric) */}
-      <div className="absolute top-0 left-0 w-full h-[300px] bg-gradient-to-b from-slate-50 to-white -z-10" />
-      <div className="absolute -top-20 -right-20 w-64 h-64 bg-blue-50 rounded-full blur-3xl opacity-50 -z-10" />
-
+    <div className="w-full h-full bg-white relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
       {/* Header */}
-      <div className="flex items-center px-6 pt-12 pb-6 relative z-10">
-        <button 
-          onClick={onBack} 
-          className="w-10 h-10 bg-white shadow-sm border border-slate-100 rounded-2xl flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-all active:scale-95"
-        >
-          <ArrowLeft size={18} />
+      <div className="flex items-center px-4 pt-12 pb-4 border-b border-slate-100 shadow-sm relative z-10">
+        <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full transition-colors active:bg-slate-200">
+          <ArrowLeft size={24} className="text-slate-800" />
         </button>
-        <div className="ml-4">
-          <p className="text-[10px] font-black text-[#1AA3FF] uppercase tracking-[0.2em]">Circle Infrastructure</p>
-          <h2 className="font-black text-[15px] text-slate-900">Registration</h2>
-        </div>
+        <h2 className="font-bold text-[16px] text-slate-800 ml-2">Open New Account</h2>
       </div>
       
       {step === 1 && (
-        <motion.div 
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="flex-1 p-6 flex flex-col pt-4"
-        >
-          {/* Custom UI Header Style from Docs */}
-          <div className="mb-10 text-left">
-            <h3 className="text-[32px] font-black leading-tight tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-[#B090F5] to-[#1AA3FF] pb-1">
-              Set up your<br/>Web3 Account
-            </h3>
-            <div className="w-12 h-1 bg-gradient-to-r from-[#B090F5] to-[#1AA3FF] rounded-full mt-2" />
-            <p className="text-[14px] text-slate-500 mt-5 leading-relaxed font-medium">
-              Initialize your secure, <span className="text-[#1AA3FF] font-bold">Circle-powered</span> developer-controlled wallet.
-            </p>
-          </div>
+        <div className="flex-1 p-6 flex flex-col pt-8">
+          <h3 className="text-[26px] tracking-tight font-extrabold text-slate-800 leading-tight mb-2">Start Your<br/>Easy Steps</h3>
+          <p className="text-[14.5px] text-slate-500 mb-8 mt-2">Prepare your ID Card and enter details to create your Web3 Wallet.</p>
           
-          <div className="space-y-5">
-            <div className="group">
-              <label className="text-[11px] font-black text-slate-400 mb-2 block uppercase tracking-wider group-focus-within:text-[#1AA3FF] transition-colors">Personal Username</label>
-              <div className="relative">
-                <input 
-                  type="text" 
-                  value={username} 
-                  onChange={e => setUsername(e.target.value)} 
-                  className="w-full bg-slate-50/50 border border-slate-100 px-5 py-4 rounded-2xl outline-none focus:border-[#1AA3FF] focus:bg-white focus:ring-4 focus:ring-blue-50 text-[15px] font-bold text-slate-800 transition-all placeholder:text-slate-300" 
-                  placeholder="e.g. Satoshi_25" 
-                />
-              </div>
+          <div className="space-y-6">
+            <div>
+              <label className="text-[12.5px] font-bold text-[#005faa] mb-1 block">Username</label>
+              <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="w-full border-b-[2px] border-slate-200 py-2 outline-none focus:border-[#005faa] text-[16px] font-bold text-slate-800 transition-colors" placeholder="Enter Username" />
             </div>
-
-            <div className="group">
-              <label className="text-[11px] font-black text-slate-400 mb-2 block uppercase tracking-wider group-focus-within:text-[#1AA3FF] transition-colors">Email Address</label>
-              <div className="relative">
-                <input 
-                  type="email" 
-                  value={email} 
-                  onChange={e => setEmail(e.target.value)} 
-                  className="w-full bg-slate-50/50 border border-slate-100 px-5 py-4 rounded-2xl outline-none focus:border-[#1AA3FF] focus:bg-white focus:ring-4 focus:ring-blue-50 text-[15px] font-bold text-slate-800 transition-all placeholder:text-slate-300" 
-                  placeholder="name@company.com" 
-                />
-              </div>
+            <div>
+              <label className="text-[12.5px] font-bold text-[#005faa] mb-1 block">Email</label>
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full border-b-[2px] border-slate-200 py-2 outline-none focus:border-[#005faa] text-[16px] font-bold text-slate-800 transition-colors" placeholder="name@email.com" />
             </div>
-
-            <div className="group relative">
-              <label className="text-[11px] font-black text-slate-400 mb-2 block uppercase tracking-wider group-focus-within:text-[#1AA3FF] transition-colors">Wallet Password & Security</label>
+            <div className="relative">
+              <label className="text-[12.5px] font-bold text-[#005faa] mb-1 block">Password</label>
               <div className="relative">
                 <input 
                   type={showPassword ? "text" : "password"} 
                   value={password} 
                   onChange={e => setPassword(e.target.value)} 
-                  className="w-full bg-slate-50/50 border border-slate-100 px-5 py-4 rounded-2xl outline-none focus:border-[#1AA3FF] focus:bg-white focus:ring-4 focus:ring-blue-50 text-[15px] font-bold text-slate-800 transition-all placeholder:text-slate-300 pr-12" 
-                  placeholder="Create strong password" 
+                  className="w-full border-b-[2px] border-slate-200 py-2 pr-10 outline-none focus:border-[#005faa] text-[16px] font-bold text-slate-800 transition-colors" 
+                  placeholder="••••••••" 
                 />
                 <button 
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-slate-600 transition-colors"
+                  className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-slate-600 transition-colors"
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
-              </div>
-              <div className="mt-2 flex items-center gap-1.5 px-1">
-                 <Lock size={10} className="text-slate-300" />
-                 <span className="text-[10px] font-bold text-slate-400">Minimum 6 characters recommended</span>
               </div>
             </div>
           </div>
           
-          <div className="mt-auto pt-8 pb-10">
-            <div className="bg-slate-50 rounded-2xl p-4 mb-6 border border-slate-100 flex items-start gap-4">
-               <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                  <ShieldCheck size={16} className="text-[#1AA3FF]" />
-               </div>
-               <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
-                 By proceeding, you agree to initialize a <span className="text-slate-900 font-bold">non-custodial infrastructure</span> on the Arc Testnet via Circle.
-               </p>
-            </div>
-
+          <div className="mt-auto pt-6 pb-6">
             <button 
               disabled={!username || !email || !password}
               onClick={() => setStep(2)}
-              className="w-full bg-[#1AA3FF] text-white font-black py-5 rounded-[22px] shadow-xl shadow-blue-500/20 hover:bg-[#0088e0] transition-all active:scale-[0.98] disabled:opacity-30 disabled:shadow-none flex items-center justify-center gap-2 group"
+              className="w-full bg-[#005faa] text-white font-bold py-[14px] rounded-full hover:bg-[#004780] transition-colors active:scale-[0.98] disabled:opacity-50"
             >
-              Initialize Wallet
-              <motion.div
-                animate={{ x: [0, 4, 0] }}
-                transition={{ repeat: Infinity, duration: 1.5 }}
-              >
-                <ArrowLeft size={18} className="rotate-180" />
-              </motion.div>
+              Continue
             </button>
           </div>
-        </motion.div>
+        </div>
       )}
 
       {step === 2 && (
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="flex-1 p-8 flex flex-col items-center justify-center text-center -mt-10"
-        >
+        <div className="flex-1 p-6 flex flex-col items-center justify-center text-center animate-in fade-in duration-300">
           {!error ? (
             <>
-              <div className="relative mb-10">
-                 <div className="w-24 h-24 border-4 border-slate-50 border-t-[#1AA3FF] border-r-[#B090F5] rounded-full animate-spin shadow-inner"></div>
+              <div className="relative mb-8 mt-[-10vh]">
+                 <div className="w-20 h-20 border-[3px] border-slate-100 border-t-[#005faa] rounded-full animate-spin"></div>
                  <div className="absolute inset-0 flex items-center justify-center">
-                    <motion.div
-                      initial={{ scale: 0.8 }}
-                      animate={{ scale: [0.8, 1.1, 0.8] }}
-                      transition={{ repeat: Infinity, duration: 2 }}
-                    >
-                      <Wallet size={32} className="text-[#1AA3FF]" />
-                    </motion.div>
+                   <Wallet size={24} className="text-[#005faa]" />
                  </div>
-                 
-                 {/* Decorative pulses like docs aesthetics */}
-                 <div className="absolute inset-0 -z-10 bg-blue-100 rounded-full blur-xl scale-150 opacity-30" />
               </div>
-              
-              <h3 className="text-[24px] font-black text-slate-900 mb-3 tracking-tight">Initializing Infrastructure</h3>
-              <div className="flex flex-col gap-2 max-w-[280px]">
-                <div className="flex items-center justify-center gap-2">
-                   <CheckCircle2 size={12} className="text-emerald-500" />
-                   <span className="text-[12px] font-extrabold text-slate-400 uppercase tracking-widest">Generating Entity Secrets</span>
-                </div>
-                <div className="flex items-center justify-center gap-2">
-                   <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 2 }}>
-                     <div className="w-2 h-2 rounded-full border border-[#1AA3FF] border-t-transparent" />
-                   </motion.div>
-                   <span className="text-[12px] font-extrabold text-slate-800 uppercase tracking-widest">Provisions Arc Wallet</span>
-                </div>
-              </div>
-              
-              <p className="text-[13px] text-slate-400 mt-10 font-medium leading-loose px-4">
-                 Our system is securely communicating with <span className="text-[#1AA3FF] font-bold">Circle Web3 Nodes</span> to generate your unique address.
+              <h3 className="text-[20px] font-bold text-slate-800 mb-3">Creating Web3 Wallet...</h3>
+              <p className="text-[14px] text-slate-500 px-6 leading-relaxed">
+                Initializing <span className="font-semibold text-slate-700">Circle Developer-Controlled Wallet</span> on <span className="font-semibold text-slate-700">Arc Testnet</span>. Please wait a moment.
               </p>
             </>
           ) : (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="w-full px-4"
-            >
-              <div className="w-20 h-20 bg-red-50 rounded-[28px] flex items-center justify-center mb-8 mx-auto border border-red-100 shadow-sm">
-                <AlertCircle size={36} className="text-red-500" />
+            <div className="mt-[-10vh] px-4">
+              <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-6 mx-auto border border-red-100">
+                <Wallet size={32} className="text-red-500" />
               </div>
-              <h3 className="text-[26px] font-black text-slate-900 mb-3 tracking-tight">Setup Interrupted</h3>
-              <p className="text-[14px] text-slate-500 font-medium mb-8">We encountered an issue during secure provisioning.</p>
-              
-              <div className="bg-red-50 border border-red-100 p-6 rounded-[32px] mb-10 text-left">
-                <p className="text-[11px] font-black text-red-300 uppercase tracking-widest mb-2">Technical Logs</p>
-                <p className="text-[13px] text-red-600 font-mono font-bold leading-relaxed break-words line-clamp-4">
+              <h3 className="text-[20px] font-bold text-slate-800 mb-3">Registration Failed</h3>
+              <div className="bg-red-50/50 border border-red-100 p-4 rounded-xl mb-8">
+                <p className="text-[13px] text-red-600 font-mono text-left break-words overflow-auto max-h-[150px]">
                   {error}
                 </p>
               </div>
-
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-3">
                 <button 
                   onClick={() => createWallet()}
-                  className="w-full bg-[#1AA3FF] text-white font-black py-5 rounded-[22px] shadow-lg shadow-blue-500/20 hover:bg-[#0088e0] transition-all active:scale-[0.98]"
+                  className="w-full bg-[#005faa] text-white font-bold py-[14px] rounded-full hover:bg-[#004780] transition-colors active:scale-[0.98]"
                 >
-                  Retry Secure Handshake
+                  Retry Creation
                 </button>
                 <button 
                   onClick={() => setStep(1)}
-                  className="w-full bg-white text-slate-400 font-black py-5 rounded-[22px] border border-slate-100 hover:text-slate-600 transition-all active:scale-[0.98]"
+                  className="w-full bg-slate-100 text-slate-500 font-bold py-[14px] border border-slate-200 rounded-full hover:bg-slate-200 transition-colors active:scale-[0.98]"
                 >
-                  Return to Dashboard
+                  Back to Form
                 </button>
               </div>
-            </motion.div>
+            </div>
           )}
-        </motion.div>
+        </div>
       )}
     </div>
   )
