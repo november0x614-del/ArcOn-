@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Clock, ExternalLink, CheckCircle2, Receipt, ArrowUpRight, ArrowDownToLine, RefreshCw, ShoppingBag, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Clock, ExternalLink, CheckCircle2, Receipt, ArrowUpRight, ArrowDownToLine, RefreshCw, ShoppingBag } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { formatCurrency, truncateAddress, cn } from '../../lib/utils';
 
 interface TransactionHistoryScreenProps {
   onBack: () => void;

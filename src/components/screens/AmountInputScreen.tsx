@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, CheckCircle2, Edit3, ChevronDown, ArrowRight, X, Delete } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { truncateAddress, formatCurrency, cn } from '../../lib/utils';
+import { truncateAddress, formatCurrency } from '../../lib/utils';
 import { WalletCard } from '../common/WalletCard';
 
 interface AmountInputScreenProps {

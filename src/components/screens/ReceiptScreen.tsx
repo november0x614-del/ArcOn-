@@ -1,7 +1,7 @@
 import React from 'react';
 import { ArrowLeft, Share2, Download, Receipt as ReceiptIcon, Copy } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { formatCurrency, truncateAddress, cn } from '../../lib/utils';
+import { formatCurrency, truncateAddress } from '../../lib/utils';
 
 interface ReceiptScreenProps {
   onBack: () => void;
