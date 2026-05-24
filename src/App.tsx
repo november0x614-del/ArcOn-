@@ -71,13 +71,13 @@ export default function App() {
       // Navigate to home only if not already in a logged in screen or processing a login/signup
       const currentView = useStore.getState().viewState;
       if (currentView === 'splash' || currentView === 'password') {
-        setViewState("home");
+        setViewState("swap");
       }
     } catch (e) {
       console.error(e);
       const currentView = useStore.getState().viewState;
       if (currentView === 'splash' || currentView === 'password') {
-        setViewState("home");
+        setViewState("swap");
       }
     }
   }, [setRegisteredUser, setViewState]);
