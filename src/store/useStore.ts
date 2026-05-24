@@ -178,7 +178,7 @@ export const useStore = create<AppState>()(
       setSelectedTransaction: (tx) => set({ selectedTransaction: tx }),
       
       // Feature Persistence
-      visibleTokenCodes: ["USDC", "EURC", "USDT", "USDe", "DAI", "PYUSD", "cirBTC"],
+      visibleTokenCodes: ["USDC", "ARC", "ETH", "SOL", "BTC"],
       setVisibleTokenCodes: (codes) => set({ visibleTokenCodes: codes }),
       readReceiptIds: [],
       markAsRead: (id) => set((state) => ({
