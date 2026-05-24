@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { ArrowLeft, Users, Send, Trash2, CheckCircle2, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useApp } from '../../context/AppContext';
-import { formatCurrency, truncateAddress, cn } from '../../lib/utils';
 
 interface Contact {
   id: string;
@@ -186,7 +185,9 @@ export function BatchTransferScreen({ onBack, contacts }: BatchTransferScreenPro
                                 <div className="flex items-center justify-between">
                                    <p className="font-bold text-slate-900 text-[14px] truncate">{recipient.name}</p>
                                    <span className="font-mono text-[11px] text-slate-400 truncate max-w-[120px] ml-2">
-                                      {truncateAddress(recipient.address)}
+                                      {recipient.address.length > 12 
+                                         ? `${recipient.address.substring(0, 6)}...${recipient.address.substring(recipient.address.length - 4)}` 
+                                         : recipient.address}
                                    </span>
                                 </div>
                                 
@@ -275,7 +276,7 @@ export function BatchTransferScreen({ onBack, contacts }: BatchTransferScreenPro
                          <div className="flex justify-between items-center">
                             <span className="text-[13px] text-slate-500 font-bold">Total Payout</span>
                             <span className="font-mono font-extrabold text-[#3FA2F6] text-lg">
-                               {formatCurrency(recipients.reduce((acc, curr) => acc + parseFloat(curr.amount || '0'), 0))}
+                               {recipients.reduce((acc, curr) => acc + parseFloat(curr.amount || '0'), 0).toFixed(2)} USDC
                             </span>
                          </div>
                          <div className="mt-3 pt-3 border-t border-slate-50 flex justify-between items-center">
@@ -344,14 +345,14 @@ export function BatchTransferScreen({ onBack, contacts }: BatchTransferScreenPro
                                         : rec.address}
                                   </span>
                                </div>
-                               <span className="font-mono font-black text-slate-900 text-[15px]">{formatCurrency(rec.amount || '0')}</span>
+                               <span className="font-mono font-black text-slate-900 text-[15px]">{parseFloat(rec.amount || '0').toFixed(2)} USDC</span>
                             </div>
                          ))}
                       </div>
                       <div className="flex justify-between items-center border-t border-slate-100 pt-5 mt-5">
                          <span className="text-[12px] font-bold text-slate-500">Total Transferred</span>
                          <span className="font-mono font-black text-[#3FA2F6] text-lg">
-                            {formatCurrency(recipients.reduce((acc, curr) => acc + parseFloat(curr.amount || '0'), 0))}
+                            {recipients.reduce((acc, curr) => acc + parseFloat(curr.amount || '0'), 0).toFixed(2)} USDC
                          </span>
                       </div>
                       <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center overflow-hidden">

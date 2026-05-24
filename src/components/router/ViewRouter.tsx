@@ -132,9 +132,6 @@ export const ViewRouter = React.memo(({ isLoggingIn, loginEmail, setLoginEmail, 
           onLogin={async (email, password) => {
             setIsLoggingIn(true);
 
-            // Clear any previous session to avoid "Invalid Refresh Token" error
-            await supabase.auth.signOut();
-
             const { error } = await supabase.auth.signInWithPassword({
               email,
               password
