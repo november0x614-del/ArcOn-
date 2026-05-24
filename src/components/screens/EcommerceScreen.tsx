@@ -121,7 +121,7 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
                      <span className="text-[13px] font-medium text-slate-500">Merchant</span>
                      <div className="text-right">
                        <span className="text-[13px] font-bold text-slate-800 block">Arc Marketplace</span>
-                       <span className="text-[11px] font-mono text-slate-400">{transactionMetadata?.merchantBase}</span>
+                       <span className="text-[11px] font-mono text-slate-400">{truncateAddress(transactionMetadata?.merchantBase || '')}</span>
                      </div>
                    </div>
                    <div className="flex justify-between items-start">
@@ -167,7 +167,7 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
                    <div className="flex justify-between items-center">
                      <span className="text-[12px] font-medium text-slate-500">Tx Hash</span>
                      <div className="flex items-center gap-2">
-                       <span className="text-[12px] font-mono text-blue-600 font-bold truncate max-w-[120px]">{transactionMetadata?.txHash}</span>
+                       <span className="text-[12px] font-mono text-blue-600 font-bold truncate max-w-[120px]">{truncateAddress(transactionMetadata?.txHash || '')}</span>
                        <button className="text-slate-400 hover:text-slate-600 transition-colors bg-white p-1 rounded-md shadow-sm border border-slate-200"><Copy size={12} /></button>
                      </div>
                    </div>
@@ -321,14 +321,14 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
                  <img src={selectedProduct?.image} alt="product" className="w-16 h-16 rounded-xl object-cover shadow-sm" />
                  <div className="flex-1">
                     <h4 className="font-bold text-slate-800 text-[14px] mb-1">{selectedProduct?.name}</h4>
-                    <span className="font-bold text-[#005faa] text-[15px]">{selectedProduct?.price} USDC</span>
+                    <span className="font-bold text-[#005faa] text-[15px] font-mono">{formatCurrency(selectedProduct?.price || 0)}</span>
                  </div>
               </div>
 
               <div className="space-y-3 mb-8 px-2">
                  <div className="flex justify-between items-center text-[14px]">
                     <span className="text-slate-500 font-medium">Subtotal</span>
-                    <span className="font-bold text-slate-800">{selectedProduct?.price} USDC</span>
+                    <span className="font-bold text-slate-800 font-mono">{formatCurrency(selectedProduct?.price || 0)}</span>
                  </div>
                  <div className="flex justify-between items-center text-[14px]">
                     <span className="text-slate-500 font-medium">Network Fee (Arc)</span>

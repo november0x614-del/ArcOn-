@@ -166,7 +166,7 @@ export function ArcSwapScreen({ onBack }: ArcSwapScreenProps) {
               </div>
               <h4 className="font-bold text-emerald-800 text-[18px]">Swap Successful!</h4>
               <p className="text-[14px] text-emerald-600 mt-2">
-                Swapped {swapFromAmount} USDC for {(Number(swapFromAmount) / swapRate).toFixed(4)} {swapToToken} on Arc Network L1.
+                Swapped {formatCurrency(swapFromAmount)} for {formatCurrency(Number(swapFromAmount) / swapRate, swapToToken, 4)} on Arc Network L1.
               </p>
               <div className="mt-4 text-[10px] text-slate-400 font-mono select-all bg-white px-3 py-1 rounded-full border border-emerald-100">
                 TXID: 0xarc542f...{Math.floor(Math.random() * 90000) + 10000}
