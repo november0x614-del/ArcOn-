@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Search, ShoppingBag, Heart, Wallet, CheckCircle2, Copy, ShieldCheck } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { formatCurrency, cn } from '../../lib/utils';
 
 interface EcommerceScreenProps {
   onBack: () => void;
@@ -129,7 +130,7 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
                    </div>
                    <div className="flex justify-between items-center bg-blue-50/50 p-3 rounded-xl border border-blue-100/30">
                      <span className="text-[13px] font-medium text-slate-500">Total Paid (inc. fee)</span>
-                     <span className="text-[16px] font-black text-slate-800">{transactionMetadata?.totalPaid} USDC</span>
+                     <span className="text-[16px] font-black text-slate-800 font-mono">{formatCurrency(transactionMetadata?.totalPaid || 0)}</span>
                    </div>
 
                    {/* Digital Delivery Module */}
@@ -255,7 +256,7 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
                   <span className="text-[10px] font-bold text-blue-500 uppercase tracking-wider mb-1">{product.category}</span>
                   <h4 className="font-bold text-slate-800 text-[14px] mb-3 leading-snug">{product.name}</h4>
                   <div className="mt-auto">
-                    <span className="font-black text-[18px] text-slate-900 block">{product.price} <span className="text-[12px] text-slate-500 font-semibold">USDC</span></span>
+                    <span className="font-black text-[18px] text-slate-900 block font-mono">{formatCurrency(product.price)}</span>
                   </div>
                 </div>
               </div>
@@ -289,7 +290,7 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
              </div>
              
              <h2 className="text-[28px] font-black text-slate-800 leading-tight mb-2 mt-2">{selectedProduct?.name}</h2>
-             <div className="text-[24px] font-extrabold text-[#005faa] mb-6">{selectedProduct?.price} USDC</div>
+             <div className="text-[24px] font-extrabold text-[#005faa] mb-6 font-mono">{formatCurrency(selectedProduct?.price || 0)}</div>
              
              <div className="mb-6">
                 <h4 className="text-[14px] font-bold text-slate-800 mb-2">Description</h4>
@@ -336,7 +337,7 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
                  <div className="w-full border-t border-dashed border-slate-200 my-2"></div>
                  <div className="flex justify-between items-center">
                     <span className="text-slate-800 font-bold text-[16px]">Total Payment</span>
-                    <span className="font-black text-[22px] text-[#005faa]">{(Number(selectedProduct?.price) * 1.015).toFixed(2)} USDC</span>
+                    <span className="font-black text-[22px] text-[#005faa] font-mono">{formatCurrency(Number(selectedProduct?.price) * 1.015)}</span>
                  </div>
               </div>
 
@@ -344,7 +345,7 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
                  <Wallet size={20} className="text-[#005faa] shrink-0 mt-0.5" />
                  <div>
                     <h5 className="font-bold text-[#005faa] text-[13px] mb-0.5">Pay with Web3 Wallet</h5>
-                    <p className="text-[12px] text-blue-600/70 leading-relaxed">Transactions are secured by Arc Testnet. Your current balance is <span className="font-bold text-[#005faa]">{balance.toFixed(2)} USDC</span>.</p>
+                    <p className="text-[12px] text-blue-600/70 leading-relaxed">Transactions are secured by Arc Testnet. Your current balance is <span className="font-bold text-[#005faa] font-mono">{formatCurrency(balance || 0)}</span>.</p>
                  </div>
               </div>
 

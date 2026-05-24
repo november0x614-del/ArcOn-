@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, RefreshCw, ArrowLeftRight } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { formatCurrency } from '../../lib/utils';
 
 interface ArcSwapScreenProps {
   onBack: () => void;
@@ -103,7 +104,7 @@ export function ArcSwapScreen({ onBack }: ArcSwapScreenProps) {
             <div className="flex flex-col gap-1 w-2/3">
               <span className="text-[10px] uppercase font-bold text-slate-400">You Receive (Estimate)</span>
               <span className="text-[20px] font-bold text-slate-800 font-mono">
-                {swapFromAmount ? (Number(swapFromAmount) / swapRate).toFixed(2) : "0.00"}
+                {formatCurrency(swapFromAmount ? (Number(swapFromAmount) / swapRate) : 0, '')}
               </span>
             </div>
             <div className="flex flex-col gap-1 shrink-0">

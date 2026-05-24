@@ -284,8 +284,11 @@ export function AccountDetailScreen({
                          </div>
                        </div>
                        <div className="flex flex-col items-end">
-                         <span className={`font-bold text-[15px] ${tx.amount.startsWith('+') ? 'text-emerald-500' : 'text-slate-800'}`}>
-                            {tx.amount} {tx.currency}
+                         <span className={cn(
+                           "font-bold text-[15px] font-mono",
+                           tx.amount.startsWith('+') ? 'text-emerald-500' : 'text-slate-800'
+                         )}>
+                            {tx.amount.startsWith('+') ? '+' : '-'}{formatCurrency(tx.amount.replace(/[+-]/g, ''), '')}
                          </span>
                          {tx.status === 'success' ? (
                             <div className="flex items-center gap-1 mt-1 text-emerald-500 bg-emerald-50/50 px-2 py-0.5 rounded-full border border-emerald-100">

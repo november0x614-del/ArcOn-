@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
+import { formatCurrency } from "../../lib/utils";
 
 interface StablestakeScreenProps {
   onBack: () => void;
@@ -90,7 +91,7 @@ export function StablestakeScreen({ onBack }: StablestakeScreenProps) {
                   Total Staked
                 </span>
                 <span className="text-[20px] font-extrabold text-slate-200 font-mono block">
-                  {stakedAmount.toFixed(2)} USDC
+                  {formatCurrency(stakedAmount)}
                 </span>
               </div>
               <div className="bg-white/5 p-3 rounded-xl border border-white/5">

@@ -71,8 +71,11 @@ export function TransactionHistoryScreen({ onBack }: TransactionHistoryScreenPro
                      </div>
                    </div>
                    <div className="flex flex-col items-end">
-                     <span className={`font-bold text-[15px] ${tx.amount.startsWith('+') ? 'text-emerald-500' : 'text-slate-800'}`}>
-                        {tx.amount} {tx.currency}
+                     <span className={cn(
+                       "font-bold text-[15px] font-mono",
+                       tx.amount.startsWith('+') ? 'text-emerald-500' : 'text-slate-800'
+                     )}>
+                        {tx.amount.startsWith('+') ? '+' : '-'}{formatCurrency(tx.amount.replace(/[+-]/g, ''), '')}
                      </span>
                      {tx.status === 'success' ? (
                         <div className="flex items-center gap-1 mt-1 text-emerald-500">
@@ -98,8 +101,11 @@ export function TransactionHistoryScreen({ onBack }: TransactionHistoryScreenPro
                   {getTxIcon(selectedTx.type)}
                 </div>
                 <h2 className="text-[18px] font-bold text-slate-800 mb-1">{selectedTx.title}</h2>
-                <div className={`text-[32px] font-extrabold font-mono tracking-tight my-2 ${selectedTx.amount.startsWith('+') ? 'text-emerald-500' : 'text-slate-800'}`}>
-                  {selectedTx.amount} {selectedTx.currency}
+                <div className={cn(
+                  "text-[32px] font-extrabold font-mono tracking-tight my-2",
+                  selectedTx.amount.startsWith('+') ? 'text-emerald-500' : 'text-slate-800'
+                )}>
+                  {selectedTx.amount.startsWith('+') ? '+' : '-'}{formatCurrency(selectedTx.amount.replace(/[+-]/g, ''), '')}
                 </div>
                 
                 <div className="flex items-center gap-1.5 text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full mt-2 border border-emerald-100 shadow-sm">
@@ -128,7 +134,7 @@ export function TransactionHistoryScreen({ onBack }: TransactionHistoryScreenPro
                         <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                      </div>
                      <p className="text-[10px] text-blue-600 font-mono text-left opacity-80 select-all line-clamp-1 break-all">
-                       {selectedTx.txHash}
+                       {truncateAddress(selectedTx.txHash, 20, 20)}
                      </p>
                      
                      <a href="#" className="mt-2 w-full bg-white border border-blue-200 text-blue-600 font-bold py-2 rounded-lg text-[13px] flex items-center justify-center gap-1 hover:bg-blue-100 active:scale-95 transition-all">
