@@ -21,7 +21,6 @@ interface AppState {
   
   // Financials
   balance: number;
-  allBalances: any[];
   setBalance: (balance: number | ((prev: number) => number)) => void;
   fetchBalance: () => Promise<void>;
   pnlValue: number;
@@ -86,7 +85,6 @@ export const useStore = create<AppState>()(
       
       // Financials
       balance: 0,
-      allBalances: [],
       setBalance: (balance) => set((state) => ({ 
         balance: typeof balance === 'function' ? balance(state.balance) : balance 
       })),
@@ -97,7 +95,7 @@ export const useStore = create<AppState>()(
         try {
           const response = await fetch(`/api/balance/${user.supabaseUid}`);
           if (!response.ok) {
-            console.error(`Balance fetch failed with status: ${response.status}, text: ${await response.text()}`);
+            console.error(`Balance fetch failed with status: ${response.status}`);
             return;
           }
           const text = await response.text();
@@ -117,7 +115,7 @@ export const useStore = create<AppState>()(
           const pnlValue = totalDeposit > 0 ? newBalance - totalDeposit : 0;
           const pnlPercentage = totalDeposit > 0 ? (pnlValue / totalDeposit) * 100 : 0;
 
-          set({ balance: newBalance, pnlValue, pnlPercentage, allBalances: data.allBalances || [] });
+          set({ balance: newBalance, pnlValue, pnlPercentage });
         } catch (error) {
           console.error('Failed to fetch balance', error);
         }
@@ -134,7 +132,7 @@ export const useStore = create<AppState>()(
         try {
           const response = await fetch(`/api/transactions/${user.supabaseUid}`);
           if (!response.ok) {
-            console.error(`Transactions fetch failed with status: ${response.status}, text: ${await response.text()}`);
+            console.error(`Transactions fetch failed with status: ${response.status}`);
             return;
           }
           const text = await response.text();

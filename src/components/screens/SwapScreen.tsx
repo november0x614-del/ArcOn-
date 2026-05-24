@@ -7,83 +7,64 @@ interface SwapScreenProps {
 }
 
 const TOKENS = [
-  { symbol: 'USDC', name: 'USD Coin', color: 'bg-[#2775ca]', type: 'Stablecoin' },
-  { symbol: 'EURC', name: 'Euro Coin', color: 'bg-blue-600', type: 'Stablecoin' },
-  { symbol: 'cirBTC', name: 'Circular BTC', color: 'bg-[#f7931a]', type: 'Wrapped Token' },
+  { symbol: 'USDC', name: 'USD Coin', balance: '1,134.66', color: 'bg-[#2775ca]', type: 'Stablecoin' },
+  { symbol: 'ARC', name: 'Arc Token', balance: '0.00', color: 'bg-gradient-to-tr from-orange-400 to-orange-500', type: 'Native Layer-1' },
+  { symbol: 'ETH', name: 'Ethereum', balance: '0.00', color: 'bg-[#627eea]', type: 'Layer-1 Token' },
+  { symbol: 'WBTC', name: 'Wrapped BTC', balance: '0.00', color: 'bg-[#f7931a]', type: 'Wrapped Token' },
 ];
 
 export function SwapScreen({ onBack }: SwapScreenProps) {
+  const { registeredUser, setBalance: updateStoreBalance } = useStore();
   const [fromAmount, setFromAmount] = useState('');
   const [toAmount, setToAmount] = useState('0');
   const [isSwapping, setIsSwapping] = useState(false);
   const [swapFinished, setSwapFinished] = useState(false);
-  const [exchangeRate, setExchangeRate] = useState(1);
-  
+  const [exchangeRate, setExchangeRate] = useState(0.9852);
+  const [balance, setBalance] = useState(1134.66);
+
+  // Modal states
   const [showTokenSelector, setShowTokenSelector] = useState<'from' | 'to' | null>(null);
   const [fromToken, setFromToken] = useState(TOKENS[0]);
   const [toToken, setToToken] = useState(TOKENS[1]);
   const [searchToken, setSearchToken] = useState('');
   const [txHash, setTxHash] = useState('');
 
-  // Fetch real-time quote
   useEffect(() => {
-    const fetchQuote = async () => {
-      if (!fromAmount || parseFloat(fromAmount) <= 0) {
-        setToAmount('0');
-        return;
-      }
-      
-      try {
-        const response = await fetch('/api/swap/quote', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            amount: fromAmount,
-            fromToken: fromToken.symbol,
-            toToken: toToken.symbol
-          }),
-        });
-        
-        if (!response.ok) throw new Error('Quote failed');
-        
-        const data = await response.json();
-        setToAmount(data.amountOut || '0');
-        if (parseFloat(fromAmount) > 0) {
-           setExchangeRate(parseFloat(data.amountOut) / parseFloat(fromAmount));
-        }
-      } catch (error) {
-        console.error('Quote error', error);
-      }
-    };
-    
-    const handler = setTimeout(fetchQuote, 500);
-    return () => clearTimeout(handler);
-  }, [fromAmount, fromToken, toToken]);
-
-  const registeredUser = useStore((state) => state.registeredUser);
-  const balance = useStore((state) => state.balance);
-  const allBalances = useStore((state) => state.allBalances);
-  const setBalance = useStore((state) => state.setBalance);
-  const fetchBalance = useStore((state) => state.fetchBalance);
-
-  // Helper to find balance for a symbol
-  const getBalance = (symbol: string) => {
-    const b = allBalances.find(b => b.token?.symbol === symbol || b.token?.name?.includes(symbol));
-    return b ? parseFloat(b.amount).toFixed(2) : '0.00';
-  }
+    // Live rate simulation
+    const interval = setInterval(() => {
+      setExchangeRate(prev => {
+        const change = (Math.random() - 0.5) * 0.01;
+        return parseFloat((prev + change).toFixed(4));
+      });
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
-    fetchBalance();
-  }, [fetchBalance]);
+    if (fromAmount) {
+      if (fromToken.symbol === toToken.symbol) {
+         setToAmount(fromAmount);
+      } else {
+         const rate = fromToken.symbol === 'USDC' && toToken.symbol === 'ARC' ? exchangeRate : (1 / exchangeRate); // Simplistic simulated cross-rates
+         setToAmount((parseFloat(fromAmount) * (fromToken.symbol === 'USDC' || toToken.symbol === 'USDC' ? rate : 1)).toFixed(4));
+      }
+    } else {
+      setToAmount('0');
+    }
+  }, [fromAmount, exchangeRate, fromToken, toToken]);
 
   const handleSwap = async () => {
     if (!registeredUser?.supabaseUid) return;
+
     setIsSwapping(true);
-    
+    setSwapFinished(false);
+
     try {
       const response = await fetch('/api/swap/execute', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           userId: registeredUser.supabaseUid,
           amount: parseFloat(fromAmount),
@@ -92,19 +73,24 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
         }),
       });
 
-      if (!response.ok) throw new Error('Swap failed');
+      if (!response.ok) {
+        throw new Error('Swap failed');
+      }
 
-      const data = await response.json();
+      const result = await response.json();
+      setTxHash(result.txId);
       setIsSwapping(false);
       setSwapFinished(true);
-      setTxHash(data.txId);
+      
+      // Update balance if needed
       if (fromToken.symbol === 'USDC') {
-        setBalance(prev => prev - parseFloat(fromAmount || '0'));
+         setBalance(prev => prev - parseFloat(fromAmount || '0'));
+         updateStoreBalance(prev => prev - parseFloat(fromAmount || '0'));
       }
     } catch (error) {
       console.error(error);
       setIsSwapping(false);
-      // Optional: show error message
+      useStore.getState().displayToast("Swap failed!");
     }
   };
 
@@ -184,9 +170,11 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
           <div className={`bg-white p-5 rounded-[24px] shadow-sm border transition-all duration-300 relative z-10 ${isSwapping ? 'border-blue-400/50 shadow-blue-100/50 opacity-80' : 'border-slate-200 focus-within:border-slate-400'}`}>
             <div className="flex justify-between items-center mb-4">
               <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">You Pay</span>
-              <span className="text-[12px] font-bold text-slate-500 flex items-center gap-1">
-                Balance: {getBalance(fromToken.symbol)}
-              </span>
+              {fromToken.symbol === 'USDC' && (
+                 <span className="text-[12px] font-bold text-slate-500 flex items-center gap-1">
+                   Balance: {balance.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                 </span>
+              )}
             </div>
             <div className="flex flex-col gap-4">
               <div className="flex justify-between items-center">
@@ -232,9 +220,6 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
           <div className={`bg-white p-5 rounded-[24px] shadow-sm border mt-1.5 transition-all duration-300 relative z-10 ${isSwapping ? 'border-orange-400/50 shadow-orange-100/50 opacity-80' : 'border-slate-200 gap-2'}`}>
             <div className="flex justify-between items-center mb-4">
               <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">You Receive</span>
-              <span className="text-[12px] font-bold text-slate-500 flex items-center gap-1">
-                Balance: {getBalance(toToken.symbol)}
-              </span>
             </div>
             <div className="flex flex-col gap-4">
               <div className="flex justify-between items-center">
@@ -356,7 +341,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
                         </div>
                      </div>
                      <div className="text-right">
-                        <div className="font-bold text-slate-800">{getBalance(token.symbol)}</div>
+                        <div className="font-bold text-slate-800">{token.balance}</div>
                      </div>
                    </button>
                 ))}
