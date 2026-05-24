@@ -4,6 +4,12 @@ import { useStore } from '../../store/useStore';
 import { truncateAddress, formatCurrency, cn } from '../../lib/utils';
 import { WalletCard } from '../common/WalletCard';
 
+interface AmountInputScreenProps {
+  contact: any;
+  onBack: () => void;
+  onNext: (amount: string) => void;
+}
+
 export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreenProps) {
   const { registeredUser, balance, transferAmount } = useStore();
   const [amount, setAmount] = useState(transferAmount && transferAmount !== '0' ? transferAmount : '');

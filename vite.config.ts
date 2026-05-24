@@ -5,7 +5,6 @@ import {defineConfig, loadEnv} from 'vite';
 import {nodePolyfills} from 'vite-plugin-node-polyfills';
 
 export default defineConfig(({mode}) => {
-  const env = loadEnv(mode, '.', '');
   return {
     plugins: [
       react(),
@@ -19,9 +18,6 @@ export default defineConfig(({mode}) => {
         protocolImports: true,
       }),
     ],
-    define: {
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || ''),
-    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
@@ -30,7 +26,7 @@ export default defineConfig(({mode}) => {
     build: {
       rollupOptions: {
         output: {
-          manualChunks: (id) => {
+          manualChunks(id) {
             if (id.includes('node_modules')) {
               return 'vendor';
             }

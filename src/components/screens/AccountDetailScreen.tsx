@@ -21,7 +21,7 @@ import {
 import { useUnifiedBalanceKit } from '../../services/unified-balance-kit';
 import { useApp } from '../../context/AppContext';
 import { UIDCard } from '../common/UIDCard';
-import { formatCurrency, truncateAddress } from '../../lib/utils';
+import { formatCurrency } from '../../lib/utils';
 
 interface AccountDetailScreenProps {
   onBack: () => void;
