@@ -1,11 +1,43 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
+import { useApp } from '../../context/AppContext';
 
 interface ReceiveVAScreenProps {
   onBack: () => void;
 }
 
 export function ReceiveVAScreen({ onBack }: ReceiveVAScreenProps) {
+  const { registeredUser, displayToast, fetchBalance, fetchTransactions } = useApp();
+  const [isSimulating, setIsSimulating] = useState(false);
+
+  const handleSimulatePayment = async () => {
+    setIsSimulating(true);
+    try {
+      const receiveAmount = 50; // Mock amount for VA simulation
+      
+      const response = await fetch('/api/webhook/simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          userId: registeredUser?.supabaseUid,
+          amount: receiveAmount
+        }),
+      });
+      
+      if (!response.ok) throw new Error('Simulation failed');
+      
+      await fetchBalance();
+      await fetchTransactions();
+      
+      displayToast(`Successfully received ${receiveAmount} USDC via VA`);
+      onBack();
+    } catch (error) {
+      console.error(error);
+      displayToast("Simulation failed");
+      setIsSimulating(false);
+    }
+  };
+
   return (
     <div className="absolute inset-0 z-[60] bg-[#f8fafc] flex flex-col animate-in slide-in-from-right duration-300">
       <div className="flex items-center px-4 pt-12 pb-4 bg-white border-b border-slate-100 shadow-sm relative z-10 w-full">
@@ -51,6 +83,14 @@ export function ReceiveVAScreen({ onBack }: ReceiveVAScreenProps) {
               Salin
             </button>
           </div>
+
+          <button
+            className="w-full bg-slate-900 text-white font-bold py-3.5 rounded-xl text-[14px] hover:bg-slate-800 transition-colors border-0 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+            onClick={handleSimulatePayment}
+            disabled={isSimulating}
+          >
+            {isSimulating ? "Processing..." : "Simulasikan Pembayaran"}
+          </button>
         </div>
       </div>
     </div>

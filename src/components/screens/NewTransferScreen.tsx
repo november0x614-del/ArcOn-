@@ -133,7 +133,7 @@ export function NewTransferScreen({ onBack, onSelectContact }: NewTransferScreen
                           {initials}
                        </div>
                        <h4 className="font-extrabold text-[16px] text-slate-800 text-center tracking-tight">{receiverName}</h4>
-                       <p className="text-slate-500 text-[13px] text-center mt-1">{selectedNetwork} - {accountNumber.length > 20 ? `${accountNumber.substring(0, 10)}...${accountNumber.substring(accountNumber.length - 8)}` : accountNumber}</p>
+                       <p className="text-slate-500 text-[13px] text-center mt-1">{selectedNetwork} - {accountNumber}</p>
                     </div>
 
                     <p className="text-slate-500 text-[13px] text-center mt-2 mb-1 px-4">
