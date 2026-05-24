@@ -1,12 +1,14 @@
 import { verifyAndProcessWebhook } from "../src/services/webhookHandler.js";
 import { logAuditEvent } from "../src/services/auditLogger.js";
-import { createWallet, performOnChainAction } from "../src/services/circleTransactions.js";
+import { createWallet, executeTransaction } from "../src/services/circleTransactions.js";
 import express from "express";
 import * as crypto from "crypto";
+import { GoogleGenAI } from "@google/genai";
 import { initiateDeveloperControlledWalletsClient } from "@circle-fin/developer-controlled-wallets";
 import { createClient } from "@supabase/supabase-js";
+import * as dotenv from "dotenv";
 
-// Note: Removed dotenv.config() as Vercel injects environment variables directly.
+dotenv.config();
 
 process.on('uncaughtException', (err) => {
   console.error('Unhandled Exception:', err);
@@ -36,9 +38,11 @@ function getSupabaseAdmin() {
   return supabaseAdminInstance;
 }
 
-function getDb() {
-  return getSupabaseAdmin();
-}
+const supabaseAdmin: any = new Proxy({}, {
+  get: (_target, prop) => {
+    return getSupabaseAdmin()[prop];
+  }
+});
 
 // Lazy initialization of Circle Client
 let circleClient: any = null;
@@ -84,7 +88,7 @@ app.post("/api/wallets/create", async (req, res) => {
     console.log("Checking if wallet exists...");
     
     if (userId && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      const { data: existingWallet, error: fetchError } = await getDb()
+      const { data: existingWallet, error: fetchError } = await supabaseAdmin
         .from('user_wallets')
         .select('*')
         .eq('id', userId)
@@ -105,7 +109,7 @@ app.post("/api/wallets/create", async (req, res) => {
     }
 
     console.log("Creating new wallet for Arc Testnet...");
-    const result = await createWallet(getDb(), userId);
+    const result = await createWallet(supabaseAdmin, userId);
     console.log(`Wallet created successfully: ${result.address}`);
     res.json(result);
   } catch (error: any) {
@@ -121,7 +125,7 @@ app.post("/api/wallets/create", async (req, res) => {
 app.get("/api/debug-wallet/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
-    const { data, error } = await getDb()
+    const { data, error } = await supabaseAdmin
       .from('user_wallets')
       .select('wallet_id, wallet_address')
       .eq('id', userId)
@@ -147,7 +151,7 @@ app.get("/api/balance/:userId", async (req, res) => {
     const { userId } = req.params;
     
     // 1. Get the wallet ID from Supabase
-    const { data: walletData, error: walletError } = await getDb()
+    const { data: walletData, error: walletError } = await supabaseAdmin
       .from('user_wallets')
       .select('wallet_id')
       .eq('id', userId)
@@ -200,7 +204,7 @@ app.get("/api/balance/:userId", async (req, res) => {
 // Transactions Route
 app.get("/api/transactions/:userId", async (req, res) => {
   try {
-    const { data, error } = await getDb()
+    const { data, error } = await supabaseAdmin
       .from('transactions')
       .select('*')
       .eq('user_id', req.params.userId)
@@ -219,7 +223,7 @@ app.post("/api/webhook/simulate", async (req, res) => {
     const { userId, amount } = req.body;
     console.log(`Simulating webhook for user ${userId}, amount ${amount}`);
 
-    const { error } = await getDb()
+    const { error } = await supabaseAdmin
       .from('transactions')
       .insert({
         user_id: userId,
@@ -243,7 +247,7 @@ app.post("/api/swap/execute", async (req, res) => {
   try {
     const { userId, amount, fromToken, toToken, tokenAddress } = req.body;
     
-    const result = await performOnChainAction(getDb(), userId, 'swap', amount, { fromToken, toToken, tokenAddress });
+    const result = await executeTransaction(supabaseAdmin, userId, 'swap', amount, { fromToken, toToken, tokenAddress });
     res.status(200).json({ message: "Swap queued", txId: result.txId });
   } catch (error: any) {
     console.error("Swap Error", error);
@@ -257,7 +261,7 @@ app.post("/api/bridge/execute", async (req, res) => {
     const { userId, amount, fromNetwork, toNetwork } = req.body;
     const bridgeAddress = "0x0000000000000000000000000000000000000000";
     
-    const result = await performOnChainAction(getDb(), userId, 'send', amount, { destinationAddress: bridgeAddress, fromNetwork, toNetwork });
+    const result = await executeTransaction(supabaseAdmin, userId, 'send', amount, { destinationAddress: bridgeAddress, fromNetwork, toNetwork });
     res.status(200).json({ message: "Bridge transfer queued", txId: result.txId });
   } catch (error: any) {
     console.error("Bridge execute error:", error);
@@ -271,7 +275,7 @@ app.post("/api/withdraw/execute", async (req, res) => {
     const { userId, amount, bank } = req.body;
     const treasuryAddress = "0x1111111111111111111111111111111111111111"; 
 
-    const result = await performOnChainAction(getDb(), userId, 'send', amount, { destinationAddress: treasuryAddress, bank });
+    const result = await executeTransaction(supabaseAdmin, userId, 'send', amount, { destinationAddress: treasuryAddress, bank });
     res.status(200).json({ message: "Withdraw queued", txId: result.txId });
   } catch (error: any) {
     console.error("Withdraw Error", error);
@@ -282,23 +286,24 @@ app.post("/api/withdraw/execute", async (req, res) => {
 // Webhook Route. Note: express.raw middleware needs to be carefully handled in Serverless.
 // We apply it inline here.
 app.post("/api/circle/webhook", express.raw({ type: "application/json" }), async (req, res) => {
-    await verifyAndProcessWebhook(req, res, getDb());
+    await verifyAndProcessWebhook(req, res, supabaseAdmin);
 });
 
 // Payment Route
 app.post("/api/payments/create", async (req, res) => {
   try {
     const { walletId, destinationAddress, amount, userId, recipientName } = req.body;
-    const amountVal = parseFloat(amount);
-    if (isNaN(amountVal)) {
+    
+    if (isNaN(parseFloat(amount))) {
       return res.status(400).json({ error: "Invalid amount" });
     }
+    
     const client = getCircleClient();
     
     // Audit Log for critical transfers
-    if (amountVal > 100) {
-      await logAuditEvent(getDb(), userId, 'TRANSFER_HIGH_VALUE', { 
-          amount: amountVal, 
+    if (parseFloat(amount) > 100) {
+      await logAuditEvent(supabaseAdmin, userId, 'TRANSFER_HIGH_VALUE', { 
+          amount, 
           destinationAddress 
       });
     }
@@ -307,14 +312,14 @@ app.post("/api/payments/create", async (req, res) => {
     const response = await client.createTransaction({
       walletId: walletId,
       destinationAddress: destinationAddress,
-      amount: [amountVal.toString()],
+      amount: [amount.toString()],
       fee: { type: "level", config: { feeLevel: "LOW" } },
       tokenAddress: "",
       blockchain: "ARC-TESTNET"
     } as any);
     
     // Record in Supabase
-    await getDb().from('transactions').insert({
+    await supabaseAdmin.from('transactions').insert({
       user_id: userId,
       amount: `-${amount}`,
       type: 'transfer',
@@ -338,12 +343,17 @@ app.post("/api/payments/create", async (req, res) => {
 app.post("/api/payments/batch", async (req, res) => {
   try {
     const { walletId, recipients, userId } = req.body;
+    
+    if (!Array.isArray(recipients) || recipients.some(r => isNaN(parseFloat(r.amount)))) {
+      return res.status(400).json({ error: "Invalid recipient amounts" });
+    }
+    
     const client = getCircleClient();
     
     // Log batch initiation audit trail
     const totalAmount = recipients.reduce((sum: number, r: any) => sum + parseFloat(r.amount || "0"), 0);
     if (totalAmount > 500) {
-      await logAuditEvent(getDb(), userId, 'BATCH_TRANSFER_HIGH_VALUE', { 
+      await logAuditEvent(supabaseAdmin, userId, 'BATCH_TRANSFER_HIGH_VALUE', { 
           totalAmount, 
           recipientCount: recipients.length
       });
@@ -364,7 +374,7 @@ app.post("/api/payments/batch", async (req, res) => {
            blockchain: "ARC-TESTNET"
          } as any);
          
-         await getDb().from('transactions').insert({
+         await supabaseAdmin.from('transactions').insert({
             user_id: userId,
             amount: `-${rec.amount}`,
             type: 'transfer',
@@ -388,7 +398,7 @@ app.post("/api/payments/batch", async (req, res) => {
          console.error(`Failed to process batch recipient: ${rec.address}`, txError);
          
          // Record failed transaction locally to keep user ledger complete & consistent
-         await getDb().from('transactions').insert({
+         await supabaseAdmin.from('transactions').insert({
             user_id: userId,
             amount: `-${rec.amount}`,
             type: 'transfer',
@@ -429,7 +439,7 @@ app.post("/api/purchase/execute", async (req, res) => {
     const { userId, amount, product } = req.body;
     const merchantAddress = "0x2222222222222222222222222222222222222222"; 
 
-    const result = await performOnChainAction(getDb(), userId, 'send', amount, { destinationAddress: merchantAddress, product });
+    const result = await executeTransaction(supabaseAdmin, userId, 'send', amount, { destinationAddress: merchantAddress, product });
     res.status(200).json({ message: "Purchase queued", txId: result.txId });
   } catch (error: any) {
     console.error("Purchase error", error);
@@ -454,10 +464,41 @@ app.get("/api/tokens", async (_req, res) => {
 });
 
 // AI Route
-app.post("/api/chat", async (_req, res) => {
+app.post("/api/chat", async (req, res) => {
   try {
-    // Always provide simulation response
-    res.json({ reply: "(Simulasi) Halo! Saya adalah asisten virtual Arc untuk membantu Anda dengan USDC di Arc Testnet." });
+    const { message, history, localContext } = req.body;
+    
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error('GEMINI_API_KEY is required');
+
+    const ai = new GoogleGenAI({
+      apiKey,
+      httpOptions: {
+        headers: { 'User-Agent': 'aistudio-build' }
+      }
+    });
+    
+    const contents = `
+You are Arc AI Agent, a helpful virtual assistant for Arc Commerce and Arc Testnet Wallet.
+You help users with USDC transactions on Arc Testnet, wallet management, checking transaction history (simulated context), and troubleshooting web3 payments.
+
+System State / Local Context (Latest data):
+${localContext || 'No current state context available.'}
+
+User History Context:
+${history.map((msg: any) => `${msg.sender}: ${msg.text}`).join('\n')}
+
+New User Message: ${message}
+
+Please respond concisely and helpfully in Indonesian. Use the system state context to answer questions about balances or recent transactions directly.
+`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: contents,
+    });
+
+    res.json({ reply: response.text });
   } catch (error: any) {
     console.error(error);
     res.status(500).json({ error: error.message || 'Failed to generate response' });

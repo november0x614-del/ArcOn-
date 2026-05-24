@@ -60,7 +60,7 @@ export async function createWallet(supabaseAdmin: any, userId: string) {
     };
 }
 
-export async function performOnChainAction(
+export async function executeTransaction(
     supabaseAdmin: any,
     userId: string,
     action: 'swap' | 'send',
