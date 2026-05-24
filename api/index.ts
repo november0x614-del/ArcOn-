@@ -8,9 +8,6 @@ import { initiateDeveloperControlledWalletsClient } from "@circle-fin/developer-
 import { createSwapKitContext, swap, estimate } from "@circle-fin/swap-kit";
 import { createCircleWalletsAdapter } from "@circle-fin/adapter-circle-wallets";
 import { createClient } from "@supabase/supabase-js";
-import * as dotenv from "dotenv";
-
-dotenv.config();
 
 process.on('uncaughtException', (err) => {
   console.error('Unhandled Exception:', err);
@@ -40,11 +37,8 @@ function getSupabaseAdmin() {
   return supabaseAdminInstance;
 }
 
-const supabaseAdmin: any = new Proxy({}, {
-  get: (_target, prop) => {
-    return getSupabaseAdmin()[prop];
-  }
-});
+// Use direct getter instead of Proxy to avoid Vercel tracing issues
+const getSupabase = () => getSupabaseAdmin();
 
 // Lazy initialization of Circle Client
 let circleClient: any = null;
@@ -68,8 +62,7 @@ function getCircleClient() {
 
 const app = express();
 
-// Important: Next.js API Routes / Vercel Serverless automatically parses JSON for you in some setups,
-// but for an exported Express app to work locally and on Vercel Node, we should use express.json().
+// Set up JSON parsing
 app.use(express.json());
 
 // Health check and Env verification
@@ -90,7 +83,7 @@ app.post("/api/wallets/create", async (req, res) => {
     console.log("Checking if wallet exists...");
     
     if (userId && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      const { data: existingWallet, error: fetchError } = await supabaseAdmin
+      const { data: existingWallet, error: fetchError } = await getSupabase()
         .from('user_wallets')
         .select('*')
         .eq('id', userId)
@@ -142,7 +135,7 @@ app.post("/api/wallets/create", async (req, res) => {
 
     // 3. Save to Supabase if userId is provided
     if (userId && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      const { error } = await supabaseAdmin.from('user_wallets').upsert({
+      const { error } = await getSupabase().from('user_wallets').upsert({
         id: userId,
         wallet_id: wallet.id,
         wallet_address: wallet.address,
@@ -170,7 +163,7 @@ app.post("/api/wallets/create", async (req, res) => {
 app.get("/api/debug-wallet/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await getSupabase()
       .from('user_wallets')
       .select('wallet_id, wallet_address')
       .eq('id', userId)
@@ -196,7 +189,7 @@ app.get("/api/balance/:userId", async (req, res) => {
     const { userId } = req.params;
     
     // 1. Get the wallet ID from Supabase
-    const { data: walletData, error: walletError } = await supabaseAdmin
+    const { data: walletData, error: walletError } = await getSupabase()
       .from('user_wallets')
       .select('wallet_id')
       .eq('id', userId)
@@ -233,7 +226,7 @@ app.get("/api/balance/:userId", async (req, res) => {
     }
 
     // Add Simulated balances (from webhook simulator) to reflect in UI
-    const { data: simData } = await supabaseAdmin
+    const { data: simData } = await getSupabase()
       .from('transactions')
       .select('amount')
       .eq('user_id', userId)
@@ -261,13 +254,13 @@ app.get("/api/balance/:userId", async (req, res) => {
 // Contacts Route
 app.get("/api/contacts", async (_req, res) => {
   try {
-    const { data: profiles, error: profileError } = await supabaseAdmin
+    const { data: profiles, error: profileError } = await getSupabase()
       .from('profiles')
       .select('id, full_name');
     
     if (profileError) throw profileError;
 
-    const { data: wallets, error: walletError } = await supabaseAdmin
+    const { data: wallets, error: walletError } = await getSupabase()
       .from('user_wallets')
       .select('id, wallet_address');
     
@@ -295,7 +288,7 @@ app.get("/api/contacts", async (_req, res) => {
 // Transactions Route
 app.get("/api/transactions/:userId", async (req, res) => {
   try {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await getSupabase()
       .from('transactions')
       .select('*')
       .eq('user_id', req.params.userId)
@@ -314,7 +307,7 @@ app.post("/api/webhook/simulate", async (req, res) => {
     const { userId, amount } = req.body;
     console.log(`Simulating webhook for user ${userId}, amount ${amount}`);
 
-    const { error } = await supabaseAdmin
+    const { error } = await getSupabase()
       .from('transactions')
       .insert({
         user_id: userId,
@@ -338,7 +331,7 @@ app.post("/api/swap/execute", async (req, res) => {
   try {
     const { userId, amount, fromToken, toToken } = req.body;
     
-    const { data: walletData } = await supabaseAdmin
+    const { data: walletData } = await getSupabase()
       .from('user_wallets').select('wallet_id, wallet_address').eq('id', userId).single();
     if (!walletData?.wallet_address) throw new Error("No wallet address found");
 
@@ -373,7 +366,7 @@ app.post("/api/swap/execute", async (req, res) => {
 
     const txId = response.txHash || `swap_${crypto.randomBytes(8).toString('hex')}`;
 
-    const { error } = await supabaseAdmin.from('transactions').insert({
+    const { error } = await getSupabase().from('transactions').insert({
         user_id: userId,
         amount: `-${parseFloat(amount).toFixed(2)}`,
         type: 'swap',
@@ -397,7 +390,7 @@ app.post("/api/estimate-swap", async (req, res) => {
     
     // We only need wallet info to pass to SwapKit estimator, 
     // even though it doesn't execute a Tx, it needs context
-    const { data: walletData } = await supabaseAdmin
+    const { data: walletData } = await getSupabase()
       .from('user_wallets').select('wallet_id, wallet_address').eq('id', userId).single();
     if (!walletData?.wallet_address) throw new Error("No wallet address found");
 
@@ -445,7 +438,7 @@ app.post("/api/bridge/execute", async (req, res) => {
   try {
     const { userId, amount, fromNetwork, toNetwork } = req.body;
     
-    const { data: walletData } = await supabaseAdmin
+    const { data: walletData } = await getSupabase()
       .from('user_wallets').select('wallet_id, wallet_address').eq('id', userId).single();
     if (!walletData?.wallet_address) throw new Error("No wallet found");
 
@@ -497,7 +490,7 @@ app.post("/api/bridge/execute", async (req, res) => {
     const finalStep = bridgeResult.steps[bridgeResult.steps.length - 1];
     const txId = finalStep?.txHash || `bridge_${Date.now()}`;
 
-    const { error } = await supabaseAdmin.from('transactions').insert({
+    const { error } = await getSupabase().from('transactions').insert({
       user_id: userId,
       amount: `-${parseFloat(amount).toFixed(2)}`,
       type: 'bridge',
@@ -540,7 +533,7 @@ app.post("/api/withdraw/execute", async (req, res) => {
   try {
     const { userId, amount, bank } = req.body;
 
-    const { data: walletData } = await supabaseAdmin
+    const { data: walletData } = await getSupabase()
       .from('user_wallets').select('wallet_id').eq('id', userId).single();
     if (!walletData?.wallet_id) throw new Error("No wallet found");
 
@@ -556,7 +549,7 @@ app.post("/api/withdraw/execute", async (req, res) => {
       blockchain: "ARC-TESTNET"
     } as any);
 
-    const { error } = await supabaseAdmin.from('transactions').insert({
+    const { error } = await getSupabase().from('transactions').insert({
         user_id: userId,
         amount: `-${parseFloat(amount).toFixed(2)}`,
         type: 'withdraw',
@@ -576,7 +569,7 @@ app.post("/api/withdraw/execute", async (req, res) => {
 // Webhook Route. Note: express.raw middleware needs to be carefully handled in Serverless.
 // We apply it inline here.
 app.post("/api/circle/webhook", express.raw({ type: "application/json" }), async (req, res) => {
-    await verifyAndProcessWebhook(req, res, supabaseAdmin);
+    await verifyAndProcessWebhook(req, res, getSupabase());
 });
 
 // Payment Route
@@ -587,7 +580,7 @@ app.post("/api/payments/create", async (req, res) => {
     
     // Audit Log for critical transfers
     if (parseFloat(amount) > 100) {
-      await logAuditEvent(supabaseAdmin, userId, 'TRANSFER_HIGH_VALUE', { 
+      await logAuditEvent(getSupabase(), userId, 'TRANSFER_HIGH_VALUE', { 
           amount, 
           destinationAddress 
       });
@@ -604,7 +597,7 @@ app.post("/api/payments/create", async (req, res) => {
     } as any);
     
     // Record in Supabase
-    await supabaseAdmin.from('transactions').insert({
+    await getSupabase().from('transactions').insert({
       user_id: userId,
       amount: `-${amount}`,
       type: 'transfer',
@@ -636,7 +629,7 @@ app.post("/api/payments/batch", async (req, res) => {
          blockchain: "ARC-TESTNET"
        } as any);
        
-       await supabaseAdmin.from('transactions').insert({
+       await getSupabase().from('transactions').insert({
           user_id: userId,
           amount: `-${rec.amount}`,
           type: 'transfer',
@@ -658,7 +651,7 @@ app.post("/api/purchase/execute", async (req, res) => {
   try {
     const { userId, amount, product } = req.body;
 
-    const { data: walletData } = await supabaseAdmin
+    const { data: walletData } = await getSupabase()
       .from('user_wallets').select('wallet_id').eq('id', userId).single();
     if (!walletData?.wallet_id) throw new Error("No wallet found");
 
@@ -674,7 +667,7 @@ app.post("/api/purchase/execute", async (req, res) => {
       blockchain: "ARC-TESTNET"
     } as any);
 
-    const { error } = await supabaseAdmin.from('transactions').insert({
+    const { error } = await getSupabase().from('transactions').insert({
         user_id: userId,
         amount: `-${parseFloat(amount).toFixed(2)}`,
         type: 'purchase',
@@ -702,39 +695,32 @@ app.post("/api/chat", async (req, res) => {
       return res.status(500).json({ error: "Gemini API key is not configured in Secrets." });
     }
 
-    const ai = new GoogleGenAI({
-      apiKey: apiKey,
-      httpOptions: {
-        headers: { 'User-Agent': 'aistudio-build' }
-      }
-    });
+    const genAI = new GoogleGenAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
     
-    const contents = `
+    const prompt = `
 You are Arc AI Agent, a helpful virtual assistant for Arc Commerce and Arc Testnet Wallet.
 You help users with USDC transactions on Arc Testnet, wallet management, checking transaction history (simulated context), and troubleshooting web3 payments.
 
 System State / Local Context (Latest data):
-${localContext || 'No current state context available.'}
+${typeof localContext === 'object' ? JSON.stringify(localContext, null, 2) : (localContext || 'No current state context available.')}
 
 User History Context:
-${history.map((msg: any) => `${msg.sender}: ${msg.text}`).join('\n')}
+${Array.isArray(history) ? history.map((msg: any) => `${msg.sender}: ${msg.text}`).join('\n') : ''}
 
 New User Message: ${message}
 
 Please respond concisely and helpfully in Indonesian. Use the system state context to answer questions about balances or recent transactions directly.
 `;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
-      contents: contents,
-    });
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
 
-    res.json({ reply: response.text });
+    res.json({ reply: text });
   } catch (error: any) {
     console.error("Gemini API Error:", error);
     res.status(error.status || 500).json({ 
-      error: error.message || 'Failed to generate response',
-      details: error.details || null
+      error: error.message || 'Failed to generate response'
     });
   }
 });

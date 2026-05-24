@@ -4,7 +4,8 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 
 async function startServer() {
-  const PORT = 3000;
+  const PORT = parseInt(process.env.PORT || '3000', 10);
+  const HOST = process.env.VERCEL ? '0.0.0.0' : 'localhost';
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
@@ -21,8 +22,8 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://0.0.0.0:${PORT}`);
+  app.listen(PORT, HOST, () => {
+    console.log(`Server running on http://${HOST}:${PORT}`);
   });
 }
 
