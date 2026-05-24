@@ -1,6 +1,5 @@
-import { AppKit } from "@circle-fin/app-kit";
-import { createCircleWalletsAdapter } from "@circle-fin/adapter-circle-wallets";
 import { initiateDeveloperControlledWalletsClient } from "@circle-fin/developer-controlled-wallets";
+import * as crypto from "crypto";
 
 const getCircleClient = () => {
     const apiKey = process.env.CIRCLE_API_KEY;
@@ -64,54 +63,37 @@ export async function executeTransaction(
     supabaseAdmin: any,
     userId: string,
     amount: number,
-    _destinationAddress: string,
+    destinationAddress: string,
     type: string,
     metadata: any
 ) {
-    console.log("executeTransaction called for user:", userId, "amount:", amount, "type:", type, "metadata:", metadata);
     const { data: walletData } = await supabaseAdmin
-        .from('user_wallets').select('wallet_id, wallet_address').eq('id', userId).single();
-    
-    console.log("Wallet Data from Supabase:", walletData);
-    
-    if (!walletData?.wallet_id || !walletData?.wallet_address) throw new Error(`No wallet found or missing address. Data: ${JSON.stringify(walletData)}`);
+        .from('user_wallets').select('wallet_id').eq('id', userId).single();
+    if (!walletData?.wallet_id) throw new Error("No wallet found");
 
-    const kit = new AppKit();
-    const adapter = createCircleWalletsAdapter({
-        apiKey: process.env.CIRCLE_API_KEY as string,
-        entitySecret: process.env.CIRCLE_ENTITY_SECRET as string,
+    const client = getCircleClient();
+
+    const response = await client.createTransaction({
+        walletId: walletData.wallet_id,
+        destinationAddress: destinationAddress,
+        amount: [amount.toString()],
+        fee: { type: "level", config: { feeLevel: "LOW" } },
+        tokenAddress: "",
+        blockchain: "ARC-TESTNET"
+    } as any);
+
+    const { error } = await supabaseAdmin.from('transactions').insert({
+        user_id: userId,
+        amount: `-${amount.toFixed(2)}`,
+        type: type,
+        status: 'pending',
+        internal_ref: response.data?.id || `req_${crypto.randomBytes(8).toString('hex')}`,
+        metadata: { ...metadata, real: true }
     });
 
-    // Perform the swap using AppKit
-    console.log("Calling kit.swap with:", { chain: "Arc_Testnet", address: walletData.wallet_address, tokenIn: metadata.fromToken, tokenOut: metadata.toToken, amountIn: amount.toString() });
-    try {
-        const result = await kit.swap({
-            from: { adapter, chain: "Arc_Testnet", address: walletData.wallet_address },
-            tokenIn: metadata.fromToken,
-            tokenOut: metadata.toToken,
-            amountIn: amount.toString(),
-            config: {
-                kitKey: process.env.KIT_KEY as string,
-            },
-        });
-        console.log("Swap result:", result);
-
-        const { error } = await supabaseAdmin.from('transactions').insert({
-            user_id: userId,
-            amount: `-${amount.toFixed(2)}`,
-            type: type,
-            status: 'pending',
-            internal_ref: result.txHash,
-            metadata: { ...metadata, real: true, explorerUrl: result.explorerUrl }
-        });
-
-        if (error) throw error;
-        
-        return {
-            txId: result.txHash
-        };
-    } catch (err) {
-        console.error("Critical error in executeTransaction for user", userId, ":", err);
-        throw err;
-    }
+    if (error) throw error;
+    
+    return {
+        txId: response.data?.id
+    };
 }
