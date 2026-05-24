@@ -1,5 +1,6 @@
 import { verifyAndProcessWebhook } from "../src/services/webhookHandler.js";
 import { logAuditEvent } from "../src/services/auditLogger.js";
+import { createWallet, executeTransaction } from "../src/services/circleTransactions.js";
 import express from "express";
 import * as crypto from "crypto";
 import { GoogleGenAI } from "@google/genai";
@@ -108,52 +109,9 @@ app.post("/api/wallets/create", async (req, res) => {
     }
 
     console.log("Creating new wallet for Arc Testnet...");
-    const client = getCircleClient();
-    
-    // 1. Create Wallet Set
-    console.log("Calling Circle createWalletSet...");
-    const walletSetResponse = await client.createWalletSet({
-      name: "Arc Commerce Wallet Set",
-    });
-    console.log("Circle walletSetResponse:", JSON.stringify(walletSetResponse.data));
-
-    const walletSet = walletSetResponse.data?.walletSet;
-    if (!walletSet?.id) {
-      throw new Error("Wallet set creation failed: no ID returned from Circle");
-    }
-
-    // 2. Create Wallet in the Set
-    console.log("Calling Circle createWallets...");
-    const walletResponse = await client.createWallets({
-      walletSetId: walletSet.id,
-      blockchains: ["ARC-TESTNET"],
-      count: 1,
-      accountType: "EOA",
-    });
-    console.log("Circle walletResponse:", JSON.stringify(walletResponse.data));
-
-    const wallet = walletResponse.data?.wallets?.[0];
-    if (!wallet) {
-      throw new Error("Wallet creation failed: no wallets array returned from Circle");
-    }
-
-    // 3. Save to Supabase if userId is provided
-    if (userId && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      const { error } = await supabaseAdmin.from('user_wallets').upsert({
-        id: userId,
-        wallet_id: wallet.id,
-        wallet_address: wallet.address,
-        wallet_set_id: walletSet.id
-      });
-      if (error) console.error("Failed mapping to Supabase:", error);
-    }
-
-    console.log(`Wallet created successfully: ${wallet.address}`);
-    res.json({
-      walletId: wallet.id,
-      address: wallet.address,
-      walletSetId: walletSet.id
-    });
+    const result = await createWallet(supabaseAdmin, userId);
+    console.log(`Wallet created successfully: ${result.address}`);
+    res.json(result);
   } catch (error: any) {
     console.error("Circle API Error detail:", error);
     res.status(500).json({ 
@@ -300,34 +258,10 @@ app.post("/api/webhook/simulate", async (req, res) => {
 app.post("/api/swap/execute", async (req, res) => {
   try {
     const { userId, amount, fromToken, toToken } = req.body;
-    
-    const { data: walletData } = await supabaseAdmin
-      .from('user_wallets').select('wallet_id').eq('id', userId).single();
-    if (!walletData?.wallet_id) throw new Error("No wallet found");
-
-    const client = getCircleClient();
     const dexAddress = "0x3333333333333333333333333333333333333333";
-
-    const response = await client.createTransaction({
-      walletId: walletData.wallet_id,
-      destinationAddress: dexAddress,
-      amount: [amount.toString()],
-      fee: { type: "level", config: { feeLevel: "LOW" } },
-      tokenAddress: "",
-      blockchain: "ARC-TESTNET"
-    } as any);
-
-    const { error } = await supabaseAdmin.from('transactions').insert({
-        user_id: userId,
-        amount: `-${parseFloat(amount).toFixed(2)}`,
-        type: 'swap',
-        status: 'pending',
-        internal_ref: response.data?.id || `req_${crypto.randomBytes(8).toString('hex')}`,
-        metadata: { fromToken, toToken, real: true }
-    });
-
-    if (error) throw error;
-    res.status(200).json({ message: "Swap queued", txId: response.data?.id });
+    
+    const result = await executeTransaction(supabaseAdmin, userId, amount, dexAddress, 'swap', { fromToken, toToken });
+    res.status(200).json({ message: "Swap queued", txId: result.txId });
   } catch (error: any) {
     console.error("Swap Error", error);
     res.status(500).json({ error: error.message });
@@ -338,34 +272,10 @@ app.post("/api/swap/execute", async (req, res) => {
 app.post("/api/bridge/execute", async (req, res) => {
   try {
     const { userId, amount, fromNetwork, toNetwork } = req.body;
-    
-    const { data: walletData } = await supabaseAdmin
-      .from('user_wallets').select('wallet_id').eq('id', userId).single();
-    if (!walletData?.wallet_id) throw new Error("No wallet found");
-
-    const client = getCircleClient();
     const bridgeAddress = "0x0000000000000000000000000000000000000000";
-
-    const response = await client.createTransaction({
-      walletId: walletData.wallet_id,
-      destinationAddress: bridgeAddress,
-      amount: [amount.toString()],
-      fee: { type: "level", config: { feeLevel: "LOW" } },
-      tokenAddress: "",
-      blockchain: "ARC-TESTNET"
-    } as any);
-
-    const { error } = await supabaseAdmin.from('transactions').insert({
-      user_id: userId,
-      amount: `-${parseFloat(amount).toFixed(2)}`,
-      type: 'transfer',
-      status: 'pending',
-      internal_ref: response.data?.id || `req_${crypto.randomBytes(8).toString('hex')}`,
-      metadata: { fromNetwork, toNetwork, real: true }
-    });
-
-    if (error) throw error;
-    res.status(200).json({ message: "Bridge transfer queued", txId: response.data?.id });
+    
+    const result = await executeTransaction(supabaseAdmin, userId, amount, bridgeAddress, 'transfer', { fromNetwork, toNetwork });
+    res.status(200).json({ message: "Bridge transfer queued", txId: result.txId });
   } catch (error: any) {
     console.error("Bridge execute error:", error);
     res.status(500).json({ error: error.message });
@@ -376,34 +286,10 @@ app.post("/api/bridge/execute", async (req, res) => {
 app.post("/api/withdraw/execute", async (req, res) => {
   try {
     const { userId, amount, bank } = req.body;
-
-    const { data: walletData } = await supabaseAdmin
-      .from('user_wallets').select('wallet_id').eq('id', userId).single();
-    if (!walletData?.wallet_id) throw new Error("No wallet found");
-
-    const client = getCircleClient();
     const treasuryAddress = "0x1111111111111111111111111111111111111111"; 
 
-    const response = await client.createTransaction({
-      walletId: walletData.wallet_id,
-      destinationAddress: treasuryAddress,
-      amount: [amount.toString()],
-      fee: { type: "level", config: { feeLevel: "LOW" } },
-      tokenAddress: "",
-      blockchain: "ARC-TESTNET"
-    } as any);
-
-    const { error } = await supabaseAdmin.from('transactions').insert({
-        user_id: userId,
-        amount: `-${parseFloat(amount).toFixed(2)}`,
-        type: 'withdraw',
-        status: 'pending',
-        internal_ref: response.data?.id || `req_${crypto.randomBytes(8).toString('hex')}`,
-        metadata: { bank, real: true }
-    });
-
-    if (error) throw error;
-    res.status(200).json({ message: "Withdraw queued", txId: response.data?.id });
+    const result = await executeTransaction(supabaseAdmin, userId, amount, treasuryAddress, 'withdraw', { bank });
+    res.status(200).json({ message: "Withdraw queued", txId: result.txId });
   } catch (error: any) {
     console.error("Withdraw Error", error);
     res.status(500).json({ error: error.message });
@@ -554,34 +440,10 @@ app.post("/api/payments/batch", async (req, res) => {
 app.post("/api/purchase/execute", async (req, res) => {
   try {
     const { userId, amount, product } = req.body;
-
-    const { data: walletData } = await supabaseAdmin
-      .from('user_wallets').select('wallet_id').eq('id', userId).single();
-    if (!walletData?.wallet_id) throw new Error("No wallet found");
-
-    const client = getCircleClient();
     const merchantAddress = "0x2222222222222222222222222222222222222222"; 
 
-    const response = await client.createTransaction({
-      walletId: walletData.wallet_id,
-      destinationAddress: merchantAddress,
-      amount: [amount.toString()],
-      fee: { type: "level", config: { feeLevel: "LOW" } },
-      tokenAddress: "",
-      blockchain: "ARC-TESTNET"
-    } as any);
-
-    const { error } = await supabaseAdmin.from('transactions').insert({
-        user_id: userId,
-        amount: `-${parseFloat(amount).toFixed(2)}`,
-        type: 'purchase',
-        status: 'pending',
-        internal_ref: response.data?.id || `req_${crypto.randomBytes(8).toString('hex')}`,
-        metadata: { product, real: true }
-    });
-
-    if (error) throw error;
-    res.status(200).json({ message: "Purchase queued", txId: response.data?.id });
+    const result = await executeTransaction(supabaseAdmin, userId, amount, merchantAddress, 'purchase', { product });
+    res.status(200).json({ message: "Purchase queued", txId: result.txId });
   } catch (error: any) {
     console.error("Purchase error", error);
     res.status(500).json({ error: error.message });
