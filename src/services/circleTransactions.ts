@@ -1,5 +1,5 @@
-import { AppKit } from "@circle-fin/app-kit";
-import { createViemAdapterFromPrivateKey } from "@circle-fin/adapter-viem-v2";
+import { AppKit, BridgeChain } from "@circle-fin/app-kit";
+import { createCircleWalletsAdapter } from "@circle-fin/adapter-circle-wallets";
 import { initiateDeveloperControlledWalletsClient } from "@circle-fin/developer-controlled-wallets";
 
 const getCircleClient = () => {
@@ -60,44 +60,27 @@ export async function createWallet(supabaseAdmin: any, userId: string) {
     };
 }
 
-const getAppKit = () => {
-    const kitKey = process.env.KIT_KEY;
-    if (!kitKey) {
-        throw new Error("KIT_KEY is required for AppKit operations.");
-    }
-    return new AppKit();
-};
-
-// Note: For actual on-chain transaction execution, we keep the private key server-side.
-// DO NOT expose this to the frontend.
-const getAdapter = () => {
-    const privateKey = process.env.PRIVATE_KEY;
-    if (!privateKey) {
-        throw new Error("PRIVATE_KEY is required for AppKit adapters.");
-    }
-    return createViemAdapterFromPrivateKey({
-        privateKey: privateKey,
-    });
-};
-
-export async function executeTransaction(
+export async function performOnChainAction(
     supabaseAdmin: any,
     userId: string,
+    action: 'swap' | 'send',
     amount: number,
-    _dexAddress: string, // Kept for compatibility, but AppKit handles routing
-    _type: string, // Kept for compatibility
     metadata: any
 ) {
-    console.log("Starting executeTransaction for user:", userId);
-    try {
-        const kit = getAppKit();
-        const adapter = getAdapter();
-        console.log("AppKit and Adapter initialized");
+    const { data: walletData } = await supabaseAdmin
+        .from('user_wallets').select('wallet_id, wallet_address').eq('id', userId).single();
+    if (!walletData?.wallet_id || !walletData?.wallet_address) throw new Error("No wallet found");
 
-        // Perform the swap using AppKit
-        console.log("Initiating swap...");
-        const result = await kit.swap({
-            from: { adapter, chain: "Arc_Testnet" },
+    const kit = new AppKit();
+    const adapter = createCircleWalletsAdapter({
+        apiKey: process.env.CIRCLE_API_KEY as string,
+        entitySecret: process.env.CIRCLE_ENTITY_SECRET as string,
+    });
+
+    let result: any;
+    if (action === 'swap') {
+        result = await kit.swap({
+            from: { adapter, chain: "Arc_Testnet", address: walletData.wallet_address },
             tokenIn: metadata.fromToken,
             tokenOut: metadata.toToken,
             amountIn: amount.toString(),
@@ -105,28 +88,29 @@ export async function executeTransaction(
                 kitKey: process.env.KIT_KEY as string,
             },
         });
-        console.log("Swap completed successfully:", result.txHash);
-
-        // Save to Supabase
-        const { error } = await supabaseAdmin.from('transactions').insert({
-            user_id: userId,
-            amount: `-${amount.toFixed(2)}`,
-            type: 'swap',
-            status: 'pending',
-            internal_ref: result.txHash, // This should be the on-chain hash
-            metadata: { ...metadata, real: true, explorerUrl: result.explorerUrl }
-        });
-
-        if (error) {
-            console.error("Supabase insert error:", error);
-            throw error;
-        }
-
-        return {
-            txId: result.txHash // Now returning the on-chain hash!
+    } else {
+        const sendParams = {
+            from: { adapter, chain: BridgeChain.Arc_Testnet, address: walletData.wallet_address },
+            to: metadata.destinationAddress,
+            amount: amount.toString(),
+            token: metadata.token || "USDC",
         };
-    } catch (err: any) {
-        console.error("Critical error in executeTransaction:", err);
-        throw err;
+        await kit.estimateSend(sendParams);
+        result = await kit.send(sendParams);
     }
+
+    const { error } = await supabaseAdmin.from('transactions').insert({
+        user_id: userId,
+        amount: `-${amount.toFixed(2)}`,
+        type: action,
+        status: 'pending',
+        internal_ref: result.txHash,
+        metadata: { ...metadata, real: true, explorerUrl: result.explorerUrl }
+    });
+
+    if (error) throw error;
+    
+    return {
+        txId: result.txHash
+    };
 }

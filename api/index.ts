@@ -1,6 +1,6 @@
 import { verifyAndProcessWebhook } from "../src/services/webhookHandler.js";
 import { logAuditEvent } from "../src/services/auditLogger.js";
-import { createWallet, executeTransaction } from "../src/services/circleTransactions.js";
+import { createWallet, performOnChainAction } from "../src/services/circleTransactions.js";
 import express from "express";
 import * as crypto from "crypto";
 import { GoogleGenAI } from "@google/genai";
@@ -246,9 +246,8 @@ app.post("/api/webhook/simulate", async (req, res) => {
 app.post("/api/swap/execute", async (req, res) => {
   try {
     const { userId, amount, fromToken, toToken, tokenAddress } = req.body;
-    const dexAddress = "0x3333333333333333333333333333333333333333";
     
-    const result = await executeTransaction(supabaseAdmin, userId, amount, dexAddress, 'swap', { fromToken, toToken, tokenAddress });
+    const result = await performOnChainAction(supabaseAdmin, userId, 'swap', amount, { fromToken, toToken, tokenAddress });
     res.status(200).json({ message: "Swap queued", txId: result.txId });
   } catch (error: any) {
     console.error("Swap Error", error);
@@ -262,7 +261,7 @@ app.post("/api/bridge/execute", async (req, res) => {
     const { userId, amount, fromNetwork, toNetwork } = req.body;
     const bridgeAddress = "0x0000000000000000000000000000000000000000";
     
-    const result = await executeTransaction(supabaseAdmin, userId, amount, bridgeAddress, 'transfer', { fromNetwork, toNetwork });
+    const result = await performOnChainAction(supabaseAdmin, userId, 'send', amount, { destinationAddress: bridgeAddress, fromNetwork, toNetwork });
     res.status(200).json({ message: "Bridge transfer queued", txId: result.txId });
   } catch (error: any) {
     console.error("Bridge execute error:", error);
@@ -276,7 +275,7 @@ app.post("/api/withdraw/execute", async (req, res) => {
     const { userId, amount, bank } = req.body;
     const treasuryAddress = "0x1111111111111111111111111111111111111111"; 
 
-    const result = await executeTransaction(supabaseAdmin, userId, amount, treasuryAddress, 'withdraw', { bank });
+    const result = await performOnChainAction(supabaseAdmin, userId, 'send', amount, { destinationAddress: treasuryAddress, bank });
     res.status(200).json({ message: "Withdraw queued", txId: result.txId });
   } catch (error: any) {
     console.error("Withdraw Error", error);
@@ -430,7 +429,7 @@ app.post("/api/purchase/execute", async (req, res) => {
     const { userId, amount, product } = req.body;
     const merchantAddress = "0x2222222222222222222222222222222222222222"; 
 
-    const result = await executeTransaction(supabaseAdmin, userId, amount, merchantAddress, 'purchase', { product });
+    const result = await performOnChainAction(supabaseAdmin, userId, 'send', amount, { destinationAddress: merchantAddress, product });
     res.status(200).json({ message: "Purchase queued", txId: result.txId });
   } catch (error: any) {
     console.error("Purchase error", error);
