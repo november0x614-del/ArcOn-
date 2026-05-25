@@ -1124,103 +1124,123 @@ export const HomeScreen = React.memo(({
 
       {/* Deposit/Withdraw Initial Modal */}
       {/* Step-Up Authentication (Tiered Access) Modal */}
-      {showTieredAccessAlert && (
-        <div className="absolute inset-0 z-[160] flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div
-            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
-            onClick={() => setShowTieredAccessAlert(false)}
-          ></div>
-          <div className="bg-white rounded-3xl p-6 w-full relative z-10 animate-in zoom-in-95 duration-300 shadow-2xl flex flex-col items-center text-center">
-            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4">
-              <ShieldCheck size={32} className="text-red-500" />
-            </div>
-            <h3 className="font-bold text-[18px] text-slate-800 leading-tight">
-              Step-Up Authentication Required
-            </h3>
-            <p className="text-[13px] text-slate-500 mt-2 mb-6 font-sans">
-              Untuk transaksi bernilai tinggi di atas 100 USDC atau cash-out,
-              verifikasi biometrik tambahan diperlukan (Tiered Access).
-            </p>
-            <div className="flex flex-col gap-2 w-full">
-              <button
-                onClick={() => {
-                  setShowTieredAccessAlert(false);
-                  onNavigate("settings");
-                }}
-                className="w-full bg-[#005faa] text-white font-bold py-3.5 rounded-full text-[14px] hover:bg-[#004780] transition-colors"
-              >
-                Verifikasi Sekarang
-              </button>
-              <button
-                onClick={() => setShowTieredAccessAlert(false)}
-                className="w-full bg-slate-100 text-slate-600 font-bold py-3.5 rounded-full text-[14px] hover:bg-slate-200 transition-colors"
-              >
-                Batalkan Transaksi
-              </button>
-            </div>
+      <AnimatePresence>
+        {showTieredAccessAlert && (
+          <div className="absolute inset-0 z-[160] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+              onClick={() => setShowTieredAccessAlert(false)}
+            ></motion.div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 12 }}
+              transition={{ type: "spring", stiffness: 350, damping: 30 }}
+              className="bg-white rounded-3xl p-6 w-full relative z-10 shadow-2xl flex flex-col items-center text-center max-w-[320px]"
+            >
+              <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4">
+                <ShieldCheck size={32} className="text-red-500" />
+              </div>
+              <h3 className="font-bold text-[18px] text-slate-800 leading-tight">
+                Step-Up Authentication Required
+              </h3>
+              <p className="text-[13px] text-slate-500 mt-2 mb-6 font-sans">
+                Untuk transaksi bernilai tinggi di atas 100 USDC atau cash-out,
+                verifikasi biometrik tambahan diperlukan (Tiered Access).
+              </p>
+              <div className="flex flex-col gap-2 w-full">
+                <button
+                  onClick={() => {
+                    setShowTieredAccessAlert(false);
+                    onNavigate("settings");
+                  }}
+                  className="w-full bg-[#005faa] text-white font-bold py-3.5 rounded-full text-[14px] hover:bg-[#004780] transition-colors"
+                >
+                  Verifikasi Sekarang
+                </button>
+                <button
+                  onClick={() => setShowTieredAccessAlert(false)}
+                  className="w-full bg-slate-100 text-slate-600 font-bold py-3.5 rounded-full text-[14px] hover:bg-slate-200 transition-colors"
+                >
+                  Batalkan Transaksi
+                </button>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
       {/* Manage Token Markets Slide-in Screen */}
-      {showManageMarketModal && (
-        <div className="absolute inset-0 z-[200] bg-slate-50 flex flex-col animate-in slide-in-from-right duration-300">
-          {/* Header */}
-          <div className="flex items-center px-4 pt-12 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between">
-            <div className="flex items-center">
-              <button 
-                onClick={() => setShowManageMarketModal(false)} 
-                className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent flex items-center justify-center outline-none"
-              >
-                <ArrowLeft size={20} className="text-white" />
-              </button>
-              <h2 className="font-bold text-[16px] text-white ml-2 uppercase tracking-tight">MANAGE MARKETS</h2>
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto w-full scrollbar-hide pb-24">
-            <div className="px-5 text-center mt-6 mb-6">
-               <p className="text-[14px] text-slate-600 font-sans">Pilih token yang ingin ditampilkan di halaman utama live market feed.</p>
-            </div>
-
-            <div className="px-4 flex flex-col gap-3">
-              {marketTokens.map((token) => (
-                <div 
-                  key={token.code}
-                  className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl cursor-pointer transition-all active:scale-[0.98] group shadow-sm hover:border-slate-300"
-                  onClick={() => toggleTokenVisibility(token.code)}
+      <AnimatePresence>
+        {showManageMarketModal && (
+          <motion.div
+            initial={{ opacity: 0, x: "100%" }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: "100%" }}
+            transition={{ type: "spring", stiffness: 350, damping: 32 }}
+            className="absolute inset-0 z-[200] bg-slate-50 flex flex-col"
+          >
+            {/* Header */}
+            <div className="flex items-center px-4 pt-12 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between">
+              <div className="flex items-center">
+                <button 
+                  onClick={() => setShowManageMarketModal(false)} 
+                  className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent flex items-center justify-center outline-none"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center shadow-sm font-black text-white text-xs">
-                      {token.code.slice(0, 3)}
-                    </div>
-                    <div className="flex flex-col text-left">
-                      <span className="font-bold text-[14px] text-slate-800 leading-none mb-1">{token.code}</span>
-                      <span className="text-[11px] text-slate-400 font-medium">{token.name}</span>
-                    </div>
-                  </div>
-                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${visibleTokenCodes.includes(token.code) ? 'bg-slate-900 text-white shadow-lg' : 'bg-white border-2 border-slate-200 text-transparent'}`}>
-                    <Check size={14} strokeWidth={4} />
-                  </div>
-                </div>
-              ))}
+                  <ArrowLeft size={20} className="text-white" />
+                </button>
+                <h2 className="font-bold text-[16px] text-white ml-2 uppercase tracking-tight">MANAGE MARKETS</h2>
+              </div>
             </div>
-          </div>
 
-          {/* Footer Save Button */}
-          <div className="bg-white/95 backdrop-blur-md px-5 pb-5 pt-4 absolute bottom-0 w-full z-30 shadow-[0_-5px_15px_rgba(0,0,0,0.02)]">
-            <button
-              onClick={() => {
-                setShowManageMarketModal(false);
-                displayToast("Konfigurasi live market feed telah disimpan.");
-              }}
-              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-extrabold py-3.5 rounded-full transition-all text-[15px] tracking-wider uppercase cursor-pointer border-0"
-            >
-              Simpan Konfigurasi
-            </button>
-          </div>
-        </div>
-      )}
+            <div className="flex-1 overflow-y-auto w-full scrollbar-hide pb-24">
+              <div className="px-5 text-center mt-6 mb-6">
+                 <p className="text-[14px] text-slate-600 font-sans">Pilih token yang ingin ditampilkan di halaman utama live market feed.</p>
+              </div>
+
+              <div className="px-4 flex flex-col gap-3">
+                {marketTokens.map((token) => (
+                  <div 
+                    key={token.code}
+                    className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl cursor-pointer transition-all active:scale-[0.98] group shadow-sm hover:border-slate-300"
+                    onClick={() => toggleTokenVisibility(token.code)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center shadow-sm font-black text-white text-xs">
+                        {token.code.slice(0, 3)}
+                      </div>
+                      <div className="flex flex-col text-left">
+                        <span className="font-bold text-[14px] text-slate-800 leading-none mb-1">{token.code}</span>
+                        <span className="text-[11px] text-slate-400 font-medium">{token.name}</span>
+                      </div>
+                    </div>
+                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${visibleTokenCodes.includes(token.code) ? 'bg-slate-900 text-white shadow-lg' : 'bg-white border-2 border-slate-200 text-transparent'}`}>
+                      <Check size={14} strokeWidth={4} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Footer Save Button */}
+            <div className="bg-white/95 backdrop-blur-md px-5 pb-5 pt-4 absolute bottom-0 w-full z-30 shadow-[0_-5px_15px_rgba(0,0,0,0.02)]">
+              <button
+                onClick={() => {
+                  setShowManageMarketModal(false);
+                  displayToast("Konfigurasi live market feed telah disimpan.");
+                }}
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-extrabold py-3.5 rounded-full transition-all text-[15px] tracking-wider uppercase cursor-pointer border-0"
+              >
+                Simpan Konfigurasi
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
 
 

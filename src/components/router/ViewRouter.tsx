@@ -80,10 +80,10 @@ export const ViewRouter = React.memo(({ isLoggingIn, loginEmail, setLoginEmail, 
     <AnimatePresence mode="wait">
       <motion.div
         key={viewState}
-        initial={{ opacity: 0, y: 3 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -3 }}
-        transition={{ duration: 0.1, ease: "easeInOut" }}
+        initial={{ opacity: 0, x: "20%" }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: "-20%" }}
+        transition={{ type: "spring", stiffness: 320, damping: 30 }}
         className="w-full h-full flex flex-col"
       >
         {viewState === "splash" && (

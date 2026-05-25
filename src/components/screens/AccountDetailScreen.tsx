@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   ArrowLeft, 
   Send, 
@@ -372,69 +373,77 @@ export function AccountDetailScreen({
               </div>
 
               {/* Accordion Rincian Saldo Gabungan */}
-              {showUnifiedDetails && (
-                <div className="px-4 pb-4 pt-2 border-t border-slate-50 bg-slate-50/50 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="flex justify-between items-center mb-3 mt-1">
-                    <span className="font-extrabold tracking-wide uppercase text-[10px] text-slate-500">
-                      Cross-Chain Balance (USDC)
-                    </span>
-                    <span className="px-1.5 py-0.5 rounded bg-blue-100 text-[#008fcd] text-[8px] font-mono font-bold uppercase">
-                      Circle Gateway
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2 mb-3">
-                    <div className="rounded-xl p-2.5 bg-white border border-slate-100 flex flex-col justify-between shadow-sm">
-                      <span className="text-[8.5px] font-mono font-extrabold text-slate-800">ARC L1</span>
-                      <span className="font-bold text-[12px] sm:text-[13px] mt-1 text-slate-700 font-mono">
-                        {showBalance ? (() => {
-                          const usdcArcData = balanceData?.allBalances?.find((b: any) => 
-                            (b.token?.symbol === 'USDC' || b.token?.name?.includes('USDC')) && 
-                            (b.token?.blockchain?.toUpperCase() === 'ARC-TESTNET' || b.token?.blockchain?.toLowerCase() === 'arc-testnet' || !b.token?.blockchain)
-                          );
-                          const amt = usdcArcData ? parseFloat(usdcArcData.amount || '0') : (balance * 0.50);
-                          return amt.toFixed(2).replace('.', ',');
-                        })() : '••••'}
+              <AnimatePresence initial={false}>
+                {showUnifiedDetails && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25, ease: "easeInOut" }}
+                    className="px-4 pb-4 pt-2 border-t border-slate-50 bg-slate-50/50 overflow-hidden"
+                  >
+                    <div className="flex justify-between items-center mb-3 mt-1">
+                      <span className="font-extrabold tracking-wide uppercase text-[10px] text-slate-500">
+                        Cross-Chain Balance (USDC)
                       </span>
-                      <span className="text-[8px] text-slate-400 mt-1">Native (50%)</span>
+                      <span className="px-1.5 py-0.5 rounded bg-blue-100 text-[#008fcd] text-[8px] font-mono font-bold uppercase">
+                        Circle Gateway
+                      </span>
                     </div>
 
-                    <div className="rounded-xl p-2.5 bg-white border border-slate-100 flex flex-col justify-between shadow-sm">
-                      <span className="text-[8.5px] font-mono font-extrabold text-[#0052FF]">BASE</span>
-                      <span className="font-bold text-[12px] sm:text-[13px] mt-1 text-slate-700 font-mono">
-                        {showBalance ? (() => {
-                          const usdcBaseData = balanceData?.allBalances?.find((b: any) => 
-                            (b.token?.symbol === 'USDC' || b.token?.name?.includes('USDC')) && 
-                            (b.token?.blockchain?.toUpperCase().includes('BASE') || b.token?.blockchain?.toLowerCase().includes('base'))
-                          );
-                          const amt = usdcBaseData ? parseFloat(usdcBaseData.amount || '0') : (balance * 0.25);
-                          return amt.toFixed(2).replace('.', ',');
-                        })() : '••••'}
-                      </span>
-                      <span className="text-[8px] text-slate-400 mt-1">L2 (25%)</span>
+                    <div className="grid grid-cols-3 gap-2 mb-3">
+                      <div className="rounded-xl p-2.5 bg-white border border-slate-100 flex flex-col justify-between shadow-sm">
+                        <span className="text-[8.5px] font-mono font-extrabold text-slate-800">ARC L1</span>
+                        <span className="font-bold text-[12px] sm:text-[13px] mt-1 text-slate-700 font-mono">
+                          {showBalance ? (() => {
+                            const usdcArcData = balanceData?.allBalances?.find((b: any) => 
+                              (b.token?.symbol === 'USDC' || b.token?.name?.includes('USDC')) && 
+                              (b.token?.blockchain?.toUpperCase() === 'ARC-TESTNET' || b.token?.blockchain?.toLowerCase() === 'arc-testnet' || !b.token?.blockchain)
+                            );
+                            const amt = usdcArcData ? parseFloat(usdcArcData.amount || '0') : (balance * 0.50);
+                            return amt.toFixed(2).replace('.', ',');
+                          })() : '••••'}
+                        </span>
+                        <span className="text-[8px] text-slate-400 mt-1">Native (50%)</span>
+                      </div>
+
+                      <div className="rounded-xl p-2.5 bg-white border border-slate-100 flex flex-col justify-between shadow-sm">
+                        <span className="text-[8.5px] font-mono font-extrabold text-[#0052FF]">BASE</span>
+                        <span className="font-bold text-[12px] sm:text-[13px] mt-1 text-slate-700 font-mono">
+                          {showBalance ? (() => {
+                            const usdcBaseData = balanceData?.allBalances?.find((b: any) => 
+                              (b.token?.symbol === 'USDC' || b.token?.name?.includes('USDC')) && 
+                              (b.token?.blockchain?.toUpperCase().includes('BASE') || b.token?.blockchain?.toLowerCase().includes('base'))
+                            );
+                            const amt = usdcBaseData ? parseFloat(usdcBaseData.amount || '0') : (balance * 0.25);
+                            return amt.toFixed(2).replace('.', ',');
+                          })() : '••••'}
+                        </span>
+                        <span className="text-[8px] text-slate-400 mt-1">L2 (25%)</span>
+                      </div>
+
+                      <div className="rounded-xl p-2.5 bg-white border border-slate-100 flex flex-col justify-between shadow-sm">
+                        <span className="text-[8.5px] font-mono font-extrabold text-[#28A0F0]">ARBITRUM</span>
+                        <span className="font-bold text-[12px] sm:text-[13px] mt-1 text-slate-700 font-mono">
+                          {showBalance ? (() => {
+                            const usdcArbData = balanceData?.allBalances?.find((b: any) => 
+                              (b.token?.symbol === 'USDC' || b.token?.name?.includes('USDC')) && 
+                              (b.token?.blockchain?.toUpperCase().includes('ARBITRUM') || b.token?.blockchain?.toLowerCase().includes('arbitrum'))
+                            );
+                            const amt = usdcArbData ? parseFloat(usdcArbData.amount || '0') : (balance * 0.25);
+                            return amt.toFixed(2).replace('.', ',');
+                          })() : '••••'}
+                        </span>
+                        <span className="text-[8px] text-slate-400 mt-1">L2 (25%)</span>
+                      </div>
                     </div>
 
-                    <div className="rounded-xl p-2.5 bg-white border border-slate-100 flex flex-col justify-between shadow-sm">
-                      <span className="text-[8.5px] font-mono font-extrabold text-[#28A0F0]">ARBITRUM</span>
-                      <span className="font-bold text-[12px] sm:text-[13px] mt-1 text-slate-700 font-mono">
-                        {showBalance ? (() => {
-                          const usdcArbData = balanceData?.allBalances?.find((b: any) => 
-                            (b.token?.symbol === 'USDC' || b.token?.name?.includes('USDC')) && 
-                            (b.token?.blockchain?.toUpperCase().includes('ARBITRUM') || b.token?.blockchain?.toLowerCase().includes('arbitrum'))
-                          );
-                          const amt = usdcArbData ? parseFloat(usdcArbData.amount || '0') : (balance * 0.25);
-                          return amt.toFixed(2).replace('.', ',');
-                        })() : '••••'}
-                      </span>
-                      <span className="text-[8px] text-slate-400 mt-1">L2 (25%)</span>
+                    <div className="text-[10px] sm:text-[11px] leading-relaxed p-3 rounded-xl border border-blue-100 bg-blue-50/50 text-slate-600">
+                      💡 <span className="font-bold text-slate-700">Unified Balance:</span> USDC from various networks (Arc, Base, Arbitrum) are virtually unified. You can spend or transfer your total balance instantly on Arc Testnet without tedious cross-chain bridging.
                     </div>
-                  </div>
-
-                  <div className="text-[10px] sm:text-[11px] leading-relaxed p-3 rounded-xl border border-blue-100 bg-blue-50/50 text-slate-600">
-                    💡 <span className="font-bold text-slate-700">Unified Balance:</span> USDC from various networks (Arc, Base, Arbitrum) are virtually unified. You can spend or transfer your total balance instantly on Arc Testnet without tedious cross-chain bridging.
-                  </div>
-                </div>
-              )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             {/* ARC Token Card */}
@@ -528,200 +537,220 @@ export function AccountDetailScreen({
         )}
       </div>
 
-      {showCard && (
-        <div className="absolute inset-0 z-[100] flex flex-col justify-end">
-          <div 
-            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity animate-in fade-in" 
-            onClick={() => setShowCard(false)}
-          ></div>
-          
-          <div className="bg-white rounded-t-[32px] w-full flex flex-col items-center relative z-10 animate-in slide-in-from-bottom-[100%] duration-300 pb-10 shadow-[0_-10px_40px_rgba(0,0,0,0.2)]">
+      <AnimatePresence>
+        {showCard && (
+          <div className="absolute inset-0 z-[100] flex flex-col justify-end">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" 
+              onClick={() => setShowCard(false)}
+            ></motion.div>
             
-            {/* Handle bar */}
-            <div className="w-12 h-1.5 bg-slate-200 rounded-full mt-4 mb-6"></div>
-            
-            <div className="px-6 w-full flex flex-col items-center">
-              <h3 className="font-bold text-[18px] text-slate-800 mb-6">Your UID Card</h3>
+            <motion.div 
+              initial={{ opacity: 0, y: "100%" }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: "100%" }}
+              transition={{ type: "spring", stiffness: 350, damping: 33 }}
+              className="bg-white rounded-t-[32px] w-full flex flex-col items-center relative z-10 pb-10 shadow-[0_-10px_40px_rgba(0,0,0,0.2)]"
+            >
               
-              {/* Card Design */}
-              <UIDCard userName={userName} isBlurred={!showUID} />
+              {/* Handle bar */}
+              <div className="w-12 h-1.5 bg-slate-200 rounded-full mt-4 mb-6"></div>
               
-              {/* Card Actions */}
-              <div className="flex justify-center w-full mt-8 border-t border-slate-100 pt-6">
-                <div onClick={() => setShowUID(!showUID)} className="flex flex-col items-center gap-2 cursor-pointer group">
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-transform group-active:scale-95 ${showUID ? 'bg-slate-100 text-slate-600' : 'bg-slate-100 text-slate-800'}`}>
-                    {showUID ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </div>
-                  <span className="text-[12px] font-medium text-slate-600">{showUID ? 'Hide UID' : 'View UID'}</span>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showImportModal && (
-        <div className="absolute inset-0 z-[120] bg-slate-50 flex flex-col animate-in slide-in-from-right duration-300">
-          {/* Header */}
-          <div className="flex items-center px-4 pt-12 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between">
-            <div className="flex items-center">
-              <button 
-                onClick={() => setShowImportModal(false)} 
-                className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent flex items-center justify-center outline-none"
-              >
-                <ArrowLeft size={20} className="text-white" />
-              </button>
-              <h2 className="font-bold text-[16px] text-white ml-2 uppercase tracking-tight">Import Token</h2>
-            </div>
-          </div>
-          
-          <div className="px-6 w-full flex-1 overflow-y-auto flex flex-col pt-6 pb-8">
-            {/* Import Tabs */}
-            <div className="flex gap-2 p-1 bg-white border border-slate-100/80 rounded-xl mb-4 shadow-sm">
-              <button
-                onClick={() => setImportTab('popular')}
-                className={`flex-1 py-2 text-[13px] font-bold rounded-lg transition-all border-0 cursor-pointer ${
-                  importTab === 'popular' 
-                    ? 'bg-slate-900 text-white shadow-sm' 
-                    : 'bg-transparent text-slate-500 hover:text-slate-700'
-                }`}
-              >
-                Popular Token
-              </button>
-              <button
-                onClick={() => setImportTab('custom')}
-                className={`flex-1 py-2 text-[13px] font-bold rounded-lg transition-all border-0 cursor-pointer ${
-                  importTab === 'custom' 
-                    ? 'bg-slate-900 text-white shadow-sm' 
-                    : 'bg-transparent text-slate-500 hover:text-slate-700'
-                }`}
-              >
-                Custom Token
-              </button>
-            </div>
-
-            {importTab === 'popular' ? (
-              <div className="flex flex-col gap-3 min-h-[250px] pb-4 select-none">
-                <p className="text-[12px] text-slate-400 mb-1 font-medium">Select from popular standard assets on Arc L1 Testnet:</p>
+              <div className="px-6 w-full flex flex-col items-center">
+                <h3 className="font-bold text-[18px] text-slate-800 mb-6">Your UID Card</h3>
                 
-                {popularCatalog.map((ptok) => {
-                  const isAlreadyImported = importedTokens.some(t => t.symbol.toUpperCase() === ptok.symbol.toUpperCase()) || ptok.symbol === 'USDC' || ptok.symbol === 'ARC';
-                  
-                  return (
-                    <div key={ptok.symbol} className="flex justify-between items-center p-3.5 bg-white border border-slate-100 rounded-2xl hover:bg-slate-100/30 transition-colors shadow-sm">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-full ${ptok.color || 'bg-slate-800'} flex items-center justify-center text-white text-xs font-extrabold font-sans uppercase tracking-tight shrink-0 shadow-sm`}>
-                           {ptok.symbol.substring(0, 4)}
-                        </div>
-                        <div className="flex flex-col text-left">
-                          <span className="font-bold text-[14px] text-slate-800 leading-snug">{ptok.name}</span>
-                          <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest leading-none mt-0.5">{ptok.symbol} • {ptok.type}</span>
-                        </div>
-                      </div>
-
-                      {isAlreadyImported ? (
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-xl text-[11px] font-extrabold border border-emerald-100/50">
-                          <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-                          ACTIVE
-                        </div>
-                      ) : (
-                        <button 
-                          onClick={() => {
-                            importToken({
-                              symbol: ptok.symbol,
-                              name: ptok.name,
-                              decimals: ptok.decimals,
-                              contractAddress: ptok.contractAddress,
-                              balance: ptok.initialBalance,
-                              usdPrice: ptok.usdPrice,
-                              color: ptok.color
-                            });
-                            displayToast(`${ptok.symbol} Token imported!`);
-                          }}
-                          className="bg-slate-900 text-white hover:bg-slate-800 font-sans text-[11.5px] font-bold px-3.5 py-1.5 rounded-xl cursor-pointer border-0 transition-opacity active:opacity-90"
-                        >
-                          Import
-                        </button>
-                      )}
+                {/* Card Design */}
+                <UIDCard userName={userName} isBlurred={!showUID} />
+                
+                {/* Card Actions */}
+                <div className="flex justify-center w-full mt-8 border-t border-slate-100 pt-6">
+                  <div onClick={() => setShowUID(!showUID)} className="flex flex-col items-center gap-2 cursor-pointer group">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-transform group-active:scale-95 ${showUID ? 'bg-slate-100 text-slate-600' : 'bg-slate-100 text-slate-800'}`}>
+                      {showUID ? <EyeOff size={20} /> : <Eye size={20} />}
                     </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="flex flex-col gap-4 min-h-[250px] pb-4">
-                <div className="flex justify-between items-center bg-blue-50/50 p-3.5 rounded-2xl border border-blue-100/50 text-left">
-                  <span className="text-[11.5px] text-slate-600 leading-relaxed max-w-[70%] font-medium">
-                    💡 Fast-track testing? Auto-populate mock contract details instantly with a single tap.
-                  </span>
-                  <button 
-                    onClick={handleAutoFillCustom}
-                    className="bg-blue-600 text-white hover:bg-blue-700 text-[11.5px] font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer border-0 shadow-sm"
-                  >
-                    Autofill
-                  </button>
+                    <span className="text-[12px] font-medium text-slate-600">{showUID ? 'Hide UID' : 'View UID'}</span>
+                  </div>
                 </div>
 
-                <div className="flex flex-col gap-3">
-                  <div className="flex flex-col gap-1 text-left">
-                    <label className="text-[10.5px] font-extrabold uppercase tracking-widest text-slate-500">Token Contract Address</label>
-                    <input 
-                      type="text" 
-                      value={customAddress}
-                      onChange={(e) => setCustomAddress(e.target.value)}
-                      placeholder="e.g. 0x07f1ea50e30d47376c0dfb3eb853fd40e3a8907a"
-                      className="w-full bg-white border border-slate-100 focus:border-blue-400 focus:bg-white rounded-xl px-4 py-2.5 text-[14px] text-slate-800 font-mono focus:outline-none transition-all placeholder:text-slate-300 shadow-sm"
-                    />
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showImportModal && (
+          <motion.div
+            initial={{ opacity: 0, x: "100%" }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: "100%" }}
+            transition={{ type: "spring", stiffness: 350, damping: 32 }}
+            className="absolute inset-0 z-[120] bg-slate-50 flex flex-col"
+          >
+            {/* Header */}
+            <div className="flex items-center px-4 pt-12 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between">
+              <div className="flex items-center">
+                <button 
+                  onClick={() => setShowImportModal(false)} 
+                  className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent flex items-center justify-center outline-none"
+                >
+                  <ArrowLeft size={20} className="text-white" />
+                </button>
+                <h2 className="font-bold text-[16px] text-white ml-2 uppercase tracking-tight">Import Token</h2>
+              </div>
+            </div>
+            
+            <div className="px-6 w-full flex-1 overflow-y-auto flex flex-col pt-6 pb-8">
+              {/* Import Tabs */}
+              <div className="flex gap-2 p-1 bg-white border border-slate-100/80 rounded-xl mb-4 shadow-sm">
+                <button
+                  onClick={() => setImportTab('popular')}
+                  className={`flex-1 py-2 text-[13px] font-bold rounded-lg transition-all border-0 cursor-pointer ${
+                    importTab === 'popular' 
+                      ? 'bg-slate-900 text-white shadow-sm' 
+                      : 'bg-transparent text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Popular Token
+                </button>
+                <button
+                  onClick={() => setImportTab('custom')}
+                  className={`flex-1 py-2 text-[13px] font-bold rounded-lg transition-all border-0 cursor-pointer ${
+                    importTab === 'custom' 
+                      ? 'bg-slate-900 text-white shadow-sm' 
+                      : 'bg-transparent text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Custom Token
+                </button>
+              </div>
+
+              {importTab === 'popular' ? (
+                <div className="flex flex-col gap-3 min-h-[250px] pb-4 select-none">
+                  <p className="text-[12px] text-slate-400 mb-1 font-medium">Select from popular standard assets on Arc L1 Testnet:</p>
+                  
+                  {popularCatalog.map((ptok) => {
+                    const isAlreadyImported = importedTokens.some(t => t.symbol.toUpperCase() === ptok.symbol.toUpperCase()) || ptok.symbol === 'USDC' || ptok.symbol === 'ARC';
+                    
+                    return (
+                      <div key={ptok.symbol} className="flex justify-between items-center p-3.5 bg-white border border-slate-100 rounded-2xl hover:bg-slate-100/30 transition-colors shadow-sm">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-full ${ptok.color || 'bg-slate-800'} flex items-center justify-center text-white text-xs font-extrabold font-sans uppercase tracking-tight shrink-0 shadow-sm`}>
+                             {ptok.symbol.substring(0, 4)}
+                          </div>
+                          <div className="flex flex-col text-left">
+                            <span className="font-bold text-[14px] text-slate-800 leading-snug">{ptok.name}</span>
+                            <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest leading-none mt-0.5">{ptok.symbol} • {ptok.type}</span>
+                          </div>
+                        </div>
+
+                        {isAlreadyImported ? (
+                          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-xl text-[11px] font-extrabold border border-emerald-100/50">
+                            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                            ACTIVE
+                          </div>
+                        ) : (
+                          <button 
+                            onClick={() => {
+                              importToken({
+                                symbol: ptok.symbol,
+                                name: ptok.name,
+                                decimals: ptok.decimals,
+                                contractAddress: ptok.contractAddress,
+                                balance: ptok.initialBalance,
+                                usdPrice: ptok.usdPrice,
+                                color: ptok.color
+                              });
+                              displayToast(`${ptok.symbol} Token imported!`);
+                            }}
+                            className="bg-slate-900 text-white hover:bg-slate-800 font-sans text-[11.5px] font-bold px-3.5 py-1.5 rounded-xl cursor-pointer border-0 transition-opacity active:opacity-90"
+                          >
+                            Import
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4 min-h-[250px] pb-4">
+                  <div className="flex justify-between items-center bg-blue-50/50 p-3.5 rounded-2xl border border-blue-100/50 text-left">
+                    <span className="text-[11.5px] text-slate-600 leading-relaxed max-w-[70%] font-medium">
+                      💡 Fast-track testing? Auto-populate mock contract details instantly with a single tap.
+                    </span>
+                    <button 
+                      onClick={handleAutoFillCustom}
+                      className="bg-blue-600 text-white hover:bg-blue-700 text-[11.5px] font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer border-0 shadow-sm"
+                    >
+                      Autofill
+                    </button>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-3">
                     <div className="flex flex-col gap-1 text-left">
-                      <label className="text-[10.5px] font-extrabold uppercase tracking-widest text-slate-500">Token Symbol</label>
+                      <label className="text-[10.5px] font-extrabold uppercase tracking-widest text-slate-500">Token Contract Address</label>
                       <input 
                         type="text" 
-                        value={customSymbol}
-                        onChange={(e) => setCustomSymbol(e.target.value)}
-                        placeholder="e.g. MINT"
-                        maxLength={8}
-                        className="w-full bg-white border border-slate-100 focus:border-blue-400 focus:bg-white rounded-xl px-4 py-2.5 text-[14px] text-slate-800 font-extrabold focus:outline-none transition-all placeholder:text-slate-300 shadow-sm"
+                        value={customAddress}
+                        onChange={(e) => setCustomAddress(e.target.value)}
+                        placeholder="e.g. 0x07f1ea50e30d47376c0dfb3eb853fd40e3a8907a"
+                        className="w-full bg-white border border-slate-100 focus:border-blue-400 focus:bg-white rounded-xl px-4 py-2.5 text-[14px] text-slate-800 font-mono focus:outline-none transition-all placeholder:text-slate-300 shadow-sm"
                       />
                     </div>
 
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="flex flex-col gap-1 text-left">
+                        <label className="text-[10.5px] font-extrabold uppercase tracking-widest text-slate-500">Token Symbol</label>
+                        <input 
+                          type="text" 
+                          value={customSymbol}
+                          onChange={(e) => setCustomSymbol(e.target.value)}
+                          placeholder="e.g. MINT"
+                          maxLength={8}
+                          className="w-full bg-white border border-slate-100 focus:border-blue-400 focus:bg-white rounded-xl px-4 py-2.5 text-[14px] text-slate-800 font-extrabold focus:outline-none transition-all placeholder:text-slate-300 shadow-sm"
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-1 text-left">
+                        <label className="text-[10.5px] font-extrabold uppercase tracking-widest text-slate-500">Decimals</label>
+                        <input 
+                          type="number" 
+                          value={customDecimals}
+                          onChange={(e) => setCustomDecimals(e.target.value)}
+                          placeholder="18"
+                          className="w-full bg-white border border-slate-100 focus:border-blue-400 focus:bg-white rounded-xl px-4 py-2.5 text-[14px] text-slate-800 focus:outline-none transition-all placeholder:text-slate-300 shadow-sm"
+                        />
+                      </div>
+                    </div>
+
                     <div className="flex flex-col gap-1 text-left">
-                      <label className="text-[10.5px] font-extrabold uppercase tracking-widest text-slate-500">Decimals</label>
+                      <label className="text-[10.5px] font-extrabold uppercase tracking-widest text-slate-500">Token Name</label>
                       <input 
-                        type="number" 
-                        value={customDecimals}
-                        onChange={(e) => setCustomDecimals(e.target.value)}
-                        placeholder="18"
+                        type="text" 
+                        value={customName}
+                        onChange={(e) => setCustomName(e.target.value)}
+                        placeholder="e.g. Arc Mintable Protocol"
                         className="w-full bg-white border border-slate-100 focus:border-blue-400 focus:bg-white rounded-xl px-4 py-2.5 text-[14px] text-slate-800 focus:outline-none transition-all placeholder:text-slate-300 shadow-sm"
                       />
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-1 text-left">
-                    <label className="text-[10.5px] font-extrabold uppercase tracking-widest text-slate-500">Token Name</label>
-                    <input 
-                      type="text" 
-                      value={customName}
-                      onChange={(e) => setCustomName(e.target.value)}
-                      placeholder="e.g. Arc Mintable Protocol"
-                      className="w-full bg-white border border-slate-100 focus:border-blue-400 focus:bg-white rounded-xl px-4 py-2.5 text-[14px] text-slate-800 focus:outline-none transition-all placeholder:text-slate-300 shadow-sm"
-                    />
-                  </div>
+                  <button 
+                    onClick={handleImportCustom}
+                    className="w-full mt-2 bg-slate-900 text-white hover:bg-slate-800 text-[13.5px] font-bold py-3.5 px-4 rounded-xl active:scale-[0.98] transition-all cursor-pointer border-0 uppercase tracking-wide font-sans shadow-md"
+                  >
+                    Import Custom Token
+                  </button>
                 </div>
-
-                <button 
-                  onClick={handleImportCustom}
-                  className="w-full mt-2 bg-slate-900 text-white hover:bg-slate-800 text-[13.5px] font-bold py-3.5 px-4 rounded-xl active:scale-[0.98] transition-all cursor-pointer border-0 uppercase tracking-wide font-sans shadow-md"
-                >
-                  Import Custom Token
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );
