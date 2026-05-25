@@ -63,8 +63,9 @@ export async function createWallet(supabaseAdmin: any, userId: string) {
 export async function executeTransaction(
     supabaseAdmin: any,
     userId: string,
-    action: 'swap' | 'send',
     amount: number,
+    _destinationAddress: string,
+    type: string,
     metadata: any
 ) {
     const { data: walletData } = await supabaseAdmin
@@ -77,30 +78,21 @@ export async function executeTransaction(
         entitySecret: process.env.CIRCLE_ENTITY_SECRET as string,
     });
 
-    let result: any;
-    if (action === 'swap') {
-        result = await kit.swap({
-            from: { adapter, chain: "Arc_Testnet", address: walletData.wallet_address },
-            tokenIn: metadata.fromToken,
-            tokenOut: metadata.toToken,
-            amountIn: amount.toString(),
-            config: {
-                kitKey: process.env.KIT_KEY as string,
-            },
-        });
-    } else {
-        result = await kit.send({
-            from: { adapter, chain: "Arc_Testnet", address: walletData.wallet_address },
-            to: metadata.destinationAddress,
-            amount: amount.toString(),
-            token: metadata.token,
-        });
-    }
+    // Perform the swap using AppKit
+    const result = await kit.swap({
+        from: { adapter, chain: "Arc_Testnet", address: walletData.wallet_address },
+        tokenIn: metadata.fromToken,
+        tokenOut: metadata.toToken,
+        amountIn: amount.toString(),
+        config: {
+            kitKey: process.env.KIT_KEY as string,
+        },
+    });
 
     const { error } = await supabaseAdmin.from('transactions').insert({
         user_id: userId,
         amount: `-${amount.toFixed(2)}`,
-        type: action,
+        type: type,
         status: 'pending',
         internal_ref: result.txHash,
         metadata: { ...metadata, real: true, explorerUrl: result.explorerUrl }
