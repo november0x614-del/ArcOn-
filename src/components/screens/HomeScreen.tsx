@@ -327,12 +327,12 @@ export const HomeScreen = React.memo(({
       </header>
 
       {/* Scrollable Main Content */}
-      <div className="flex-1 overflow-y-auto pb-32 pt-0 scrollbar-hide z-20 md:px-6 relative">
-        <div className="flex flex-col md:grid md:grid-cols-12 md:gap-5 lg:gap-6">
+      <div className="flex-1 overflow-y-auto pb-32 pt-0 scrollbar-hide z-20 md:px-4 lg:px-6 relative">
+        <div className="flex flex-col lg:grid lg:grid-cols-12 lg:gap-6">
           {/* Left Column for Desktop */}
-          <div className="md:col-span-7 xl:col-span-8 flex flex-col gap-3">
+          <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-3">
             {/* Accounts Section */}
-            <section className="bg-white rounded-[24px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] mx-4 md:mx-0 border border-slate-50/50 mt-0">
+            <section className="bg-white rounded-[24px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] mx-4 lg:mx-0 border border-slate-50/50 mt-0">
               <div className="flex justify-between items-center mb-3">
                 <h2 className="text-[17px] font-bold text-slate-800 tracking-tight">
                   Accounts
@@ -419,7 +419,7 @@ export const HomeScreen = React.memo(({
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.3 }}
-                    className="bg-white rounded-[24px] p-5 border border-slate-200/60 shadow-sm mb-3 text-left font-sans flex flex-col gap-4 mx-4 md:mx-0"
+                    className="bg-white rounded-[24px] p-5 border border-slate-200/60 shadow-sm mb-3 text-left font-sans flex flex-col gap-4 mx-4 lg:mx-0"
                   >
                     {/* Header */}
                     <div className="flex justify-between items-start border-b border-slate-100 pb-3">
@@ -756,7 +756,7 @@ export const HomeScreen = React.memo(({
             </section>
 
             {/* Favorite Transactions Section */}
-            <section className="bg-white rounded-[24px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] mb-3 md:mb-0 mx-4 md:mx-0 border border-slate-50/50">
+            <section className="bg-white rounded-[24px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] mb-3 lg:mb-0 mx-4 lg:mx-0 border border-slate-50/50">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-[17px] font-bold text-slate-800 tracking-tight">
                   Favorite Transactions
@@ -839,7 +839,7 @@ export const HomeScreen = React.memo(({
             </section>
 
             {/* Special For You (Promo Banner) */}
-            <section className="bg-white rounded-[24px] overflow-hidden shadow-sm mb-4 md:mb-0 mx-4 md:mx-0 pb-4 border border-x-transparent border-t-transparent border-b-slate-50 relative z-10 md:mt-6 lg:mt-8">
+            <section className="bg-white rounded-[24px] overflow-hidden shadow-sm mb-4 lg:mb-0 mx-4 lg:mx-0 pb-4 border border-x-transparent border-t-transparent border-b-slate-50 relative z-10 lg:mt-8">
               <div className="px-5 pt-5 pb-3">
                 <h2 className="text-[17px] font-bold text-slate-800 tracking-tight mb-0 text-left">
                   Special For You
@@ -899,10 +899,10 @@ export const HomeScreen = React.memo(({
           </div>
 
           {/* Right Column for Desktop */}
-          <div className="md:col-span-5 xl:col-span-4 flex flex-col gap-4">
+          <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-4">
             <LogPanel />
             {/* Dapps */}
-            <section className="bg-white rounded-[24px] p-5 shadow-sm mb-4 md:mb-0 mx-4 md:mx-0 text-left">
+            <section className="bg-white rounded-[24px] p-5 shadow-sm mb-4 lg:mb-0 mx-4 lg:mx-0 text-left">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-[17px] font-bold text-slate-800 tracking-tight font-sans">
                   External DApps
@@ -995,7 +995,7 @@ export const HomeScreen = React.memo(({
             </section>
 
             {/* Live Token Price Feed */}
-            <section className="bg-white rounded-[24px] p-5 shadow-sm mx-4 md:mx-0 mb-4 md:mb-0">
+            <section className="bg-white rounded-[24px] p-5 shadow-sm mx-4 lg:mx-0 mb-4 lg:mb-0">
               <div className="mb-4 text-left flex justify-between items-start">
                 <div>
                   <h2 className="text-[17px] font-bold text-slate-800 tracking-tight">
@@ -1040,7 +1040,7 @@ export const HomeScreen = React.memo(({
             </section>
 
             {/* Developer Services */}
-            <section className="bg-white rounded-[24px] p-5 shadow-sm mx-4 md:mx-0 mb-8 md:mb-0">
+            <section className="bg-white rounded-[24px] p-5 shadow-sm mx-4 lg:mx-0 mb-8 lg:mb-0">
               <h2 className="text-[17px] font-bold text-slate-800 tracking-tight mb-4 text-left">
                 Developer Services
               </h2>
@@ -1070,7 +1070,7 @@ export const HomeScreen = React.memo(({
       >
         {/* The Masked White Nav Bar */}
         <nav
-          className="relative bg-white h-[75px] md:h-[85px] px-6 md:px-12 pb-2 flex items-center justify-between md:justify-around pointer-events-auto rounded-t-2xl md:rounded-t-3xl"
+          className="relative bg-white h-[75px] md:h-[85px] px-6 lg:px-12 pb-2 flex items-center justify-between lg:justify-around pointer-events-auto rounded-t-2xl md:rounded-t-3xl"
           style={{
             maskImage:
               "radial-gradient(circle at 50% 0px, transparent 34px, black 35px)",
