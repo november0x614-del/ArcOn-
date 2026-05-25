@@ -1065,7 +1065,7 @@ export const HomeScreen = React.memo(({
 
       {/* Aesthetic Bottom Navigation Wrapper with Cutout Notch */}
       <div
-        className="absolute bottom-0 left-0 right-0 z-30 pointer-events-none"
+        className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none"
         style={{ filter: "drop-shadow(0 -5px 15px rgba(0,0,0,0.06))" }}
       >
         {/* The Masked White Nav Bar */}
