@@ -174,9 +174,9 @@ export default function App() {
   }, [registeredUser?.supabaseUid, fetchBalance, fetchTransactions]);
 
   return (
-    <div className="bg-[#EAF3FA] sm:bg-slate-900 min-h-screen sm:p-4 md:p-8 flex items-center justify-center">
-      {/* Responsive Device Frame */}
-      <div className="w-full max-w-[400px] md:max-w-2xl lg:max-w-5xl xl:max-w-6xl h-[100dvh] sm:h-[850px] lg:h-[90vh] bg-[#EAF3FA] sm:rounded-[40px] relative shadow-2xl overflow-hidden flex flex-col sm:border-[8px] border-slate-800 animate-in fade-in duration-500">
+    <div className="bg-[#EAF3FA] min-h-screen flex flex-col">
+      {/* Full screen responsive web application wrapper */}
+      <div className="w-full h-[100dvh] bg-[#EAF3FA] relative overflow-hidden flex flex-col animate-in fade-in duration-500">
         <AnimatePresence mode="wait">
           <motion.div
             key={viewState}

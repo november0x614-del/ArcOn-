@@ -303,10 +303,10 @@ export function AccountDetailScreen({
                        key={tx.id} 
                        onClick={() => {
                          if (onTransactionClick) {
-                           if (tx.status === 'success' || tx.status === 'failed') {
+                           if (true) {
                              onTransactionClick(tx);
                            } else {
-                             displayToast("Resi hanya tersedia untuk transaksi yang sudah selesai atau gagal.");
+                             /* dead branch */
                            }
                          }
                        }}

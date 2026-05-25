@@ -21,7 +21,7 @@ interface InboxScreenProps {
 }
 
 export function InboxScreen({ onBack, onTransactionClick }: InboxScreenProps) {
-  const { transactions, readReceiptIds, markAsRead, displayToast } = useApp();
+  const { transactions, readReceiptIds, markAsRead } = useApp();
   const [activeTab, setActiveTab] = useState<'resi' | 'notifikasi' | 'promo'>('resi');
   const [selectedNotification, setSelectedNotification] = useState<{title: string, desc: string, date: string} | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -87,10 +87,10 @@ export function InboxScreen({ onBack, onTransactionClick }: InboxScreenProps) {
 
   const handleReceiptClick = (tx: any) => {
     markAsRead(tx.id);
-    if (tx.status === 'success' || tx.status === 'failed') {
+    if (true) {
       onTransactionClick?.(tx);
     } else {
-      displayToast("Resi hanya tersedia untuk transaksi yang sudah selesai atau gagal.");
+      /* dead branch */
     }
   };
 

@@ -50,7 +50,8 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
   };
 
   const txHash = tx?.txHash || '0x' + (tx?.id ? tx.id.substring(0, 16) + 'abc' + tx.id.substring(tx.id.length - 8) : 'dc78e12b7fa120021c99f018a14b9c1d');
-  const isSuccess = tx?.status !== 'failed'; // default to success unless failed
+  const isSuccess = tx?.status === 'success';
+  const isPending = tx?.status === 'pending' || tx?.status === 'processing';
 
   return (
     <div className="w-full h-full bg-slate-100 relative flex flex-col z-50 animate-in fade-in slide-in-from-right duration-300">
@@ -94,7 +95,22 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
 
       <div className="flex-1 overflow-y-auto px-4 py-6 pb-24 flex flex-col items-center gap-6">
         
-        {/* SUBMITTED SUCCESS BANNER (Styled precisely matching Commonwealth reference with adaptive success/fail styling) */}
+        {isPending ? (
+          <div className="flex flex-col items-center justify-center mt-20 p-8 w-full max-w-[370px]">
+            <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-6 shadow-sm">
+              <svg className="animate-spin w-8 h-8" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </div>
+            <h3 className="text-[19px] font-extrabold text-slate-800 tracking-tight leading-snug mb-3">Transaksi Diproses</h3>
+            <p className="text-[13px] text-slate-500 leading-relaxed text-center font-medium font-sans">
+              Resi belum tersedia.<br/>Transaksi Anda masih dalam antrean validasi jaringan blockchain Arc.
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* SUBMITTED SUCCESS BANNER (Styled precisely matching Commonwealth reference with adaptive success/fail styling) */}
             <div className="flex items-center gap-4 w-full max-w-[370px] bg-transparent py-2 px-1">
               <div className={`w-14 h-14 rounded-full flex items-center justify-center shadow-md shrink-0 ${isSuccess ? 'bg-[#E6F4EA] text-[#137333] border border-emerald-200' : 'bg-rose-100 text-rose-600 border border-rose-200'}`}>
                 {isSuccess ? (
@@ -247,6 +263,8 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                 <span className="text-[9.5px] text-slate-400/80 font-bold tracking-wider font-mono">POWERED BY SECURE ARC PLATFORM</span>
               </div>
             </div>
+          </>
+        )}
 
       </div>
     </div>

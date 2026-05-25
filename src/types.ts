@@ -74,7 +74,7 @@ export interface Transaction {
   amount: string;
   currency: string;
   timestamp: string;
-  status: 'pending' | 'success' | 'failed';
+  status: 'pending' | 'processing' | 'success' | 'failed';
   txHash?: string;
   explorerUrl?: string;
   internal_ref?: string;
