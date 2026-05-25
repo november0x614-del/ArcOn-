@@ -1,126 +1,253 @@
-import React from 'react';
-import { ArrowLeft, Share2, Download, Receipt as ReceiptIcon, Copy } from 'lucide-react';
+import React, { useState } from 'react';
+import { 
+  ArrowLeft, 
+  Share2, 
+  Download, 
+  Copy, 
+  Check,
+  X,
+  HelpCircle
+} from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
-interface ReceiptScreenProps {
-  onBack: () => void;
-}
-
-export function ReceiptScreen({ onBack }: ReceiptScreenProps) {
+export function ReceiptScreen({ onBack }: { onBack: () => void }) {
   const { selectedTransaction: tx } = useApp();
+  const [copiedText, setCopiedText] = useState<string | null>(null);
+  const [showReceiptHelp, setShowReceiptHelp] = useState(false);
+
+  const handleCopy = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedText(label);
+    setTimeout(() => setCopiedText(null), 2000);
+  };
+
+  // Convert default ISO timestamp or simple date to Commonwealth-style "Sunday, 28 Jun 2015 at 10:33am"
+  const formatReceiptDate = (timeStr: string = '') => {
+    if (!timeStr) return 'Monday, 25 May 2026 at 10:30pm UTC';
+    try {
+      const d = new Date(timeStr);
+      if (isNaN(d.getTime())) return timeStr;
+      
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      
+      const dayName = days[d.getDay()];
+      const dateNum = d.getDate();
+      const monthName = months[d.getMonth()];
+      const year = d.getFullYear();
+      
+      let hours = d.getHours();
+      const minutes = d.getMinutes();
+      const ampm = hours >= 12 ? 'pm' : 'am';
+      hours = hours % 12;
+      hours = hours ? hours : 12; // the hour '0' should be '12'
+      const minutesStr = minutes < 10 ? '0' + minutes : minutes;
+      
+      return `${dayName}  ${dateNum}  ${monthName}  ${year}  at  ${hours}:${minutesStr}${ampm} UTC`;
+    } catch {
+      return timeStr;
+    }
+  };
+
+  const txHash = tx?.txHash || '0x' + (tx?.id ? tx.id.substring(0, 16) + 'abc' + tx.id.substring(tx.id.length - 8) : 'dc78e12b7fa120021c99f018a14b9c1d');
+  const isSuccess = tx?.status !== 'failed'; // default to success unless failed
 
   return (
-    <div className="w-full h-full bg-[#f8fafc] relative flex flex-col z-50 animate-in fade-in slide-in-from-right duration-300">
-      {/* Header */}
-      <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between">
-        <div className="flex items-center">
-          <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent">
-            <ArrowLeft size={20} className="text-white" />
-          </button>
-          <h2 className="font-bold text-[16px] text-white ml-2">RECEIPT</h2>
+    <div className="w-full h-full bg-slate-100 relative flex flex-col z-50 animate-in fade-in slide-in-from-right duration-300">
+      
+      {/* Toast Feedback */}
+      {copiedText && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-slate-900 border border-slate-800 text-white text-xs px-3.5 py-2 rounded-full shadow-xl z-[9999] flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
+          <Check size={14} className="text-emerald-400 stroke-[3]" />
+          <span className="font-semibold">{copiedText} disalin ke clipboard!</span>
         </div>
-        <div className="flex items-center gap-2">
-            <button className="p-1.5 hover:bg-slate-100 rounded-full transition-colors cursor-pointer border-0 bg-transparent">
-               <Download size={20} className="text-white" />
-            </button>
-            <button className="p-1.5 hover:bg-slate-100 rounded-full transition-colors cursor-pointer border-0 bg-transparent">
-               <Share2 size={20} className="text-white" />
-            </button>
+      )}
+
+      {/* Modern, clean Glassmorphism Header */}
+      <div className="flex items-center px-4 pt-5 pb-3 bg-white border-b border-slate-200 shadow-xs relative z-10 w-full justify-between">
+        <div className="flex items-center">
+          <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full transition-colors active:bg-slate-200 cursor-pointer border-0 bg-transparent flex items-center justify-center">
+            <ArrowLeft size={20} className="text-slate-800" />
+          </button>
+          <div className="ml-2 flex flex-col">
+            <h2 className="font-extrabold text-[14px] text-slate-900 tracking-wide uppercase">STRUK TRANSAKSI WEB3</h2>
+            <span className="text-[9px] text-slate-500 font-bold tracking-wider uppercase font-sans">ARC NETWORK TESTNET</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <button 
+            onClick={() => handleCopy(JSON.stringify(tx, null, 2), "JSON Metadata")} 
+            className="p-2 hover:bg-slate-100 rounded-full transition-all cursor-pointer border-0 bg-transparent text-slate-700 hover:text-slate-900"
+            title="Download JSON Metadata"
+          >
+            <Download size={19} />
+          </button>
+          <button 
+            onClick={() => handleCopy(txHash, "TxHash")} 
+            className="p-2 hover:bg-slate-100 rounded-full transition-all cursor-pointer border-0 bg-transparent text-slate-700 hover:text-slate-900"
+            title="Bagikan hash transaksi"
+          >
+            <Share2 size={19} />
+          </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 py-6 pb-24 flex flex-col items-center">
-        {/* Receipt Ticket Design */}
-        <div className="bg-white rounded-3xl w-full max-w-[320px] shadow-sm border border-slate-100 flex flex-col relative drop-shadow-xl overflow-hidden mt-4">
-            
-            {/* Ticket Header Graphic */}
-            <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-6 flex flex-col items-center relative overflow-hidden">
-                <div className="absolute top-[-30px] right-[-30px] w-[100px] h-[100px] bg-white/20 rounded-full blur-xl"></div>
-                <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-slate-800 shadow-md z-10 mb-3">
-                   <ReceiptIcon size={32} />
-                </div>
-                <h2 className="text-slate-800 font-bold text-[18px] z-10">{tx?.status === 'success' ? 'Transaction Successful' : 'Transaction Processing'}</h2>
-                <span className="text-blue-100 text-[12px] z-10">{tx?.timestamp || 'Unknown Time'}</span>
+      <div className="flex-1 overflow-y-auto px-4 py-6 pb-24 flex flex-col items-center gap-6">
+        
+        {/* SUBMITTED SUCCESS BANNER (Styled precisely matching Commonwealth reference with adaptive success/fail styling) */}
+            <div className="flex items-center gap-4 w-full max-w-[370px] bg-transparent py-2 px-1">
+              <div className={`w-14 h-14 rounded-full flex items-center justify-center shadow-md shrink-0 ${isSuccess ? 'bg-[#E6F4EA] text-[#137333] border border-emerald-200' : 'bg-rose-100 text-rose-600 border border-rose-200'}`}>
+                {isSuccess ? (
+                  <Check size={32} className="stroke-[3]" />
+                ) : (
+                   <X size={32} className="stroke-[3]" />
+                )}
+              </div>
+              <div className="flex flex-col">
+                <h3 className="text-[17px] font-bold text-slate-800 tracking-tight leading-snug">
+                  {isSuccess ? 'Your transaction has been submitted' : 'Your transaction has failed'}
+                </h3>
+                <span className="text-[11px] text-slate-505 text-slate-500 font-bold uppercase tracking-wider mt-0.5">
+                  {isSuccess ? 'Verified on Arc Blockchain' : 'Reverted on Arc Blockchain'}
+                </span>
+              </div>
             </div>
 
-            {/* Jagged edge divider (simulated with CSS circles) */}
-            <div className="relative h-4 bg-white overflow-hidden flex transform -translate-y-2">
-                <div className="absolute inset-0 flex justify-between space-x-[2px]">
-                   {[...Array(20)].map((_, i) => (
-                      <div key={i} className="w-3 h-3 bg-[#f8fafc] rounded-full -mt-2"></div>
-                   ))}
+            {/* PHYSICAL RECEIPT ADAPTATION (Adapted from Commonwealth Bank visual reference) */}
+            <div className="bg-white w-full max-w-[370px] shadow-sm border border-slate-200/65 flex flex-col relative">
+              
+              {/* Jagged physical paper cutout edge simulator */}
+              <div className="absolute top-0 left-0 right-0 h-2 bg-slate-100 overflow-hidden flex z-20">
+                <div className="absolute inset-x-0 top-[-4px] flex justify-between space-x-[2px] px-[1px]">
+                  {[...Array(24)].map((_, i) => (
+                    <div key={i} className="w-[12px] h-[12px] bg-white rounded-full"></div>
+                  ))}
                 </div>
-            </div>
+              </div>
 
-            {/* Amount */}
-            <div className="flex flex-col items-center pt-2 pb-6 border-b border-dashed border-slate-200 mx-6">
-                <span className="text-slate-500 text-[13px] font-medium mb-1">Total Amount</span>
-                <h1 className="text-slate-800 text-[32px] font-bold tracking-tight">{tx ? tx.amount.replace('-', '').replace('+', '') : '0.00'} <span className="text-[16px] text-slate-500">{tx?.currency || 'USDC'}</span></h1>
-            </div>
+              {/* Receipt Body content (Vertical layout resembling physical receipt) */}
+              <div className="px-7 pt-9 pb-8 flex flex-col">
+                
+                <h1 className="text-slate-800 text-[26px] font-normal tracking-tight mb-7 mt-2">
+                  Receipt
+                </h1>
 
-            {/* Details Table */}
-            <div className="px-6 py-6 flex flex-col gap-4">
-                <div className="flex justify-between items-start">
-                    <span className="text-[13px] text-slate-500 font-medium">Description</span>
-                    <span className="text-[13px] font-bold text-slate-800 text-right">{tx?.title || 'Unknown Transaction'}</span>
-                </div>
-                <div className="flex justify-between items-start">
-                    <span className="text-[13px] text-slate-500 font-medium">Transaction Type</span>
-                    <span className="text-[13px] font-bold text-slate-800 text-right uppercase">{tx?.type || 'Transfer'}</span>
-                </div>
-                <div className="flex justify-between items-start">
-                    <span className="text-[13px] text-slate-500 font-medium">Source of Funds</span>
-                    <span className="text-[13px] font-bold text-slate-800">Arc Wallet</span>
-                </div>
-                <div className="flex justify-between items-start">
-                    <span className="text-[13px] text-slate-500 font-medium">Network Fee</span>
-                    <span className="text-[13px] font-bold text-slate-800">0.00 (Sponsored)</span>
-                </div>
-
-                {tx?.metadata?.voucherCode && (
-                  <div className="mt-2 pt-4 border-t border-slate-100 flex flex-col gap-3">
-                    <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest text-center">Digital Delivery detail</span>
-                    <div className="bg-slate-100 border border-slate-200 rounded-xl p-3 flex flex-col items-center">
-                        {tx.metadata.productCategory === 'Subscription' ? (
-                          <div className="text-center">
-                             <div className="text-emerald-600 font-bold text-[12px] mb-1">✓ Layanan Aktif</div>
-                             <p className="text-[11px] text-slate-600 leading-relaxed">{tx.metadata.instructions}</p>
-                          </div>
-                        ) : (
-                          <div className="w-full">
-                             <div className="bg-white border border-blue-200 rounded-lg px-3 py-2 flex items-center justify-between shadow-sm">
-                                <span className="font-mono font-bold text-[14px] text-slate-800 tracking-wider truncate mr-2">{tx.metadata.voucherCode}</span>
-                                <button 
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(tx.metadata?.voucherCode || '');
-                                    // Normally we would use a toast here, but we are in ReceiptScreen
-                                  }}
-                                  className="text-slate-600 hover:bg-slate-200 p-1 rounded-md transition-colors"
-                                >
-                                  <Copy size={14} />
-                                </button>
-                             </div>
-                             <p className="text-[10px] text-slate-400 mt-2 text-center leading-tight">{tx.metadata.instructions}</p>
-                          </div>
-                        )}
+                {/* Receipt Number Column */}
+                <div className="flex flex-col mb-5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[12.5px] text-slate-450 font-normal leading-relaxed text-slate-500">Receipt number</span>
+                    <button 
+                      onClick={() => setShowReceiptHelp(!showReceiptHelp)}
+                      className="text-slate-400 hover:text-slate-600 transition-colors p-0.5 rounded-full hover:bg-slate-100 flex items-center justify-center border-0 bg-transparent cursor-pointer"
+                      title="Definisi Receipt Number"
+                    >
+                      <HelpCircle size={13} />
+                    </button>
+                  </div>
+                  <span className="text-[16px] font-bold text-slate-800 font-mono tracking-tight mt-0.5 flex items-center gap-1.5 select-all">
+                    {txHash.substring(0, 15)}...{txHash.substring(txHash.length - 10)}
+                    <button 
+                      onClick={() => handleCopy(txHash, "TxHash")}
+                      className="text-slate-400 hover:text-slate-700 p-0.5 rounded transition-colors bg-transparent border-0 cursor-pointer"
+                    >
+                      <Copy size={12} />
+                    </button>
+                  </span>
+                  
+                  {showReceiptHelp && (
+                    <div className="mt-2 p-3 bg-amber-50/70 border border-amber-100 rounded-lg text-[11.5px] text-slate-600 leading-relaxed font-sans shadow-xs animate-in fade-in slide-in-from-top-1 duration-200">
+                      <div className="font-bold text-amber-900 mb-0.5">
+                        Penjelasan Receipt Number
+                      </div>
+                      <p className="mt-0.5">
+                        <strong>Receipt Number</strong> (di blockchain dikenal sebagai <code className="text-[10.5px] bg-amber-100 px-1 py-0.5 rounded text-amber-900 font-mono">TxHash</code>) adalah bukti kriptografis unik dari pembayaran Anda.
+                      </p>
+                      <p className="mt-1">
+                        Setiap pembayaran USDC pada jaringan Arc Network direkam secara permanen dalam ledger publik terdesentralisasi, menjamin bahwa transaksi ini 100% rill, aman, dan tidak dapat diubah oleh siapa pun.
+                      </p>
                     </div>
+                  )}
+                </div>
+
+                {/* Amount Column */}
+                <div className="flex flex-col mb-5">
+                  <span className="text-[12.5px] text-slate-450 font-normal leading-relaxed text-slate-505 text-slate-500">Amount</span>
+                  <span className="text-[23px] font-bold text-slate-800 mt-0.5">
+                    {tx?.amount.startsWith('+') ? '' : tx?.amount.startsWith('-') ? '' : ''}
+                    {tx ? tx.amount : '0.00'} {tx?.currency || 'USDC'}
+                  </span>
+                </div>
+
+                {/* From Source Wallet */}
+                <div className="flex flex-col mb-5">
+                  <span className="text-[12.5px] text-slate-450 font-normal leading-relaxed text-slate-500">From</span>
+                  <span className="text-[16px] font-bold text-slate-800 mt-0.5">
+                    Arc Developer-Controlled Wallet
+                  </span>
+                  <span className="font-mono text-[11.5px] text-slate-500 tracking-tight">0x40E9D4b82Acbf082ef2bEc7aa0b8d2345efF...</span>
+                </div>
+
+                {/* To Destination/Merchant */}
+                <div className="flex flex-col mb-5">
+                  <span className="text-[12.5px] text-slate-450 font-normal leading-relaxed text-slate-500">To</span>
+                  <span className="text-[16px] font-bold text-slate-800 mt-0.5 truncate max-w-full">
+                    {tx?.title || 'Arc Merchant Gateway'}
+                  </span>
+                  <span className="font-mono text-[11.5px] text-slate-500 tracking-tight truncate max-w-full">
+                    {tx?.metadata?.destinationAddress || "0x981C8e25E12E1119590632501081117906A..."}
+                  </span>
+                </div>
+
+                {/* When Timestamp column */}
+                <div className="flex flex-col">
+                  <span className="text-[12.5px] text-slate-450 font-normal leading-relaxed text-slate-500">When</span>
+                  <span className="text-[13.5px] font-medium text-slate-700 mt-1">
+                    {formatReceiptDate(tx?.timestamp)}
+                  </span>
+                </div>
+
+                {/* Digital Voucher payload if any (Clean styled card) */}
+                {tx?.metadata?.voucherCode && (
+                  <div className="mt-6 pt-5 border-t border-slate-200/70 flex flex-col gap-2">
+                    <span className="text-[10px] font-extrabold text-blue-600 uppercase tracking-widest">Digital product payload</span>
+                    {tx.metadata.productCategory === 'Subscription' ? (
+                      <div className="bg-slate-50 p-3 rounded-lg border border-slate-200/50">
+                        <div className="text-emerald-700 font-extrabold text-[12px] flex items-center gap-1.5 mb-1">
+                          <Check size={14} className="stroke-[3]" />
+                          <span>Subscription Layanan Aktif</span>
+                        </div>
+                        <p className="text-[11.5px] text-slate-600 leading-normal font-medium">{tx.metadata.instructions}</p>
+                      </div>
+                    ) : (
+                      <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-200/50 flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Voucher Code</span>
+                          <button 
+                            onClick={() => handleCopy(tx.metadata?.voucherCode || '', "Kode Voucher")}
+                            className="text-slate-400 hover:text-slate-700 flex items-center gap-1 font-bold text-[10px] bg-transparent border-0 cursor-pointer"
+                          >
+                            <Copy size={10} /> Salin
+                          </button>
+                        </div>
+                        <div className="bg-white border border-slate-200 py-2.5 px-3 rounded text-center shadow-2xs">
+                          <span className="font-mono font-extrabold text-[16px] text-slate-800 tracking-widest select-all">
+                            {tx.metadata.voucherCode}
+                          </span>
+                        </div>
+                        <p className="text-[10.5px] text-slate-500 leading-tight block mt-0.5">{tx.metadata.instructions}</p>
+                      </div>
+                    )}
                   </div>
                 )}
 
-                <div className="flex justify-between items-start">
-                    <span className="text-[13px] text-slate-500 font-medium">Reference Number</span>
-                    <div className="flex items-center gap-1.5">
-                       <span className="text-[11px] font-mono font-bold text-slate-700 truncate w-24 text-right">{tx?.txHash || 'N/A'}</span>
-                       <Copy size={12} className="text-slate-800" />
-                    </div>
-                </div>
+              </div>
+
+              <div className="bg-[#FFFCEF] border-t border-slate-200/60 p-4.5 px-7 flex flex-col items-center gap-0.5">
+                <span className="text-[10.5px] text-slate-500 font-medium">On-chain consensus generated ticket</span>
+                <span className="text-[9.5px] text-slate-400/80 font-bold tracking-wider font-mono">POWERED BY SECURE ARC PLATFORM</span>
+              </div>
             </div>
 
-            {/* Footer */}
-            <div className="bg-slate-50 p-4 border-t border-slate-100 flex flex-col items-center">
-                <span className="text-[10px] text-slate-400 font-medium text-center uppercase tracking-widest">Powered by Arc Network</span>
-            </div>
-        </div>
       </div>
     </div>
   );

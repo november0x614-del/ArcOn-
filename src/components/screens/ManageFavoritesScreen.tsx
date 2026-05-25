@@ -5,12 +5,11 @@ import { ShortcutItem } from '../../types';
 
 export const defaultSelectedShortcuts: ShortcutItem[] = [
     { id: '1', icon: 'Send', label: "Transfer USDC", color: "text-slate-600" },
-    { id: '2', icon: 'ArrowLeftRight', label: "Native Wallet Swap", color: "text-orange-500", badge: "HOT" },
+    { id: '2', icon: 'ArrowLeftRight', label: "Swap USDC", color: "text-orange-500", badge: "HOT" },
     { id: '3', icon: 'ArrowDownToLine', label: "Receive USDC", color: "text-slate-800" },
     { id: '13', icon: 'ArrowDownToLine', label: "Withdraw", color: "text-red-500" },
     { id: '14', icon: 'ArrowLeftRight', label: "Bridge USDC", color: "text-indigo-600", badge: "NEW" },
     { id: '12', icon: 'ShieldCheck', label: "Staking Pool", color: "text-emerald-500", badge: "NEW" },
-    { id: '8', icon: 'Settings2', label: "Security & Limits", color: "text-slate-500" },
   ];
 
   export const defaultAvailableShortcuts: ShortcutItem[] = [

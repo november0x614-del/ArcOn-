@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import { 
   ArrowLeft, 
   Send, 
@@ -23,12 +22,13 @@ import { useApp } from '../../context/AppContext';
 import { UIDCard } from '../common/UIDCard';
 import { useBalances } from '../../hooks/useBalances';
 import { useStore } from '../../store/useStore';
+import { Transaction } from '../../types';
 
 interface AccountDetailScreenProps {
   onBack: () => void;
   onTransfer: () => void;
   onReceive: () => void;
-  onTransactionClick?: () => void;
+  onTransactionClick?: (tx: Transaction) => void;
   userName?: string;
 }
 
@@ -302,7 +302,13 @@ export function AccountDetailScreen({
                      <div 
                        key={tx.id} 
                        onClick={() => {
-                         if (onTransactionClick) onTransactionClick();
+                         if (onTransactionClick) {
+                           if (tx.status === 'success' || tx.status === 'failed') {
+                             onTransactionClick(tx);
+                           } else {
+                             displayToast("Resi hanya tersedia untuk transaksi yang sudah selesai atau gagal.");
+                           }
+                         }
                        }}
                        className="bg-white p-4 rounded-2xl border border-slate-100 shadow-[0_2px_10px_rgba(0,0,0,0.02)] flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-all"
                      >
@@ -373,77 +379,69 @@ export function AccountDetailScreen({
               </div>
 
               {/* Accordion Rincian Saldo Gabungan */}
-              <AnimatePresence initial={false}>
-                {showUnifiedDetails && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.25, ease: "easeInOut" }}
-                    className="px-4 pb-4 pt-2 border-t border-slate-50 bg-slate-50/50 overflow-hidden"
-                  >
-                    <div className="flex justify-between items-center mb-3 mt-1">
-                      <span className="font-extrabold tracking-wide uppercase text-[10px] text-slate-500">
-                        Cross-Chain Balance (USDC)
+              {showUnifiedDetails && (
+                <div className="px-4 pb-4 pt-2 border-t border-slate-50 bg-slate-50/50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="flex justify-between items-center mb-3 mt-1">
+                    <span className="font-extrabold tracking-wide uppercase text-[10px] text-slate-500">
+                      Cross-Chain Balance (USDC)
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded bg-blue-100 text-[#008fcd] text-[8px] font-mono font-bold uppercase">
+                      Circle Gateway
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 mb-3">
+                    <div className="rounded-xl p-2.5 bg-white border border-slate-100 flex flex-col justify-between shadow-sm">
+                      <span className="text-[8.5px] font-mono font-extrabold text-slate-800">ARC L1</span>
+                      <span className="font-bold text-[12px] sm:text-[13px] mt-1 text-slate-700 font-mono">
+                        {showBalance ? (() => {
+                          const usdcArcData = balanceData?.allBalances?.find((b: any) => 
+                            (b.token?.symbol === 'USDC' || b.token?.name?.includes('USDC')) && 
+                            (b.token?.blockchain?.toUpperCase() === 'ARC-TESTNET' || b.token?.blockchain?.toLowerCase() === 'arc-testnet' || !b.token?.blockchain)
+                          );
+                          const amt = usdcArcData ? parseFloat(usdcArcData.amount || '0') : (balance * 0.50);
+                          return amt.toFixed(2).replace('.', ',');
+                        })() : '••••'}
                       </span>
-                      <span className="px-1.5 py-0.5 rounded bg-blue-100 text-[#008fcd] text-[8px] font-mono font-bold uppercase">
-                        Circle Gateway
+                      <span className="text-[8px] text-slate-400 mt-1">Native (50%)</span>
+                    </div>
+
+                    <div className="rounded-xl p-2.5 bg-white border border-slate-100 flex flex-col justify-between shadow-sm">
+                      <span className="text-[8.5px] font-mono font-extrabold text-[#0052FF]">BASE</span>
+                      <span className="font-bold text-[12px] sm:text-[13px] mt-1 text-slate-700 font-mono">
+                        {showBalance ? (() => {
+                          const usdcBaseData = balanceData?.allBalances?.find((b: any) => 
+                            (b.token?.symbol === 'USDC' || b.token?.name?.includes('USDC')) && 
+                            (b.token?.blockchain?.toUpperCase().includes('BASE') || b.token?.blockchain?.toLowerCase().includes('base'))
+                          );
+                          const amt = usdcBaseData ? parseFloat(usdcBaseData.amount || '0') : (balance * 0.25);
+                          return amt.toFixed(2).replace('.', ',');
+                        })() : '••••'}
                       </span>
+                      <span className="text-[8px] text-slate-400 mt-1">L2 (25%)</span>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2 mb-3">
-                      <div className="rounded-xl p-2.5 bg-white border border-slate-100 flex flex-col justify-between shadow-sm">
-                        <span className="text-[8.5px] font-mono font-extrabold text-slate-800">ARC L1</span>
-                        <span className="font-bold text-[12px] sm:text-[13px] mt-1 text-slate-700 font-mono">
-                          {showBalance ? (() => {
-                            const usdcArcData = balanceData?.allBalances?.find((b: any) => 
-                              (b.token?.symbol === 'USDC' || b.token?.name?.includes('USDC')) && 
-                              (b.token?.blockchain?.toUpperCase() === 'ARC-TESTNET' || b.token?.blockchain?.toLowerCase() === 'arc-testnet' || !b.token?.blockchain)
-                            );
-                            const amt = usdcArcData ? parseFloat(usdcArcData.amount || '0') : (balance * 0.50);
-                            return amt.toFixed(2).replace('.', ',');
-                          })() : '••••'}
-                        </span>
-                        <span className="text-[8px] text-slate-400 mt-1">Native (50%)</span>
-                      </div>
-
-                      <div className="rounded-xl p-2.5 bg-white border border-slate-100 flex flex-col justify-between shadow-sm">
-                        <span className="text-[8.5px] font-mono font-extrabold text-[#0052FF]">BASE</span>
-                        <span className="font-bold text-[12px] sm:text-[13px] mt-1 text-slate-700 font-mono">
-                          {showBalance ? (() => {
-                            const usdcBaseData = balanceData?.allBalances?.find((b: any) => 
-                              (b.token?.symbol === 'USDC' || b.token?.name?.includes('USDC')) && 
-                              (b.token?.blockchain?.toUpperCase().includes('BASE') || b.token?.blockchain?.toLowerCase().includes('base'))
-                            );
-                            const amt = usdcBaseData ? parseFloat(usdcBaseData.amount || '0') : (balance * 0.25);
-                            return amt.toFixed(2).replace('.', ',');
-                          })() : '••••'}
-                        </span>
-                        <span className="text-[8px] text-slate-400 mt-1">L2 (25%)</span>
-                      </div>
-
-                      <div className="rounded-xl p-2.5 bg-white border border-slate-100 flex flex-col justify-between shadow-sm">
-                        <span className="text-[8.5px] font-mono font-extrabold text-[#28A0F0]">ARBITRUM</span>
-                        <span className="font-bold text-[12px] sm:text-[13px] mt-1 text-slate-700 font-mono">
-                          {showBalance ? (() => {
-                            const usdcArbData = balanceData?.allBalances?.find((b: any) => 
-                              (b.token?.symbol === 'USDC' || b.token?.name?.includes('USDC')) && 
-                              (b.token?.blockchain?.toUpperCase().includes('ARBITRUM') || b.token?.blockchain?.toLowerCase().includes('arbitrum'))
-                            );
-                            const amt = usdcArbData ? parseFloat(usdcArbData.amount || '0') : (balance * 0.25);
-                            return amt.toFixed(2).replace('.', ',');
-                          })() : '••••'}
-                        </span>
-                        <span className="text-[8px] text-slate-400 mt-1">L2 (25%)</span>
-                      </div>
+                    <div className="rounded-xl p-2.5 bg-white border border-slate-100 flex flex-col justify-between shadow-sm">
+                      <span className="text-[8.5px] font-mono font-extrabold text-[#28A0F0]">ARBITRUM</span>
+                      <span className="font-bold text-[12px] sm:text-[13px] mt-1 text-slate-700 font-mono">
+                        {showBalance ? (() => {
+                          const usdcArbData = balanceData?.allBalances?.find((b: any) => 
+                            (b.token?.symbol === 'USDC' || b.token?.name?.includes('USDC')) && 
+                            (b.token?.blockchain?.toUpperCase().includes('ARBITRUM') || b.token?.blockchain?.toLowerCase().includes('arbitrum'))
+                          );
+                          const amt = usdcArbData ? parseFloat(usdcArbData.amount || '0') : (balance * 0.25);
+                          return amt.toFixed(2).replace('.', ',');
+                        })() : '••••'}
+                      </span>
+                      <span className="text-[8px] text-slate-400 mt-1">L2 (25%)</span>
                     </div>
+                  </div>
 
-                    <div className="text-[10px] sm:text-[11px] leading-relaxed p-3 rounded-xl border border-blue-100 bg-blue-50/50 text-slate-600">
-                      💡 <span className="font-bold text-slate-700">Unified Balance:</span> USDC from various networks (Arc, Base, Arbitrum) are virtually unified. You can spend or transfer your total balance instantly on Arc Testnet without tedious cross-chain bridging.
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                  <div className="text-[10px] sm:text-[11px] leading-relaxed p-3 rounded-xl border border-blue-100 bg-blue-50/50 text-slate-600">
+                    💡 <span className="font-bold text-slate-700">Unified Balance:</span> USDC from various networks (Arc, Base, Arbitrum) are virtually unified. You can spend or transfer your total balance instantly on Arc Testnet without tedious cross-chain bridging.
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* ARC Token Card */}
@@ -537,81 +535,68 @@ export function AccountDetailScreen({
         )}
       </div>
 
-      <AnimatePresence>
-        {showCard && (
-          <div className="absolute inset-0 z-[100] flex flex-col justify-end">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" 
-              onClick={() => setShowCard(false)}
-            ></motion.div>
+      {showCard && (
+        <div className="absolute inset-0 z-[100] flex flex-col justify-end">
+          <div 
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity animate-in fade-in" 
+            onClick={() => setShowCard(false)}
+          ></div>
+          
+          <div className="bg-white rounded-t-[32px] w-full flex flex-col items-center relative z-10 animate-in slide-in-from-bottom-[100%] duration-300 pb-10 shadow-[0_-10px_40px_rgba(0,0,0,0.2)]">
             
-            <motion.div 
-              initial={{ opacity: 0, y: "100%" }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: "100%" }}
-              transition={{ type: "spring", stiffness: 350, damping: 33 }}
-              className="bg-white rounded-t-[32px] w-full flex flex-col items-center relative z-10 pb-10 shadow-[0_-10px_40px_rgba(0,0,0,0.2)]"
-            >
+            {/* Handle bar */}
+            <div className="w-12 h-1.5 bg-slate-200 rounded-full mt-4 mb-6"></div>
+            
+            <div className="px-6 w-full flex flex-col items-center">
+              <h3 className="font-bold text-[18px] text-slate-800 mb-6">Your UID Card</h3>
               
-              {/* Handle bar */}
-              <div className="w-12 h-1.5 bg-slate-200 rounded-full mt-4 mb-6"></div>
+              {/* Card Design */}
+              <UIDCard userName={userName} isBlurred={!showUID} />
               
-              <div className="px-6 w-full flex flex-col items-center">
-                <h3 className="font-bold text-[18px] text-slate-800 mb-6">Your UID Card</h3>
-                
-                {/* Card Design */}
-                <UIDCard userName={userName} isBlurred={!showUID} />
-                
-                {/* Card Actions */}
-                <div className="flex justify-center w-full mt-8 border-t border-slate-100 pt-6">
-                  <div onClick={() => setShowUID(!showUID)} className="flex flex-col items-center gap-2 cursor-pointer group">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-transform group-active:scale-95 ${showUID ? 'bg-slate-100 text-slate-600' : 'bg-slate-100 text-slate-800'}`}>
-                      {showUID ? <EyeOff size={20} /> : <Eye size={20} />}
-                    </div>
-                    <span className="text-[12px] font-medium text-slate-600">{showUID ? 'Hide UID' : 'View UID'}</span>
+              {/* Card Actions */}
+              <div className="flex justify-center w-full mt-8 border-t border-slate-100 pt-6">
+                <div onClick={() => setShowUID(!showUID)} className="flex flex-col items-center gap-2 cursor-pointer group">
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-transform group-active:scale-95 ${showUID ? 'bg-slate-100 text-slate-600' : 'bg-slate-100 text-slate-800'}`}>
+                    {showUID ? <EyeOff size={20} /> : <Eye size={20} />}
                   </div>
+                  <span className="text-[12px] font-medium text-slate-600">{showUID ? 'Hide UID' : 'View UID'}</span>
                 </div>
-
               </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
-      <AnimatePresence>
-        {showImportModal && (
-          <motion.div
-            initial={{ opacity: 0, x: "100%" }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: "100%" }}
-            transition={{ type: "spring", stiffness: 350, damping: 32 }}
-            className="absolute inset-0 z-[120] bg-slate-50 flex flex-col"
-          >
-            {/* Header */}
-            <div className="flex items-center px-4 pt-12 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between">
-              <div className="flex items-center">
-                <button 
-                  onClick={() => setShowImportModal(false)} 
-                  className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent flex items-center justify-center outline-none"
-                >
-                  <ArrowLeft size={20} className="text-white" />
-                </button>
-                <h2 className="font-bold text-[16px] text-white ml-2 uppercase tracking-tight">Import Token</h2>
-              </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showImportModal && (
+        <div className="absolute inset-0 z-[120] flex flex-col justify-end">
+          <div 
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity animate-in fade-in" 
+            onClick={() => setShowImportModal(false)}
+          ></div>
+          
+          <div className="bg-white rounded-t-[32px] w-full max-h-[85vh] flex flex-col items-center relative z-10 animate-in slide-in-from-bottom-[100%] duration-300 pb-8 shadow-[0_-10px_40px_rgba(0,0,0,0.2)]">
+            {/* Handle bar */}
+            <div className="w-12 h-1.5 bg-slate-200 rounded-full mt-4 mb-4"></div>
             
-            <div className="px-6 w-full flex-1 overflow-y-auto flex flex-col pt-6 pb-8">
+            <div className="px-6 w-full flex-1 overflow-y-auto flex flex-col pb-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-black text-[18px] text-slate-800 uppercase tracking-tight">Import Token</h3>
+                <button 
+                  onClick={() => setShowImportModal(false)}
+                  className="p-1 px-3 hover:bg-slate-100 rounded-full text-slate-500 border-0 bg-transparent text-[13px] font-bold cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+
               {/* Import Tabs */}
-              <div className="flex gap-2 p-1 bg-white border border-slate-100/80 rounded-xl mb-4 shadow-sm">
+              <div className="flex gap-2 p-1 bg-slate-100 rounded-xl mb-4">
                 <button
                   onClick={() => setImportTab('popular')}
                   className={`flex-1 py-2 text-[13px] font-bold rounded-lg transition-all border-0 cursor-pointer ${
                     importTab === 'popular' 
-                      ? 'bg-slate-900 text-white shadow-sm' 
+                      ? 'bg-white text-slate-800 shadow-sm' 
                       : 'bg-transparent text-slate-500 hover:text-slate-700'
                   }`}
                 >
@@ -621,7 +606,7 @@ export function AccountDetailScreen({
                   onClick={() => setImportTab('custom')}
                   className={`flex-1 py-2 text-[13px] font-bold rounded-lg transition-all border-0 cursor-pointer ${
                     importTab === 'custom' 
-                      ? 'bg-slate-900 text-white shadow-sm' 
+                      ? 'bg-white text-slate-800 shadow-sm' 
                       : 'bg-transparent text-slate-500 hover:text-slate-700'
                   }`}
                 >
@@ -637,7 +622,7 @@ export function AccountDetailScreen({
                     const isAlreadyImported = importedTokens.some(t => t.symbol.toUpperCase() === ptok.symbol.toUpperCase()) || ptok.symbol === 'USDC' || ptok.symbol === 'ARC';
                     
                     return (
-                      <div key={ptok.symbol} className="flex justify-between items-center p-3.5 bg-white border border-slate-100 rounded-2xl hover:bg-slate-100/30 transition-colors shadow-sm">
+                      <div key={ptok.symbol} className="flex justify-between items-center p-3 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-slate-100/30 transition-colors">
                         <div className="flex items-center gap-3">
                           <div className={`w-10 h-10 rounded-full ${ptok.color || 'bg-slate-800'} flex items-center justify-center text-white text-xs font-extrabold font-sans uppercase tracking-tight shrink-0 shadow-sm`}>
                              {ptok.symbol.substring(0, 4)}
@@ -698,7 +683,7 @@ export function AccountDetailScreen({
                         value={customAddress}
                         onChange={(e) => setCustomAddress(e.target.value)}
                         placeholder="e.g. 0x07f1ea50e30d47376c0dfb3eb853fd40e3a8907a"
-                        className="w-full bg-white border border-slate-100 focus:border-blue-400 focus:bg-white rounded-xl px-4 py-2.5 text-[14px] text-slate-800 font-mono focus:outline-none transition-all placeholder:text-slate-300 shadow-sm"
+                        className="w-full bg-slate-55 border border-slate-100 focus:border-blue-400 focus:bg-white rounded-xl px-4 py-2.5 text-[14px] text-slate-800 font-mono focus:outline-none transition-all placeholder:text-slate-300 shadow-inner"
                       />
                     </div>
 
@@ -711,7 +696,7 @@ export function AccountDetailScreen({
                           onChange={(e) => setCustomSymbol(e.target.value)}
                           placeholder="e.g. MINT"
                           maxLength={8}
-                          className="w-full bg-white border border-slate-100 focus:border-blue-400 focus:bg-white rounded-xl px-4 py-2.5 text-[14px] text-slate-800 font-extrabold focus:outline-none transition-all placeholder:text-slate-300 shadow-sm"
+                          className="w-full bg-slate-55 border border-slate-100 focus:border-blue-400 focus:bg-white rounded-xl px-4 py-2.5 text-[14px] text-slate-800 font-extrabold focus:outline-none transition-all placeholder:text-slate-300 shadow-inner"
                         />
                       </div>
 
@@ -722,7 +707,7 @@ export function AccountDetailScreen({
                           value={customDecimals}
                           onChange={(e) => setCustomDecimals(e.target.value)}
                           placeholder="18"
-                          className="w-full bg-white border border-slate-100 focus:border-blue-400 focus:bg-white rounded-xl px-4 py-2.5 text-[14px] text-slate-800 focus:outline-none transition-all placeholder:text-slate-300 shadow-sm"
+                          className="w-full bg-slate-55 border border-slate-100 focus:border-blue-400 focus:bg-white rounded-xl px-4 py-2.5 text-[14px] text-slate-800 focus:outline-none transition-all placeholder:text-slate-300 shadow-inner"
                         />
                       </div>
                     </div>
@@ -734,7 +719,7 @@ export function AccountDetailScreen({
                         value={customName}
                         onChange={(e) => setCustomName(e.target.value)}
                         placeholder="e.g. Arc Mintable Protocol"
-                        className="w-full bg-white border border-slate-100 focus:border-blue-400 focus:bg-white rounded-xl px-4 py-2.5 text-[14px] text-slate-800 focus:outline-none transition-all placeholder:text-slate-300 shadow-sm"
+                        className="w-full bg-slate-55 border border-slate-100 focus:border-blue-400 focus:bg-white rounded-xl px-4 py-2.5 text-[14px] text-slate-800 focus:outline-none transition-all placeholder:text-slate-300 shadow-inner"
                       />
                     </div>
                   </div>
@@ -748,9 +733,9 @@ export function AccountDetailScreen({
                 </div>
               )}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+        </div>
+      )}
 
     </div>
   );

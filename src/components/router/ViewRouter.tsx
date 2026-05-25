@@ -1,5 +1,5 @@
 import React from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, Variants } from "motion/react";
 import { ViewState } from "../../types";
 import { useApp } from "../../context/AppContext";
 import { LoginScreen } from "../screens/LoginScreen";
@@ -42,6 +42,29 @@ import { HomeScreen } from "../screens/HomeScreen";
 import { supabase } from "../../lib/supabaseClient";
 import { ArcAppKitAdapter } from "../../services/arc-app-kit/adapter";
 
+const slideFadeVariants: Variants = {
+  initial: {
+    opacity: 0,
+    x: 16,
+  },
+  animate: {
+    opacity: 1,
+    x: 0,
+    transition: {
+      duration: 0.28,
+      ease: [0.16, 1, 0.3, 1], // easeOutExpo
+    }
+  },
+  exit: {
+    opacity: 0,
+    x: -16,
+    transition: {
+      duration: 0.22,
+      ease: [0.7, 0, 0.84, 0], // easeInQuad
+    }
+  }
+};
+
 interface ViewRouterProps {
   isLoggingIn: boolean;
   loginEmail: string;
@@ -80,11 +103,11 @@ export const ViewRouter = React.memo(({ isLoggingIn, loginEmail, setLoginEmail, 
     <AnimatePresence mode="wait">
       <motion.div
         key={viewState}
-        initial={{ opacity: 0, x: "20%" }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: "-20%" }}
-        transition={{ type: "spring", stiffness: 320, damping: 30 }}
-        className="w-full h-full flex flex-col"
+        variants={slideFadeVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        className="w-full h-full flex flex-col transform-gpu will-change-transform animate-in fade-in duration-300 ease-out"
       >
         {viewState === "splash" && (
         <LoginScreen
@@ -251,7 +274,8 @@ export const ViewRouter = React.memo(({ isLoggingIn, loginEmail, setLoginEmail, 
           onBack={() => setViewState("home")}
           onTransfer={() => setViewState("transfer")}
           onReceive={() => setViewState("receive")}
-          onTransactionClick={() => {
+          onTransactionClick={(tx) => {
+            setSelectedTransaction(tx);
             setReceiptSource("accountDetail");
             setViewState("receipt");
           }}

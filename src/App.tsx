@@ -85,9 +85,13 @@ export default function App() {
   React.useEffect(() => {
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error) {
-        console.error("Error getting session:", error.message);
-        if (error.message.includes("Refresh Token Not Found") || error.message.includes("Invalid Refresh Token")) {
-          supabase.auth.signOut();
+        if (error.message.includes("Refresh Token Not Found") || error.message.includes("Invalid Refresh Token") || error.message.includes("refresh token")) {
+          // Suppress error and just clear local state because the session is authentically expired
+          supabase.auth.signOut().catch(() => {});
+          resetState();
+        } else {
+          console.error("Error getting session:", error.message);
+          supabase.auth.signOut().catch(() => {});
           resetState();
         }
       } else if (session) {
@@ -99,12 +103,14 @@ export default function App() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (_event === 'TOKEN_REFRESHED' && !session) {
-         supabase.auth.signOut();
+         supabase.auth.signOut().catch(() => {});
+         resetState();
+      } else if (_event === 'SIGNED_OUT') {
          resetState();
       } else if (session) {
         handleUserSession(session.user);
       } else {
-        resetState();
+         resetState();
       }
     });
 

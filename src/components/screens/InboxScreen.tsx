@@ -21,13 +21,18 @@ interface InboxScreenProps {
 }
 
 export function InboxScreen({ onBack, onTransactionClick }: InboxScreenProps) {
-  const { transactions, readReceiptIds, markAsRead } = useApp();
+  const { transactions, readReceiptIds, markAsRead, displayToast } = useApp();
   const [activeTab, setActiveTab] = useState<'resi' | 'notifikasi' | 'promo'>('resi');
   const [selectedNotification, setSelectedNotification] = useState<{title: string, desc: string, date: string} | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [deletedIds, setDeletedIds] = useState<Record<string, boolean>>({});
+
+  // Mendefinisikan fungsi receipts untuk mengambil daftar resi transaksi yang aktif
+  const getReceipts = () => {
+    return transactions.filter(t => !deletedIds[t.id] && (t.status === 'success' || t.status === 'failed'));
+  };
 
   const handleToggleSelect = (id: string) => {
     // Check if it's an unread receipt
@@ -59,7 +64,7 @@ export function InboxScreen({ onBack, onTransactionClick }: InboxScreenProps) {
     let allIds: string[] = [];
     if (activeTab === 'resi') {
       allIds = transactions
-        .filter(t => !deletedIds[t.id] && readReceiptIds.includes(t.id))
+        .filter(t => !deletedIds[t.id] && readReceiptIds.includes(t.id) && (t.status === 'success' || t.status === 'failed'))
         .map(t => t.id);
     } else if (activeTab === 'notifikasi') {
       // Mock IDs for notifications as they are hardcoded in the component
@@ -82,7 +87,11 @@ export function InboxScreen({ onBack, onTransactionClick }: InboxScreenProps) {
 
   const handleReceiptClick = (tx: any) => {
     markAsRead(tx.id);
-    onTransactionClick?.(tx);
+    if (tx.status === 'success' || tx.status === 'failed') {
+      onTransactionClick?.(tx);
+    } else {
+      displayToast("Resi hanya tersedia untuk transaksi yang sudah selesai atau gagal.");
+    }
   };
 
   return (
@@ -128,33 +137,33 @@ export function InboxScreen({ onBack, onTransactionClick }: InboxScreenProps) {
           <button 
              onClick={() => setActiveTab('resi')}
              className={`flex-1 py-2.5 rounded-xl font-bold text-[13px] transition-all relative z-10 ${
-                activeTab === 'resi' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'
+                activeTab === 'resi' ? 'bg-white text-slate-850 shadow-sm' : 'text-slate-500 hover:text-slate-800'
              }`}
           >
-             Receipts
+             Resi
           </button>
           <button 
              onClick={() => setActiveTab('notifikasi')}
              className={`flex-1 py-2.5 rounded-xl font-bold text-[13px] transition-all relative z-10 ${
-                activeTab === 'notifikasi' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'
+                activeTab === 'notifikasi' ? 'bg-white text-slate-850 shadow-sm' : 'text-slate-500 hover:text-slate-800'
              }`}
           >
-             Notifications
+             Notifikasi
           </button>
           <button 
              onClick={() => setActiveTab('promo')}
              className={`flex-1 py-2.5 rounded-xl font-bold text-[13px] transition-all relative z-10 ${
-                activeTab === 'promo' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'
+                activeTab === 'promo' ? 'bg-white text-slate-850 shadow-sm' : 'text-slate-500 hover:text-slate-800'
              }`}
           >
-             Promos
+             Promo
           </button>
         </div>
       </div>
 
       {/* Tabs Content */}
       <div className="flex-1 overflow-y-auto">
-         {activeTab === 'resi' && <ResiContent transactions={transactions} onTransactionClick={handleReceiptClick} isSelectionMode={isSelectionMode} selectedIds={selectedIds} onToggleSelect={handleToggleSelect} deletedIds={deletedIds} readReceiptIds={readReceiptIds} />}
+         {activeTab === 'resi' && <ResiContent transactions={getReceipts()} onTransactionClick={handleReceiptClick} isSelectionMode={isSelectionMode} selectedIds={selectedIds} onToggleSelect={handleToggleSelect} readReceiptIds={readReceiptIds} />}
          {activeTab === 'notifikasi' && <NotifikasiContent onNotificationClick={(title, desc, date) => setSelectedNotification({title, desc, date})} isSelectionMode={isSelectionMode} selectedIds={selectedIds} onToggleSelect={handleToggleSelect} deletedIds={deletedIds} />}
          {activeTab === 'promo' && <PromoContent isSelectionMode={isSelectionMode} selectedIds={selectedIds} onToggleSelect={handleToggleSelect} deletedIds={deletedIds} />}
       </div>
@@ -231,7 +240,7 @@ function ResiContent({
   deletedIds?: Record<string, boolean>,
   readReceiptIds?: string[]
 }) {
-  const visibleTransactions = transactions.filter(t => !deletedIds[t.id]);
+  const visibleTransactions = transactions.filter(t => !deletedIds[t.id] && (t.status === 'success' || t.status === 'failed'));
 
   if (visibleTransactions.length === 0) {
     return (
@@ -264,7 +273,7 @@ function ResiContent({
                 onToggleSelect={onToggleSelect}
                 icon={tx.type === 'purchase' || tx.type === 'transfer' ? <Wallet size={22} className="text-slate-800" /> : <ArrowRight size={22} className="text-emerald-500" />}
                 title={tx.title}
-                status={tx.status === 'success' ? 'Successful' : 'Processing'}
+                status={tx.status === 'success' ? 'Successful' : 'Failed'}
                 amount={`${tx.amount} ${tx.currency}`}
                 onClick={() => onTransactionClick?.(tx)}
                 isRead={isRead}
@@ -320,7 +329,7 @@ function TransactionItem({ id, icon, title, status, amount, isSelectionMode, isS
          <div className={`mt-0.5 w-8 h-8 flex items-center justify-center shrink-0 group-hover:bg-slate-100 transition-colors rounded-full ${!isRead && !isSelectionMode ? 'bg-slate-100/30' : ''}`}>{icon}</div>
          <div className="flex flex-col">
             <h5 className={`font-medium text-[14px] leading-snug mb-1 transition-colors ${!isRead && !isSelectionMode ? 'text-slate-950 font-bold' : 'text-slate-700'}`}>{title}</h5>
-            <span className="text-[12px] text-emerald-500 font-medium">{status}</span>
+            <span className={`text-[12px] font-medium ${status === 'Failed' ? 'text-rose-500' : 'text-emerald-500'}`}>{status}</span>
          </div>
       </div>
       <div className="flex shrink-0">
