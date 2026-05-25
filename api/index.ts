@@ -168,6 +168,8 @@ app.get("/api/balance/:userId", async (req, res) => {
           id: walletId
         });
         
+        console.log("Circle Balance Response:", JSON.stringify(balanceResponse?.data, null, 2));
+        
         if (balanceResponse?.data?.tokenBalances) {
             tokenBalances = balanceResponse.data.tokenBalances;
         }
@@ -176,6 +178,7 @@ app.get("/api/balance/:userId", async (req, res) => {
           b.token?.symbol === 'USDC' || b.token?.name?.includes('USDC')
         );
         baseBalance = parseFloat(usdcToken?.amount || '0');
+        console.log(`USDC Balance found: ${baseBalance}`);
       } catch (e) {
         console.error("Circle API balance fetch failed", e);
       }
@@ -183,11 +186,14 @@ app.get("/api/balance/:userId", async (req, res) => {
 
     // Adjust balance based on pending local transactions to improve responsiveness
     // (Circle API might be slow to reflect recent on-chain transfers)
+    // Only consider pending transactions from the last 5 minutes to avoid stuck txs breaking balance
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
     const { data: pendingTxs } = await getSupabaseAdmin()
       .from('transactions')
       .select('amount, metadata')
       .eq('user_id', userId)
-      .eq('status', 'pending');
+      .eq('status', 'pending')
+      .gte('created_at', fiveMinutesAgo);
 
     if (pendingTxs) {
       for (const tx of pendingTxs) {

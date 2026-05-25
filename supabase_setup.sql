@@ -26,6 +26,14 @@ CREATE TABLE public.user_wallets (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- 3.5. CREATE BALANCES TABLE
+CREATE TABLE public.balances (
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+    amount DECIMAL NOT NULL DEFAULT 0,
+    currency TEXT NOT NULL DEFAULT 'USDC',
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- 4. CREATE TRANSACTIONS TABLE (Log Ledger)
 CREATE TABLE public.transactions (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,

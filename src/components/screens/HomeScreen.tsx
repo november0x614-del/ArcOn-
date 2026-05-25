@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ViewState, ShortcutItem } from "../../types";
 import { useApp } from "../../context/AppContext";
+import { LogPanel } from "../common/LogPanel";
 import { MenuIcon } from "../common/MenuIcon";
 import { StockRow } from "../common/StockRow";
 import { ProductCard } from "../common/ProductCard";
@@ -67,7 +68,10 @@ export const HomeScreen = React.memo(({
       fetchTransactions();
     };
     window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [fetchBalance, fetchTransactions]);
   const [activeRekeningTab, setActiveRekeningTab] = useState(0);
 
@@ -895,6 +899,7 @@ export const HomeScreen = React.memo(({
 
           {/* Right Column for Desktop */}
           <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-4">
+            <LogPanel />
             {/* Dapps */}
             <section className="bg-white rounded-[24px] p-5 shadow-sm mb-4 lg:mb-0 mx-4 lg:mx-0 text-left">
               <div className="flex justify-between items-center mb-4">

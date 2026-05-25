@@ -63,6 +63,8 @@ interface AppState {
   setContractAllowances: (count: number) => void;
   sourceAccount: SourceAccount;
   setSourceAccount: (account: SourceAccount) => void;
+  logs: string[];
+  addLog: (log: string) => void;
   resetState: () => void;
 }
 
@@ -93,15 +95,23 @@ export const useStore = create<AppState>()(
         if (!user?.supabaseUid) return;
         
         try {
-          const response = await fetch(`/api/balance/${user.supabaseUid}`);
+          const url = `/api/balance/${user.supabaseUid}`;
+          useStore.getState().addLog(`Fetching balance: GET ${url}`);
+          const response = await fetch(url);
           if (!response.ok) {
+            useStore.getState().addLog(`Balance fetch failed: ${url} Status: ${response.status}`);
             console.error(`Balance fetch failed with status: ${response.status}`);
             return;
           }
           const text = await response.text();
-          if (!text) return;
+          useStore.getState().addLog(`Balance response received from ${url}`);
+          if (!text) {
+             useStore.getState().addLog("Balance response empty");
+             return;
+          }
           const data = JSON.parse(text);
           const newBalance = data.balance || 0;
+          useStore.getState().addLog(`Balance value: ${newBalance} (from ${url})`);
           
           const state = useStore.getState();
           let totalDeposit = 0;
@@ -117,6 +127,7 @@ export const useStore = create<AppState>()(
 
           set({ balance: newBalance, pnlValue, pnlPercentage });
         } catch (error) {
+          useStore.getState().addLog(`Balance fetch error: ${error}`);
           console.error('Failed to fetch balance', error);
         }
       },
@@ -130,13 +141,20 @@ export const useStore = create<AppState>()(
         if (!user?.supabaseUid) return;
         
         try {
-          const response = await fetch(`/api/transactions/${user.supabaseUid}`);
+          const url = `/api/transactions/${user.supabaseUid}`;
+          useStore.getState().addLog(`Fetching transactions: GET ${url}`);
+          const response = await fetch(url);
           if (!response.ok) {
+            useStore.getState().addLog(`Transactions fetch failed: ${url} Status: ${response.status}`);
             console.error(`Transactions fetch failed with status: ${response.status}`);
             return;
           }
           const text = await response.text();
-          if (!text) return;
+          useStore.getState().addLog(`Transactions response received from ${url}`);
+          if (!text) {
+             useStore.getState().addLog("Transactions response empty");
+             return;
+          }
           const dbTransactions = JSON.parse(text);
           
           if (!Array.isArray(dbTransactions)) return;
@@ -170,7 +188,9 @@ export const useStore = create<AppState>()(
           const pnlPercentage = totalDeposit > 0 ? (pnlValue / totalDeposit) * 100 : 0;
 
           set({ transactions, pnlValue, pnlPercentage });
+          useStore.getState().addLog(`Transactions updated: ${transactions.length} total`);
         } catch (error) {
+          useStore.getState().addLog(`Transactions fetch error: ${error}`);
           console.error('Failed to fetch transactions', error);
         }
       },
@@ -217,6 +237,8 @@ export const useStore = create<AppState>()(
         currency: 'IDR'
       },
       setSourceAccount: (account) => set({ sourceAccount: account }),
+      logs: [],
+      addLog: (log) => set((state) => ({ logs: [...state.logs.slice(-49), `[${new Date().toLocaleTimeString()}] ${log}`] })),
       resetState: () => set({
         viewState: 'splash',
         registeredUser: null,
@@ -225,6 +247,7 @@ export const useStore = create<AppState>()(
         pnlValue: 0,
         pnlPercentage: 0,
         readReceiptIds: [],
+        logs: [],
       }),
     }),
 );
