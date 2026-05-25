@@ -328,9 +328,9 @@ export const HomeScreen = React.memo(({
 
       {/* Scrollable Main Content */}
       <div className="flex-1 overflow-y-auto pb-32 pt-0 scrollbar-hide z-20 md:px-6 relative">
-        <div className="flex flex-col md:grid md:grid-cols-12 md:gap-5 lg:gap-6">
-          {/* Left Column for Desktop */}
-          <div className="md:col-span-7 xl:col-span-8 flex flex-col gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-5 lg:gap-6">
+          {/* Row 1 Left: Accounts Section */}
+          <div className="col-span-1 md:col-span-7 xl:col-span-8 flex flex-col gap-3">
             {/* Accounts Section */}
             <section className="bg-white rounded-[24px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] mx-4 md:mx-0 border border-slate-50/50 mt-0">
               <div className="flex justify-between items-center mb-3">
@@ -754,7 +754,10 @@ export const HomeScreen = React.memo(({
                 Other Personal Savings & Checking <PlusCircleIcon size={14} />
               </button>
             </section>
+          </div>
 
+          {/* Row 1 Right: Favorite Transactions Section */}
+          <div className="col-span-1 md:col-span-5 xl:col-span-4 flex flex-col gap-3">
             {/* Favorite Transactions Section */}
             <section className="bg-white rounded-[24px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] mb-3 md:mb-0 mx-4 md:mx-0 border border-slate-50/50">
               <div className="flex justify-between items-center mb-4">
@@ -837,9 +840,12 @@ export const HomeScreen = React.memo(({
                 </div>
               </div>
             </section>
+          </div>
 
+          {/* Row 2 Left: Special For You (Promo Banner) */}
+          <div className="col-span-1 md:col-span-7 xl:col-span-8 flex flex-col gap-3">
             {/* Special For You (Promo Banner) */}
-            <section className="bg-white rounded-[24px] overflow-hidden shadow-sm mb-4 md:mb-0 mx-4 md:mx-0 pb-4 border border-x-transparent border-t-transparent border-b-slate-50 relative z-10 md:mt-6 lg:mt-8">
+            <section className="bg-white rounded-[24px] overflow-hidden shadow-sm mb-4 md:mb-0 mx-4 md:mx-0 pb-4 border border-x-transparent border-t-transparent border-b-slate-50 relative z-10 md:mt-2 lg:mt-3">
               <div className="px-5 pt-5 pb-3">
                 <h2 className="text-[17px] font-bold text-slate-800 tracking-tight mb-0 text-left">
                   Special For You
@@ -898,9 +904,8 @@ export const HomeScreen = React.memo(({
             </section>
           </div>
 
-          {/* Right Column for Desktop */}
-          <div className="md:col-span-5 xl:col-span-4 flex flex-col gap-4">
-            <LogPanel />
+          {/* Row 2 Right: External DApps, Token Markets, Developer Services */}
+          <div className="col-span-1 md:col-span-5 xl:col-span-4 flex flex-col gap-4">
             {/* Dapps */}
             <section className="bg-white rounded-[24px] p-5 shadow-sm mb-4 md:mb-0 mx-4 md:mx-0 text-left">
               <div className="flex justify-between items-center mb-4">
@@ -1005,7 +1010,7 @@ export const HomeScreen = React.memo(({
                     Live data feed from pyth.network
                   </p>
                 </div>
-                <button 
+                <button
                   onClick={() => setShowManageMarketModal(true)}
                   className="text-slate-800 text-[13px] font-semibold flex items-center gap-1.5 hover:bg-slate-100 px-2 py-1 rounded-full transition-colors border-0 bg-transparent"
                 >
@@ -1059,6 +1064,11 @@ export const HomeScreen = React.memo(({
                 />
               </div>
             </section>
+          </div>
+
+          {/* Row 3 Full Width: LogPanel */}
+          <div className="col-span-1 md:col-span-12 mt-2 md:mt-4">
+            <LogPanel />
           </div>
         </div>
       </div>
