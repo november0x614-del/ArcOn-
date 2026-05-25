@@ -115,7 +115,7 @@ export async function verifyAndProcessWebhook(
       const { data: walletData, error: walletError } = await supabaseAdmin
         .from('user_wallets')
         .select('user_id, wallet_address')
-        .ilike('wallet_address', destinationAddress) // Use ilike for case-insensitive match
+        .ilike('wallet_address', destinationAddress)
         .single();
         
       console.log("Wallet lookup attempt:", { destinationAddress, walletData, walletError });
@@ -124,7 +124,7 @@ export async function verifyAndProcessWebhook(
           const { error } = await supabaseAdmin
             .from('transactions')
             .insert({
-              user_id: walletData.user_id, // Use user_id from wallet
+              user_id: walletData.user_id,
               amount: amountValue,
               type: 'receive',
               status: 'success',
@@ -138,7 +138,7 @@ export async function verifyAndProcessWebhook(
             console.log(`Inbound transaction ${id} recorded for user ${walletData.user_id}`);
           }
       } else {
-          console.warn(`No wallet found or error in lookup for address: ${destinationAddress}. Error:`, walletError);
+          console.warn(`No wallet found for address: ${destinationAddress}`);
       }
     }
 

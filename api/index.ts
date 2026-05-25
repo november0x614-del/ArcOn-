@@ -1,6 +1,6 @@
-import { verifyAndProcessWebhook } from "../src/services/webhookHandler.js";
-import { logAuditEvent } from "../src/services/auditLogger.js";
-import { createWallet, executeTransaction } from "../src/services/circleTransactions.js";
+import { verifyAndProcessWebhook } from "./services/webhook.js";
+import { logAuditEvent } from "./services/audit.js";
+import { createWallet, executeTransaction } from "./services/circle.js";
 import express from "express";
 import * as crypto from "crypto";
 import { GoogleGenAI } from "@google/genai";
@@ -37,12 +37,6 @@ function getSupabaseAdmin() {
   }
   return supabaseAdminInstance;
 }
-
-const supabaseAdmin: any = new Proxy({}, {
-  get: (_target, prop) => {
-    return getSupabaseAdmin()[prop];
-  }
-});
 
 // Lazy initialization of Circle Client
 let circleClient: any = null;
@@ -88,7 +82,7 @@ app.post("/api/wallets/create", async (req, res) => {
     console.log("Checking if wallet exists...");
     
     if (userId && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      const { data: existingWallet, error: fetchError } = await supabaseAdmin
+      const { data: existingWallet, error: fetchError } = await getSupabaseAdmin()
         .from('user_wallets')
         .select('*')
         .eq('id', userId)
@@ -109,7 +103,7 @@ app.post("/api/wallets/create", async (req, res) => {
     }
 
     console.log("Creating new wallet for Arc Testnet...");
-    const result = await createWallet(supabaseAdmin, userId);
+    const result = await createWallet(getSupabaseAdmin(), userId);
     console.log(`Wallet created successfully: ${result.address}`);
     res.json(result);
   } catch (error: any) {
@@ -125,7 +119,7 @@ app.post("/api/wallets/create", async (req, res) => {
 app.get("/api/debug-wallet/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await getSupabaseAdmin()
       .from('user_wallets')
       .select('wallet_id, wallet_address')
       .eq('id', userId)
@@ -151,7 +145,7 @@ app.get("/api/balance/:userId", async (req, res) => {
     const { userId } = req.params;
     
     // 1. Get the wallet ID from Supabase
-    const { data: walletData, error: walletError } = await supabaseAdmin
+    const { data: walletData, error: walletError } = await getSupabaseAdmin()
       .from('user_wallets')
       .select('wallet_id')
       .eq('id', userId)
@@ -187,8 +181,6 @@ app.get("/api/balance/:userId", async (req, res) => {
       }
     }
 
-    // (Removed simulated balances)
-    
     res.json({ 
       balance: baseBalance, 
       realBalance: baseBalance,
@@ -204,7 +196,7 @@ app.get("/api/balance/:userId", async (req, res) => {
 // Transactions Route
 app.get("/api/transactions/:userId", async (req, res) => {
   try {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await getSupabaseAdmin()
       .from('transactions')
       .select('*')
       .eq('user_id', req.params.userId)
@@ -223,7 +215,7 @@ app.post("/api/webhook/simulate", async (req, res) => {
     const { userId, amount } = req.body;
     console.log(`Simulating webhook for user ${userId}, amount ${amount}`);
 
-    const { error } = await supabaseAdmin
+    const { error } = await getSupabaseAdmin()
       .from('transactions')
       .insert({
         user_id: userId,
@@ -248,7 +240,7 @@ app.post("/api/swap/execute", async (req, res) => {
     const { userId, amount, fromToken, toToken, tokenAddress } = req.body;
     const dexAddress = "0x3333333333333333333333333333333333333333";
     
-    const result = await executeTransaction(supabaseAdmin, userId, amount, dexAddress, 'swap', { fromToken, toToken, tokenAddress });
+    const result = await executeTransaction(getSupabaseAdmin(), userId, amount, dexAddress, 'swap', { fromToken, toToken, tokenAddress });
     res.status(200).json({ message: "Swap queued", txId: result.txId });
   } catch (error: any) {
     console.error("Swap Error", error);
@@ -262,7 +254,7 @@ app.post("/api/bridge/execute", async (req, res) => {
     const { userId, amount, fromNetwork, toNetwork } = req.body;
     const bridgeAddress = "0x0000000000000000000000000000000000000000";
     
-    const result = await executeTransaction(supabaseAdmin, userId, amount, bridgeAddress, 'transfer', { fromNetwork, toNetwork });
+    const result = await executeTransaction(getSupabaseAdmin(), userId, amount, bridgeAddress, 'transfer', { fromNetwork, toNetwork });
     res.status(200).json({ message: "Bridge transfer queued", txId: result.txId });
   } catch (error: any) {
     console.error("Bridge execute error:", error);
@@ -276,7 +268,7 @@ app.post("/api/withdraw/execute", async (req, res) => {
     const { userId, amount, bank } = req.body;
     const treasuryAddress = "0x1111111111111111111111111111111111111111"; 
 
-    const result = await executeTransaction(supabaseAdmin, userId, amount, treasuryAddress, 'withdraw', { bank });
+    const result = await executeTransaction(getSupabaseAdmin(), userId, amount, treasuryAddress, 'withdraw', { bank });
     res.status(200).json({ message: "Withdraw queued", txId: result.txId });
   } catch (error: any) {
     console.error("Withdraw Error", error);
@@ -287,7 +279,7 @@ app.post("/api/withdraw/execute", async (req, res) => {
 // Webhook Route. Note: express.raw middleware needs to be carefully handled in Serverless.
 // We apply it inline here.
 app.post("/api/circle/webhook", express.raw({ type: "application/json" }), async (req, res) => {
-    await verifyAndProcessWebhook(req, res, supabaseAdmin);
+    await verifyAndProcessWebhook(req, res, getSupabaseAdmin());
 });
 
 // Payment Route
@@ -298,7 +290,7 @@ app.post("/api/payments/create", async (req, res) => {
     
     // Audit Log for critical transfers
     if (parseFloat(amount) > 100) {
-      await logAuditEvent(supabaseAdmin, userId, 'TRANSFER_HIGH_VALUE', { 
+      await logAuditEvent(getSupabaseAdmin(), userId, 'TRANSFER_HIGH_VALUE', { 
           amount, 
           destinationAddress 
       });
@@ -315,7 +307,7 @@ app.post("/api/payments/create", async (req, res) => {
     } as any);
     
     // Record in Supabase
-    await supabaseAdmin.from('transactions').insert({
+    await getSupabaseAdmin().from('transactions').insert({
       user_id: userId,
       amount: `-${amount}`,
       type: 'transfer',
@@ -344,7 +336,7 @@ app.post("/api/payments/batch", async (req, res) => {
     // Log batch initiation audit trail
     const totalAmount = recipients.reduce((sum: number, r: any) => sum + parseFloat(r.amount || "0"), 0);
     if (totalAmount > 500) {
-      await logAuditEvent(supabaseAdmin, userId, 'BATCH_TRANSFER_HIGH_VALUE', { 
+      await logAuditEvent(getSupabaseAdmin(), userId, 'BATCH_TRANSFER_HIGH_VALUE', { 
           totalAmount, 
           recipientCount: recipients.length
       });
@@ -365,7 +357,7 @@ app.post("/api/payments/batch", async (req, res) => {
            blockchain: "ARC-TESTNET"
          } as any);
          
-         await supabaseAdmin.from('transactions').insert({
+         await getSupabaseAdmin().from('transactions').insert({
             user_id: userId,
             amount: `-${rec.amount}`,
             type: 'transfer',
@@ -389,7 +381,7 @@ app.post("/api/payments/batch", async (req, res) => {
          console.error(`Failed to process batch recipient: ${rec.address}`, txError);
          
          // Record failed transaction locally to keep user ledger complete & consistent
-         await supabaseAdmin.from('transactions').insert({
+         await getSupabaseAdmin().from('transactions').insert({
             user_id: userId,
             amount: `-${rec.amount}`,
             type: 'transfer',
@@ -430,7 +422,7 @@ app.post("/api/purchase/execute", async (req, res) => {
     const { userId, amount, product } = req.body;
     const merchantAddress = "0x2222222222222222222222222222222222222222"; 
 
-    const result = await executeTransaction(supabaseAdmin, userId, amount, merchantAddress, 'purchase', { product });
+    const result = await executeTransaction(getSupabaseAdmin(), userId, amount, merchantAddress, 'purchase', { product });
     res.status(200).json({ message: "Purchase queued", txId: result.txId });
   } catch (error: any) {
     console.error("Purchase error", error);
