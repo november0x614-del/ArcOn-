@@ -181,8 +181,26 @@ app.get("/api/balance/:userId", async (req, res) => {
       }
     }
 
+    // Adjust balance based on pending local transactions to improve responsiveness
+    // (Circle API might be slow to reflect recent on-chain transfers)
+    const { data: pendingTxs } = await getSupabaseAdmin()
+      .from('transactions')
+      .select('amount, metadata')
+      .eq('user_id', userId)
+      .eq('status', 'pending');
+
+    if (pendingTxs) {
+      for (const tx of pendingTxs) {
+        // Only adjust if it involves USDC (default or explicitly stated)
+        const involvesUSDC = !tx.metadata?.fromToken || tx.metadata.fromToken === 'USDC';
+        if (involvesUSDC) {
+          baseBalance += parseFloat(tx.amount);
+        }
+      }
+    }
+
     res.json({ 
-      balance: baseBalance, 
+      balance: Math.max(0, baseBalance), 
       realBalance: baseBalance,
       currency: "USDC",
       allBalances: tokenBalances

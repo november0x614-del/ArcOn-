@@ -41,6 +41,7 @@ import { BridgeScreen } from "../screens/BridgeScreen";
 import { TransactionHistoryScreen } from "../screens/TransactionHistoryScreen";
 import { HomeScreen } from "../screens/HomeScreen";
 import { supabase } from "../../lib/supabaseClient";
+import { ArcAppKitAdapter } from "../../services/arc-app-kit/adapter";
 
 interface ViewRouterProps {
   isLoggingIn: boolean;
@@ -336,19 +337,7 @@ export const ViewRouter = React.memo(({ isLoggingIn, loginEmail, setLoginEmail, 
             setViewState("processing");
             
             try {
-              const response = await fetch('/api/payments/create', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                  walletId: registeredUser?.walletId || 'default-wallet', 
-                  destinationAddress: selectedContact.account,
-                  amount: amount,
-                  userId: registeredUser?.supabaseUid,
-                  recipientName: selectedContact.name
-                }),
-              });
-              
-              if (!response.ok) throw new Error('Transfer failed');
+              await ArcAppKitAdapter.sendUnifiedBalance(numAmount, selectedContact.account);
               
               await fetchBalance();
               await fetchTransactions();

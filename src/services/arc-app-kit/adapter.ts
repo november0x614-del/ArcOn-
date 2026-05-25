@@ -1,7 +1,7 @@
 import { useStore } from "../../store/useStore";
 
 export const ArcAppKitAdapter = {
-    async executeSwap(amount: number, fromToken: string, toToken: string, tokenAddress: string) {
+    async swapTokens(amount: number, fromToken: string, toToken: string, tokenAddress: string) {
         const { registeredUser } = useStore.getState();
         if (!registeredUser?.supabaseUid) throw new Error("User not registered");
 
@@ -21,7 +21,7 @@ export const ArcAppKitAdapter = {
         return await response.json();
     },
 
-    async executeTransfer(amount: number, destinationAddress: string) {
+    async sendUnifiedBalance(amount: number, destinationAddress: string) {
         const { registeredUser } = useStore.getState();
         if (!registeredUser?.supabaseUid) throw new Error("User not registered");
 
@@ -39,7 +39,7 @@ export const ArcAppKitAdapter = {
         return await response.json();
     },
 
-    async executeBridge(amount: number, fromNetwork: string, toNetwork: string) {
+    async bridgeToken(amount: number, fromNetwork: string, toNetwork: string) {
         const { registeredUser } = useStore.getState();
         if (!registeredUser?.supabaseUid) throw new Error("User not registered");
 

@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
 import { ArrowLeft, RefreshCw, ArrowLeftRight } from 'lucide-react';
-import { useApp } from '../../context/AppContext';
+import { useQueryClient } from '@tanstack/react-query';
+import { useStore } from '../../store/useStore';
+import { ArcAppKitAdapter } from '../../services/arc-app-kit/adapter';
 
 interface ArcSwapScreenProps {
   onBack: () => void;
 }
 
 export function ArcSwapScreen({ onBack }: ArcSwapScreenProps) {
-  const { fetchBalance, fetchTransactions, registeredUser } = useApp();
+  const queryClient = useQueryClient();
+  const { fetchBalance, fetchTransactions, registeredUser, displayToast } = useStore();
+  
   const [swapFromAmount, setSwapFromAmount] = useState<string>("100");
   const [swapToToken, setSwapToToken] = useState<"ARC" | "AETH" | "AQR">("ARC");
   const [isSwapping, setIsSwapping] = useState<boolean>(false);
@@ -15,34 +19,32 @@ export function ArcSwapScreen({ onBack }: ArcSwapScreenProps) {
   const [swapRate, setSwapRate] = useState<number>(0.12);
 
   const handleSwap = async () => {
+    if (!registeredUser?.supabaseUid) return;
     setIsSwapping(true);
     
     try {
       const fromNum = Number(swapFromAmount);
       
-      const response = await fetch('/api/swap/execute', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          userId: registeredUser?.supabaseUid,
-          amount: fromNum,
-          fromToken: 'USDC',
-          toToken: swapToToken
-        }),
-      });
+      await ArcAppKitAdapter.swapTokens(
+        fromNum,
+        'USDC',
+        swapToToken,
+        '' // Default token address
+      );
 
-      if (!response.ok) throw new Error('Swap failed');
-
-      await response.json();
+      // Invalidate React Query cache (for useBalances hook)
+      queryClient.invalidateQueries({ queryKey: ['balances'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
       
-      // Update data from backend
+      // Update store states manually for fallback/immediate effect
       await fetchBalance();
       await fetchTransactions();
       
       setSwapSuccess(true);
+      displayToast("Swap successful!");
     } catch (error) {
       console.error(error);
-      // In a real app, show a toast here
+      displayToast("Swap failed. Please try again.");
     } finally {
       setIsSwapping(false);
     }

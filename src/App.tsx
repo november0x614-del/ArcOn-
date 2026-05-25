@@ -83,8 +83,14 @@ export default function App() {
   }, [setRegisteredUser, setViewState]);
 
   React.useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.error("Error getting session:", error.message);
+        if (error.message.includes("Refresh Token Not Found") || error.message.includes("Invalid Refresh Token")) {
+          supabase.auth.signOut();
+          resetState();
+        }
+      } else if (session) {
         handleUserSession(session.user);
       }
     });
@@ -92,7 +98,10 @@ export default function App() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
+      if (_event === 'TOKEN_REFRESHED' && !session) {
+         supabase.auth.signOut();
+         resetState();
+      } else if (session) {
         handleUserSession(session.user);
       } else {
         resetState();

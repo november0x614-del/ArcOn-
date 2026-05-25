@@ -38,7 +38,7 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
     setStep('processing');
     
     try {
-      await ArcAppKitAdapter.executeBridge(
+      await ArcAppKitAdapter.bridgeToken(
         numAmount,
         fromNetwork.name,
         toNetwork.name

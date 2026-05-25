@@ -86,7 +86,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
     setSwapFinished(false);
 
     try {
-      const result = await ArcAppKitAdapter.executeSwap(
+      const result = await ArcAppKitAdapter.swapTokens(
         parseFloat(fromAmount),
         fromToken?.symbol || '',
         toToken?.symbol || '',
@@ -97,6 +97,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
       setIsSwapping(false);
       setSwapFinished(true);
       queryClient.invalidateQueries({ queryKey: ['balances'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
     } catch (error) {
       console.error(error);
       setIsSwapping(false);

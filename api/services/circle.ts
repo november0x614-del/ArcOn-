@@ -73,23 +73,21 @@ export async function executeTransaction(
     const client = getCircleClientInstance();
 
     // Perform transaction using Developer SDK directly on backend
-    // This replaces the AppKit usage on backend which was causing conflicts
-    let result;
-    if (type === 'swap') {
-        // Swap logic for Arc Testnet using Developer Controlled Wallets
-        // Placeholder for real swap implementation or bridge
-        result = { txHash: `tx_${Math.random().toString(36).substring(7)}`, explorerUrl: '#' };
-    } else {
-        const response = await client.createTransaction({
-            walletId: walletData.wallet_id,
-            destinationAddress: _destinationAddress,
-            amount: [amount.toString()],
-            fee: { type: "level", config: { feeLevel: "LOW" } },
-            tokenAddress: metadata.tokenAddress || "",
-            blockchain: "ARC-TESTNET"
-        } as any);
-        result = { txHash: response.data?.id, explorerUrl: '#' };
-    }
+    // For both 'swap' and 'transfer', we perform a real on-chain transaction
+    // to a destination (DEX address for swaps, recipient for transfers)
+    const response = await client.createTransaction({
+        walletId: walletData.wallet_id,
+        destinationAddress: _destinationAddress,
+        amount: [amount.toString()],
+        fee: { type: "level", config: { feeLevel: "LOW" } },
+        tokenAddress: metadata.tokenAddress || "", // Use provided token address or empty for native
+        blockchain: "ARC-TESTNET"
+    } as any);
+
+    const result = { 
+        txHash: response.data?.id, 
+        explorerUrl: `https://explorer.arc.network/tx/${response.data?.id}` // Example explorer URL
+    };
 
     const { error } = await supabaseAdmin.from('transactions').insert({
         user_id: userId,
