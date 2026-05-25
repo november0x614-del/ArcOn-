@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ArrowLeft, 
   Send, 
@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { UIDCard } from '../common/UIDCard';
+import { useBalances } from '../../hooks/useBalances';
+import { useStore } from '../../store/useStore';
 
 interface AccountDetailScreenProps {
   onBack: () => void;
@@ -38,7 +40,46 @@ export function AccountDetailScreen({
 }: AccountDetailScreenProps) {
   const [activeTab, setActiveTab] = useState<'history' | 'token'>('history');
   const [showUID, setShowUID] = useState(false);
-  const { transactions, showBalance, balance, activeFilter, setActiveFilter } = useApp();
+  const { 
+    transactions, 
+    showBalance, 
+    balance, 
+    activeFilter, 
+    setActiveFilter,
+    importedTokens,
+    importToken,
+    displayToast
+  } = useApp();
+
+  const { data: balanceData } = useBalances();
+  const { registeredUser } = useStore();
+  const [liveCustomBalances, setLiveCustomBalances] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (!registeredUser?.supabaseUid || !importedTokens || importedTokens.length === 0) {
+      setLiveCustomBalances({});
+      return;
+    }
+    
+    const fetchLiveCustomBalances = async () => {
+      try {
+        const contracts = importedTokens.map(t => t.contractAddress).join(',');
+        const response = await fetch(`/api/balance/${registeredUser.supabaseUid}/tokens?contracts=${contracts}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data && data.balances) {
+            setLiveCustomBalances(data.balances);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch live custom token balances on-chain:", error);
+      }
+    };
+
+    fetchLiveCustomBalances();
+    const interval = setInterval(fetchLiveCustomBalances, 15000);
+    return () => clearInterval(interval);
+  }, [registeredUser?.supabaseUid, importedTokens]);
   
   const filteredTransactions = transactions.filter((tx) => {
     if (activeFilter === 'All') return true;
@@ -72,6 +113,119 @@ export function AccountDetailScreen({
 
   const [showCard, setShowCard] = useState(false);
   const [showUnifiedDetails, setShowUnifiedDetails] = useState(false);
+  
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importTab, setImportTab] = useState<'popular' | 'custom'>('popular');
+  const [customAddress, setCustomAddress] = useState('');
+  const [customSymbol, setCustomSymbol] = useState('');
+  const [customName, setCustomName] = useState('');
+  const [customDecimals, setCustomDecimals] = useState('18');
+
+  const popularCatalog = [
+    { 
+      symbol: 'EURC', 
+      name: 'Euro Coin', 
+      decimals: 6, 
+      contractAddress: '0x17ca85bcbb48d06992ad8ebd8833fd4038a8facc', 
+      initialBalance: 750.00, 
+      usdPrice: 1.08, 
+      color: 'bg-blue-600', 
+      type: 'Stablecoin' 
+    },
+    { 
+      symbol: 'cirBTC', 
+      name: 'Circle Bitcoin', 
+      decimals: 8, 
+      contractAddress: '0x07f1ea50e30d47376c0dfb3eb853fd40e3a8907a', 
+      initialBalance: 0.0450, 
+      usdPrice: 67450.00, 
+      color: 'bg-amber-500', 
+      type: 'Wrapped Asset' 
+    },
+    { 
+      symbol: 'USDT', 
+      name: 'Tether USD', 
+      decimals: 6, 
+      contractAddress: '0xbc4cfb8da47fcd3eb7ebd8833fd4038a4acc89d2', 
+      initialBalance: 2400.00, 
+      usdPrice: 1.00, 
+      color: 'bg-teal-500', 
+      type: 'Stablecoin' 
+    },
+    { 
+      symbol: 'DAI', 
+      name: 'Dai Stablecoin', 
+      decimals: 18, 
+      contractAddress: '0x897486e00cfb8da47fc0dfb3eb853fd40e3a8907a', 
+      initialBalance: 125.50, 
+      usdPrice: 1.00, 
+      color: 'bg-amber-400', 
+      type: 'Stablecoin' 
+    },
+    { 
+      symbol: 'USDe', 
+      name: 'Ethena Synthetic USD', 
+      decimals: 18, 
+      contractAddress: '0xfebd8853fd40e3a8907ad8ebd8833fd4038a8fac', 
+      initialBalance: 980.00, 
+      usdPrice: 1.00, 
+      color: 'bg-purple-600', 
+      type: 'Synthetic Stablecoin' 
+    }
+  ];
+
+  const handleAutoFillCustom = () => {
+    const templates = [
+      { symbol: 'MINT', name: 'Arc Mintable Assets', address: '0x4fbc689076bc19ad080bfebd8833fd4038a8faec', decimals: '18' },
+      { symbol: 'STAKE', name: 'Validator Stake Token', address: '0x8ec8ebd8833fd4038a8faec07f1ea50e30d47376', decimals: '18' },
+      { symbol: 'PAY', name: 'Arc Gas Refund Pool', address: '0x16fd4038a8faec07f1ea50e30d4737604fbc6890', decimals: '6' },
+      { symbol: 'GOLD', name: 'Circle Tokenized Gold', address: '0x22cfb8da47fcd3eb7ebd8833fd4038a4acc89d2', decimals: '8' }
+    ];
+    
+    const randomTemplate = templates[Math.floor(Math.random() * templates.length)];
+    setCustomAddress(randomTemplate.address);
+    setCustomSymbol(randomTemplate.symbol);
+    setCustomName(randomTemplate.name);
+    setCustomDecimals(randomTemplate.decimals);
+    displayToast(`Autofilled details for ${randomTemplate.symbol}`);
+  };
+
+  const handleImportCustom = () => {
+    if (!customAddress || !customSymbol || !customName) {
+      displayToast("Please fill all required custom token fields");
+      return;
+    }
+    
+    if (!customAddress.startsWith('0x') || customAddress.length < 20) {
+      displayToast("Invalid Ethereum-style contract address");
+      return;
+    }
+
+    const dec = parseInt(customDecimals) || 18;
+    const mockBalance = Math.floor(Math.random() * 850) + 150; 
+    
+    const colors = ['bg-indigo-600', 'bg-violet-600', 'bg-fuchsia-600', 'bg-orange-500', 'bg-pink-500', 'bg-emerald-600', 'bg-cyan-500'];
+    const charCodeSum = customSymbol.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const chosenColor = colors[charCodeSum % colors.length];
+
+    importToken({
+      symbol: customSymbol.toUpperCase(),
+      name: customName,
+      decimals: dec,
+      contractAddress: customAddress,
+      balance: mockBalance,
+      usdPrice: 1.00,
+      color: chosenColor
+    });
+
+    displayToast(`${customSymbol.toUpperCase()} Custom Token imported successfully!`);
+    
+    setCustomAddress('');
+    setCustomSymbol('');
+    setCustomName('');
+    setCustomDecimals('18');
+    setShowImportModal(false);
+  };
   
   return (
     <div className="w-full h-full bg-white relative flex flex-col z-50 animate-in slide-in-from-right duration-300 overflow-hidden">
@@ -232,24 +386,45 @@ export function AccountDetailScreen({
                   <div className="grid grid-cols-3 gap-2 mb-3">
                     <div className="rounded-xl p-2.5 bg-white border border-slate-100 flex flex-col justify-between shadow-sm">
                       <span className="text-[8.5px] font-mono font-extrabold text-slate-800">ARC L1</span>
-                      <span className="font-bold text-[12px] sm:text-[13px] mt-1 text-slate-700">
-                        {showBalance ? `${(balance * 0.50).toFixed(2).replace('.', ',')}` : '••••'}
+                      <span className="font-bold text-[12px] sm:text-[13px] mt-1 text-slate-700 font-mono">
+                        {showBalance ? (() => {
+                          const usdcArcData = balanceData?.allBalances?.find((b: any) => 
+                            (b.token?.symbol === 'USDC' || b.token?.name?.includes('USDC')) && 
+                            (b.token?.blockchain?.toUpperCase() === 'ARC-TESTNET' || b.token?.blockchain?.toLowerCase() === 'arc-testnet' || !b.token?.blockchain)
+                          );
+                          const amt = usdcArcData ? parseFloat(usdcArcData.amount || '0') : (balance * 0.50);
+                          return amt.toFixed(2).replace('.', ',');
+                        })() : '••••'}
                       </span>
                       <span className="text-[8px] text-slate-400 mt-1">Native (50%)</span>
                     </div>
 
                     <div className="rounded-xl p-2.5 bg-white border border-slate-100 flex flex-col justify-between shadow-sm">
                       <span className="text-[8.5px] font-mono font-extrabold text-[#0052FF]">BASE</span>
-                      <span className="font-bold text-[12px] sm:text-[13px] mt-1 text-slate-700">
-                        {showBalance ? `${(balance * 0.25).toFixed(2).replace('.', ',')}` : '••••'}
+                      <span className="font-bold text-[12px] sm:text-[13px] mt-1 text-slate-700 font-mono">
+                        {showBalance ? (() => {
+                          const usdcBaseData = balanceData?.allBalances?.find((b: any) => 
+                            (b.token?.symbol === 'USDC' || b.token?.name?.includes('USDC')) && 
+                            (b.token?.blockchain?.toUpperCase().includes('BASE') || b.token?.blockchain?.toLowerCase().includes('base'))
+                          );
+                          const amt = usdcBaseData ? parseFloat(usdcBaseData.amount || '0') : (balance * 0.25);
+                          return amt.toFixed(2).replace('.', ',');
+                        })() : '••••'}
                       </span>
                       <span className="text-[8px] text-slate-400 mt-1">L2 (25%)</span>
                     </div>
 
                     <div className="rounded-xl p-2.5 bg-white border border-slate-100 flex flex-col justify-between shadow-sm">
                       <span className="text-[8.5px] font-mono font-extrabold text-[#28A0F0]">ARBITRUM</span>
-                      <span className="font-bold text-[12px] sm:text-[13px] mt-1 text-slate-700">
-                        {showBalance ? `${(balance * 0.25).toFixed(2).replace('.', ',')}` : '••••'}
+                      <span className="font-bold text-[12px] sm:text-[13px] mt-1 text-slate-700 font-mono">
+                        {showBalance ? (() => {
+                          const usdcArbData = balanceData?.allBalances?.find((b: any) => 
+                            (b.token?.symbol === 'USDC' || b.token?.name?.includes('USDC')) && 
+                            (b.token?.blockchain?.toUpperCase().includes('ARBITRUM') || b.token?.blockchain?.toLowerCase().includes('arbitrum'))
+                          );
+                          const amt = usdcArbData ? parseFloat(usdcArbData.amount || '0') : (balance * 0.25);
+                          return amt.toFixed(2).replace('.', ',');
+                        })() : '••••'}
                       </span>
                       <span className="text-[8px] text-slate-400 mt-1">L2 (25%)</span>
                     </div>
@@ -275,13 +450,77 @@ export function AccountDetailScreen({
                 </div>
               </div>
               <div className="flex flex-col items-end">
-                <span className="font-bold text-[16px] text-slate-800">12,450.00</span>
-                <span className="text-[12px] text-slate-400 font-medium tracking-wide">~$249.00</span>
+                <span className="font-bold text-[16px] text-slate-800 font-mono">
+                  {showBalance ? (() => {
+                    const arcTokenData = balanceData?.allBalances?.find((b: any) => 
+                      b.token?.symbol === 'ARC' || b.token?.name?.toUpperCase().includes('ARC')
+                    );
+                    const amt = arcTokenData ? parseFloat(arcTokenData.amount || '0') : 12450.00;
+                    return amt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                  })() : '••••'}
+                </span>
+                <span className="text-[12px] text-slate-400 font-medium tracking-wide">
+                  {showBalance ? (() => {
+                    const arcTokenData = balanceData?.allBalances?.find((b: any) => 
+                      b.token?.symbol === 'ARC' || b.token?.name?.toUpperCase().includes('ARC')
+                    );
+                    const amt = arcTokenData ? parseFloat(arcTokenData.amount || '0') : 12450.00;
+                    return `~$` + (amt * 0.02).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                  })() : '••••'}
+                </span>
               </div>
             </div>
 
+            {/* Imported Tokens List */}
+            {importedTokens.map((token) => (
+              <div 
+                key={token.symbol} 
+                className="bg-white rounded-2xl p-4 flex justify-between items-center shadow-sm border border-slate-100 hover:shadow-md transition-all cursor-pointer group relative overflow-hidden"
+              >
+                <div className="flex items-center gap-4">
+                  <div className={`w-12 h-12 ${token.color || 'bg-blue-600'} rounded-full flex items-center justify-center text-white font-bold text-sm shadow-inner relative overflow-hidden shrink-0`}>
+                     <span className="z-10 tracking-tight uppercase">{token.symbol.substring(0, 4)}</span>
+                  </div>
+                  <div className="flex flex-col max-w-[150px] sm:max-w-[200px]">
+                    <span className="font-bold text-[16px] text-slate-800 leading-tight flex items-center gap-1.5 truncate">
+                      {token.symbol}
+                      <span className="bg-blue-50 text-[#008fcd] text-[8.5px] uppercase font-mono font-bold tracking-wider px-1.5 py-0.5 rounded border border-blue-100 leading-none">Imported</span>
+                    </span>
+                    <span className="text-[11px] text-slate-400 font-medium truncate font-mono mt-0.5" title={token.contractAddress}>
+                      {token.contractAddress.substring(0, 6)}...{token.contractAddress.substring(token.contractAddress.length - 4)}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center">
+                  <div className="flex flex-col items-end">
+                    <span className="font-bold text-[16px] text-slate-800 font-mono">
+                      {showBalance ? (() => {
+                        const amt = liveCustomBalances[token.contractAddress.toLowerCase().trim()] !== undefined 
+                          ? liveCustomBalances[token.contractAddress.toLowerCase().trim()] 
+                          : token.balance;
+                        return amt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: token.decimals > 6 ? 4 : 2 });
+                      })() : '••••'}
+                    </span>
+                    <span className="text-[12px] text-slate-400 font-medium tracking-wide">
+                      {showBalance ? (() => {
+                        const amt = liveCustomBalances[token.contractAddress.toLowerCase().trim()] !== undefined 
+                          ? liveCustomBalances[token.contractAddress.toLowerCase().trim()] 
+                          : token.balance;
+                        return `~$` + (amt * token.usdPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                      })() : '••••'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+
             {/* Empty State / Add Token */}
-            <button className="mt-2 w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center gap-2 text-slate-400 hover:text-slate-800 hover:border-blue-200 hover:bg-slate-100/50 transition-all font-semibold">
+            <button 
+              onClick={() => {
+                setShowImportModal(true);
+              }}
+              className="mt-2 w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center gap-2 text-slate-400 hover:text-slate-800 hover:border-blue-200 hover:bg-slate-100/50 transition-all font-semibold outline-none cursor-pointer"
+            >
               <Plus size={18} />
               <span className="text-[14px]">Import Token</span>
             </button>
@@ -321,6 +560,169 @@ export function AccountDetailScreen({
           </div>
         </div>
       )}
+
+      {showImportModal && (
+        <div className="absolute inset-0 z-[120] bg-slate-50 flex flex-col animate-in slide-in-from-right duration-300">
+          {/* Header */}
+          <div className="flex items-center px-4 pt-12 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between">
+            <div className="flex items-center">
+              <button 
+                onClick={() => setShowImportModal(false)} 
+                className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent flex items-center justify-center outline-none"
+              >
+                <ArrowLeft size={20} className="text-white" />
+              </button>
+              <h2 className="font-bold text-[16px] text-white ml-2 uppercase tracking-tight">Import Token</h2>
+            </div>
+          </div>
+          
+          <div className="px-6 w-full flex-1 overflow-y-auto flex flex-col pt-6 pb-8">
+            {/* Import Tabs */}
+            <div className="flex gap-2 p-1 bg-white border border-slate-100/80 rounded-xl mb-4 shadow-sm">
+              <button
+                onClick={() => setImportTab('popular')}
+                className={`flex-1 py-2 text-[13px] font-bold rounded-lg transition-all border-0 cursor-pointer ${
+                  importTab === 'popular' 
+                    ? 'bg-slate-900 text-white shadow-sm' 
+                    : 'bg-transparent text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                Popular Token
+              </button>
+              <button
+                onClick={() => setImportTab('custom')}
+                className={`flex-1 py-2 text-[13px] font-bold rounded-lg transition-all border-0 cursor-pointer ${
+                  importTab === 'custom' 
+                    ? 'bg-slate-900 text-white shadow-sm' 
+                    : 'bg-transparent text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                Custom Token
+              </button>
+            </div>
+
+            {importTab === 'popular' ? (
+              <div className="flex flex-col gap-3 min-h-[250px] pb-4 select-none">
+                <p className="text-[12px] text-slate-400 mb-1 font-medium">Select from popular standard assets on Arc L1 Testnet:</p>
+                
+                {popularCatalog.map((ptok) => {
+                  const isAlreadyImported = importedTokens.some(t => t.symbol.toUpperCase() === ptok.symbol.toUpperCase()) || ptok.symbol === 'USDC' || ptok.symbol === 'ARC';
+                  
+                  return (
+                    <div key={ptok.symbol} className="flex justify-between items-center p-3.5 bg-white border border-slate-100 rounded-2xl hover:bg-slate-100/30 transition-colors shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-full ${ptok.color || 'bg-slate-800'} flex items-center justify-center text-white text-xs font-extrabold font-sans uppercase tracking-tight shrink-0 shadow-sm`}>
+                           {ptok.symbol.substring(0, 4)}
+                        </div>
+                        <div className="flex flex-col text-left">
+                          <span className="font-bold text-[14px] text-slate-800 leading-snug">{ptok.name}</span>
+                          <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest leading-none mt-0.5">{ptok.symbol} • {ptok.type}</span>
+                        </div>
+                      </div>
+
+                      {isAlreadyImported ? (
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-xl text-[11px] font-extrabold border border-emerald-100/50">
+                          <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                          ACTIVE
+                        </div>
+                      ) : (
+                        <button 
+                          onClick={() => {
+                            importToken({
+                              symbol: ptok.symbol,
+                              name: ptok.name,
+                              decimals: ptok.decimals,
+                              contractAddress: ptok.contractAddress,
+                              balance: ptok.initialBalance,
+                              usdPrice: ptok.usdPrice,
+                              color: ptok.color
+                            });
+                            displayToast(`${ptok.symbol} Token imported!`);
+                          }}
+                          className="bg-slate-900 text-white hover:bg-slate-800 font-sans text-[11.5px] font-bold px-3.5 py-1.5 rounded-xl cursor-pointer border-0 transition-opacity active:opacity-90"
+                        >
+                          Import
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4 min-h-[250px] pb-4">
+                <div className="flex justify-between items-center bg-blue-50/50 p-3.5 rounded-2xl border border-blue-100/50 text-left">
+                  <span className="text-[11.5px] text-slate-600 leading-relaxed max-w-[70%] font-medium">
+                    💡 Fast-track testing? Auto-populate mock contract details instantly with a single tap.
+                  </span>
+                  <button 
+                    onClick={handleAutoFillCustom}
+                    className="bg-blue-600 text-white hover:bg-blue-700 text-[11.5px] font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer border-0 shadow-sm"
+                  >
+                    Autofill
+                  </button>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-1 text-left">
+                    <label className="text-[10.5px] font-extrabold uppercase tracking-widest text-slate-500">Token Contract Address</label>
+                    <input 
+                      type="text" 
+                      value={customAddress}
+                      onChange={(e) => setCustomAddress(e.target.value)}
+                      placeholder="e.g. 0x07f1ea50e30d47376c0dfb3eb853fd40e3a8907a"
+                      className="w-full bg-white border border-slate-100 focus:border-blue-400 focus:bg-white rounded-xl px-4 py-2.5 text-[14px] text-slate-800 font-mono focus:outline-none transition-all placeholder:text-slate-300 shadow-sm"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1 text-left">
+                      <label className="text-[10.5px] font-extrabold uppercase tracking-widest text-slate-500">Token Symbol</label>
+                      <input 
+                        type="text" 
+                        value={customSymbol}
+                        onChange={(e) => setCustomSymbol(e.target.value)}
+                        placeholder="e.g. MINT"
+                        maxLength={8}
+                        className="w-full bg-white border border-slate-100 focus:border-blue-400 focus:bg-white rounded-xl px-4 py-2.5 text-[14px] text-slate-800 font-extrabold focus:outline-none transition-all placeholder:text-slate-300 shadow-sm"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1 text-left">
+                      <label className="text-[10.5px] font-extrabold uppercase tracking-widest text-slate-500">Decimals</label>
+                      <input 
+                        type="number" 
+                        value={customDecimals}
+                        onChange={(e) => setCustomDecimals(e.target.value)}
+                        placeholder="18"
+                        className="w-full bg-white border border-slate-100 focus:border-blue-400 focus:bg-white rounded-xl px-4 py-2.5 text-[14px] text-slate-800 focus:outline-none transition-all placeholder:text-slate-300 shadow-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1 text-left">
+                    <label className="text-[10.5px] font-extrabold uppercase tracking-widest text-slate-500">Token Name</label>
+                    <input 
+                      type="text" 
+                      value={customName}
+                      onChange={(e) => setCustomName(e.target.value)}
+                      placeholder="e.g. Arc Mintable Protocol"
+                      className="w-full bg-white border border-slate-100 focus:border-blue-400 focus:bg-white rounded-xl px-4 py-2.5 text-[14px] text-slate-800 focus:outline-none transition-all placeholder:text-slate-300 shadow-sm"
+                    />
+                  </div>
+                </div>
+
+                <button 
+                  onClick={handleImportCustom}
+                  className="w-full mt-2 bg-slate-900 text-white hover:bg-slate-800 text-[13.5px] font-bold py-3.5 px-4 rounded-xl active:scale-[0.98] transition-all cursor-pointer border-0 uppercase tracking-wide font-sans shadow-md"
+                >
+                  Import Custom Token
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

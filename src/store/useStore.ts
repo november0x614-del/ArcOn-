@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { ViewState, ShortcutItem, UserIdentity, Transaction, SourceAccount } from '../types';
+import { ViewState, ShortcutItem, UserIdentity, Transaction, SourceAccount, ImportedToken } from '../types';
 import { defaultSelectedShortcuts, defaultAvailableShortcuts } from '../components/screens/ManageFavoritesScreen';
 
 export type TransactionFilter = 'All' | 'Received' | 'Sent' | 'Swaps';
@@ -14,6 +14,11 @@ interface AppState {
   setShowBalance: (show: boolean) => void;
   activeFilter: TransactionFilter;
   setActiveFilter: (filter: TransactionFilter) => void;
+  
+  // Imported Tokens state
+  importedTokens: ImportedToken[];
+  importToken: (token: ImportedToken) => void;
+  removeToken: (symbol: string) => void;
   
   // User & Auth
   registeredUser: UserIdentity | null;
@@ -208,6 +213,19 @@ export const useStore = create<AppState>()(
       readReceiptIds: [],
       markAsRead: (id) => set((state) => ({
         readReceiptIds: state.readReceiptIds.includes(id) ? state.readReceiptIds : [...state.readReceiptIds, id]
+      })),
+      
+      // Imported Tokens
+      importedTokens: [],
+      importToken: (token) => set((state) => {
+        const uppercaseSymbol = token.symbol.toUpperCase();
+        if (state.importedTokens.some(t => t.symbol.toUpperCase() === uppercaseSymbol)) {
+          return state;
+        }
+        return { importedTokens: [...state.importedTokens, token] };
+      }),
+      removeToken: (symbol) => set((state) => ({
+        importedTokens: state.importedTokens.filter(t => t.symbol.toUpperCase() !== symbol.toUpperCase())
       })),
       
       // Integration

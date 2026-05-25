@@ -6,7 +6,7 @@ import { createServer as createViteServer } from "vite";
 async function startServer() {
   const PORT = 3000;
 
-  app.use((req, res, next) => {
+  app.use((req, _res, next) => {
     if (req.url.startsWith('/api/')) {
       console.log(`[API REQUEST] ${req.method} ${req.url}`);
     }

@@ -103,3 +103,13 @@ export interface SourceAccount {
   balance: number;
   currency: string;
 }
+
+export interface ImportedToken {
+  symbol: string;
+  name: string;
+  decimals: number;
+  contractAddress: string;
+  balance: number;
+  usdPrice: number;
+  color?: string;
+}
