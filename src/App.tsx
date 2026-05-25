@@ -174,9 +174,9 @@ export default function App() {
   }, [registeredUser?.supabaseUid, fetchBalance, fetchTransactions]);
 
   return (
-    <div className="bg-[#EAF3FA] min-h-screen flex flex-col">
-      {/* Full screen responsive web application wrapper */}
-      <div className="w-full h-[100dvh] bg-[#EAF3FA] relative overflow-hidden flex flex-col animate-in fade-in duration-500">
+    <div className="bg-[#0B0F17] min-h-screen flex flex-col items-center justify-center overflow-hidden">
+      {/* Centered responsive web application wrapper - max width capped at 768px to preserve beautiful portrait tablet dimensions on wider landscape/desktop screens */}
+      <div className="w-full max-w-[768px] h-[100dvh] bg-[#EAF3FA] relative sm:shadow-[0_0_60px_rgba(0,0,0,0.45)] sm:border-x sm:border-slate-800/10 overflow-hidden flex flex-col animate-in fade-in duration-500">
         <AnimatePresence mode="wait">
           <motion.div
             key={viewState}
