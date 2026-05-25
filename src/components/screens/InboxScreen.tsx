@@ -88,32 +88,35 @@ export function InboxScreen({ onBack, onTransactionClick }: InboxScreenProps) {
   return (
     <div className="w-full h-full bg-white relative flex flex-col z-50 animate-in slide-in-from-bottom duration-300">
       {/* Search & Back Header */}
-      <div className="px-4 pt-12 pb-2 bg-white flex items-center justify-between shrink-0">
+      <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between shrink-0">
         {isSelectionMode ? (
           <div className="flex items-center justify-between w-full">
-            <button onClick={toggleSelectionMode} className="text-slate-500 font-bold text-[14px] hover:text-slate-700 transition-colors">Cancel</button>
+            <button onClick={toggleSelectionMode} className="text-slate-300 font-bold text-[14px] hover:text-white transition-colors cursor-pointer border-0 bg-transparent">Cancel</button>
             <button 
               onClick={handleSelectAll}
-              className="text-[#3FA2F6] font-bold text-[14px] px-3 py-1 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+              className="text-slate-900 font-bold text-[14px] px-3 py-1 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
             >
               {selectedIds.length > 0 ? "Deselect All" : "Select All"}
             </button>
             <button 
               onClick={() => setShowDeleteConfirm(true)} 
               disabled={selectedIds.length === 0}
-              className={`font-bold text-[14px] transition-colors ${selectedIds.length > 0 ? "text-red-500" : "text-slate-300"}`}
+              className={`font-bold text-[14px] transition-colors bg-transparent border-0 cursor-pointer ${selectedIds.length > 0 ? "text-red-400" : "text-slate-400"}`}
             >
               Delete ({selectedIds.length})
             </button>
           </div>
         ) : (
           <>
-            <button onClick={onBack} className="p-2 -ml-2 hover:bg-slate-50 rounded-full transition-colors">
-              <ArrowLeft size={24} className="text-slate-800" />
-            </button>
+            <div className="flex items-center">
+              <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent -ml-2">
+                <ArrowLeft size={20} className="text-white" />
+              </button>
+              <h2 className="font-bold text-[16px] text-white ml-2">INBOX</h2>
+            </div>
             <div className="flex items-center gap-3">
-              <button className="text-[#3FA2F6] bg-blue-50 p-2.5 rounded-full"><Search size={18} strokeWidth={2.5} /></button>
-              <button onClick={toggleSelectionMode} className="text-slate-400 p-2.5 rounded-full bg-slate-50 hover:bg-red-50 hover:text-red-500 transition-colors"><Trash2 size={18} /></button>
+              <button className="text-white bg-white/10 p-2.5 rounded-full hover:bg-white/20 transition-colors border-0 cursor-pointer"><Search size={18} strokeWidth={2.5} /></button>
+              <button onClick={toggleSelectionMode} className="text-slate-300 p-2.5 rounded-full bg-white/5 hover:bg-red-500/20 hover:text-red-400 transition-colors border-0 cursor-pointer"><Trash2 size={18} /></button>
             </div>
           </>
         )}
@@ -125,7 +128,7 @@ export function InboxScreen({ onBack, onTransactionClick }: InboxScreenProps) {
           <button 
              onClick={() => setActiveTab('resi')}
              className={`flex-1 py-2.5 rounded-xl font-bold text-[13px] transition-all relative z-10 ${
-                activeTab === 'resi' ? 'bg-white text-[#3FA2F6] shadow-sm' : 'text-slate-400 hover:text-slate-600'
+                activeTab === 'resi' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'
              }`}
           >
              Receipts
@@ -133,7 +136,7 @@ export function InboxScreen({ onBack, onTransactionClick }: InboxScreenProps) {
           <button 
              onClick={() => setActiveTab('notifikasi')}
              className={`flex-1 py-2.5 rounded-xl font-bold text-[13px] transition-all relative z-10 ${
-                activeTab === 'notifikasi' ? 'bg-white text-[#3FA2F6] shadow-sm' : 'text-slate-400 hover:text-slate-600'
+                activeTab === 'notifikasi' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'
              }`}
           >
              Notifications
@@ -141,7 +144,7 @@ export function InboxScreen({ onBack, onTransactionClick }: InboxScreenProps) {
           <button 
              onClick={() => setActiveTab('promo')}
              className={`flex-1 py-2.5 rounded-xl font-bold text-[13px] transition-all relative z-10 ${
-                activeTab === 'promo' ? 'bg-white text-[#3FA2F6] shadow-sm' : 'text-slate-400 hover:text-slate-600'
+                activeTab === 'promo' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'
              }`}
           >
              Promos
@@ -193,7 +196,7 @@ export function InboxScreen({ onBack, onTransactionClick }: InboxScreenProps) {
           <div className="bg-white rounded-[24px] p-6 w-full max-w-[320px] relative z-10 flex flex-col animate-in zoom-in-95 duration-200 shadow-2xl">
              <div className="flex justify-between items-start mb-4">
                 <div className="flex flex-col gap-1.5">
-                  <span className="text-[11px] font-bold text-[#3FA2F6] uppercase tracking-wider">{selectedNotification.date}</span>
+                  <span className="text-[11px] font-bold text-slate-800 uppercase tracking-wider">{selectedNotification.date}</span>
                   <h3 className="font-bold text-[18px] text-slate-800 leading-tight pr-4">{selectedNotification.title}</h3>
                 </div>
              </div>
@@ -259,7 +262,7 @@ function ResiContent({
                 isSelectionMode={isSelectionMode}
                 isSelected={selectedIds.includes(tx.id)}
                 onToggleSelect={onToggleSelect}
-                icon={tx.type === 'purchase' || tx.type === 'transfer' ? <Wallet size={22} className="text-[#3FA2F6]" /> : <ArrowRight size={22} className="text-emerald-500" />}
+                icon={tx.type === 'purchase' || tx.type === 'transfer' ? <Wallet size={22} className="text-slate-800" /> : <ArrowRight size={22} className="text-emerald-500" />}
                 title={tx.title}
                 status={tx.status === 'success' ? 'Successful' : 'Processing'}
                 amount={`${tx.amount} ${tx.currency}`}
@@ -268,7 +271,7 @@ function ResiContent({
                 disabledSelection={!isRead}
               />
               {!isRead && !isSelectionMode && (
-                <div className="absolute top-2 left-10 w-2 h-2 bg-[#3FA2F6] rounded-full border border-white z-20"></div>
+                <div className="absolute top-2 left-10 w-2 h-2 bg-slate-900 rounded-full border border-white z-20"></div>
               )}
             </div>
           );
@@ -311,10 +314,10 @@ function TransactionItem({ id, icon, title, status, amount, isSelectionMode, isS
       <div className="flex gap-3 items-start pr-4">
          {isSelectionMode && (
            <div className="mt-1 shrink-0 w-6 flex items-center justify-center -mr-1">
-             {isSelected ? <CheckSquare size={20} className="text-blue-500" /> : <Square size={20} className={`text-slate-300 ${disabledSelection ? 'text-slate-100' : ''}`} />}
+             {isSelected ? <CheckSquare size={20} className="text-slate-600" /> : <Square size={20} className={`text-slate-300 ${disabledSelection ? 'text-slate-100' : ''}`} />}
            </div>
          )}
-         <div className={`mt-0.5 w-8 h-8 flex items-center justify-center shrink-0 group-hover:bg-blue-50 transition-colors rounded-full ${!isRead && !isSelectionMode ? 'bg-blue-50/30' : ''}`}>{icon}</div>
+         <div className={`mt-0.5 w-8 h-8 flex items-center justify-center shrink-0 group-hover:bg-slate-100 transition-colors rounded-full ${!isRead && !isSelectionMode ? 'bg-slate-100/30' : ''}`}>{icon}</div>
          <div className="flex flex-col">
             <h5 className={`font-medium text-[14px] leading-snug mb-1 transition-colors ${!isRead && !isSelectionMode ? 'text-slate-950 font-bold' : 'text-slate-700'}`}>{title}</h5>
             <span className="text-[12px] text-emerald-500 font-medium">{status}</span>
@@ -409,7 +412,7 @@ function NotifikasiContent({
       <div className="flex flex-col gap-4 mt-2 px-4">
         <div className="flex justify-between items-center mb-2">
            <h3 className="font-bold text-[18px] text-slate-800 tracking-tight">Account Info</h3>
-           <button onClick={markAllRead} className="text-[#3FA2F6] text-[13px] font-bold px-2 py-1 hover:bg-blue-50 rounded-lg transition-colors">Mark as Read</button>
+           <button onClick={markAllRead} className="text-slate-800 text-[13px] font-bold px-2 py-1 hover:bg-slate-100 rounded-lg transition-colors">Mark as Read</button>
         </div>
         
         {notificationsLuarBiasaDua && (
@@ -502,7 +505,7 @@ function NotificationItem({ id, icon, title, desc, date, isRead, isSelectionMode
     <div className={"flex items-start gap-4 mb-2 cursor-pointer group transition-opacity " + ((isRead && !isSelectionMode) ? "opacity-60" : "opacity-100")} onClick={handleClick}>
        {isSelectionMode && (
          <div className="mt-1.5 shrink-0 flex items-center justify-center -mr-1">
-           {isSelected ? <CheckSquare size={20} className="text-blue-500" /> : <Square size={20} className="text-slate-300" />}
+           {isSelected ? <CheckSquare size={20} className="text-slate-600" /> : <Square size={20} className="text-slate-300" />}
          </div>
        )}
        <div className="mt-1 shrink-0 relative">
@@ -511,7 +514,7 @@ function NotificationItem({ id, icon, title, desc, date, isRead, isSelectionMode
        </div>
        <div className="flex flex-col flex-1 border-b border-slate-100 pb-5 pt-1">
           <div className="flex justify-between items-start mb-1 gap-2">
-             <h5 className={`font-bold text-[14px] transition-colors leading-tight ${isRead ? 'text-slate-600' : 'text-slate-800'} group-hover:text-blue-600`}>{title}</h5>
+             <h5 className={`font-bold text-[14px] transition-colors leading-tight ${isRead ? 'text-slate-600' : 'text-slate-800'} group-hover:text-slate-600`}>{title}</h5>
              <span className="text-[12px] text-slate-500 shrink-0 font-medium">{date}</span>
           </div>
           <p className="text-[12px] text-slate-600/90 leading-[1.6] line-clamp-2 pr-2">{desc}</p>
@@ -558,14 +561,14 @@ function PromoContent({
       <div className="px-4 flex items-start gap-3">
          {isSelectionMode && (
            <div className="mt-20 shrink-0 w-6 flex items-center justify-center -mr-1" onClick={handleClick}>
-             {selectedIds.includes('p1') ? <CheckSquare size={20} className="text-blue-500 cursor-pointer" /> : <Square size={20} className="text-slate-300 cursor-pointer" />}
+             {selectedIds.includes('p1') ? <CheckSquare size={20} className="text-slate-600 cursor-pointer" /> : <Square size={20} className="text-slate-300 cursor-pointer" />}
            </div>
          )}
          <div className="flex-1 rounded-[16px] overflow-hidden border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.06)] relative bg-white group cursor-pointer" onClick={handleClick}>
             <div className="bg-gradient-to-tr from-blue-100 to-indigo-50 h-[170px] relative overflow-hidden group-hover:opacity-90 transition-opacity">
                {/* Banner Abstract Image block */}
                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-[120%] h-[120%] bg-blue-600/10 rounded-full blur-2xl absolute -top-10 -right-10"></div>
+                  <div className="w-[120%] h-[120%] bg-slate-800/10 rounded-full blur-2xl absolute -top-10 -right-10"></div>
                   <div className="w-[150%] h-[150%] bg-indigo-900/5 mix-blend-multiply opacity-50 absolute inset-0 rotate-12 scale-150 border-[50px] border-dashed border-indigo-200/30 rounded-full"></div>
                </div>
                
@@ -575,11 +578,11 @@ function PromoContent({
             </div>
             
             <div className="p-5 bg-white relative">
-               <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-3 -mt-10 relative z-10 border-4 border-white shadow-sm">
+               <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-800 flex items-center justify-center mb-3 -mt-10 relative z-10 border-4 border-white shadow-sm">
                   <Info size={18} className="fill-blue-600 text-white" />
                </div>
                
-               <h4 className="font-bold text-[17px] text-slate-800 mb-4 leading-snug pr-4 group-hover:text-blue-600 transition-colors">Looking for Assets at the Best Prices? 😉</h4>
+               <h4 className="font-bold text-[17px] text-slate-800 mb-4 leading-snug pr-4 group-hover:text-slate-600 transition-colors">Looking for Assets at the Best Prices? 😉</h4>
                
                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-50/80 border border-slate-100 rounded-[8px] mb-4">
                   <span className="text-[14px]">⌛</span>
@@ -595,7 +598,7 @@ function PromoContent({
       </div>
       
       <div className="flex justify-center mt-2 gap-1.5">
-         <div className="w-6 h-1.5 bg-[#3FA2F6] rounded-full"></div>
+         <div className="w-6 h-1.5 bg-slate-900 rounded-full"></div>
          <div className="w-1.5 h-1.5 bg-slate-200 rounded-full"></div>
          <div className="w-1.5 h-1.5 bg-slate-200 rounded-full"></div>
          <div className="w-1.5 h-1.5 bg-slate-200 rounded-full"></div>

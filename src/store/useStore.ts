@@ -103,32 +103,34 @@ export const useStore = create<AppState>()(
             console.error(`Balance fetch failed with status: ${response.status}`);
             return;
           }
-          const text = await response.text();
-          useStore.getState().addLog(`Balance response received from ${url}`);
-          if (!text) {
-             useStore.getState().addLog("Balance response empty");
-             return;
-          }
-          const data = JSON.parse(text);
-          const newBalance = data.balance || 0;
-          useStore.getState().addLog(`Balance value: ${newBalance} (from ${url})`);
-          
-          const state = useStore.getState();
-          let totalDeposit = 0;
-          state.transactions.forEach((tx) => {
-            if (tx.type === 'deposit' || tx.type === 'receive') {
-              const amt = Math.abs(parseFloat(tx.amount.replace(/[+-]/g, ''))) || 0;
-              totalDeposit += amt;
-            }
-          });
-          
-          const pnlValue = totalDeposit > 0 ? newBalance - totalDeposit : 0;
-          const pnlPercentage = totalDeposit > 0 ? (pnlValue / totalDeposit) * 100 : 0;
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.indexOf("application/json") !== -1) {
+            const text = await response.text();
+            const data = JSON.parse(text);
+            const newBalance = data.balance || 0;
+            useStore.getState().addLog(`Balance value: ${newBalance} (from ${url})`);
+            
+            const state = useStore.getState();
+            let totalDeposit = 0;
+            state.transactions.forEach((tx) => {
+              if (tx.type === 'deposit' || tx.type === 'receive') {
+                const amt = Math.abs(parseFloat(tx.amount.replace(/[+-]/g, ''))) || 0;
+                totalDeposit += amt;
+              }
+            });
+            
+            const pnlValue = totalDeposit > 0 ? newBalance - totalDeposit : 0;
+            const pnlPercentage = totalDeposit > 0 ? (pnlValue / totalDeposit) * 100 : 0;
 
-          set({ balance: newBalance, pnlValue, pnlPercentage });
-        } catch (error) {
+            set({ balance: newBalance, pnlValue, pnlPercentage });
+          } else {
+             console.error(`Received non-JSON response for ${url}`);
+          }
+        } catch (error: any) {
           useStore.getState().addLog(`Balance fetch error: ${error}`);
-          console.error('Failed to fetch balance', error);
+          if (error.name !== 'TypeError' || error.message !== 'Failed to fetch') {
+            console.error('Failed to fetch balance', error);
+          }
         }
       },
       pnlValue: 0,
@@ -170,7 +172,8 @@ export const useStore = create<AppState>()(
               currency: 'USDC',
               timestamp: new Date(tx.created_at).toLocaleString(),
               status: tx.status,
-              txHash: tx.metadata?.txHash,
+              txHash: tx.tx_hash || tx.metadata?.txHash || tx.internal_ref,
+              explorerUrl: tx.metadata?.explorerUrl || (tx.tx_hash || tx.internal_ref ? `https://explorer.arc.network/tx/${tx.tx_hash || tx.internal_ref}` : undefined),
               metadata: tx.metadata
             };
           });
@@ -189,9 +192,11 @@ export const useStore = create<AppState>()(
 
           set({ transactions, pnlValue, pnlPercentage });
           useStore.getState().addLog(`Transactions updated: ${transactions.length} total`);
-        } catch (error) {
+        } catch (error: any) {
           useStore.getState().addLog(`Transactions fetch error: ${error}`);
-          console.error('Failed to fetch transactions', error);
+          if (error.name !== 'TypeError' || error.message !== 'Failed to fetch') {
+            console.error('Failed to fetch transactions', error);
+          }
         }
       },
       selectedTransaction: null,

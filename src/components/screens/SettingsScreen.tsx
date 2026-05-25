@@ -48,7 +48,7 @@ export function SettingsScreen({
       {/* Header */}
       <div className="bg-white border-b border-slate-100 flex items-center gap-3 px-4 py-4 z-10 shrink-0">
         <button onClick={onBack} className="p-1 -ml-1 hover:bg-slate-50 rounded-full transition-colors">
-          <ArrowLeft size={24} className="text-slate-700" />
+          <ArrowLeft size={20} className="text-white" />
         </button>
         <div className="flex-1 bg-slate-100/80 rounded-[12px] flex items-center px-3 py-2.5">
           <Search size={18} className="text-slate-500 mr-2 shrink-0" />
@@ -65,9 +65,9 @@ export function SettingsScreen({
             <span className="text-[12px] font-bold text-slate-500 tracking-wide uppercase">Profile & Account</span>
           </div>
           <div className="bg-white border-y border-slate-100 flex flex-col">
-            <SettingItem icon={<UserCircle size={20} className="text-[#3FA2F6]" />} label="Nickname" badge={registeredUser?.username || "Not Set"} onClick={onNamaPanggilan} />
-            <SettingItem icon={<Mail size={20} className="text-[#3FA2F6]" />} label="Registered Email" badge={registeredUser?.email || "Not Set"} onClick={onEmail} />
-            <SettingItem icon={<Settings size={20} className="text-[#3FA2F6]" />} label="Language Preferences" badge={language} isLast onClick={() => handleNotImplemented("Language Preferences")} />
+            <SettingItem icon={<UserCircle size={20} className="text-slate-800" />} label="Nickname" badge={registeredUser?.username || "Not Set"} onClick={onNamaPanggilan} />
+            <SettingItem icon={<Mail size={20} className="text-slate-800" />} label="Registered Email" badge={registeredUser?.email || "Not Set"} onClick={onEmail} />
+            <SettingItem icon={<Settings size={20} className="text-slate-800" />} label="Language Preferences" badge={language} isLast onClick={() => handleNotImplemented("Language Preferences")} />
           </div>
         </div>
 
@@ -77,9 +77,9 @@ export function SettingsScreen({
             <span className="text-[12px] font-bold text-slate-500 tracking-wide uppercase">Wallet Security</span>
           </div>
           <div className="bg-white border-y border-slate-100 flex flex-col">
-            <SettingItem icon={<Lock size={20} className="text-[#3FA2F6]" />} label="Change PIN / Password" onClick={() => handleNotImplemented("Change PIN")} />
-            <SettingItem icon={<Key size={20} className="text-[#3FA2F6]" />} label="Recovery Phrase (Seed)" badge="IMPORTANT" onClick={() => handleNotImplemented("Recovery Phrase")} />
-            <SettingItem icon={<Shield size={20} className="text-[#3FA2F6]" />} label="Export Private Key" isLast onClick={() => handleNotImplemented("Export Private Key")} />
+            <SettingItem icon={<Lock size={20} className="text-slate-800" />} label="Change PIN / Password" onClick={() => handleNotImplemented("Change PIN")} />
+            <SettingItem icon={<Key size={20} className="text-slate-800" />} label="Recovery Phrase (Seed)" badge="IMPORTANT" onClick={() => handleNotImplemented("Recovery Phrase")} />
+            <SettingItem icon={<Shield size={20} className="text-slate-800" />} label="Export Private Key" isLast onClick={() => handleNotImplemented("Export Private Key")} />
           </div>
         </div>
 
@@ -89,9 +89,9 @@ export function SettingsScreen({
             <span className="text-[12px] font-bold text-slate-500 tracking-wide uppercase">Network & Connections</span>
           </div>
           <div className="bg-white border-y border-slate-100 flex flex-col">
-            <SettingItem icon={<RefreshCw size={20} className="text-[#3FA2F6]" />} label="Network Settings" badge={network} onClick={() => handleNotImplemented("Network Settings")} />
-            <SettingItem icon={<Smartphone size={20} className="text-[#3FA2F6]" />} label="WalletConnect Sessions" badge={walletConnectSessions.toString()} onClick={() => handleNotImplemented("WalletConnect")} />
-            <SettingItem icon={<FileText size={20} className="text-[#3FA2F6]" />} label="Contract Allowances" badge={contractAllowances.toString()} isLast onClick={() => handleNotImplemented("Contract Allowances")}/>
+            <SettingItem icon={<RefreshCw size={20} className="text-slate-800" />} label="Network Settings" badge={network} onClick={() => handleNotImplemented("Network Settings")} />
+            <SettingItem icon={<Smartphone size={20} className="text-slate-800" />} label="WalletConnect Sessions" badge={walletConnectSessions.toString()} onClick={() => handleNotImplemented("WalletConnect")} />
+            <SettingItem icon={<FileText size={20} className="text-slate-800" />} label="Contract Allowances" badge={contractAllowances.toString()} isLast onClick={() => handleNotImplemented("Contract Allowances")}/>
           </div>
         </div>
 
@@ -101,8 +101,8 @@ export function SettingsScreen({
             <span className="text-[12px] font-bold text-slate-500 tracking-wide uppercase">Help & Community</span>
           </div>
           <div className="bg-white border-y border-slate-100">
-            <SettingItem icon={<HeadphonesIcon size={20} className="text-[#3FA2F6]" />} label="Arc Help Center" onClick={() => handleNotImplemented("Help Center")} />
-            <SettingItem icon={<ArrowUpRight size={20} className="text-[#3FA2F6]" />} label="Developer Docs" isLast onClick={() => handleNotImplemented("Docs")} />
+            <SettingItem icon={<HeadphonesIcon size={20} className="text-slate-800" />} label="Arc Help Center" onClick={() => handleNotImplemented("Help Center")} />
+            <SettingItem icon={<ArrowUpRight size={20} className="text-slate-800" />} label="Developer Docs" isLast onClick={() => handleNotImplemented("Docs")} />
           </div>
         </div>
         

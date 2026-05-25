@@ -21,7 +21,7 @@ export function RegisterSuccessScreen({ username = 'Arcreal', email = 'arcreal@e
       
       <div className="bg-slate-50 border border-slate-100 rounded-2xl p-5 w-full text-left mb-6 flex flex-col gap-4">
          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-blue-100 text-[#005faa] flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-full bg-blue-100 text-slate-800 flex items-center justify-center shrink-0">
                <User size={16} />
             </div>
             <div className="flex flex-col">
@@ -33,7 +33,7 @@ export function RegisterSuccessScreen({ username = 'Arcreal', email = 'arcreal@e
          <div className="w-full h-[1px] bg-slate-200/50"></div>
          
          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-blue-100 text-[#005faa] flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-full bg-blue-100 text-slate-800 flex items-center justify-center shrink-0">
                <Mail size={16} />
             </div>
             <div className="flex flex-col">
@@ -45,13 +45,13 @@ export function RegisterSuccessScreen({ username = 'Arcreal', email = 'arcreal@e
          <div className="w-full h-[1px] bg-slate-200/50"></div>
 
          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-blue-100 text-[#005faa] flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-full bg-blue-100 text-slate-800 flex items-center justify-center shrink-0">
                <Wallet size={16} />
             </div>
             <div className="flex flex-col w-full overflow-hidden">
                <div className="flex justify-between items-center w-full">
                   <span className="text-slate-400 text-[11px] font-bold uppercase tracking-wider">Arc Wallet Address</span>
-                  <span className="text-[9px] font-bold text-[#005faa] bg-blue-100 px-1.5 py-0.5 rounded">TESTNET</span>
+                  <span className="text-[9px] font-bold text-slate-800 bg-blue-100 px-1.5 py-0.5 rounded">TESTNET</span>
                </div>
                <span className="font-mono font-medium text-slate-800 text-[13px] truncate mt-0.5">{walletAddress}</span>
             </div>

@@ -22,7 +22,6 @@ import { DepositOptionsScreen } from "../screens/DepositOptionsScreen";
 import { ReceiveVAScreen } from "../screens/ReceiveVAScreen";
 import { ReceiveQRISScreen } from "../screens/ReceiveQRISScreen";
 import { LogoutScreen } from "../screens/LogoutScreen";
-import { ArcSwapScreen } from "../screens/ArcSwapScreen";
 import { ArcBirdScreen } from "../screens/ArcBirdScreen";
 import { InboxScreen } from "../screens/InboxScreen";
 import { AccountDetailScreen } from "../screens/AccountDetailScreen";
@@ -228,7 +227,7 @@ export const ViewRouter = React.memo(({ isLoggingIn, loginEmail, setLoginEmail, 
       )}
 
       {viewState === "arcswap" && (
-        <ArcSwapScreen onBack={() => setViewState("home")} />
+        <SwapScreen onBack={() => setViewState("home")} />
       )}
 
       {viewState === "arcbird" && (

@@ -28,22 +28,22 @@ export function FaucetScreen({ onBack }: FaucetScreenProps) {
   return (
     <div className="w-full h-full bg-slate-50 relative flex flex-col z-40 animate-in slide-in-from-bottom duration-500">
       {/* Header */}
-      <div className="bg-white px-4 pt-12 pb-4 shadow-sm relative z-10 w-full flex items-center gap-3">
-        <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full transition-colors -ml-2 bg-transparent border-0">
-          <ArrowLeft size={24} className="text-slate-800" />
+      <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-center">
+        <button onClick={onBack} className="absolute left-4 p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent">
+          <ArrowLeft size={20} className="text-white" />
         </button>
-        <div>
-          <h1 className="text-[18px] font-bold text-slate-800 tracking-tight font-sans">Arc Faucet</h1>
-          <p className="text-[11px] text-[#3FA2F6] font-bold">Testnet Gas Token</p>
-        </div>
+        <h1 className="font-bold text-[16px] text-white tracking-tight leading-tight">ARC FAUCET</h1>
       </div>
       
       <div className="flex-1 overflow-y-auto px-4 py-6 flex flex-col items-center">
-        <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-6 mt-4 ring-8 ring-blue-50/50">
-          <Droplets size={36} className="text-[#3FA2F6]" />
+        <div className="flex flex-col items-center justify-center pt-2">
+          <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4 mt-2 ring-8 ring-blue-50/50">
+            <Droplets size={36} className="text-[#008fcd]" />
+          </div>
+          <h2 className="text-[20px] font-bold text-slate-800 mb-1 text-center">ARC FAUCET</h2>
+          <p className="text-[12px] text-slate-500 font-bold uppercase tracking-wider mb-6 text-center">Testnet Token</p>
         </div>
         
-        <h2 className="text-[22px] font-bold text-slate-800 mb-2 text-center">Claim ARC Tokens</h2>
         <p className="text-[14px] text-slate-500 text-center mb-8 px-4 leading-relaxed">
           Request testnet ARC tokens to pay for transaction gas fees on the Arc Network.
         </p>
@@ -90,7 +90,7 @@ export function FaucetScreen({ onBack }: FaucetScreenProps) {
                     setAddress(e.target.value);
                     if (status === 'error') setStatus('idle');
                   }}
-                  className={`w-full bg-slate-50 border ${status === 'error' ? 'border-red-300 focus:border-red-500' : 'border-slate-200 focus:border-[#3FA2F6]'} rounded-xl px-4 py-3.5 text-[14px] font-mono text-slate-800 focus:outline-none transition-colors`}
+                  className={`w-full bg-slate-50 border ${status === 'error' ? 'border-red-300 focus:border-red-500' : 'border-slate-200 focus:border-slate-900'} rounded-xl px-4 py-3.5 text-[14px] font-mono text-slate-800 focus:outline-none transition-colors`}
                   placeholder="0x742d35Cc6634C053292..."
                   disabled={status === 'loading'}
                 />
@@ -112,7 +112,7 @@ export function FaucetScreen({ onBack }: FaucetScreenProps) {
               <button 
                 onClick={handleClaim}
                 disabled={status === 'loading' || !address}
-                className="w-full bg-[#3FA2F6] disabled:bg-blue-300 text-white font-bold py-4 rounded-xl mt-2 relative overflow-hidden transition-all border-0"
+                className="w-full bg-slate-900 disabled:bg-blue-300 text-white font-bold py-4 rounded-xl mt-2 relative overflow-hidden transition-all border-0"
               >
                 {status === 'loading' ? (
                   <div className="flex items-center justify-center gap-2">

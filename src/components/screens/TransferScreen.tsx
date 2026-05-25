@@ -69,7 +69,7 @@ function ContactItem({
         >
            <div className={`flex items-center ${isManageContacts ? 'gap-3' : ''}`}>
              {isManageContacts && (
-               <div className={`w-5 h-5 rounded-[4px] border-[1.5px] flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'bg-[#3FA2F6] border-[#3FA2F6]' : 'border-slate-300 bg-white'}`}>
+               <div className={`w-5 h-5 rounded-[4px] border-[1.5px] flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'bg-slate-800 border-slate-800' : 'border-slate-300 bg-white'}`}>
                   {isSelected && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3.5 h-3.5 text-white" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
                </div>
              )}
@@ -215,31 +215,31 @@ export function TransferScreen({ onBack, onNewTransfer, onSelectContact, onBatch
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   return (
-    <div className="w-full h-full bg-[#3FA2F6] relative flex flex-col items-center overflow-hidden z-50 animate-in slide-in-from-right duration-300">
-       {/* Header */}
-       <div className="w-full pt-12 pb-10 px-4 shrink-0 flex flex-col relative">
-         <div className="flex justify-between items-center w-full mb-6 relative">
-            <button onClick={() => isAddingFavorite ? setIsAddingFavorite(false) : onBack()} className="p-1 hover:bg-white/10 rounded-full transition-colors active:bg-white/20">
-              <ArrowLeft className="text-white" size={24} />
-            </button>
-            {!isAddingFavorite && (
-              <button 
-                onClick={onBatchTransfer}
-                className="bg-white text-[#3FA2F6] px-3 py-1.5 rounded-full flex items-center text-[12px] font-bold gap-1.5 shadow-sm absolute right-0 hover:bg-slate-50 transition-colors active:scale-95"
-              >
-                <Users size={16} strokeWidth={2.5}/> Batch Transfer
-              </button>
-            )}
-         </div>
-         <h2 className="text-white text-center font-bold text-lg w-full">USDC Transfer</h2>
-       </div>
+    <div className="w-full h-full bg-slate-50 relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
+      {/* Header */}
+      <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between shrink-0">
+        <div className="flex items-center">
+          <button onClick={() => isAddingFavorite ? setIsAddingFavorite(false) : onBack()} className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent">
+            <ArrowLeft size={20} className="text-white" />
+          </button>
+          <h2 className="font-bold text-[16px] text-white ml-2">TRANSFER</h2>
+        </div>
+        {!isAddingFavorite && (
+          <button 
+            onClick={onBatchTransfer}
+            className="bg-slate-100 text-slate-700 px-3 py-1.5 rounded-full flex items-center text-[12px] font-bold gap-1.5 hover:bg-slate-200 transition-colors active:scale-95 border border-slate-200"
+          >
+            <Users size={16} strokeWidth={2.5}/> Batch Transfer
+          </button>
+        )}
+      </div>
 
        {/* Sub Content area */}
-       <div className="flex-1 w-full bg-white rounded-t-[20px] shadow-[0_-4px_15px_rgba(0,0,0,0.05)] flex flex-col overflow-hidden relative">
+       <div className="flex-1 w-full flex flex-col overflow-hidden relative">
           
           {/* Search Bar Container */}
           <div className="px-5 pt-6 pb-4 shrink-0">
-             <div className="bg-white border border-slate-200 rounded-full px-4 py-3.5 flex items-center gap-3 shadow-[0_2px_10px_rgba(0,0,0,0.02)] focus-within:border-[#3FA2F6] transition-colors">
+             <div className="bg-white border border-slate-200 rounded-full px-4 py-3.5 flex items-center gap-3 shadow-[0_2px_10px_rgba(0,0,0,0.02)] focus-within:border-slate-400 transition-colors">
                 <Search className="text-slate-400" size={20}/>
                 <input 
                   type="text" 
@@ -260,7 +260,7 @@ export function TransferScreen({ onBack, onNewTransfer, onSelectContact, onBatch
                      <h3 className="text-slate-400 font-semibold text-[15px]">Favorites</h3>
                      <button 
                        onClick={() => setIsEditFavorites(!isEditFavorites)}
-                       className="text-[#3FA2F6] text-[13px] font-semibold hover:text-blue-600 transition-colors"
+                       className="text-slate-600 text-[13px] font-semibold hover:text-slate-800 transition-colors"
                      >
                        {isEditFavorites ? "Done" : "Manage"}
                      </button>
@@ -275,7 +275,7 @@ export function TransferScreen({ onBack, onNewTransfer, onSelectContact, onBatch
                  
                  {isLoadingFavorite ? (
                    <div className="flex justify-center items-center py-6 h-[80px]">
-                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-transparent border-t-[#3FA2F6] border-l-[#3FA2F6]"></div>
+                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-transparent border-t-slate-800 border-l-slate-800"></div>
                    </div>
                  ) : (
                    <div className="flex gap-4 overflow-x-auto scrollbar-hide mt-4 mb-2">
@@ -297,10 +297,10 @@ export function TransferScreen({ onBack, onNewTransfer, onSelectContact, onBatch
                             </div>
                           )}
                           <div className={`w-[52px] h-[52px] rounded-full flex items-center justify-center font-bold shadow-sm shrink-0 text-[14px] transition-colors
-                            ${isEditFavorites ? 'bg-[#f1f5f9] text-[#3FA2F6]' : 'bg-blue-50 border border-blue-100 text-[#3FA2F6]'}`}>
+                            ${isEditFavorites ? 'bg-[#f1f5f9] text-slate-700' : 'bg-slate-100 border border-slate-200 text-slate-700'}`}>
                              {fav.initials}
                           </div>
-                          <span className={`text-[11px] font-semibold text-center w-16 line-clamp-2 leading-tight ${isEditFavorites ? 'text-[#3FA2F6]' : 'text-slate-800'}`}>
+                          <span className={`text-[11px] font-semibold text-center w-16 line-clamp-2 leading-tight ${isEditFavorites ? 'text-slate-500' : 'text-slate-800'}`}>
                             {fav.name.split(' ')[0]}
                           </span>
                        </div>
@@ -308,10 +308,10 @@ export function TransferScreen({ onBack, onNewTransfer, onSelectContact, onBatch
                      
                      {!isEditFavorites && (
                        <div className="flex flex-col items-center w-min gap-2 cursor-pointer group" onClick={() => setIsAddingFavorite(true)}>
-                          <div className="relative w-[52px] h-[52px] rounded-full border border-[#e5f0f9] flex items-center justify-center text-[#3FA2F6] group-hover:bg-blue-50 transition-colors bg-white shadow-sm">
+                          <div className="relative w-[52px] h-[52px] rounded-full border border-slate-200 flex items-center justify-center text-slate-600 group-hover:bg-slate-100 transition-colors bg-white shadow-sm">
                              <Plus size={24} strokeWidth={2} />
                           </div>
-                          <span className="text-[#3FA2F6] text-[11px] font-semibold text-center leading-tight whitespace-nowrap">Add<br/>Favorite</span>
+                          <span className="text-slate-500 text-[11px] font-semibold text-center leading-tight whitespace-nowrap">Add<br/>Favorite</span>
                        </div>
                      )}
                    </div>
@@ -328,7 +328,7 @@ export function TransferScreen({ onBack, onNewTransfer, onSelectContact, onBatch
                        setIsManageContacts(!isManageContacts);
                        setSelectedContacts([]);
                      }}
-                     className="text-[#3FA2F6] text-[13px] font-semibold hover:text-blue-600 transition-colors"
+                     className="text-slate-600 text-[13px] font-semibold hover:text-slate-800 transition-colors"
                    >
                      {isManageContacts ? 'Done' : 'Manage'}
                    </button>
@@ -375,13 +375,13 @@ export function TransferScreen({ onBack, onNewTransfer, onSelectContact, onBatch
                  selectedContacts.length > 0 && (
                    <button 
                      onClick={() => setShowDeleteModal(true)} 
-                     className="w-full bg-[#3FA2F6] text-white py-[14px] rounded-full font-bold text-[14px] shadow-[0_4px_14px_rgba(63,162,246,0.3)] hover:bg-[#2b88d8] hover:shadow-[0_6px_20px_rgba(63,162,246,0.4)] transition-all active:scale-[0.98]"
+                     className="w-full bg-slate-900 text-white py-[14px] rounded-full font-bold text-[14px] shadow-lg hover:bg-slate-800 transition-all active:scale-[0.98]"
                    >
                        Delete
                    </button>
                  )
                ) : (
-                 <button onClick={onNewTransfer} className="w-full bg-[#008fcd] text-white py-[14px] rounded-full font-bold text-[14px] shadow-[0_4px_14px_rgba(0,143,205,0.4)] flex items-center justify-center gap-2.5 hover:bg-[#007dba] hover:shadow-[0_6px_20px_rgba(0,143,205,0.5)] transition-all active:scale-[0.98]">
+                 <button onClick={onNewTransfer} className="w-full bg-slate-900 text-white py-[14px] rounded-full font-bold text-[14px] shadow-lg flex items-center justify-center gap-2.5 hover:bg-slate-800 transition-all active:scale-[0.98]">
                     <UserPlus size={18} strokeWidth={2.5}/> Transfer to New Recipient
                  </button>
                )}
@@ -416,7 +416,7 @@ export function TransferScreen({ onBack, onNewTransfer, onSelectContact, onBatch
                       setShowDeleteModal(false);
                       setIsManageContacts(false);
                    }}
-                   className="w-full bg-[#3FA2F6] text-white py-4 rounded-full font-bold text-[15px] shadow-[0_4px_14px_rgba(63,162,246,0.3)] hover:bg-[#2b88d8] active:scale-[0.98] transition-all"
+                   className="w-full bg-red-500 text-white py-4 rounded-full font-bold text-[15px] shadow-lg hover:bg-red-600 active:scale-[0.98] transition-all"
                  >
                    Delete
                  </button>

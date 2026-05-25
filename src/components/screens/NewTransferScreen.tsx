@@ -28,22 +28,20 @@ export function NewTransferScreen({ onBack, onSelectContact }: NewTransferScreen
   return (
     <div className="w-full h-full bg-white relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
        {/* Header */}
-       <div className="w-full pt-12 pb-6 px-4 shrink-0 flex flex-col items-center relative">
-         <button onClick={onBack} className="absolute left-4 top-12 p-1 hover:bg-slate-100 rounded-full transition-colors active:bg-slate-200">
-           <ArrowLeft className="text-slate-800" size={24} />
-         </button>
-         
-         <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-full flex items-center justify-center mb-4 mt-2 shadow-sm">
-            <ArrowRight className="text-slate-700" size={20} />
+       <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between shrink-0">
+         <div className="flex items-center">
+           <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent">
+             <ArrowLeft size={20} className="text-white" />
+           </button>
+           <h2 className="font-bold text-[16px] text-white ml-2">NEW TRANSFER</h2>
          </div>
-         <h2 className="text-slate-900 font-bold text-[17px]">Transfer to New Receiver</h2>
        </div>
 
        {/* Tabs */}
-       <div className="flex w-full px-8 mt-2 mb-6">
+       <div className="flex w-full px-8 mt-6 mb-6">
           <div className="flex-1 flex justify-center items-center gap-2 border-r border-slate-200 cursor-pointer">
-             <Landmark size={18} className="text-[#3FA2F6]" />
-             <span className="text-[#3FA2F6] font-bold text-[14px]">Account</span>
+             <Landmark size={18} className="text-slate-800" />
+             <span className="text-slate-800 font-bold text-[14px]">Account</span>
           </div>
           <div className="flex-1 flex justify-center items-center gap-2 cursor-pointer group">
              <AtSign size={18} className="text-slate-400 group-hover:text-slate-500 transition-colors" />
@@ -66,7 +64,7 @@ export function NewTransferScreen({ onBack, onSelectContact }: NewTransferScreen
           </div>
           
           {/* Account Number Input */}
-          <div className="bg-[#f6f8fb] rounded-[16px] px-4 py-4 mb-4 flex justify-between items-center border border-transparent focus-within:border-[#3FA2F6] transition-colors relative">
+          <div className="bg-[#f6f8fb] rounded-[16px] px-4 py-4 mb-4 flex justify-between items-center border border-transparent focus-within:border-slate-900 transition-colors relative">
              <input 
                type="text" 
                placeholder="Wallet Address" 
@@ -82,7 +80,7 @@ export function NewTransferScreen({ onBack, onSelectContact }: NewTransferScreen
           </div>
           
           {/* Receiver Name Input */}
-          <div className="bg-[#f6f8fb] rounded-[16px] px-4 py-4 mb-4 flex justify-between items-center border border-transparent focus-within:border-[#3FA2F6] transition-colors relative">
+          <div className="bg-[#f6f8fb] rounded-[16px] px-4 py-4 mb-4 flex justify-between items-center border border-transparent focus-within:border-slate-900 transition-colors relative">
              <input 
                type="text" 
                placeholder="Account Name" 
@@ -105,7 +103,7 @@ export function NewTransferScreen({ onBack, onSelectContact }: NewTransferScreen
             disabled={!accountNumber || accountNumber.length < 3 || !receiverName.trim()}
             className={`w-full py-[14px] rounded-full font-bold text-[15px] transition-all flex items-center justify-center gap-2
               ${accountNumber.length > 3 && receiverName.trim().length > 0
-                ? 'bg-[#008fcd] text-white shadow-[0_4px_14px_rgba(0,143,205,0.4)] hover:bg-[#007dba] active:scale-[0.98]' 
+                ? 'bg-slate-900 text-white shadow-lg hover:bg-slate-800 active:scale-[0.98]' 
                 : 'bg-[#e5e7eb] text-[#9ca3af] shadow-none'}`}
           >
              Continue
@@ -151,7 +149,7 @@ export function NewTransferScreen({ onBack, onSelectContact }: NewTransferScreen
                           initials: initials
                         });
                       }}
-                      className="w-full bg-[#008fcd] text-white py-[14px] rounded-full font-bold text-[15px] shadow-[0_4px_14px_rgba(0,143,205,0.4)] hover:bg-[#007dba] active:scale-[0.98] transition-all"
+                      className="w-full bg-slate-900 text-white py-[14px] rounded-full font-bold text-[15px] shadow-lg hover:bg-slate-800 active:scale-[0.98] transition-all"
                     >
                       Continue
                     </button>
@@ -171,11 +169,13 @@ export function NewTransferScreen({ onBack, onSelectContact }: NewTransferScreen
        {showNetworkSelect && (
          <div className="absolute inset-0 z-50 bg-white flex flex-col animate-in fade-in slide-in-from-right-8 duration-200">
            {/* Overlay Header */}
-           <div className="w-full pt-12 pb-4 px-4 flex justify-center items-center relative shrink-0 bg-white border-b border-slate-100">
-             <button onClick={() => setShowNetworkSelect(false)} className="absolute left-4 p-1 hover:bg-slate-100 rounded-full transition-colors active:bg-slate-200">
-               <ArrowLeft className="text-slate-800" size={24} />
-             </button>
-             <h2 className="text-slate-800 font-bold text-[16px]">Network List</h2>
+           <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between shrink-0">
+             <div className="flex items-center">
+               <button onClick={() => setShowNetworkSelect(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent">
+                 <ArrowLeft size={20} className="text-white" />
+               </button>
+               <h2 className="font-bold text-[16px] text-white ml-2">NETWORK LIST</h2>
+             </div>
            </div>
 
            <div className="flex-1 overflow-y-auto w-full">
@@ -196,7 +196,7 @@ export function NewTransferScreen({ onBack, onSelectContact }: NewTransferScreen
 
                  <div className="flex flex-col gap-6 mt-6 pb-12 text-left">
                     {[
-                      { name: 'EVM (Arc Testnet)', fee: 'Fee 0.0001 USDC (~$0.0001)', time: 'Estimated arrival time: ~ 1 minute', logoBg: 'bg-[#008fcd]', logoForeground: <Zap className="text-white fill-white scale-[1.2]" size={16} /> },
+                      { name: 'EVM (Arc Testnet)', fee: 'Fee 0.0001 USDC (~$0.0001)', time: 'Estimated arrival time: ~ 1 minute', logoBg: 'bg-slate-900', logoForeground: <Zap className="text-white fill-white scale-[1.2]" size={16} /> },
                       { name: 'X Layer (USDT0)', fee: 'Fee 0.0022 USDT (~$0.0021)', time: 'Estimated arrival time: ~ 2 minutes', logoBg: 'bg-black', logoForeground: <div className="grid grid-cols-2 gap-[2px] w-[16px] h-[16px]"><div className="bg-white rounded-[2px]"></div><div className="bg-white rounded-[2px]" style={{opacity: 0}}></div><div className="bg-white rounded-[2px]"></div><div className="bg-white rounded-[2px]"></div></div>  },
                       { name: 'Tron (TRC20)', fee: 'Fee 1.5 USDT (~$1.4992)', time: 'Estimated arrival time: ~ 2 minutes', logoBg: 'bg-[#db2e38]', logoForeground: <div className="border-[7px] border-transparent border-b-white transform -translate-y-1"></div> },
                       { name: 'Ethereum (ERC20)', fee: 'Fee 0.18 USDT (~$0.1799)', time: 'Estimated arrival time: ~ 2 minutes', logoBg: 'bg-[#5e77db]', logoForeground: <div className="w-[12px] h-[18px] bg-white transform rotate-45 rounded-[2px] scale-y-[1.2] clip-path-rhombus" style={{ clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)'}}></div> },

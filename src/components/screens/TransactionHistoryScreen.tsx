@@ -16,7 +16,7 @@ export function TransactionHistoryScreen({ onBack }: TransactionHistoryScreenPro
       case 'withdraw': return <ArrowUpRight size={20} className="text-red-500" />;
       case 'transfer': return <ArrowUpRight size={20} className="text-orange-500" />;
       case 'purchase': return <ShoppingBag size={20} className="text-purple-500" />;
-      case 'swap': return <RefreshCw size={20} className="text-blue-500" />;
+      case 'swap': return <RefreshCw size={20} className="text-slate-600" />;
       default: return <Receipt size={20} className="text-slate-500" />;
     }
   };
@@ -27,7 +27,7 @@ export function TransactionHistoryScreen({ onBack }: TransactionHistoryScreenPro
       case 'withdraw': return 'bg-red-50 border-red-100';
       case 'transfer': return 'bg-orange-50 border-orange-100';
       case 'purchase': return 'bg-purple-50 border-purple-100';
-      case 'swap': return 'bg-blue-50 border-blue-100';
+      case 'swap': return 'bg-slate-100 border-slate-200';
       default: return 'bg-slate-50 border-slate-100';
     }
   };
@@ -35,12 +35,12 @@ export function TransactionHistoryScreen({ onBack }: TransactionHistoryScreenPro
   return (
     <div className="w-full h-full bg-[#f8fafc] relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 pt-12 pb-4 bg-white border-b border-slate-100 shadow-sm relative z-10 w-full shrink-0">
+      <div className="flex items-center justify-between px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full shrink-0 justify-between">
         <div className="flex items-center">
-           <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-             <ArrowLeft size={24} className="text-slate-800" />
+           <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent">
+             <ArrowLeft size={20} className="text-white" />
            </button>
-           <h2 className="font-bold text-[16px] text-slate-800 ml-2">Transaction History</h2>
+           <h2 className="font-bold text-[16px] text-white ml-2">Transaction History</h2>
         </div>
       </div>
 
@@ -121,16 +121,16 @@ export function TransactionHistoryScreen({ onBack }: TransactionHistoryScreenPro
                    <span className="font-medium text-slate-800 font-mono">{(Math.random() * 0.005).toFixed(4)} USDC</span>
                 </div>
                 {selectedTx.txHash && (
-                  <div className="w-full bg-blue-50 border border-blue-100 rounded-xl p-4 mt-2 flex flex-col gap-2">
+                  <div className="w-full bg-slate-100 border border-slate-200 rounded-xl p-4 mt-2 flex flex-col gap-2">
                      <div className="flex items-center justify-between">
                         <span className="text-[12px] font-bold text-blue-800 uppercase tracking-wide">Blockchain Record</span>
-                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                        <div className={`w-2 h-2 rounded-full ${selectedTx.status === 'pending' ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`}></div>
                      </div>
-                     <p className="text-[10px] text-blue-600 font-mono text-left opacity-80 select-all line-clamp-1 break-all">
+                     <p className="text-[10px] text-slate-800 font-mono text-left opacity-80 select-all line-clamp-1 break-all">
                        {selectedTx.txHash}
                      </p>
                      
-                     <a href="#" className="mt-2 w-full bg-white border border-blue-200 text-blue-600 font-bold py-2 rounded-lg text-[13px] flex items-center justify-center gap-1 hover:bg-blue-100 active:scale-95 transition-all">
+                     <a href={selectedTx.explorerUrl || '#'} target="_blank" rel="noopener noreferrer" className="mt-2 w-full bg-white border border-blue-200 text-slate-800 font-bold py-2 rounded-lg text-[13px] flex items-center justify-center gap-1 hover:bg-slate-200 active:scale-95 transition-all">
                         View on Arc Explorer <ExternalLink size={14} />
                      </a>
                   </div>

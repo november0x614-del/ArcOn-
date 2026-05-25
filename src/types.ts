@@ -76,6 +76,7 @@ export interface Transaction {
   timestamp: string;
   status: 'pending' | 'success' | 'failed';
   txHash?: string;
+  explorerUrl?: string;
   internal_ref?: string;
   metadata?: {
     voucherCode?: string;

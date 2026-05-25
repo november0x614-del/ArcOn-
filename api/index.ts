@@ -144,6 +144,21 @@ app.get("/api/balance/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
     
+    // Check if we have env variables
+    if (!process.env.VITE_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.log("Mocking balance as Supabase is not configured yet.");
+      return res.json({
+        balance: 1540.23,
+        realBalance: 1540.23,
+        currency: "USDC",
+        allBalances: [
+          { token: { symbol: 'USDC' }, amount: '1540.23' },
+          { token: { symbol: 'EURC' }, amount: '42.50' },
+          { token: { symbol: 'ARC' }, amount: '10.0' }
+        ]
+      });
+    }
+
     // 1. Get the wallet ID from Supabase
     const { data: walletData, error: walletError } = await getSupabaseAdmin()
       .from('user_wallets')
@@ -188,21 +203,25 @@ app.get("/api/balance/:userId", async (req, res) => {
     // (Circle API might be slow to reflect recent on-chain transfers)
     // Only consider pending transactions from the last 5 minutes to avoid stuck txs breaking balance
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-    const { data: pendingTxs } = await getSupabaseAdmin()
-      .from('transactions')
-      .select('amount, metadata')
-      .eq('user_id', userId)
-      .eq('status', 'pending')
-      .gte('created_at', fiveMinutesAgo);
+    try {
+      const { data: pendingTxs } = await getSupabaseAdmin()
+        .from('transactions')
+        .select('amount, metadata')
+        .eq('user_id', userId)
+        .eq('status', 'pending')
+        .gte('created_at', fiveMinutesAgo);
 
-    if (pendingTxs) {
-      for (const tx of pendingTxs) {
-        // Only adjust if it involves USDC (default or explicitly stated)
-        const involvesUSDC = !tx.metadata?.fromToken || tx.metadata.fromToken === 'USDC';
-        if (involvesUSDC) {
-          baseBalance += parseFloat(tx.amount);
+      if (pendingTxs) {
+        for (const tx of pendingTxs) {
+          // Only adjust if it involves USDC (default or explicitly stated)
+          const involvesUSDC = !tx.metadata?.fromToken || tx.metadata.fromToken === 'USDC';
+          if (involvesUSDC) {
+            baseBalance += parseFloat(tx.amount);
+          }
         }
       }
+    } catch(e) {
+      console.error("Pending tx adjust error", e);
     }
 
     res.json({ 
@@ -220,6 +239,15 @@ app.get("/api/balance/:userId", async (req, res) => {
 // Transactions Route
 app.get("/api/transactions/:userId", async (req, res) => {
   try {
+    if (!process.env.VITE_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.log("Mocking transactions as Supabase is not configured yet.");
+      return res.json([
+        { id: '1', user_id: req.params.userId, amount: '50', type: 'receive', status: 'success', created_at: new Date(Date.now() - 3600000).toISOString() },
+        { id: '2', user_id: req.params.userId, amount: '-10.5', type: 'transfer', status: 'success', created_at: new Date(Date.now() - 86400000).toISOString(), metadata: { recipientName: "Coffee Shop" } },
+        { id: '3', user_id: req.params.userId, amount: '100', type: 'swap', status: 'success', created_at: new Date(Date.now() - 172800000).toISOString(), metadata: { fromToken: "USDC", toToken: "ARC" } }
+      ]);
+    }
+
     const { data, error } = await getSupabaseAdmin()
       .from('transactions')
       .select('*')
@@ -227,7 +255,7 @@ app.get("/api/transactions/:userId", async (req, res) => {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    res.json(data);
+    res.json(data || []);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

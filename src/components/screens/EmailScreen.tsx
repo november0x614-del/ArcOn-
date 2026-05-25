@@ -40,7 +40,7 @@ export function EmailScreen({ onBack }: EmailScreenProps) {
       {/* Header */}
       <div className="flex items-center justify-center relative py-4 shrink-0 bg-white shadow-sm z-10 w-full">
         <button onClick={handleBack} className="absolute left-4 p-1 hover:bg-slate-50 rounded-full transition-colors">
-          <ArrowLeft size={24} className="text-slate-700" />
+          <ArrowLeft size={20} className="text-white" />
         </button>
         <h2 className="font-bold text-[16px] text-slate-800">{isEditing ? 'Manage Email' : 'Email'}</h2>
       </div>
@@ -65,14 +65,14 @@ export function EmailScreen({ onBack }: EmailScreenProps) {
             }}
           >
             <span className="font-bold text-[15px] text-slate-800 tracking-wide">{email}</span>
-            <button className="text-[#3FA2F6]">
+            <button className="text-slate-800">
               <Pencil size={20} />
             </button>
           </div>
         ) : (
           <div className="flex flex-col flex-1 w-full relative">
-            <div className={`w-full border rounded-xl px-4 py-2 relative bg-white transition-all group ${error ? 'border-[#db2e38]' : 'border-slate-300 focus-within:border-[#3FA2F6] focus-within:ring-1 focus-within:ring-[#3FA2F6]'}`}>
-              <label className={`text-[12px] font-medium transition-colors ${error ? 'text-[#db2e38]' : 'text-slate-500 group-focus-within:text-[#3FA2F6]'}`}>Email</label>
+            <div className={`w-full border rounded-xl px-4 py-2 relative bg-white transition-all group ${error ? 'border-[#db2e38]' : 'border-slate-300 focus-within:border-slate-900 focus-within:ring-1 focus-within:ring-slate-900'}`}>
+              <label className={`text-[12px] font-medium transition-colors ${error ? 'text-[#db2e38]' : 'text-slate-500 group-focus-within:text-slate-800'}`}>Email</label>
               <div className="flex items-center mt-0.5">
                 <input 
                   type="email"

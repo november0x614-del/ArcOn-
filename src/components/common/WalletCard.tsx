@@ -1,7 +1,6 @@
 import React from 'react';
 import { Eye, EyeOff } from "lucide-react";
 import { useApp } from "../../context/AppContext";
-import { useUSDCBalance } from "../../services/unified-balance-kit/hooks";
 import { UIDCardTheme } from "../../types";
 import { THEME_STYLES } from "../../utils/theme";
 
@@ -16,12 +15,13 @@ export const WalletCard = React.memo(function WalletCard({ onNavigate, onClick, 
   const {
     showBalance,
     setShowBalance,
+    balance,
     pnlValue,
     pnlPercentage,
     registeredUser,
   } = useApp();
 
-  const { formattedBalance } = useUSDCBalance();
+  const formattedBalance = balance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const currentTheme: Exclude<UIDCardTheme, undefined> = registeredUser?.uidTheme || 'default';
   const styles = THEME_STYLES[currentTheme];
@@ -92,11 +92,11 @@ export const WalletCard = React.memo(function WalletCard({ onNavigate, onClick, 
 
           <div className="flex justify-between items-start relative z-10">
             <div className="flex items-center gap-1">
-              <div className={`w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-[2px] ${currentTheme === 'default' ? 'bg-blue-600' : currentTheme === 'premium' ? 'bg-[#d4c085]' : 'bg-emerald-500'} flex items-center justify-center`}>
+              <div className={`w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-[2px] ${currentTheme === 'default' ? 'bg-slate-800' : currentTheme === 'premium' ? 'bg-[#d4c085]' : 'bg-emerald-500'} flex items-center justify-center`}>
                 <div className="w-1 sm:w-1.5 h-1 sm:h-1.5 rounded-full border-[1px] border-white"></div>
               </div>
               <span className="text-slate-900 font-bold text-[5px] sm:text-[6px] tracking-tight italic select-none leading-none">arc</span>
-              <span className={`${currentTheme === 'default' ? 'text-blue-600' : currentTheme === 'premium' ? 'text-[#d4c085]' : 'text-emerald-500'} text-[2.5px] sm:text-[3px] font-black mt-[-2px] ml-[-1px]`}>™</span>
+              <span className={`${currentTheme === 'default' ? 'text-slate-800' : currentTheme === 'premium' ? 'text-[#d4c085]' : 'text-emerald-500'} text-[2.5px] sm:text-[3px] font-black mt-[-2px] ml-[-1px]`}>™</span>
             </div>
             
             <div className="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-[2px] bg-slate-50 border border-slate-100 flex items-center justify-center">

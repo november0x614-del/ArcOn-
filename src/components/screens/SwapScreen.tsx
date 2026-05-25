@@ -27,6 +27,8 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
   const [toToken, setToToken] = useState<any | null>(null);
   const [searchToken, setSearchToken] = useState('');
   const [txHash, setTxHash] = useState('');
+  const [slippage, setSlippage] = useState<string>('0.5');
+  const [showDetails, setShowDetails] = useState(false);
 
   const getTokenData = (symbol: string) => {
     return balanceData?.allBalances.find((b: any) => 
@@ -116,18 +118,18 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
   if (swapFinished) {
     return (
       <div className="w-full h-full bg-slate-50 relative flex flex-col z-50 animate-in slide-in-from-bottom duration-300">
-        <div className="flex items-center px-4 pt-12 pb-4 bg-white border-b border-slate-100 shadow-sm relative z-10 w-full">
-           <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-             <X size={24} className="text-slate-800" />
+        <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full shrink-0 justify-between">
+           <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent">
+             <X size={20} className="text-white" />
            </button>
-           <h2 className="font-bold text-[16px] text-slate-800 ml-2">Transaction Receipt</h2>
+           <h2 className="font-bold text-[16px] text-white ml-2">Transaction Receipt</h2>
         </div>
         <div className="flex-1 p-6 flex flex-col items-center justify-center">
             <div className="bg-white p-8 rounded-[32px] w-full max-w-sm shadow-xl flex flex-col items-center text-center">
                 <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6 shadow-sm border-4 border-white">
                   <Check size={40} className="text-green-500" strokeWidth={3} />
                 </div>
-                <h2 className="text-[24px] font-extrabold text-slate-800 mb-2">Swap Confirmed</h2>
+                <h2 className="text-[24px] font-extrabold text-white mb-2">Swap Confirmed</h2>
                 <p className="text-[14px] text-slate-500 mb-8 leading-relaxed">
                   Your assets have been successfully swapped on the Arc Network.
                 </p>
@@ -144,7 +146,14 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
                    <div className="w-full h-[1px] bg-slate-200 my-2"></div>
                    <div className="flex justify-between items-center">
                       <span className="text-[12px] text-slate-400">Tx Hash</span>
-                      <span className="text-[12px] font-mono text-blue-500 break-all">{txHash}</span>
+                      <a 
+                        href={`https://testnet.arcexplorer.com/tx/${txHash}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-[12px] font-mono text-slate-600 break-all hover:underline text-right"
+                      >
+                        {txHash}
+                      </a>
                    </div>
                    <div className="flex justify-between items-center">
                       <span className="text-[12px] text-slate-400">Network</span>
@@ -167,11 +176,13 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
   return (
     <div className="w-full h-full bg-slate-50 relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
       {/* Header */}
-      <div className="flex items-center px-4 pt-12 pb-4 bg-white border-b border-slate-100 shadow-sm relative z-10 w-full">
-        <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full transition-colors active:bg-slate-200">
-          <ArrowLeft size={24} className="text-slate-800" />
-        </button>
-        <h2 className="font-bold text-[16px] text-slate-800 ml-2">Swap Assets</h2>
+      <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between">
+        <div className="flex items-center">
+          <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent">
+            <ArrowLeft size={20} className="text-white" />
+          </button>
+          <h2 className="font-bold text-[16px] text-white ml-2">SWAP</h2>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto pb-24 p-5 flex flex-col pt-6 w-full scrollbar-hide relative">
@@ -181,9 +192,17 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
           <div className={`bg-white p-5 rounded-[24px] shadow-sm border transition-all duration-300 relative z-10 ${isSwapping ? 'border-blue-400/50 shadow-blue-100/50 opacity-80' : 'border-slate-200 focus-within:border-slate-400'}`}>
             <div className="flex justify-between items-center mb-4">
               <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">You Pay</span>
-              <span className="text-[12px] font-bold text-slate-500 flex items-center gap-1">
-                Balance: {getTokenBalance(fromToken?.symbol || '').toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[12px] font-bold text-slate-500 flex items-center gap-1">
+                  Balance: {getTokenBalance(fromToken?.symbol || '').toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} {fromToken?.symbol || ''}
+                </span>
+                <button 
+                  onClick={() => setFromAmount(getTokenBalance(fromToken?.symbol || '').toString())}
+                  className="bg-slate-100 text-slate-800 font-bold text-[10px] px-2 py-0.5 rounded uppercase hover:bg-slate-200 transition-colors"
+                >
+                  MAX
+                </button>
+              </div>
             </div>
             <div className="flex flex-col gap-4">
               <div className="flex justify-between items-center">
@@ -230,7 +249,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
             <div className="flex justify-between items-center mb-4">
               <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">You Receive</span>
               <span className="text-[12px] font-bold text-slate-500 flex items-center gap-1">
-                Balance: {getTokenBalance(toToken?.symbol || '').toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                Balance: {getTokenBalance(toToken?.symbol || '').toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} {toToken?.symbol || ''}
               </span>
             </div>
             <div className="flex flex-col gap-4">
@@ -271,14 +290,49 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
               </span>
            </div>
            <div className="flex justify-between items-center mb-3">
-              <span className="text-[13px] text-slate-500">Slippage Tolerance</span>
-              <span className="text-[13px] font-bold text-slate-800">Auto (0.5%)</span>
+              <span className="text-[13px] text-slate-500 flex flex-col">
+                Slippage Tolerance
+                <span className="text-[10px] text-slate-400 font-normal">Max price impact</span>
+              </span>
+              <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
+                {['0.1', '0.5', '1.0'].map(val => (
+                  <button 
+                    key={val}
+                    onClick={() => setSlippage(val)}
+                    className={`px-2 py-1 rounded-md text-[11px] font-bold transition-colors ${slippage === val ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    {val}%
+                  </button>
+                ))}
+              </div>
            </div>
            <div className="w-full h-[1px] border-b border-dashed border-slate-200 my-3"></div>
-           <div className="flex justify-between items-center">
-              <span className="text-[13px] text-slate-500">Network Fee</span>
-              <span className="text-[12px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded w-fit">Free (Sponsored via Paymaster)</span>
+           <div className="flex justify-between items-center mb-3">
+              <span className="text-[13px] text-slate-500">Price Impact</span>
+              <div 
+                className="flex items-center gap-1 cursor-pointer" 
+                onClick={() => setShowDetails(!showDetails)}
+              >
+                <span className="text-[13px] font-mono text-emerald-500 font-bold">&lt; 0.01%</span>
+                <ChevronDown size={14} className={`text-slate-400 transition-transform ${showDetails ? 'rotate-180' : ''}`} />
+              </div>
            </div>
+           {showDetails && (
+             <div className="bg-slate-50 rounded-xl p-3 mb-3 border border-slate-100 flex flex-col gap-2 animate-in slide-in-from-top-2 duration-200">
+               <div className="flex justify-between items-center">
+                  <span className="text-[12px] text-slate-500">Liquidity Provider Fee</span>
+                  <span className="text-[12px] font-mono text-slate-700 font-bold">{(parseFloat(fromAmount || '0') * 0.003).toFixed(4)} {fromToken?.symbol || ''}</span>
+               </div>
+               <div className="flex justify-between items-center">
+                  <span className="text-[12px] text-slate-500">Minimum Received</span>
+                  <span className="text-[12px] font-mono text-slate-700 font-bold">{(parseFloat(toAmount || '0') * (1 - parseFloat(slippage)/100)).toFixed(4)} {toToken?.symbol || ''}</span>
+               </div>
+               <div className="flex justify-between items-center mt-1">
+                  <span className="text-[12px] text-slate-500">Network Fee</span>
+                  <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded w-fit">Free (Sponsored via Paymaster)</span>
+               </div>
+             </div>
+           )}
         </div>
 
         <div className="mt-auto pb-4">
@@ -310,11 +364,13 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
       {/* Token Selector Modal */}
       {showTokenSelector && (
         <div className="absolute inset-0 z-[60] bg-white flex flex-col animate-in slide-in-from-bottom duration-300">
-           <div className="flex items-center px-4 pt-12 pb-4 border-b border-slate-100 shadow-sm relative z-10">
-             <button onClick={() => setShowTokenSelector(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-               <ArrowLeft size={24} className="text-slate-800" />
-             </button>
-             <h2 className="font-bold text-[16px] text-slate-800 ml-2">Select a token</h2>
+           <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 justify-between shrink-0">
+             <div className="flex items-center">
+               <button onClick={() => setShowTokenSelector(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent">
+                 <ArrowLeft size={20} className="text-white" />
+               </button>
+               <h2 className="font-bold text-[16px] text-white ml-2">SELECT A TOKEN</h2>
+             </div>
            </div>
            
            <div className="p-4 border-b border-slate-100 relative">

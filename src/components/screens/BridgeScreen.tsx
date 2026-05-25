@@ -10,7 +10,7 @@ interface BridgeScreenProps {
 }
 
 const NETWORKS = [
-  { id: 'arc', name: 'Arc Testnet', icon: <Globe size={16} />, color: 'bg-blue-600' },
+  { id: 'arc', name: 'Arc Testnet', icon: <Globe size={16} />, color: 'bg-slate-800' },
   { id: 'ethereum', name: 'Ethereum Sepolia', icon: <Globe size={16} />, color: 'bg-indigo-500' },
   { id: 'polygon', name: 'Polygon Amoy', icon: <Globe size={16} />, color: 'bg-purple-600' },
   { id: 'base', name: 'Base Sepolia', icon: <Globe size={16} />, color: 'bg-blue-400' },
@@ -59,9 +59,9 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
     return (
       <div className="absolute inset-0 bg-white z-[70] flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-300">
         <div className="relative mb-8">
-           <Loader2 className="animate-spin text-[#3FA2F6]" size={64} />
+           <Loader2 className="animate-spin text-slate-800" size={64} />
            <div className="absolute inset-0 flex items-center justify-center">
-              <ArrowLeftRight size={24} className="text-[#3FA2F6] opacity-50" />
+              <ArrowLeftRight size={24} className="text-slate-500 opacity-50" />
            </div>
         </div>
         <h3 className="text-[20px] font-black text-slate-900 mb-2">Cross-Chain Bridge</h3>
@@ -73,7 +73,7 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
              initial={{ width: 0 }} 
              animate={{ width: '100%' }} 
              transition={{ duration: 3, ease: "linear" }}
-             className="h-full bg-[#3FA2F6]" 
+             className="h-full bg-slate-800" 
            />
         </div>
       </div>
@@ -93,7 +93,7 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
         <div className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-8 text-left">
            <div className="flex justify-between items-center mb-2">
               <span className="text-[12px] font-bold text-slate-400">Transaction ID</span>
-              <span className="text-[12px] font-mono font-bold text-[#3FA2F6]">0x1a2b...3c4d</span>
+              <span className="text-[12px] font-mono font-bold text-slate-800">0x1a2b...3c4d</span>
            </div>
            <div className="flex justify-between items-center">
               <span className="text-[12px] font-bold text-slate-400">Estimated Arrival</span>
@@ -113,11 +113,13 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
   return (
     <div className="absolute inset-0 z-[70] bg-[#f8fafc] flex flex-col animate-in slide-in-from-right duration-300 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center px-4 pt-12 pb-4 bg-white border-b border-slate-100 shadow-sm relative z-10 shrink-0">
-        <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full transition-colors bg-transparent border-0 cursor-pointer mr-3">
-          <ArrowLeft size={24} className="text-slate-700" />
-        </button>
-        <h3 className="font-black text-[18px] text-slate-800 tracking-tight">Bridge Assets (USDC)</h3>
+      <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 shrink-0">
+        <div className="flex items-center">
+          <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent">
+            <ArrowLeft size={20} className="text-white" />
+          </button>
+          <h3 className="font-bold text-[16px] text-white ml-2">BRIDGE</h3>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-5 pb-32 scrollbar-hide">
@@ -128,7 +130,7 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
              <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] ml-1">Transfer From</label>
              <button 
                onClick={() => setShowNetworkSelect('from')}
-               className="w-full flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:border-[#3FA2F6] transition-colors"
+               className="w-full flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:border-slate-400 transition-colors"
              >
                 <div className="flex items-center gap-3">
                    <div className={`w-8 h-8 ${fromNetwork.color} rounded-lg flex items-center justify-center text-white`}>
@@ -148,7 +150,7 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
                   setFromNetwork(toNetwork);
                   setToNetwork(temp);
                }}
-               className="w-10 h-10 bg-white border border-slate-200 rounded-full flex items-center justify-center text-[#3FA2F6] shadow-md hover:rotate-180 transition-transform duration-500 active:scale-90"
+               className="w-10 h-10 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-600 shadow-md hover:rotate-180 transition-transform duration-500 active:scale-90"
              >
                 <ArrowLeftRight size={18} />
              </button>
@@ -158,7 +160,7 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
              <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] ml-1">Destination Bridge</label>
              <button 
                onClick={() => setShowNetworkSelect('to')}
-               className="w-full flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:border-[#3FA2F6] transition-colors"
+               className="w-full flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:border-slate-400 transition-colors"
              >
                 <div className="flex items-center gap-3">
                    <div className={`w-8 h-8 ${toNetwork.color} rounded-lg flex items-center justify-center text-white`}>
@@ -180,7 +182,7 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0.00"
-              className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-5 text-[28px] font-black text-slate-900 outline-none focus:border-[#3FA2F6] transition-all placeholder:text-slate-200"
+              className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-5 text-[28px] font-black text-slate-900 outline-none focus:border-slate-400 transition-all placeholder:text-slate-200"
             />
             <div className="absolute right-5 top-1/2 -translate-y-1/2 flex items-center gap-2">
                <span className="font-black text-slate-400">USDC</span>
@@ -188,10 +190,10 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
           </div>
           
           <div className="flex justify-between mt-3 px-1">
-            <span className="text-[12px] text-slate-500 font-medium">Balance on {fromNetwork.name}: <span className="font-black text-[#3FA2F6]">{balance.toFixed(2)} USDC</span></span>
+            <span className="text-[12px] text-slate-500 font-medium">Balance on {fromNetwork.name}: <span className="font-black text-slate-800">{balance.toFixed(2)} USDC</span></span>
             <button 
               onClick={() => setAmount(balance.toString())}
-              className="text-[12px] font-black text-[#3FA2F6] bg-transparent border-0 cursor-pointer hover:underline"
+              className="text-[12px] font-black text-slate-600 bg-transparent border-0 cursor-pointer hover:underline"
             >
               Max
             </button>
@@ -215,7 +217,7 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
               </div>
               <div className="pt-3 border-t border-slate-800 flex justify-between items-center">
                  <span className="text-[14px] font-bold">Total Payout</span>
-                 <span className="text-[16px] font-black text-[#3FA2F6]">
+                 <span className="text-[16px] font-black text-white">
                     {amount ? (parseFloat(amount) - 0.012).toFixed(2) : '0.00'} USDC
                  </span>
               </div>
@@ -237,7 +239,7 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
       <div className="absolute bottom-0 left-0 right-0 p-6 bg-white border-t border-slate-100 z-20 shadow-2xl">
         <button 
           onClick={handleBridge}
-          className="w-full bg-[#3FA2F6] text-white py-4.5 rounded-full font-black text-[16px] shadow-lg shadow-blue-500/20 hover:bg-blue-600 transition-all active:scale-[0.98] border-0 cursor-pointer flex items-center justify-center gap-2"
+          className={`w-full bg-slate-900 text-white py-4.5 rounded-full font-black text-[16px] shadow-lg hover:bg-slate-800 transition-all active:scale-[0.98] border-0 cursor-pointer flex items-center justify-center gap-2 ${(!amount || parseFloat(amount) === 0 || parseFloat(amount) > balance) ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           Initiate Cross-Chain Bridge
         </button>
@@ -271,7 +273,7 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
                       }}
                       className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all ${
                          (showNetworkSelect === 'from' ? fromNetwork.id : toNetwork.id) === net.id
-                            ? 'border-[#3FA2F6] bg-blue-50/50'
+                            ? 'border-slate-400 bg-slate-100'
                             : 'border-slate-50 bg-white hover:border-slate-100'
                       }`}
                     >

@@ -71,11 +71,11 @@ export function UIDCard({ userName, isBlurred = false }: UIDCardProps) {
           {/* Top Section: Logo */}
           <div className="flex justify-between items-start z-10" style={{ transform: "translateZ(20px)" }}>
             <div className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-lg ${currentTheme === 'default' ? 'bg-blue-600' : currentTheme === 'premium' ? 'bg-[#d4c085]' : 'bg-emerald-500'} flex items-center justify-center shadow-lg`}>
+              <div className={`w-8 h-8 rounded-lg ${currentTheme === 'default' ? 'bg-slate-800' : currentTheme === 'premium' ? 'bg-[#d4c085]' : 'bg-emerald-500'} flex items-center justify-center shadow-lg`}>
                 <div className="w-3.5 h-3.5 rounded-full border-[2px] border-white"></div>
               </div>
               <span className={`text-[16px] font-bold tracking-tight italic ${styles.uidText} select-none`}>arc</span>
-              <span className={`text-[8px] font-black mt-[-10px] ml-[-2px] ${currentTheme === 'default' ? 'text-blue-600' : currentTheme === 'premium' ? 'text-[#d4c085]' : 'text-emerald-500'}`}>™</span>
+              <span className={`text-[8px] font-black mt-[-10px] ml-[-2px] ${currentTheme === 'default' ? 'text-slate-800' : currentTheme === 'premium' ? 'text-[#d4c085]' : 'text-emerald-500'}`}>™</span>
             </div>
             
             <div className={`w-8 h-8 rounded-lg ${currentTheme === 'default' ? 'bg-slate-50' : 'bg-white/50'} border ${styles.borderClass} flex items-center justify-center`}>

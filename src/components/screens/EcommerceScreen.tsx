@@ -100,11 +100,11 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
   if (viewState === 'success') {
     return (
       <div className="w-full h-full bg-slate-50 relative flex flex-col z-50 animate-in slide-in-from-bottom duration-300 overflow-y-auto">
-        <div className="flex items-center px-4 pt-12 pb-4 bg-white border-b border-slate-100 shadow-sm relative z-10 w-full">
-           <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-             <ArrowLeft size={24} className="text-slate-800" />
+        <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full shrink-0 justify-between">
+           <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent">
+             <ArrowLeft size={20} className="text-white" />
            </button>
-           <h2 className="font-bold text-[16px] text-slate-800 ml-2">Transaction Receipt</h2>
+           <h2 className="font-bold text-[16px] text-white ml-2">Transaction Receipt</h2>
         </div>
         
         <div className="flex-1 p-6 flex flex-col items-center justify-center animate-in zoom-in-95 duration-500">
@@ -112,7 +112,7 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4 shadow-md animate-bounce">
                   <CheckCircle2 size={32} className="text-green-500" />
                 </div>
-                <h2 className="text-[20px] font-extrabold text-slate-800 mb-1">Payment Successful</h2>
+                <h2 className="text-[20px] font-extrabold text-white mb-1">Payment Successful</h2>
                 <p className="text-[13px] text-slate-500 mb-6 text-center">Your order has been paid securely via Arc Network.</p>
 
                 <div className="w-full border-t border-dashed border-slate-200 pt-6 space-y-4">
@@ -127,13 +127,13 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
                      <span className="text-[13px] font-medium text-slate-500">Product</span>
                      <span className="text-[13px] font-bold text-slate-800 text-right max-w-[150px] truncate">{selectedProduct?.name}</span>
                    </div>
-                   <div className="flex justify-between items-center bg-blue-50/50 p-3 rounded-xl border border-blue-100/30">
+                   <div className="flex justify-between items-center bg-slate-100/50 p-3 rounded-xl border border-slate-200/30">
                      <span className="text-[13px] font-medium text-slate-500">Total Paid (inc. fee)</span>
                      <span className="text-[16px] font-black text-slate-800">{transactionMetadata?.totalPaid} USDC</span>
                    </div>
 
                    {/* Digital Delivery Module */}
-                   <div className="bg-blue-50/50 rounded-2xl p-4 border border-blue-100/50 my-2 animate-in fade-in slide-in-from-top-2 duration-500 delay-200">
+                   <div className="bg-slate-100/50 rounded-2xl p-4 border border-slate-200/50 my-2 animate-in fade-in slide-in-from-top-2 duration-500 delay-200">
                       <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2 block text-center">Your Digital Product</span>
                       {selectedProduct?.category === 'Subscription' ? (
                         <div className="flex flex-col items-center py-1">
@@ -145,7 +145,7 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
                       ) : (
                         <div className="flex flex-col items-center">
                            <div className="bg-white border-2 border-dashed border-blue-200 rounded-xl px-4 py-3 w-full flex items-center justify-between mb-2">
-                              <span className="font-mono font-bold text-[16px] text-blue-600 tracking-widest">{transactionMetadata?.voucherCode}</span>
+                              <span className="font-mono font-bold text-[16px] text-slate-800 tracking-widest">{transactionMetadata?.voucherCode}</span>
                               <button 
                                 onClick={() => {
                                   if (transactionMetadata?.voucherCode) {
@@ -153,7 +153,7 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
                                     displayToast("Code Copied!");
                                   }
                                 }}
-                                className="text-blue-500 hover:bg-blue-50 p-1.5 rounded-lg transition-colors border border-blue-100 bg-white"
+                                className="text-slate-600 hover:bg-slate-100 p-1.5 rounded-lg transition-colors border border-slate-200 bg-white"
                               >
                                 <Copy size={16} />
                               </button>
@@ -166,7 +166,7 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
                    <div className="flex justify-between items-center">
                      <span className="text-[12px] font-medium text-slate-500">Tx Hash</span>
                      <div className="flex items-center gap-2">
-                       <span className="text-[12px] font-mono text-blue-600 font-bold truncate max-w-[120px]">{transactionMetadata?.txHash}</span>
+                       <span className="text-[12px] font-mono text-slate-800 font-bold truncate max-w-[120px]">{transactionMetadata?.txHash}</span>
                        <button className="text-slate-400 hover:text-slate-600 transition-colors bg-white p-1 rounded-md shadow-sm border border-slate-200"><Copy size={12} /></button>
                      </div>
                    </div>
@@ -190,16 +190,16 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
   return (
     <div className="w-full h-full bg-slate-50 relative flex flex-col z-40 animate-in slide-in-from-bottom duration-300">
       {/* Search Header (List View) */}
-      <div className={`bg-white px-4 pt-12 pb-4 shadow-sm relative z-10 w-full transition-all duration-300 ${viewState !== 'list' ? 'hidden' : 'block'}`}>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full transition-colors -ml-2">
-              <ArrowLeft size={24} className="text-slate-800" />
+      <div className={`bg-white px-4 pt-6 pb-3 shadow-sm relative z-10 w-full transition-all duration-300 ${viewState !== 'list' ? 'hidden' : 'block'}`}>
+        <div className="flex items-center justify-between mb-4 mt-1">
+          <div className="flex items-center">
+            <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent">
+              <ArrowLeft size={20} className="text-slate-800" />
             </button>
-            <h1 className="text-[18px] font-bold text-slate-800 tracking-tight font-sans">E-Commerce</h1>
+            <h1 className="font-bold text-[16px] text-slate-800 ml-2">E-COMMERCE</h1>
           </div>
           <button className="p-2 hover:bg-slate-100 rounded-full transition-colors -mr-2 bg-transparent border-0">
-            <Search size={22} className="text-slate-800" />
+            <Search size={20} className="text-white" />
           </button>
         </div>
         
@@ -207,7 +207,7 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
         <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-1">
           {['All', 'Game Voucher', 'Subscription', 'Entertainment', 'Others'].map((cat, i) => (
             <span key={cat} className={`text-[13px] font-bold whitespace-nowrap pb-2 px-1 transition-colors cursor-pointer ${
-              i === 0 ? 'text-[#005faa] border-b-2 border-[#005faa]' : 'text-slate-400 hover:text-slate-600'
+              i === 0 ? 'text-slate-800 border-b-2 border-[#005faa]' : 'text-slate-400 hover:text-slate-600'
             }`}>
               {cat}
             </span>
@@ -252,7 +252,7 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
                   </div>
                 </div>
                 <div className="p-4 flex flex-col flex-1">
-                  <span className="text-[10px] font-bold text-blue-500 uppercase tracking-wider mb-1">{product.category}</span>
+                  <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1">{product.category}</span>
                   <h4 className="font-bold text-slate-800 text-[14px] mb-3 leading-snug">{product.name}</h4>
                   <div className="mt-auto">
                     <span className="font-black text-[18px] text-slate-900 block">{product.price} <span className="text-[12px] text-slate-500 font-semibold">USDC</span></span>
@@ -281,7 +281,7 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
            
            <div className="flex-1 bg-white rounded-t-[32px] -mt-8 relative z-10 p-6 flex flex-col shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
              <div className="flex items-center justify-between mb-2">
-               <span className="bg-blue-50 text-blue-600 text-[11px] px-2.5 py-1 rounded-full font-bold tracking-wide uppercase">{selectedProduct?.category}</span>
+               <span className="bg-slate-100 text-slate-800 text-[11px] px-2.5 py-1 rounded-full font-bold tracking-wide uppercase">{selectedProduct?.category}</span>
                <div className="flex items-center gap-1 text-slate-500 text-[12px] font-medium font-mono">
                  <CheckCircle2 size={14} className="text-green-500" />
                  Verified Merchant
@@ -289,7 +289,7 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
              </div>
              
              <h2 className="text-[28px] font-black text-slate-800 leading-tight mb-2 mt-2">{selectedProduct?.name}</h2>
-             <div className="text-[24px] font-extrabold text-[#005faa] mb-6">{selectedProduct?.price} USDC</div>
+             <div className="text-[24px] font-extrabold text-slate-800 mb-6">{selectedProduct?.price} USDC</div>
              
              <div className="mb-6">
                 <h4 className="text-[14px] font-bold text-slate-800 mb-2">Description</h4>
@@ -320,7 +320,7 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
                  <img src={selectedProduct?.image} alt="product" className="w-16 h-16 rounded-xl object-cover shadow-sm" />
                  <div className="flex-1">
                     <h4 className="font-bold text-slate-800 text-[14px] mb-1">{selectedProduct?.name}</h4>
-                    <span className="font-bold text-[#005faa] text-[15px]">{selectedProduct?.price} USDC</span>
+                    <span className="font-bold text-slate-800 text-[15px]">{selectedProduct?.price} USDC</span>
                  </div>
               </div>
 
@@ -336,21 +336,21 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
                  <div className="w-full border-t border-dashed border-slate-200 my-2"></div>
                  <div className="flex justify-between items-center">
                     <span className="text-slate-800 font-bold text-[16px]">Total Payment</span>
-                    <span className="font-black text-[22px] text-[#005faa]">{(Number(selectedProduct?.price) * 1.015).toFixed(2)} USDC</span>
+                    <span className="font-black text-[22px] text-slate-800">{(Number(selectedProduct?.price) * 1.015).toFixed(2)} USDC</span>
                  </div>
               </div>
 
-              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex gap-3 mb-6 items-start">
-                 <Wallet size={20} className="text-[#005faa] shrink-0 mt-0.5" />
+              <div className="bg-slate-100 border border-slate-200 rounded-xl p-4 flex gap-3 mb-6 items-start">
+                 <Wallet size={20} className="text-slate-800 shrink-0 mt-0.5" />
                  <div>
-                    <h5 className="font-bold text-[#005faa] text-[13px] mb-0.5">Pay with Web3 Wallet</h5>
-                    <p className="text-[12px] text-blue-600/70 leading-relaxed">Transactions are secured by Arc Testnet. Your current balance is <span className="font-bold text-[#005faa]">{balance.toFixed(2)} USDC</span>.</p>
+                    <h5 className="font-bold text-slate-800 text-[13px] mb-0.5">Pay with Web3 Wallet</h5>
+                    <p className="text-[12px] text-slate-800/70 leading-relaxed">Transactions are secured by Arc Testnet. Your current balance is <span className="font-bold text-slate-800">{balance.toFixed(2)} USDC</span>.</p>
                  </div>
               </div>
 
               <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex items-start gap-3 mb-6">
                 <div className="bg-blue-100 p-2 rounded-lg shrink-0">
-                  <ShieldCheck size={18} className="text-blue-600" />
+                  <ShieldCheck size={18} className="text-slate-800" />
                 </div>
                 <div>
                   <h4 className="text-[12px] font-bold text-slate-800">Protected by Arc Protocol</h4>

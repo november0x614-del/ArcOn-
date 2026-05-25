@@ -34,7 +34,7 @@ export function BayarVAScreen({ onBack }: BayarVAScreenProps) {
         </div>
         <h2 className="text-[22px] font-bold text-slate-800 mb-2">Payment Successful!</h2>
         <p className="text-[14px] text-slate-500 mb-8 leading-relaxed px-4">
-          VA Payment <span className="font-bold text-slate-800">{vaNumber}</span> for <span className="font-bold text-[#005faa]">250.00 USDC</span> has been successfully processed via Arc Network.
+          VA Payment <span className="font-bold text-slate-800">{vaNumber}</span> for <span className="font-bold text-slate-800">250.00 USDC</span> has been successfully processed via Arc Network.
         </p>
         <button 
           onClick={onBack}
@@ -49,11 +49,13 @@ export function BayarVAScreen({ onBack }: BayarVAScreenProps) {
   return (
     <div className="w-full h-full bg-slate-50 relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
       {/* Header */}
-      <div className="flex items-center px-4 pt-12 pb-4 bg-white border-b border-slate-100 shadow-sm relative z-10 w-full">
-        <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full transition-colors active:bg-slate-200">
-          <ArrowLeft size={24} className="text-slate-800" />
-        </button>
-        <h2 className="font-bold text-[16px] text-slate-800 ml-2">Pay Virtual Account</h2>
+      <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between">
+        <div className="flex items-center">
+          <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent">
+            <ArrowLeft size={20} className="text-white" />
+          </button>
+          <h2 className="font-bold text-[16px] text-white ml-2">PAY VA</h2>
+        </div>
       </div>
 
       <div className="flex-1 p-5 lg:p-10 flex flex-col pt-8 overflow-y-auto pb-24 max-w-2xl mx-auto w-full scrollbar-hide">
@@ -119,16 +121,16 @@ export function BayarVAScreen({ onBack }: BayarVAScreenProps) {
                   <div className="pt-4 border-t border-slate-100 flex justify-between items-end">
                      <span className="text-sm text-slate-500">Total Bill</span>
                      <div className="text-right">
-                        <span className="text-[10px] font-bold text-[#005faa] block">USDC</span>
+                        <span className="text-[10px] font-bold text-slate-800 block">USDC</span>
                         <span className="text-2xl font-black text-slate-800">250.00</span>
                      </div>
                   </div>
                </div>
             </div>
 
-            <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-4 flex gap-3">
+            <div className="bg-slate-100 border border-slate-200 rounded-2xl p-4 mb-4 flex gap-3">
                <div className="bg-white p-2 rounded-lg shadow-sm h-fit">
-                  <Wallet size={20} className="text-[#005faa]" />
+                  <Wallet size={20} className="text-slate-800" />
                </div>
                <div>
                   <p className="text-[13px] font-bold text-slate-700">Source of Funds: Arc Wallet</p>
@@ -150,7 +152,7 @@ export function BayarVAScreen({ onBack }: BayarVAScreenProps) {
              <div className="relative mb-8">
                 <div className="w-20 h-20 border-4 border-slate-100 border-t-[#005faa] rounded-full animate-spin"></div>
                 <div className="absolute inset-0 flex items-center justify-center">
-                   <Smartphone size={24} className="text-[#005faa]/40" />
+                   <Smartphone size={24} className="text-slate-800/40" />
                 </div>
              </div>
              <h3 className="font-bold text-slate-800 text-[20px] mb-3">Processing VA via Arc</h3>

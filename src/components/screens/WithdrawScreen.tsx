@@ -54,7 +54,7 @@ export function WithdrawScreen({ onBack, onSuccess }: WithdrawScreenProps) {
   if (step === 'processing') {
     return (
       <div className="absolute inset-0 bg-white z-[70] flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-300">
-        <Loader2 className="animate-spin text-[#3FA2F6] mb-6" size={48} />
+        <Loader2 className="animate-spin text-slate-800 mb-6" size={48} />
         <h3 className="text-[20px] font-bold text-slate-800 mb-2">Processing Withdrawal</h3>
         <p className="text-slate-500 text-[14px]">Sending USDC to Liquidity Provider for Bank Settlement...</p>
       </div>
@@ -73,7 +73,7 @@ export function WithdrawScreen({ onBack, onSuccess }: WithdrawScreenProps) {
         </p>
         <button 
           onClick={onSuccess}
-          className="w-full bg-[#3FA2F6] text-white py-4 rounded-2xl font-bold transition-all active:scale-[0.98] border-0 cursor-pointer"
+          className="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold transition-all active:scale-[0.98] border-0 cursor-pointer"
         >
           Back to Home
         </button>
@@ -83,11 +83,14 @@ export function WithdrawScreen({ onBack, onSuccess }: WithdrawScreenProps) {
 
   return (
     <div className="absolute inset-0 z-[70] bg-[#f8fafc] flex flex-col animate-in slide-in-from-right duration-300">
-      <div className="flex items-center px-4 pt-12 pb-4 bg-white border-b border-slate-100 shadow-sm relative z-10">
-        <button onClick={onBack} className="p-1 hover:bg-slate-100 rounded-full transition-colors bg-transparent border-0 cursor-pointer mr-3">
-          <ArrowLeft size={24} className="text-slate-700" />
-        </button>
-        <h3 className="font-bold text-[18px] text-slate-800">Withdraw to Bank</h3>
+      {/* Header */}
+      <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between">
+        <div className="flex items-center">
+          <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent">
+            <ArrowLeft size={20} className="text-white" />
+          </button>
+          <h2 className="font-bold text-[16px] text-white ml-2">WITHDRAW TO BANK</h2>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-5 pb-32">
@@ -111,24 +114,24 @@ export function WithdrawScreen({ onBack, onSuccess }: WithdrawScreenProps) {
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0.00"
-              className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-[24px] font-bold text-slate-800 outline-none focus:border-[#3FA2F6] transition-colors"
+              className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-[24px] font-bold text-slate-800 outline-none focus:border-slate-900 transition-colors"
             />
             <span className="absolute right-5 top-1/2 -translate-y-1/2 font-bold text-slate-400">USDC</span>
           </div>
           
           <div className="flex justify-between mt-3 px-1">
-            <span className="text-[12px] text-slate-500">Available: <span className="font-bold text-[#3FA2F6]">{balance.toFixed(2)} USDC</span></span>
+            <span className="text-[12px] text-slate-500">Available: <span className="font-bold text-slate-800">{balance.toFixed(2)} USDC</span></span>
             <button 
               onClick={() => setAmount(balance.toString())}
-              className="text-[12px] font-bold text-[#3FA2F6] bg-transparent border-0 cursor-pointer"
+              className="text-[12px] font-bold text-slate-800 bg-transparent border-0 cursor-pointer"
             >
               Withdraw All
             </button>
           </div>
         </div>
 
-        <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 flex gap-3">
-          <div className="text-[#3FA2F6] shrink-0 mt-0.5">
+        <div className="bg-slate-100/50 p-4 rounded-2xl border border-slate-200 flex gap-3">
+          <div className="text-slate-800 shrink-0 mt-0.5">
              <CheckCircle2 size={16} />
           </div>
           <p className="text-[12px] text-blue-700 leading-relaxed font-medium">
@@ -140,7 +143,7 @@ export function WithdrawScreen({ onBack, onSuccess }: WithdrawScreenProps) {
       <div className="absolute bottom-0 left-0 right-0 p-5 bg-white border-t border-slate-50">
         <button 
           onClick={handleWithdraw}
-          className="w-full bg-[#3FA2F6] text-white py-4 rounded-2xl font-bold transition-all active:scale-[0.98] border-0 cursor-pointer shadow-lg shadow-blue-200"
+          className="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold transition-all active:scale-[0.98] border-0 cursor-pointer shadow-lg shadow-blue-200"
         >
           Confirm Withdrawal
         </button>

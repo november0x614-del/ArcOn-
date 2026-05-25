@@ -102,16 +102,16 @@ export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
   return (
     <div className="w-full h-full bg-[#f8fafc] relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 pt-12 pb-4 bg-white border-b border-slate-100 shadow-sm relative z-10 w-full">
+      <div className="flex items-center justify-between px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full">
         <div className="flex items-center">
           <button
             onClick={onBack}
-            className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+            className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
           >
-            <ArrowLeft size={24} className="text-slate-800" />
+            <ArrowLeft size={20} className="text-white" />
           </button>
-          <h2 className="font-bold text-[16px] text-slate-800 ml-2">
-            Receive Payment
+          <h2 className="font-bold text-[16px] text-white ml-2">
+            RECEIVE
           </h2>
         </div>
         <button
@@ -125,7 +125,7 @@ export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
 
       <div className="flex-1 p-6 flex flex-col items-center overflow-y-auto pb-24">
         <div className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-200/60 flex flex-col items-center w-full">
-          <span className="text-[11px] font-black tracking-widest text-[#005faa] bg-blue-50 px-2.5 py-1 rounded-full mb-6 uppercase">
+          <span className="text-[11px] font-black tracking-widest text-slate-800 bg-slate-100 px-2.5 py-1 rounded-full mb-6 uppercase">
             USDC (ARC TESTNET)
           </span>
 
@@ -190,7 +190,7 @@ export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
 
           <button
             onClick={handleSimulateCamera}
-            className="mb-6 bg-white hover:bg-blue-50 text-blue-600 font-bold px-4 py-2.5 rounded-xl text-[12px] flex items-center gap-2 transition-all active:scale-95 border border-blue-100 shadow-sm hover:shadow"
+            className="mb-6 bg-white hover:bg-slate-100 text-slate-800 font-bold px-4 py-2.5 rounded-xl text-[12px] flex items-center gap-2 transition-all active:scale-95 border border-slate-200 shadow-sm hover:shadow"
           >
             <Scan size={14} /> Simulate Camera View
           </button>
@@ -200,7 +200,7 @@ export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
             {!isEditingAmount && !amount && (
               <button
                 onClick={() => setIsEditingAmount(true)}
-                className="w-full py-2.5 bg-slate-50 hover:bg-slate-100 text-[#005faa] border border-slate-200 border-dashed rounded-xl font-bold text-[13px] transition-colors"
+                className="w-full py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200 border-dashed rounded-xl font-bold text-[13px] transition-colors"
               >
                 + Set Payment Amount
               </button>
@@ -222,7 +222,7 @@ export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
                     onBlur={() => setIsEditingAmount(false)}
                     autoFocus={isEditingAmount}
                     placeholder="0.00"
-                    className="w-full pl-14 pr-4 py-3 bg-white border border-slate-200 hover:border-[#3FA2F6] focus:border-[#3FA2F6] text-[16px] font-bold text-slate-800 rounded-xl outline-none font-mono"
+                    className="w-full pl-14 pr-4 py-3 bg-white border border-slate-200 hover:border-slate-900 focus:border-slate-900 text-[16px] font-bold text-slate-800 rounded-xl outline-none font-mono"
                   />
                 </div>
               </div>
@@ -247,7 +247,7 @@ export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
                 {address}
               </span>
             </div>
-            <button className="bg-white text-[#005faa] hover:bg-slate-50 border border-slate-100 p-2 rounded-xl shrink-0 shadow-sm transition-colors active:scale-95">
+            <button className="bg-white text-slate-800 hover:bg-slate-50 border border-slate-100 p-2 rounded-xl shrink-0 shadow-sm transition-colors active:scale-95">
               {copied ? (
                 <Check size={16} className="text-green-500" />
               ) : (
@@ -258,7 +258,7 @@ export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
         </div>
 
         <div className="mt-6 flex gap-2 items-start text-left max-w-sm">
-          <Info size={16} className="text-[#3FA2F6] shrink-0 mt-0.5" />
+          <Info size={16} className="text-slate-800 shrink-0 mt-0.5" />
           <span className="text-[12px] text-slate-500 font-medium leading-snug">
             Only send USDC tokens to this address. Transactions via networks
             other than Arc will result in permanent asset loss.
@@ -270,7 +270,7 @@ export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
       {isSimulating && (
         <div className="absolute inset-0 bg-slate-900/60 z-[100] flex flex-col justify-end">
           <div className="bg-slate-900 h-2/3 rounded-t-[32px] w-full p-6 flex flex-col items-center">
-            <h3 className="text-white font-bold text-[18px] mb-2 flex flex-col items-center">
+            <h3 className="text-slate-800 font-bold text-[18px] mb-2 flex flex-col items-center">
               <div className="w-12 h-12 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center mb-3 border border-purple-500/30">
                 <span className="animate-pulse">⚡</span>
               </div>
@@ -301,7 +301,7 @@ export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
               )}
               {simStep >= 3 && (
                 <div className="text-blue-400 animate-in fade-in slide-in-from-bottom flex items-start gap-2">
-                  <span className="text-blue-500 shrink-0">➜</span>
+                  <span className="text-slate-600 shrink-0">➜</span>
                   <span>
                     [SERVER] POST /api/circle/webhook - Signature Valid.
                     Settling locally.

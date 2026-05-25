@@ -100,21 +100,20 @@ export function BatchTransferScreen({ onBack, contacts }: BatchTransferScreenPro
   return (
     <div className="w-full h-full bg-[#f8fafc] relative flex flex-col items-center overflow-hidden z-50">
        {/* Header */}
-       <div className="w-full pt-12 pb-6 px-4 shrink-0 flex flex-col bg-[#3FA2F6] relative shadow-md">
-         <div className="flex justify-between items-center w-full mb-4 relative">
-            <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20">
-              <ArrowLeft className="text-white" size={24} />
-            </button>
-            <h2 className="text-white font-extrabold text-lg absolute left-1/2 -translate-x-1/2">Batch Transfer</h2>
-            <div className="w-10"></div>
+       <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between">
+         <div className="flex items-center">
+           <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent">
+             <ArrowLeft size={20} className="text-white" />
+           </button>
+           <h2 className="font-bold text-[16px] text-white ml-2">BATCH TRANSFER</h2>
          </div>
        </div>
 
        {/* Progress Indicator */}
        <div className="w-full bg-white border-b border-slate-100 px-5 py-3 flex gap-2">
-          <div className={`h-1.5 flex-1 rounded-full ${multiSendStep === 'form' ? 'bg-[#3FA2F6]' : 'bg-[#3FA2F6]'}`}></div>
-          <div className={`h-1.5 flex-1 rounded-full ${multiSendStep === 'processing' || multiSendStep === 'success' ? 'bg-[#3FA2F6]' : 'bg-slate-100'}`}></div>
-          <div className={`h-1.5 flex-1 rounded-full ${multiSendStep === 'success' ? 'bg-[#3FA2F6]' : 'bg-slate-100'}`}></div>
+          <div className={`h-1.5 flex-1 rounded-full ${multiSendStep === 'form' ? 'bg-slate-900' : 'bg-slate-900'}`}></div>
+          <div className={`h-1.5 flex-1 rounded-full ${multiSendStep === 'processing' || multiSendStep === 'success' ? 'bg-slate-900' : 'bg-slate-100'}`}></div>
+          <div className={`h-1.5 flex-1 rounded-full ${multiSendStep === 'success' ? 'bg-slate-900' : 'bg-slate-100'}`}></div>
        </div>
 
        <div className="flex-1 w-full flex flex-col overflow-y-auto pb-24 scrollbar-hide">
@@ -124,7 +123,7 @@ export function BatchTransferScreen({ onBack, contacts }: BatchTransferScreenPro
              {multiSendStep === 'info' && (
                 <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex flex-col">
                    <div className="flex flex-col items-center text-center mt-6 mb-8">
-                      <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center text-[#3FA2F6] mb-4 shadow-sm">
+                      <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center text-slate-800 mb-4 shadow-sm">
                          <Users size={40} />
                       </div>
                       <h3 className="font-extrabold text-[24px] text-slate-900 tracking-tight">Multi-Recipient Send</h3>
@@ -133,7 +132,7 @@ export function BatchTransferScreen({ onBack, contacts }: BatchTransferScreenPro
 
                    <div className="flex flex-col gap-4 text-left">
                       <div className="flex gap-4 items-start p-5 bg-white border border-slate-100 rounded-2xl shadow-sm hover:border-blue-200 transition-colors">
-                         <div className="w-12 h-12 rounded-full bg-blue-50 text-[#3FA2F6] flex items-center justify-center shrink-0">
+                         <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-800 flex items-center justify-center shrink-0">
                             <Send size={22} />
                          </div>
                          <div className="flex-1">
@@ -146,7 +145,7 @@ export function BatchTransferScreen({ onBack, contacts }: BatchTransferScreenPro
                    <div className="mt-12">
                       <button 
                         onClick={() => setMultiSendStep('form')}
-                        className="w-full bg-[#3FA2F6] text-white py-4 rounded-full font-bold text-[16px] shadow-lg shadow-blue-500/20 hover:bg-[#2b88d8] active:scale-[0.98] transition-all"
+                        className="w-full bg-slate-900 text-white py-4 rounded-full font-bold text-[16px] shadow-lg shadow-blue-500/20 hover:bg-slate-800 active:scale-[0.98] transition-all"
                       >
                         Get Started
                       </button>
@@ -166,7 +165,7 @@ export function BatchTransferScreen({ onBack, contacts }: BatchTransferScreenPro
                    <div className="space-y-3 mb-6">
                       {recipients.map((recipient, idx) => (
                          <div key={recipient.id} className="flex items-center gap-3 p-4 bg-white border border-slate-100 rounded-2xl shadow-sm relative group">
-                            <div className="w-10 h-10 rounded-full bg-blue-50 text-[#3FA2F6] flex items-center justify-center font-bold text-sm shrink-0">
+                            <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-800 flex items-center justify-center font-bold text-sm shrink-0">
                                {recipient.name.substring(0, 1).toUpperCase()}
                              </div>
                              <div className="flex-1 min-w-0">
@@ -184,7 +183,7 @@ export function BatchTransferScreen({ onBack, contacts }: BatchTransferScreenPro
                                          const val = e.target.value;
                                          setRecipients(prev => prev.map((item, i) => i === idx ? { ...item, amount: val } : item));
                                       }}
-                                      className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[13px] font-bold text-slate-900 w-24 focus:outline-none focus:border-[#3FA2F6] font-mono"
+                                      className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[13px] font-bold text-slate-900 w-24 focus:outline-none focus:border-slate-900 font-mono"
                                    />
                                    <span className="text-[12px] font-bold text-slate-500 tracking-wide">USDC</span>
                                 </div>
@@ -207,17 +206,14 @@ export function BatchTransferScreen({ onBack, contacts }: BatchTransferScreenPro
                    </div>
 
                     {/* Input Tooling */}
-                    <div className="bg-blue-50/50 border border-blue-100/50 rounded-[24px] p-5 mb-8 flex flex-col gap-4">
-                        <div className="flex justify-between items-center w-full">
-                           <p className="text-[12px] font-black text-[#3FA2F6] uppercase tracking-widest flex items-center gap-2">
-                              <Plus size={14} strokeWidth={3} /> Quick Add Recipient
-                           </p>
+                    <div className="bg-slate-100/50 border border-slate-200/50 rounded-[24px] p-5 mb-8 flex flex-col gap-4">
+                        <div className="flex justify-end items-center w-full">
                            <button
                               onClick={() => {
                                  setSelectedQuickAddIds([]);
                                  setShowQuickAddModal(true);
                               }}
-                              className="text-[12px] text-white bg-[#3FA2F6] hover:bg-[#2b88d8] font-bold px-3 py-1.5 rounded-full flex items-center gap-1 shadow-sm transition-all active:scale-95 border-0 cursor-pointer"
+                              className="text-[12px] text-white bg-slate-900 hover:bg-slate-800 font-bold px-3 py-1.5 rounded-full flex items-center gap-1 shadow-sm transition-all active:scale-95 border-0 cursor-pointer"
                            >
                               <Plus size={13} strokeWidth={3} /> Quick Add
                            </button>
@@ -230,7 +226,7 @@ export function BatchTransferScreen({ onBack, contacts }: BatchTransferScreenPro
                              onClick={() => { 
                                 setNewAddress(prev => prev ? `${prev}, ${contact.account}` : contact.account);
                              }}
-                             className="shrink-0 bg-white border border-slate-200 pl-2 pr-4 py-2 rounded-full flex items-center gap-2 shadow-sm text-[13px] font-bold text-slate-700 hover:border-[#3FA2F6] hover:text-[#3FA2F6] transition-all active:scale-95"
+                             className="shrink-0 bg-white border border-slate-200 pl-2 pr-4 py-2 rounded-full flex items-center gap-2 shadow-sm text-[13px] font-bold text-slate-700 hover:border-slate-900 hover:text-slate-800 transition-all active:scale-95"
                            >
                              <div className="w-6 h-6 bg-[#e0f1fe] text-[#0284c7] rounded-full flex items-center justify-center text-[10px] font-black shrink-0">
                                 {contact.initials}
@@ -247,7 +243,7 @@ export function BatchTransferScreen({ onBack, contacts }: BatchTransferScreenPro
                                placeholder="Set Amount (USDC)" 
                                value={newAmount} 
                                onChange={e => setNewAmount(e.target.value)}
-                               className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-[14px] font-bold text-slate-900 focus:outline-none focus:border-[#3FA2F6] font-mono shadow-sm"
+                               className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-[14px] font-bold text-slate-900 focus:outline-none focus:border-slate-900 font-mono shadow-sm"
                             />
                             <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[12px] font-black text-slate-400">USDC</div>
                           </div>
@@ -257,7 +253,7 @@ export function BatchTransferScreen({ onBack, contacts }: BatchTransferScreenPro
                                 placeholder="Recipient Addresses (comma or space separated)" 
                                 value={newAddress} 
                                 onChange={e => setNewAddress(e.target.value)}
-                                className="bg-white border border-slate-200 rounded-2xl px-4 py-3 text-[14px] font-mono text-slate-900 w-full focus:outline-none focus:border-[#3FA2F6] min-h-[110px] shadow-sm resize-y leading-relaxed"
+                                className="bg-white border border-slate-200 rounded-2xl px-4 py-3 text-[14px] font-mono text-slate-900 w-full focus:outline-none focus:border-slate-900 min-h-[110px] shadow-sm resize-y leading-relaxed"
                                 rows={3}
                              />
                              <button 
@@ -284,7 +280,7 @@ export function BatchTransferScreen({ onBack, contacts }: BatchTransferScreenPro
                          </div>
                          <div className="flex justify-between items-center">
                             <span className="text-[13px] text-slate-500 font-bold">Total Payout</span>
-                            <span className="font-mono font-extrabold text-[#3FA2F6] text-lg">
+                            <span className="font-mono font-extrabold text-slate-800 text-lg">
                                {recipients.reduce((acc, curr) => acc + parseFloat(curr.amount || '0'), 0).toFixed(2)} USDC
                             </span>
                          </div>
@@ -298,7 +294,7 @@ export function BatchTransferScreen({ onBack, contacts }: BatchTransferScreenPro
                    <button 
                       onClick={startProcessing}
                       disabled={recipients.length === 0}
-                      className="w-full bg-[#3FA2F6] text-white py-4.5 rounded-full font-black text-[16px] shadow-xl shadow-blue-500/20 hover:bg-[#2b88d8] active:scale-[0.98] transition-all disabled:opacity-30 disabled:shadow-none mb-10"
+                      className="w-full bg-slate-900 text-white py-4.5 rounded-full font-black text-[16px] shadow-xl shadow-blue-500/20 hover:bg-slate-800 active:scale-[0.98] transition-all disabled:opacity-30 disabled:shadow-none mb-10"
                    >
                       EXECUTE BATCH SEND
                    </button>
@@ -310,7 +306,7 @@ export function BatchTransferScreen({ onBack, contacts }: BatchTransferScreenPro
                 <div className="py-20 flex flex-col items-center text-center">
                    <div className="relative mb-10">
                       <div className="w-24 h-24 rounded-full border-4 border-blue-50 flex items-center justify-center">
-                         <Loader2 className="animate-spin text-[#3FA2F6]" size={48} />
+                         <Loader2 className="animate-spin text-slate-800" size={48} />
                       </div>
                       <div className="absolute inset-0 animate-ping rounded-full border border-blue-200/50"></div>
                    </div>
@@ -356,7 +352,7 @@ export function BatchTransferScreen({ onBack, contacts }: BatchTransferScreenPro
                       </div>
                       <div className="flex justify-between items-center border-t border-slate-100 pt-5 mt-5">
                          <span className="text-[12px] font-bold text-slate-500">Total Transferred</span>
-                         <span className="font-mono font-black text-[#3FA2F6] text-lg">
+                         <span className="font-mono font-black text-slate-800 text-lg">
                             {recipients.reduce((acc, curr) => acc + parseFloat(curr.amount || '0'), 0).toFixed(2)} USDC
                          </span>
                       </div>
@@ -396,7 +392,7 @@ export function BatchTransferScreen({ onBack, contacts }: BatchTransferScreenPro
                </div>
 
                {/* Select All Controller */}
-               <div className="px-5 py-3 border-b border-slate-50 flex justify-between items-center shrink-0 bg-blue-50/50">
+               <div className="px-5 py-3 border-b border-slate-50 flex justify-between items-center shrink-0 bg-slate-100/50">
                   <span className="text-[13px] font-bold text-blue-700">
                      {selectedQuickAddIds.length} of {contacts.length} Contacts Selected
                   </span>
@@ -408,7 +404,7 @@ export function BatchTransferScreen({ onBack, contacts }: BatchTransferScreenPro
                            setSelectedQuickAddIds(contacts.map(c => c.id));
                         }
                      }}
-                     className="bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 px-3.5 py-1.5 rounded-full text-[12px] font-bold transition-all active:scale-[0.97] cursor-pointer"
+                     className="bg-white border border-blue-200 text-slate-800 hover:bg-slate-100 px-3.5 py-1.5 rounded-full text-[12px] font-bold transition-all active:scale-[0.97] cursor-pointer"
                   >
                      {selectedQuickAddIds.length === contacts.length ? 'Deselect All' : 'Select All'}
                   </button>
@@ -444,7 +440,7 @@ export function BatchTransferScreen({ onBack, contacts }: BatchTransferScreenPro
                            
                            {/* Checkbox indicator */}
                            <div className={`w-6 h-6 rounded-full border-[2px] flex items-center justify-center transition-colors ${
-                              isSelected ? 'bg-[#3FA2F6] border-[#3FA2F6]' : 'border-slate-300 bg-white'
+                              isSelected ? 'bg-slate-900 border-slate-900' : 'border-slate-300 bg-white'
                            }`}>
                               {isSelected && (
                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" className="w-3 h-3 text-white" strokeLinecap="round" strokeLinejoin="round">
@@ -490,7 +486,7 @@ export function BatchTransferScreen({ onBack, contacts }: BatchTransferScreenPro
                         displayToast(`Added ${newItems.length} selected contacts to batch list!`);
                      }}
                      disabled={selectedQuickAddIds.length === 0}
-                     className="w-full bg-[#3FA2F6] hover:bg-[#2b88d8] disabled:opacity-45 text-white py-4 rounded-full font-bold text-[15px] shadow-[0_4px_14px_rgba(63,162,246,0.3)] hover:shadow-lg transition-all active:scale-[0.98] border-0 cursor-pointer"
+                     className="w-full bg-slate-900 hover:bg-slate-800 disabled:opacity-45 text-white py-4 rounded-full font-bold text-[15px] shadow-lg hover:shadow-lg transition-all active:scale-[0.98] border-0 cursor-pointer"
                   >
                      Add Selected Contacts ({selectedQuickAddIds.length})
                   </button>

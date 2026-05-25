@@ -49,19 +49,25 @@ export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreen
   return (
     <div className="w-full h-full bg-white relative flex flex-col z-50">
       {/* Header */}
-      <div className="w-full pt-12 pb-4 px-4 flex items-center shadow-sm relative z-10 shrink-0 bg-white border-b border-slate-100">
-        <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full transition-colors absolute left-4">
-          <ArrowLeft className="text-slate-700" size={24} />
+      <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-center">
+        <button onClick={onBack} className="absolute left-4 p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent">
+          <ArrowLeft size={20} className="text-white" />
         </button>
-        <div className="flex flex-col items-center justify-center flex-1">
-          <h2 className="text-slate-800 font-bold text-[15px] uppercase tracking-tight leading-tight">{contact.name}</h2>
-          <p className="text-slate-500 text-[13px] mt-[2px]">{contact.bank || contact.network} - {contact.account}</p>
-        </div>
+        <h2 className="font-bold text-[16px] text-white">INPUT AMOUNT</h2>
       </div>
 
       <div className="flex-1 overflow-y-auto w-full pb-[380px]">
+        {/* Target Contact */}
+        <div className="flex flex-col items-center justify-center pt-8 pb-4">
+          <div className="w-[52px] h-[52px] shadow-sm rounded-full bg-[#ecf5fc] flex items-center justify-center font-bold text-slate-800 text-[18px] shrink-0 mb-3 border border-[#ecf5fc]">
+             {contact.initials}
+          </div>
+          <h2 className="text-white font-bold text-[16px] uppercase tracking-tight leading-tight text-center">{contact.name}</h2>
+          <p className="text-slate-500 text-[13px] mt-[4px] text-center">{contact.bank || contact.network} - {contact.account}</p>
+        </div>
+
         {/* Nominal */}
-        <div className="px-6 py-6 border-b border-transparent">
+        <div className="px-6 py-4 border-b border-transparent">
           <label className={`${amount && numericAmount < 1 ? 'text-[#db2e38]' : amount ? 'text-slate-500' : 'text-[#008fcd]'} text-[13px] font-medium mb-1 block`}>Amount</label>
           <div className={`flex items-center relative border-b pb-1 ${amount && numericAmount < 1 ? 'border-[#db2e38] border-b-[2px]' : amount ? 'border-slate-300' : 'border-[#008fcd] border-b-[2px]'}`}>
             <span className="text-[36px] font-medium text-slate-800 mr-2 tracking-tight">$</span>
@@ -123,7 +129,7 @@ export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreen
             disabled={!amount || parseFloat(amount) < 1}
             className={`w-full py-[14px] rounded-full font-bold text-[15px] transition-all flex items-center justify-center gap-2
               ${amount && parseFloat(amount) >= 1 
-                ? 'bg-[#008fcd] text-white shadow-[0_4px_14px_rgba(0,143,205,0.4)] hover:bg-[#007dba] active:scale-[0.98]' 
+                ? 'bg-slate-900 text-white shadow-lg hover:bg-slate-800 active:scale-[0.98]' 
                 : 'bg-[#e5e7eb] text-[#9ca3af] shadow-none'}
             `}
           >
@@ -179,9 +185,9 @@ export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreen
                        <span className="text-slate-800 font-bold text-[14.5px]">{selectedSource.isArc ? 'Arc Testnet' : 'Arc Network'}</span>
                     </div>
                     {selectedSource.isArc ? (
-                       <div className="flex flex-col gap-1 w-full bg-blue-50/50 p-2.5 rounded-xl border border-blue-100/50">
+                       <div className="flex flex-col gap-1 w-full bg-slate-100/50 p-2.5 rounded-xl border border-slate-200/50">
                           <div className="flex justify-between items-center">
-                             <span className="text-blue-600 text-[14px] flex items-center gap-1.5"><div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div> Network Gas Fee</span>
+                             <span className="text-slate-800 text-[14px] flex items-center gap-1.5"><div className="w-2 h-2 bg-slate-1000 rounded-full animate-pulse"></div> Network Gas Fee</span>
                              <span className="text-blue-800 font-bold text-[14px]">0.0025 USDC</span>
                           </div>
                           <span className="text-[11px] text-blue-400">Estimated gas fee based on active Arc-L1 Testnet parameters.</span>
@@ -222,7 +228,7 @@ export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreen
                       }
                       onNext(amount);
                    }}
-                   className={`w-full text-white py-[14px] rounded-full flex justify-between px-6 items-center transition-all ${selectedSource.isArc ? 'bg-[#3FA2F6] hover:bg-blue-600 shadow-[0_4px_14px_rgba(63,162,246,0.4)]' : 'bg-[#008fcd] hover:bg-[#007dba] shadow-[0_4px_14px_rgba(0,143,205,0.4)]'}`}
+                   className={`w-full text-white py-[14px] rounded-full flex justify-between px-6 items-center transition-all ${selectedSource.isArc ? 'bg-slate-900 hover:bg-slate-800 shadow-[0_4px_14px_rgba(63,162,246,0.4)]' : 'bg-slate-900 hover:bg-slate-800 shadow-lg'}`}
                  >
                     <span className="font-bold text-[15px]">Continue Transfer</span>
                     <div className="flex items-center gap-2">
@@ -255,14 +261,14 @@ export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreen
                       setSelectedSource(src);
                       setShowSourceSelect(false);
                     }}
-                    className={`flex flex-col p-4 rounded-2xl border-[1.5px] cursor-pointer hover:bg-slate-50 transition-colors w-full ${selectedSource.id === src.id ? 'border-[#3FA2F6] bg-blue-50/10 shadow-[0_2px_10px_rgba(63,162,246,0.1)]' : 'border-slate-200 bg-white shadow-sm'}`}
+                    className={`flex flex-col p-4 rounded-2xl border-[1.5px] cursor-pointer hover:bg-slate-50 transition-colors w-full ${selectedSource.id === src.id ? 'border-slate-900 bg-slate-100/10 shadow-[0_2px_10px_rgba(63,162,246,0.1)]' : 'border-slate-200 bg-white shadow-sm'}`}
                   >
                     <div className="flex justify-between items-start mb-2 w-full">
-                      <span className={`font-bold text-[15px] text-left ${selectedSource.id === src.id ? 'text-[#3FA2F6]' : 'text-slate-800'}`}>{src.name}</span>
-                      {selectedSource.id === src.id && <CheckCircle2 size={20} className="text-[#3FA2F6] shrink-0" />}
+                      <span className={`font-bold text-[15px] text-left ${selectedSource.id === src.id ? 'text-slate-800' : 'text-slate-800'}`}>{src.name}</span>
+                      {selectedSource.id === src.id && <CheckCircle2 size={20} className="text-slate-800 shrink-0" />}
                     </div>
                     <span className="text-slate-500 text-[13px] tracking-wide font-medium text-left w-full block">{src.account}</span>
-                    <span className={`font-bold text-[14px] mt-2 text-left w-full block ${src.isArc ? 'text-blue-600' : 'text-[#008fcd]'}`}>{src.balance}<span className="text-[10px] align-top relative top-[1px]">{src.dec}</span></span>
+                    <span className={`font-bold text-[14px] mt-2 text-left w-full block ${src.isArc ? 'text-slate-800' : 'text-[#008fcd]'}`}>{src.balance}<span className="text-[10px] align-top relative top-[1px]">{src.dec}</span></span>
                   </div>
                 ))}
               </div>

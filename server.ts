@@ -6,6 +6,13 @@ import { createServer as createViteServer } from "vite";
 async function startServer() {
   const PORT = 3000;
 
+  app.use((req, res, next) => {
+    if (req.url.startsWith('/api/')) {
+      console.log(`[API REQUEST] ${req.method} ${req.url}`);
+    }
+    next();
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

@@ -4,9 +4,9 @@ import { ArrowLeft, Minus, Plus } from 'lucide-react';
 import { ShortcutItem } from '../../types';
 
 export const defaultSelectedShortcuts: ShortcutItem[] = [
-    { id: '1', icon: 'Send', label: "Transfer USDC", color: "text-blue-500" },
-    { id: '2', icon: 'ArrowLeftRight', label: "Swap Token", color: "text-orange-500", badge: "HOT" },
-    { id: '3', icon: 'ArrowDownToLine', label: "Receive USDC", color: "text-[#3FA2F6]" },
+    { id: '1', icon: 'Send', label: "Transfer USDC", color: "text-slate-600" },
+    { id: '2', icon: 'ArrowLeftRight', label: "Native Wallet Swap", color: "text-orange-500", badge: "HOT" },
+    { id: '3', icon: 'ArrowDownToLine', label: "Receive USDC", color: "text-slate-800" },
     { id: '13', icon: 'ArrowDownToLine', label: "Withdraw", color: "text-red-500" },
     { id: '14', icon: 'ArrowLeftRight', label: "Bridge USDC", color: "text-indigo-600", badge: "NEW" },
     { id: '12', icon: 'ShieldCheck', label: "Staking Pool", color: "text-emerald-500", badge: "NEW" },
@@ -47,11 +47,13 @@ export const defaultSelectedShortcuts: ShortcutItem[] = [
     return (
       <div className="w-full h-full bg-white relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
         {/* Header */}
-        <div className="flex items-center justify-center relative py-4 shrink-0 bg-white">
-          <button onClick={onBack} className="absolute left-4 p-1 hover:bg-slate-50 rounded-full transition-colors">
-            <ArrowLeft size={24} className="text-slate-700" />
-          </button>
-          <h2 className="font-bold text-[16px] text-slate-800">Web3 Transaction Favorites</h2>
+        <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between">
+          <div className="flex items-center">
+            <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent">
+              <ArrowLeft size={20} className="text-white" />
+            </button>
+            <h2 className="font-bold text-[16px] text-white ml-2">MANAGE MENUS</h2>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto w-full scrollbar-hide pb-24">
@@ -142,7 +144,7 @@ export const defaultSelectedShortcuts: ShortcutItem[] = [
           className={`w-full py-3.5 rounded-full font-bold text-[15px] transition-all
             ${isSaveDisabled 
               ? 'bg-slate-200 text-slate-400' 
-              : 'bg-[#3FA2F6] text-white hover:bg-blue-600 active:scale-[0.98]'
+              : 'bg-slate-900 text-white hover:bg-slate-800 active:scale-[0.98]'
             }
           `}
         >

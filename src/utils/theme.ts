@@ -3,7 +3,7 @@ export const THEME_STYLES = {
     walletBg: "bg-gradient-to-br from-[#1e293b] to-[#0f172a]",
     cardBg: "bg-gradient-to-br from-[#334155] to-[#1e293b]",
     accentBorder: "border-blue-500/20",
-    glow: "bg-blue-500/10",
+    glow: "bg-slate-1000/10",
     textColor: "text-white",
     subText: "text-slate-400",
     currencyText: "text-slate-200",

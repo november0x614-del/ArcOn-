@@ -100,6 +100,13 @@ export const ArcAppKitAdapter = {
 
         const response = await fetch(`/api/balance/${registeredUser.supabaseUid}`);
         if (!response.ok) throw new Error('Failed to fetch balance');
+        
+        const contentType = response.headers.get("content-type");
+        if (!contentType || contentType.indexOf("application/json") === -1) {
+            console.error("Non-JSON response from getBalance");
+            return { balance: 0, realBalance: 0, simulatedBalance: 0, allBalances: [] };
+        }
+        
         return await response.json(); // Expected format: { balance: number, realBalance: number, simulatedBalance: number }
     },
 

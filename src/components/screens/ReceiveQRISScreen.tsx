@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
 interface ReceiveQRISScreenProps {
@@ -40,22 +40,22 @@ export function ReceiveQRISScreen({ onBack }: ReceiveQRISScreenProps) {
   };
 
   return (
-    <div className="absolute inset-0 z-[60] bg-[#1a202c] flex flex-col animate-in slide-in-from-right duration-300">
-      <div className="flex items-center justify-between px-4 pt-12 pb-4 relative z-10 w-full">
+    <div className="absolute inset-0 z-[60] bg-slate-50 flex flex-col animate-in slide-in-from-right duration-300">
+      <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between">
         <div className="flex items-center">
           <button
             onClick={onBack}
-            className="p-2 hover:bg-slate-800 rounded-full transition-colors text-white bg-transparent border-0 cursor-pointer"
+            className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
           >
-            <X size={24} />
+            <ArrowLeft size={20} className="text-white" />
           </button>
           <h2 className="font-bold text-[16px] text-white ml-2">
-            QRIS Terima Dana
+            RECEIVE
           </h2>
         </div>
       </div>
-      <div className="flex-1 p-6 flex flex-col items-center justify-center -mt-16">
-        <div className="bg-white p-6 rounded-[32px] shadow-2xl w-full max-w-[320px] flex flex-col items-center relative overflow-hidden">
+      <div className="flex-1 p-6 flex flex-col items-center justify-center">
+        <div className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-200 w-full max-w-[320px] flex flex-col items-center relative overflow-hidden">
           <h3 className="font-bold text-[18px] text-slate-800 text-center mb-1">
             {userName}
           </h3>

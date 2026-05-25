@@ -20,18 +20,18 @@ export function LoginScreen({ onLogin, onRegister, isLoading }: LoginScreenProps
   return (
     <div className="w-full h-full bg-white relative flex flex-col justify-between overflow-hidden">
       {/* Top Graphic Area */}
-      <div className="relative h-[55%] bg-gradient-to-b from-[#3FA2F6] to-blue-600 rounded-b-[40px] flex flex-col justify-center items-center px-6 overflow-hidden shrink-0">
+      <div className="relative h-[55%] bg-gradient-to-b from-slate-800 to-slate-900 rounded-b-[40px] flex flex-col justify-center items-center px-6 overflow-hidden shrink-0">
         {/* Decorative elements */}
         <div className="absolute top-[-50px] right-[-50px] w-[200px] h-[200px] bg-white/10 rounded-full blur-2xl"></div>
         <div className="absolute bottom-[-30px] left-[-30px] w-[150px] h-[150px] bg-blue-400/30 rounded-full blur-xl"></div>
         
         <div className="z-10 bg-white/20 p-4 rounded-3xl backdrop-blur-md mb-6 border border-white/30 shadow-[0_8px_32px_rgba(0,0,0,0.1)]">
-           <div className="bg-white text-[#3FA2F6] p-3 rounded-2xl shadow-sm">
+           <div className="bg-white text-slate-800 p-3 rounded-2xl shadow-sm">
              <Wallet size={36} strokeWidth={2.5}/>
            </div>
         </div>
         
-        <h1 className="text-3xl font-bold text-white tracking-tight mb-2 text-center drop-shadow-sm">Arc Commerce</h1>
+        <h1 className="text-3xl font-bold text-slate-800 tracking-tight mb-2 text-center drop-shadow-sm">Arc Commerce</h1>
         <p className="text-blue-100 text-center text-[13px] font-medium px-6 leading-relaxed">
           Manage digital assets and enjoy secure & instant Web3 transaction experiences.
         </p>
@@ -59,7 +59,7 @@ export function LoginScreen({ onLogin, onRegister, isLoading }: LoginScreenProps
           <button 
             onClick={() => onLogin(email)}
             disabled={isLoading || !email}
-            className={`w-full bg-[#3FA2F6] hover:bg-blue-600 text-white font-bold py-4 rounded-2xl transition-all shadow-[0_8px_20px_rgba(63,162,246,0.25)] flex justify-center items-center gap-2 active:scale-[0.98] border-0 ${isLoading || !email ? 'opacity-70 cursor-not-allowed' : ''}`}
+            className={`w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl transition-all shadow-[0_8px_20px_rgba(63,162,246,0.25)] flex justify-center items-center gap-2 active:scale-[0.98] border-0 ${isLoading || !email ? 'opacity-70 cursor-not-allowed' : ''}`}
           >
             {isLoading ? (
               <Loader2 size={18} className="animate-spin" />
@@ -73,7 +73,7 @@ export function LoginScreen({ onLogin, onRegister, isLoading }: LoginScreenProps
           <button 
             onClick={handleRegisterClick}
             disabled={isLoading}
-            className={`w-full font-bold py-4 rounded-2xl transition-all flex justify-center items-center active:scale-[0.98] border-0 bg-blue-50 hover:bg-blue-100 text-[#3FA2F6]
+            className={`w-full font-bold py-4 rounded-2xl transition-all flex justify-center items-center active:scale-[0.98] border-0 bg-slate-100 hover:bg-slate-200 text-slate-800
               ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
           >
             Sign Up
@@ -82,7 +82,7 @@ export function LoginScreen({ onLogin, onRegister, isLoading }: LoginScreenProps
 
         <p className="text-[11px] text-center text-slate-400 font-medium mt-10 leading-relaxed">
            By logging in or registering, you agree to our <br/>
-           <span className="text-[#3FA2F6] cursor-pointer hover:underline">Terms of Service</span> and <span className="text-[#3FA2F6] cursor-pointer hover:underline">Privacy Policy</span>.
+           <span className="text-slate-800 cursor-pointer hover:underline">Terms of Service</span> and <span className="text-slate-800 cursor-pointer hover:underline">Privacy Policy</span>.
         </p>
       </div>
     </div>

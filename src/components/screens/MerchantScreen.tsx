@@ -32,7 +32,7 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
           </button>
           <div>
             <h1 className="text-[18px] font-extrabold text-slate-900 tracking-tight leading-tight">Arc Merchant</h1>
-            <p className="text-[12px] text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded-full inline-block mt-0.5">Verified Partner</p>
+            <p className="text-[12px] text-slate-800 font-bold bg-slate-100 px-2 py-0.5 rounded-full inline-block mt-0.5">Verified Partner</p>
           </div>
         </div>
         <div className="w-10 h-10 rounded-full bg-slate-100 border-2 border-white shadow-sm overflow-hidden flex items-center justify-center">
@@ -151,7 +151,7 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
             <div className="bg-white rounded-[24px] p-5 border border-slate-100 shadow-sm">
                <div className="flex items-center justify-between mb-4">
                  <h3 className="font-bold text-slate-800 text-[15px]">Recent Sales</h3>
-                 <button className="text-[12px] font-bold text-blue-600 hover:text-blue-700 bg-transparent border-0 p-0">View All</button>
+                 <button className="text-[12px] font-bold text-slate-800 hover:text-blue-700 bg-transparent border-0 p-0">View All</button>
                </div>
                
                <div className="flex flex-col gap-4">
@@ -167,7 +167,7 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
                            <div className="flex items-center gap-2">
                              <p className="text-[11px] font-medium text-slate-500">{sale.time}</p>
                              <span className="text-[10px] text-slate-300">•</span>
-                             <p className="text-[11px] font-bold text-blue-500">Fee: {sale.fee} USDC</p>
+                             <p className="text-[11px] font-bold text-slate-600">Fee: {sale.fee} USDC</p>
                            </div>
                          </div>
                        </div>
@@ -211,7 +211,7 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
                 <div>
                    <div className="flex items-center justify-between mb-2">
                      <label className="text-[12px] font-bold text-slate-700 block uppercase tracking-wide">Settlement Wallet (Arc L1)</label>
-                     <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">CONNECTED</span>
+                     <span className="text-[10px] font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md">CONNECTED</span>
                    </div>
                    <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 shadow-inner">
                      <span className="text-[13px] font-mono font-medium text-slate-600 truncate flex-1 leading-none">{address}</span>

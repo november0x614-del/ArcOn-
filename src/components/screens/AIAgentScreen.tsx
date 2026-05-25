@@ -71,16 +71,18 @@ ${transactions.slice(0, 5).map(tx => `- ${tx.type.toUpperCase()}: ${tx.title} ($
 
   return (
     <div className="w-full h-full bg-slate-50 relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
-       <div className="px-5 pt-8 pb-4 bg-white border-b border-slate-100 flex items-center shadow-sm relative z-10 sticky top-0">
-          <button onClick={onBack} className="p-2 -ml-2 mr-2 hover:bg-slate-100 rounded-full transition-colors">
-            <ArrowLeft size={24} className="text-slate-800" />
-          </button>
-          <div className="flex bg-[#005faa]/10 p-2 rounded-xl text-[#005faa] mr-3">
-             <Bot size={22} />
-          </div>
-          <div className="flex flex-col">
-            <h2 className="font-bold text-[16px] text-slate-800 flex items-center gap-1">Arc AI Assistant <Sparkles size={14} className="text-[#3FA2F6]" /></h2>
-            <span className="text-[11px] text-green-500 font-medium">● Online</span>
+       <div className="px-5 pt-6 pb-3 bg-slate-900 shadow-md flex items-center relative z-10 sticky top-0 justify-between">
+          <div className="flex items-center">
+            <button onClick={onBack} className="p-2 -ml-2 mr-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent">
+              <ArrowLeft size={20} className="text-white" />
+            </button>
+            <div className="flex bg-white/10 p-2 rounded-xl text-white mr-3">
+               <Bot size={22} className="text-white" />
+            </div>
+            <div className="flex flex-col">
+              <h2 className="font-bold text-[16px] text-slate-800 flex items-center gap-1">Arc Assistant <Sparkles size={14} className="text-white" /></h2>
+              <span className="text-[11px] text-green-400 font-medium tracking-wide">● Online</span>
+            </div>
           </div>
        </div>
 
@@ -109,7 +111,7 @@ ${transactions.slice(0, 5).map(tx => `- ${tx.type.toUpperCase()}: ${tx.title} ($
        </div>
 
        <div className="p-4 bg-white border-t border-slate-100 shadow-[0_-4px_16px_rgba(0,0,0,0.02)]">
-          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-full py-1.5 px-4 focus-within:border-[#3FA2F6] transition-colors">
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-full py-1.5 px-4 focus-within:border-slate-900 transition-colors">
             <input 
                type="text" 
                placeholder="Tanya sesuatu ke AI..." 

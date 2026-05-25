@@ -37,26 +37,26 @@ export function ArcBirdScreen({ onBack }: ArcBirdScreenProps) {
 
   return (
     <div className="absolute inset-0 z-[60] bg-white flex flex-col animate-in slide-in-from-right duration-300">
-      <div className="flex items-center px-4 pt-12 pb-4 bg-white border-b border-slate-100 shadow-sm relative z-10 w-full">
+      <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-center">
         <button
           onClick={onBack}
-          className="p-2 hover:bg-slate-100 rounded-full transition-colors active:bg-slate-200 bg-transparent border-0 cursor-pointer"
+          className="absolute left-4 p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
         >
-          <ArrowLeft size={24} className="text-slate-800" />
+          <ArrowLeft size={20} className="text-white" />
         </button>
-        <div className="flex items-center gap-2 ml-2">
-           <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-purple-500 to-indigo-600 flex items-center justify-center text-white shrink-0">
-             <Gamepad2 size={16} />
-           </div>
-           <div>
-             <h2 className="font-bold text-[16px] text-slate-800 leading-tight">ArcBird Run</h2>
-             <p className="text-[10px] text-[#3FA2F6] font-bold">Arc Network L1 Simulation</p>
-           </div>
-        </div>
+        <h2 className="font-bold text-[16px] text-white">ARCBIRD RUN</h2>
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
-        <p className="text-[13px] text-slate-500">
+        <div className="flex flex-col items-center justify-center pt-2">
+          <div className="w-12 h-12 mb-3 rounded-xl bg-gradient-to-tr from-purple-500 to-indigo-600 flex items-center justify-center text-white shrink-0 shadow-sm">
+             <Gamepad2 size={24} />
+          </div>
+          <h2 className="font-bold text-[20px] text-slate-800 leading-tight">ARCBIRD RUN</h2>
+          <p className="text-[12px] text-slate-500 font-bold uppercase tracking-wider mt-1">Arc Network Simulation</p>
+        </div>
+
+        <p className="text-[13px] text-slate-500 text-center">
           Play **ArcBird Run**! Tap the JUMP button to flap and earn native ARC rewards instantly.
         </p>
 

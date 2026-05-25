@@ -36,7 +36,7 @@ export function NamaPanggilanScreen({ onBack }: NamaPanggilanScreenProps) {
       {/* Header */}
       <div className="flex items-center justify-center relative py-4 shrink-0 bg-white shadow-sm z-10 w-full">
         <button onClick={onBack} className="absolute left-4 p-1 hover:bg-slate-50 rounded-full transition-colors">
-          <ArrowLeft size={24} className="text-slate-700" />
+          <ArrowLeft size={20} className="text-white" />
         </button>
         <h2 className="font-bold text-[16px] text-slate-800">Nickname</h2>
       </div>
@@ -54,14 +54,14 @@ export function NamaPanggilanScreen({ onBack }: NamaPanggilanScreenProps) {
             onClick={() => setIsEditing(true)}
           >
             <span className="font-bold text-[15px] text-slate-800 tracking-wide uppercase">{name}</span>
-            <button className="text-[#3FA2F6]">
+            <button className="text-slate-800">
               <Pencil size={20} />
             </button>
           </div>
         ) : (
           <div className="flex flex-col flex-1 w-full relative">
-            <div className="w-full border border-slate-300 rounded-xl px-4 py-2 relative bg-white focus-within:border-[#3FA2F6] focus-within:ring-1 focus-within:ring-[#3FA2F6] transition-all group">
-              <label className="text-[12px] font-medium text-slate-500 group-focus-within:text-[#3FA2F6] transition-colors">Nickname</label>
+            <div className="w-full border border-slate-300 rounded-xl px-4 py-2 relative bg-white focus-within:border-slate-900 focus-within:ring-1 focus-within:ring-slate-900 transition-all group">
+              <label className="text-[12px] font-medium text-slate-500 group-focus-within:text-slate-800 transition-colors">Nickname</label>
               <div className="flex items-center">
                 <input 
                   type="text"
@@ -86,7 +86,7 @@ export function NamaPanggilanScreen({ onBack }: NamaPanggilanScreenProps) {
               <span className="text-[12px] text-slate-500 font-medium">{name.length}/16</span>
               <button 
                 onClick={() => setName('RAKYAN INUKERTAPATI')}
-                className="w-max mt-3 border border-[#3FA2F6] text-[#3FA2F6] px-3 py-1.5 rounded-full text-[12px] font-bold hover:bg-blue-50 transition-colors"
+                className="w-max mt-3 border border-slate-900 text-slate-800 px-3 py-1.5 rounded-full text-[12px] font-bold hover:bg-slate-100 transition-colors"
               >
                 Use Full Name
               </button>

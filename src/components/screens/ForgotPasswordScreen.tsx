@@ -17,13 +17,13 @@ export function ForgotPasswordScreen({ onBack }: ForgotPasswordScreenProps) {
   return (
     <div className="w-full h-full bg-white relative flex flex-col justify-between overflow-hidden z-50">
       {/* Top Graphic Area */}
-      <div className="relative h-[45%] bg-gradient-to-b from-[#3FA2F6] to-blue-600 rounded-b-[40px] flex flex-col justify-center items-center px-6 overflow-hidden shrink-0 shadow-lg">
+      <div className="relative h-[45%] bg-gradient-to-b from-slate-800 to-slate-900 rounded-b-[40px] flex flex-col justify-center items-center px-6 overflow-hidden shrink-0 shadow-lg">
         {/* Abstract Background Elements */}
         <div className="absolute top-[-20%] right-[-10%] w-[120%] h-[120%] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-white/20 via-transparent to-transparent opacity-50 blur-2xl pointer-events-none"></div>
         <div className="absolute top-10 left-10 w-24 h-24 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
         <div className="absolute bottom-10 right-10 w-32 h-32 bg-blue-400/20 rounded-full blur-2xl pointer-events-none"></div>
         
-        <h1 className="text-2xl font-bold text-white tracking-tight mb-1 text-center drop-shadow-sm">Reset Password</h1>
+        <h1 className="text-2xl font-bold text-slate-800 tracking-tight mb-1 text-center drop-shadow-sm">Reset Password</h1>
         <p className="text-blue-100 text-center text-[13px] font-medium px-6 leading-relaxed">
           {isSent ? "Periksa email Anda untuk instruksi pemulihan." : "Masukkan email terdaftar Anda untuk menerima tautan reset."}
         </p>
@@ -68,7 +68,7 @@ export function ForgotPasswordScreen({ onBack }: ForgotPasswordScreenProps) {
                      placeholder="Alamat Email"
                      value={email}
                      onChange={(e) => setEmail(e.target.value)}
-                     className="w-full bg-[#f8fafc] border-[1.5px] border-slate-200 focus:border-[#3FA2F6] rounded-2xl py-4 px-5 pl-12 text-slate-800 text-[15px] font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-100/50 shadow-sm transition-all"
+                     className="w-full bg-[#f8fafc] border-[1.5px] border-slate-200 focus:border-slate-900 rounded-2xl py-4 px-5 pl-12 text-slate-800 text-[15px] font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-100/50 shadow-sm transition-all"
                   />
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                      <Mail size={20} strokeWidth={2} />
@@ -79,7 +79,7 @@ export function ForgotPasswordScreen({ onBack }: ForgotPasswordScreenProps) {
                   onClick={email.length > 0 ? handleReset : undefined}
                   className={`w-full font-bold text-[15px] py-4 rounded-2xl transition-all duration-300 flex justify-center items-center gap-2 border-0 active:scale-[0.98]
                      ${email.length > 0 
-                     ? 'bg-[#3FA2F6] text-white shadow-[0_8px_20px_rgba(63,162,246,0.25)] hover:bg-[#2b88d8]' 
+                     ? 'bg-slate-900 text-white shadow-[0_8px_20px_rgba(63,162,246,0.25)] hover:bg-slate-800' 
                      : 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'}`}
                   >
                   Kirim Tautan Reset

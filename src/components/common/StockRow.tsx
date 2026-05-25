@@ -26,7 +26,7 @@ export const StockRow = React.memo(function StockRow({ code, name, price, change
   return (
     <div className="flex justify-between items-center py-2 border-b border-slate-50 last:border-0 hover:bg-slate-50 rounded-lg -mx-2 px-2 transition-colors cursor-pointer group">
       <div className="flex gap-3 items-center">
-        <div className="w-8 h-8 rounded-full bg-blue-50 text-[#3FA2F6] flex justify-center items-center text-xs font-bold border border-blue-100">
+        <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-800 flex justify-center items-center text-xs font-bold border border-slate-200">
            {code.substring(0, 1)}
         </div>
         <div className="text-left">

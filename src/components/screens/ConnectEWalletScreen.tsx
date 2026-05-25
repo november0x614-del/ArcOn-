@@ -3,7 +3,7 @@ import { ArrowLeft, Wallet } from 'lucide-react';
 
 const EWALLETS = [
   { id: 'gopay', name: 'GoPay', iconColor: 'text-green-500', isConnected: true, balance: 'Rp 125.000' },
-  { id: 'dana', name: 'DANA', iconColor: 'text-blue-500', isConnected: false },
+  { id: 'dana', name: 'DANA', iconColor: 'text-slate-600', isConnected: false },
   { id: 'shopeepay', name: 'ShopeePay', iconColor: 'text-orange-500', isConnected: false },
   { id: 'linkaja', name: 'LinkAja', iconColor: 'text-red-600', isConnected: false },
   { id: 'ovo', name: 'OVO', iconColor: 'text-purple-600', isConnected: false },
@@ -31,7 +31,7 @@ export function ConnectEWalletScreen({ onBack }: { onBack: () => void }) {
       {/* Header */}
       <div className="flex items-center justify-center relative py-4 shrink-0 bg-white shadow-sm z-10">
         <button onClick={onBack} className="absolute left-4 p-1 hover:bg-slate-50 rounded-full transition-colors">
-          <ArrowLeft size={24} className="text-slate-700" />
+          <ArrowLeft size={20} className="text-white" />
         </button>
         <h2 className="font-bold text-[16px] text-slate-800">Connect Asset Wallet</h2>
       </div>
@@ -68,7 +68,7 @@ export function ConnectEWalletScreen({ onBack }: { onBack: () => void }) {
               ) : (
                  <button 
                    onClick={() => handleConnect(wallet.id)}
-                   className="text-[12px] font-bold text-[#3FA2F6] px-3 py-1.5 bg-blue-50/70 rounded-full flex items-center gap-1 hover:bg-blue-100 transition-colors"
+                   className="text-[12px] font-bold text-slate-800 px-3 py-1.5 bg-slate-100/70 rounded-full flex items-center gap-1 hover:bg-slate-200 transition-colors"
                  >
                    Connect
                  </button>

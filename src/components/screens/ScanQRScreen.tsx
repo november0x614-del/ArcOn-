@@ -42,17 +42,17 @@ export function ScanQRScreen({ onBack, onScanResult }: ScanQRScreenProps) {
              }}
           >
              {/* Reticle brackets */}
-             <div className="absolute top-0 left-0 w-12 h-12 border-t-8 border-l-8 border-[#3FA2F6] rounded-tl-3xl opacity-80 group-hover:opacity-100 transition-opacity"></div>
-             <div className="absolute top-0 right-0 w-12 h-12 border-t-8 border-r-8 border-[#3FA2F6] rounded-tr-3xl opacity-80 group-hover:opacity-100 transition-opacity"></div>
-             <div className="absolute bottom-0 left-0 w-12 h-12 border-b-8 border-l-8 border-[#3FA2F6] rounded-bl-3xl opacity-80 group-hover:opacity-100 transition-opacity"></div>
-             <div className="absolute bottom-0 right-0 w-12 h-12 border-b-8 border-r-8 border-[#3FA2F6] rounded-br-3xl opacity-80 group-hover:opacity-100 transition-opacity"></div>
+             <div className="absolute top-0 left-0 w-12 h-12 border-t-8 border-l-8 border-slate-900 rounded-tl-3xl opacity-80 group-hover:opacity-100 transition-opacity"></div>
+             <div className="absolute top-0 right-0 w-12 h-12 border-t-8 border-r-8 border-slate-900 rounded-tr-3xl opacity-80 group-hover:opacity-100 transition-opacity"></div>
+             <div className="absolute bottom-0 left-0 w-12 h-12 border-b-8 border-l-8 border-slate-900 rounded-bl-3xl opacity-80 group-hover:opacity-100 transition-opacity"></div>
+             <div className="absolute bottom-0 right-0 w-12 h-12 border-b-8 border-r-8 border-slate-900 rounded-br-3xl opacity-80 group-hover:opacity-100 transition-opacity"></div>
 
              {/* Dark overlay outside reticle effect logic using box-shadow inner isn't as good, we leave center clear */}
              <div className="absolute inset-2 border-2 border-white/10 rounded-2xl"></div>
 
              {/* Scanning line animation */}
              {scanning && (
-               <div className="w-[90%] h-[2px] bg-[#3FA2F6] shadow-[0_0_15px_4px_#3FA2F6] absolute top-1/2 left-[5%] -translate-y-1/2 animate-[scan_2.5s_ease-in-out_infinite]"></div>
+               <div className="w-[90%] h-[2px] bg-slate-900 shadow-[0_0_15px_4px_#0f172a] absolute top-1/2 left-[5%] -translate-y-1/2 animate-[scan_2.5s_ease-in-out_infinite]"></div>
              )}
 
              {!scanning && (
@@ -72,7 +72,7 @@ export function ScanQRScreen({ onBack, onScanResult }: ScanQRScreenProps) {
 
        <div className="p-5 pb-8 bg-slate-900 rounded-t-[32px] border-t border-slate-800">
           <div className="bg-slate-800/80 rounded-2xl p-4 flex gap-4 items-center mb-1">
-             <div className="w-10 h-10 bg-[#3FA2F6]/20 rounded-full flex items-center justify-center text-[#3FA2F6] shrink-0">
+             <div className="w-10 h-10 bg-slate-900/20 rounded-full flex items-center justify-center text-slate-800 shrink-0">
                 <Zap size={20} />
              </div>
              <div className="flex-1">

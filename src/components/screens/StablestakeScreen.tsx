@@ -26,16 +26,13 @@ export function StablestakeScreen({ onBack }: StablestakeScreenProps) {
   return (
     <div className="w-full h-full bg-slate-50 relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
       {/* Header */}
-      <div className="flex items-center px-4 pt-12 pb-4 bg-white border-b border-slate-100 shadow-sm relative z-10 w-full">
-        <button
-          onClick={onBack}
-          className="p-2 hover:bg-slate-100 rounded-full transition-colors active:bg-slate-200"
-        >
-          <ArrowLeft size={24} className="text-slate-800" />
-        </button>
-        <h2 className="font-bold text-[16px] text-slate-800 ml-2">
-          StableStake Vault
-        </h2>
+      <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between">
+        <div className="flex items-center">
+          <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent">
+            <ArrowLeft size={20} className="text-white" />
+          </button>
+          <h2 className="font-bold text-[16px] text-white ml-2">STABLESTAKE</h2>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto pb-24 p-5 flex flex-col pt-6 w-full scrollbar-hide relative bg-white">
@@ -47,7 +44,7 @@ export function StablestakeScreen({ onBack }: StablestakeScreenProps) {
             <h3 className="font-bold text-[18px] text-slate-800 leading-tight font-sans">
               StableStake Vault
             </h3>
-            <p className="text-[12px] text-[#3FA2F6] font-bold font-sans">
+            <p className="text-[12px] text-slate-800 font-bold font-sans">
               Arc Network L1 Simulation
             </p>
           </div>
@@ -115,7 +112,7 @@ export function StablestakeScreen({ onBack }: StablestakeScreenProps) {
                   type="number"
                   value={stakeAmountInput}
                   onChange={(e) => setStakeAmountInput(e.target.value)}
-                  className="w-full bg-white border border-slate-200 rounded-2xl pl-4 pr-12 py-3.5 text-[16px] font-mono font-bold text-slate-800 focus:outline-none focus:border-[#3FA2F6] focus:ring-2 focus:ring-blue-100 transition-all shadow-sm"
+                  className="w-full bg-white border border-slate-200 rounded-2xl pl-4 pr-12 py-3.5 text-[16px] font-mono font-bold text-slate-800 focus:outline-none focus:border-slate-900 focus:ring-2 focus:ring-blue-100 transition-all shadow-sm"
                   placeholder="0.00"
                 />
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[12px] font-bold text-slate-400">

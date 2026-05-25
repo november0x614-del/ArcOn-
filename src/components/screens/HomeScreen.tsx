@@ -50,7 +50,8 @@ export const HomeScreen = React.memo(({
     visibleTokenCodes,
     setVisibleTokenCodes,
     fetchTransactions,
-    readReceiptIds
+    readReceiptIds,
+    displayToast
   } = useApp();
 
   const unreadCount = transactions.filter((tx) => !readReceiptIds.includes(tx.id)).length;
@@ -289,12 +290,12 @@ export const HomeScreen = React.memo(({
   return (
     <div className="flex flex-col h-full bg-[#ecf5fc] font-sans relative overflow-hidden">
       {/* Background shape that covers the top half */}
-      <div className="absolute top-0 left-0 right-0 h-[40vh] md:h-[450px] bg-[#3FA2F6] rounded-b-[40px] md:rounded-b-[50px] z-0"></div>
+      <div className="absolute top-0 left-0 right-0 h-[40vh] md:h-[450px] bg-slate-900 rounded-b-[40px] md:rounded-b-[50px] z-0"></div>
 
       {/* Top Header */}
       <header className="relative text-white px-5 md:px-8 lg:px-10 pt-4 md:pt-8 pb-3 flex justify-between items-center z-20 shrink-0">
         <div className="flex items-center gap-3 cursor-pointer">
-          <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-[#3FA2F6] font-[900] text-lg shadow-sm uppercase">
+          <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-slate-800 font-[900] text-lg shadow-sm uppercase">
             {userName
               ? userName
                   .split(" ")
@@ -304,7 +305,7 @@ export const HomeScreen = React.memo(({
               : "UN"}
           </div>
           <div className="flex flex-col">
-            <h1 className="font-bold text-[15px] tracking-wide relative after:content-[''] after:absolute after:right-[-20px] after:top-0 after:bottom-0 after:w-8 after:bg-gradient-to-r after:from-transparent after:to-[#3FA2F6]">
+            <h1 className="font-bold text-[15px] tracking-wide relative after:content-[''] after:absolute after:right-[-20px] after:top-0 after:bottom-0 after:w-8 after:bg-gradient-to-r after:from-transparent after:to-slate-800">
               {userName
                 ? (userName.length > 18
                     ? userName.slice(0, 15) + "..."
@@ -349,7 +350,7 @@ export const HomeScreen = React.memo(({
                     onClick={() => setActiveRekeningTab(i)}
                     className={`px-4 pb-2 flex items-center justify-center gap-2 whitespace-nowrap min-w-max cursor-pointer transition-colors relative ${
                       activeRekeningTab === i
-                        ? "text-[#3FA2F6] font-bold"
+                        ? "text-slate-800 font-bold"
                         : "text-slate-500 hover:text-slate-800"
                     }`}
                   >
@@ -358,7 +359,7 @@ export const HomeScreen = React.memo(({
                     {activeRekeningTab === i && (
                       <motion.div
                         layoutId="activeTabIndicator"
-                        className="absolute bottom-[-1px] left-0 right-0 h-[3px] bg-[#3FA2F6] rounded-t-full z-10"
+                        className="absolute bottom-[-1px] left-0 right-0 h-[3px] bg-slate-900 rounded-t-full z-10"
                         transition={{
                           type: "spring",
                           stiffness: 500,
@@ -384,7 +385,7 @@ export const HomeScreen = React.memo(({
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.2 }}
-                    className="bg-gradient-to-br from-blue-50 to-white rounded-2xl p-5 text-slate-800 shadow-sm relative overflow-hidden mb-3 cursor-pointer hover:shadow-md transition-all active:scale-[0.98] border border-blue-100"
+                    className="bg-gradient-to-br from-blue-50 to-white rounded-2xl p-5 text-slate-800 shadow-sm relative overflow-hidden mb-3 cursor-pointer hover:shadow-md transition-all active:scale-[0.98] border border-slate-200"
                     onClick={() => onNavigate("ecommerce")}
                   >
                     <div className="flex justify-between items-center z-10 relative">
@@ -396,16 +397,16 @@ export const HomeScreen = React.memo(({
                           Shop premium products with USDC
                         </p>
                         <div className="flex items-center gap-2 mt-3">
-                          <span className="text-[11px] font-bold text-[#005faa] bg-blue-100 px-2 py-0.5 rounded">
+                          <span className="text-[11px] font-bold text-slate-800 bg-blue-100 px-2 py-0.5 rounded">
                             E-commerce ready
                           </span>
                         </div>
                       </div>
                       <ShoppingBag
                         size={48}
-                        className="text-[#005faa] opacity-10 absolute -right-2 top-0"
+                        className="text-slate-800 opacity-10 absolute -right-2 top-0"
                       />
-                      <ChevronRight size={20} className="text-[#3FA2F6]" />
+                      <ChevronRight size={20} className="text-slate-800" />
                     </div>
                   </motion.div>
                 )}
@@ -426,7 +427,7 @@ export const HomeScreen = React.memo(({
                         <h3 className="font-bold text-[16px] text-slate-800 flex items-center gap-1.5 leading-snug">
                           <Zap
                             size={18}
-                            className="text-[#3FA2F6] animate-pulse"
+                            className="text-slate-800 animate-pulse"
                           />
                           Simulasi Alur Transaksi Arc Commerce
                         </h3>
@@ -451,7 +452,7 @@ export const HomeScreen = React.memo(({
                             <select
                               value={simProduct}
                               onChange={(e) => setSimProduct(e.target.value)}
-                              className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-[12.5px] font-semibold text-slate-700 outline-none focus:border-[#3FA2F6] cursor-pointer"
+                              className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-[12.5px] font-semibold text-slate-700 outline-none focus:border-slate-900 cursor-pointer"
                             >
                               <option value="Kredit Server L1">
                                 Kredit Server L1
@@ -475,7 +476,7 @@ export const HomeScreen = React.memo(({
                               type="number"
                               value={simAmount}
                               onChange={(e) => setSimAmount(e.target.value)}
-                              className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-[12.5px] font-mono font-semibold text-slate-700 outline-none focus:border-[#3FA2F6]"
+                              className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-[12.5px] font-mono font-semibold text-slate-700 outline-none focus:border-slate-900"
                               placeholder="25"
                               min="1"
                             />
@@ -514,7 +515,7 @@ export const HomeScreen = React.memo(({
 
                         <button
                           onClick={startSimulation}
-                          className="w-full bg-[#3FA2F6] hover:bg-[#328fdc] text-white font-bold py-2.5 rounded-xl text-[13.5px] transition-all flex items-center justify-center gap-2 border-0 shadow-sm cursor-pointer"
+                          className="w-full bg-slate-900 hover:bg-[#328fdc] text-white font-bold py-2.5 rounded-xl text-[13.5px] transition-all flex items-center justify-center gap-2 border-0 shadow-sm cursor-pointer"
                         >
                           <Zap size={14} /> Mulai Simulasi Transaksi L1
                         </button>
@@ -539,7 +540,7 @@ export const HomeScreen = React.memo(({
 
                             {/* Dynamic colored connector line based on current step */}
                             <div
-                              className="absolute left-4 top-4 w-[2px] bg-blue-500 z-0 transition-all duration-300"
+                              className="absolute left-4 top-4 w-[2px] bg-slate-1000 z-0 transition-all duration-300"
                               style={{
                                 height: `${((simStep - 1) / 5) * 88}%`,
                                 maxHeight: "100%",
@@ -607,7 +608,7 @@ export const HomeScreen = React.memo(({
                                       isCompleted
                                         ? "bg-emerald-500 border-emerald-500 text-white"
                                         : isActive
-                                          ? "bg-blue-100 border-[#3FA2F6] text-[#3FA2F6] animate-pulse ring-4 ring-blue-50"
+                                          ? "bg-blue-100 border-slate-900 text-slate-800 animate-pulse ring-4 ring-blue-50"
                                           : "bg-white border-slate-200 text-slate-400"
                                     }`}
                                   >
@@ -622,7 +623,7 @@ export const HomeScreen = React.memo(({
                                   <div className="flex-1">
                                     <div className="flex items-center gap-2 flex-wrap">
                                       <p
-                                        className={`text-[12.5px] font-bold ${isActive ? "text-blue-600" : isCompleted ? "text-emerald-700" : "text-slate-700"} font-sans`}
+                                        className={`text-[12.5px] font-bold ${isActive ? "text-slate-800" : isCompleted ? "text-emerald-700" : "text-slate-700"} font-sans`}
                                       >
                                         {node.label}
                                       </p>
@@ -672,8 +673,8 @@ export const HomeScreen = React.memo(({
                           })}
 
                           {simStatus === "running" && (
-                            <div className="text-[#3FA2F6] flex items-center gap-1.5 animate-pulse mt-1 select-none font-sans text-[11px]">
-                              <span className="w-1.5 h-1.5 bg-[#3FA2F6] rounded-full animate-ping"></span>
+                            <div className="text-slate-800 flex items-center gap-1.5 animate-pulse mt-1 select-none font-sans text-[11px]">
+                              <span className="w-1.5 h-1.5 bg-slate-900 rounded-full animate-ping"></span>
                               Memproses transaksional... server bekerja asinkron
                             </div>
                           )}
@@ -714,7 +715,7 @@ export const HomeScreen = React.memo(({
                                     setSimStatus("running");
                                   }
                                 }}
-                                className={`flex-1 ${simStatus === "running" ? "bg-amber-500 hover:bg-amber-600" : "bg-[#3FA2F6] hover:bg-[#328fdc]"} text-white font-bold py-2 px-3 rounded-lg text-[13px] border-0 cursor-pointer transition-colors`}
+                                className={`flex-1 ${simStatus === "running" ? "bg-amber-500 hover:bg-amber-600" : "bg-slate-900 hover:bg-[#328fdc]"} text-white font-bold py-2 px-3 rounded-lg text-[13px] border-0 cursor-pointer transition-colors`}
                               >
                                 {simStatus === "running"
                                   ? "Pause Auto-Play"
@@ -748,7 +749,7 @@ export const HomeScreen = React.memo(({
 
               <button
                 onClick={() => onNavigate("otherAccounts")}
-                className="w-full text-center text-[#3FA2F6] text-[12px] font-bold mt-1 py-1.5 hover:bg-blue-50 rounded-lg transition-colors flex justify-center items-center gap-1.5 opacity-90 border-0 bg-transparent"
+                className="w-full text-center text-slate-800 text-[12px] font-bold mt-1 py-1.5 hover:bg-slate-100 rounded-lg transition-colors flex justify-center items-center gap-1.5 opacity-90 border-0 bg-transparent"
               >
                 Other Personal Savings & Checking <PlusCircleIcon size={14} />
               </button>
@@ -756,12 +757,12 @@ export const HomeScreen = React.memo(({
 
             {/* Favorite Transactions Section */}
             <section className="bg-white rounded-[24px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] mb-3 lg:mb-0 mx-4 lg:mx-0 border border-slate-50/50">
-              <div className="flex justify-between items-center mb-3">
+              <div className="flex justify-between items-center mb-4">
                 <h2 className="text-[17px] font-bold text-slate-800 tracking-tight">
                   Favorite Transactions
                 </h2>
                 <button
-                  className="text-[#3FA2F6] text-[13px] font-semibold flex items-center gap-1.5 hover:bg-blue-50 px-2 py-1 rounded-full transition-colors border-0 bg-transparent"
+                  className="text-slate-800 text-[13px] font-semibold flex items-center gap-1.5 hover:bg-slate-100 px-2 py-1 rounded-full transition-colors border-0 bg-transparent"
                   onClick={() => onNavigate("manageFavorites")}
                 >
                   Manage <Settings2 size={14} strokeWidth={1.5} />
@@ -790,7 +791,7 @@ export const HomeScreen = React.memo(({
                         if (item.label === "Request Payment")
                           onNavigate("receive");
                         if (item.label === "Pay with USDC") onNavigate("scanQR");
-                        if (item.label === "Swap Token") onNavigate("swap");
+                        if (item.label === "Native Wallet Swap") onNavigate("swap");
                         if (item.label === "Deposit/Withdraw")
                           onNavigate("depositOptions");
                         if (item.label === "Top-up") onNavigate("topup");
@@ -819,7 +820,7 @@ export const HomeScreen = React.memo(({
                 {/* Tooltip triangle */}
                 <div className="absolute -top-2 right-10 w-4 h-4 bg-indigo-50 border-l border-t border-indigo-100 rotate-45"></div>
                 <div className="flex items-center gap-3">
-                  <div className="bg-white p-2 rounded-lg text-[#3FA2F6] shrink-0 border border-indigo-50 shadow-sm">
+                  <div className="bg-white p-2 rounded-lg text-slate-800 shrink-0 border border-indigo-50 shadow-sm">
                     <Bot size={18} />
                   </div>
                   <div className="flex flex-col text-left">
@@ -831,7 +832,7 @@ export const HomeScreen = React.memo(({
                     </span>
                   </div>
                 </div>
-                <div className="bg-white rounded-full p-1 shadow-sm text-[#3FA2F6] shrink-0 border border-indigo-50">
+                <div className="bg-white rounded-full p-1 shadow-sm text-slate-800 shrink-0 border border-indigo-50">
                   <ChevronRight size={14} />
                 </div>
               </div>
@@ -855,7 +856,7 @@ export const HomeScreen = React.memo(({
                   <h3 className="font-bold text-[15px] leading-tight w-2/3 relative z-10">
                     Opening a Checking Account is Easier...
                   </h3>
-                  <button className="mt-3 bg-white text-[#005faa] text-xs font-bold px-3 py-1.5 rounded-lg w-max relative z-10 border-0">
+                  <button className="mt-3 bg-white text-slate-800 text-xs font-bold px-3 py-1.5 rounded-lg w-max relative z-10 border-0">
                     Open Now
                   </button>
                 </div>
@@ -890,7 +891,7 @@ export const HomeScreen = React.memo(({
                 {[0, 1, 2, 3].map((index) => (
                   <div
                     key={index}
-                    className={`h-1.5 rounded-full transition-all duration-300 ${currentPromoIndex === index ? "w-5 bg-[#3FA2F6]" : "w-1.5 bg-slate-200"}`}
+                    className={`h-1.5 rounded-full transition-all duration-300 ${currentPromoIndex === index ? "w-5 bg-slate-900" : "w-1.5 bg-slate-200"}`}
                   ></div>
                 ))}
               </div>
@@ -904,7 +905,7 @@ export const HomeScreen = React.memo(({
             <section className="bg-white rounded-[24px] p-5 shadow-sm mb-4 lg:mb-0 mx-4 lg:mx-0 text-left">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-[17px] font-bold text-slate-800 tracking-tight font-sans">
-                  Arc Ecosystem
+                  External DApps
                 </h2>
                 <button className="text-slate-400 hover:text-slate-600 transition-colors bg-transparent border-0 p-1">
                   <Search size={18} strokeWidth={2.5} />
@@ -914,7 +915,10 @@ export const HomeScreen = React.memo(({
               <div className="flex flex-col gap-3">
                 {/* ArcSwap */}
                 <div
-                  onClick={() => onNavigate("arcswap")}
+                  onClick={() => {
+                    // Show a toast message to simulate opening an external browser
+                    displayToast("Membuka external web browser ke ArcSwap...");
+                  }}
                   className="flex items-center gap-3.5 p-3 rounded-2xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-all active:scale-[0.98]"
                 >
                   <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-white shrink-0 shadow-sm">
@@ -1003,13 +1007,13 @@ export const HomeScreen = React.memo(({
                 </div>
                 <button 
                   onClick={() => setShowManageMarketModal(true)}
-                  className="text-[#3FA2F6] text-[13px] font-semibold flex items-center gap-1.5 hover:bg-blue-50 px-2 py-1 rounded-full transition-colors border-0 bg-transparent"
+                  className="text-slate-800 text-[13px] font-semibold flex items-center gap-1.5 hover:bg-slate-100 px-2 py-1 rounded-full transition-colors border-0 bg-transparent"
                 >
                   Manage <Settings2 size={14} strokeWidth={1.5} />
                 </button>
               </div>
 
-              <div className="flex items-center gap-2 mb-4 text-[#3FA2F6] font-bold text-sm bg-blue-50 px-3 py-1.5 rounded-lg w-fit">
+              <div className="flex items-center gap-2 mb-4 text-slate-800 font-bold text-sm bg-slate-100 px-3 py-1.5 rounded-lg w-fit">
                 <TrendingUp size={16} /> Volume
               </div>
 
@@ -1044,13 +1048,13 @@ export const HomeScreen = React.memo(({
                 <ProductCard
                   title="Merchant"
                   desc="On-chain USDC integration."
-                  icon={<Box size={20} className="text-blue-500" />}
+                  icon={<Box size={20} className="text-slate-600" />}
                   onClick={() => onNavigate("merchant")}
                 />
                 <ProductCard
                   title="Testnet Faucet"
                   desc="Claim ARC Gas Token."
-                  icon={<Coins size={20} className="text-blue-500" />}
+                  icon={<Coins size={20} className="text-slate-600" />}
                   onClick={() => onNavigate("faucet")}
                 />
               </div>
@@ -1107,8 +1111,8 @@ export const HomeScreen = React.memo(({
             className="relative group cursor-pointer flex flex-col items-center justify-center"
             onClick={() => onNavigate("scanQR")}
           >
-            <div className="absolute inset-0 bg-[#3FA2F6] rounded-[22px] blur-md opacity-40 group-hover:opacity-60 transition-opacity"></div>
-            <div className="relative w-[56px] h-[56px] bg-[#3FA2F6] rounded-[22px] flex flex-col items-center justify-center text-white shadow-lg transform transition-all duration-300 group-hover:-translate-y-1 active:translate-y-0 border-2 border-white/20 hover:bg-[#328fdc]">
+            <div className="absolute inset-0 bg-slate-900 rounded-[22px] blur-md opacity-40 group-hover:opacity-60 transition-opacity"></div>
+            <div className="relative w-[56px] h-[56px] bg-slate-900 rounded-[22px] flex flex-col items-center justify-center text-white shadow-lg transform transition-all duration-300 group-hover:-translate-y-1 active:translate-y-0 border-2 border-white/20 hover:bg-[#328fdc]">
               <Scan size={26} strokeWidth={2.2} />
               <span className="text-[9px] font-bold mt-0.5 tracking-tight uppercase">
                 Pay
@@ -1186,11 +1190,11 @@ export const HomeScreen = React.memo(({
               {marketTokens.map((token) => (
                 <div 
                   key={token.code}
-                  className="flex items-center justify-between p-4 bg-slate-50 hover:bg-blue-50/50 rounded-2xl cursor-pointer transition-all active:scale-[0.98] group border border-slate-100"
+                  className="flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100/50 rounded-2xl cursor-pointer transition-all active:scale-[0.98] group border border-slate-100"
                   onClick={() => toggleTokenVisibility(token.code)}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm font-black text-[#3FA2F6] text-xs border border-blue-50">
+                    <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm font-black text-slate-800 text-xs border border-blue-50">
                       {token.code.slice(0, 2)}
                     </div>
                     <div className="flex flex-col">
@@ -1198,7 +1202,7 @@ export const HomeScreen = React.memo(({
                       <span className="text-[10px] text-slate-400 font-medium">{token.name}</span>
                     </div>
                   </div>
-                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${visibleTokenCodes.includes(token.code) ? 'bg-[#3FA2F6] text-white shadow-lg shadow-blue-200' : 'bg-white border-2 border-slate-200 text-transparent'}`}>
+                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${visibleTokenCodes.includes(token.code) ? 'bg-slate-900 text-white shadow-lg shadow-blue-200' : 'bg-white border-2 border-slate-200 text-transparent'}`}>
                     <Check size={14} strokeWidth={4} />
                   </div>
                 </div>
@@ -1207,7 +1211,7 @@ export const HomeScreen = React.memo(({
 
             <button
               onClick={() => setShowManageMarketModal(false)}
-              className="w-full bg-[#3FA2F6] text-white font-black py-4 rounded-2xl text-[14px] transition-all hover:bg-[#328fdc] active:scale-[0.95] mt-8 shadow-xl shadow-blue-500/20"
+              className="w-full bg-slate-900 text-white font-black py-4 rounded-2xl text-[14px] transition-all hover:bg-[#328fdc] active:scale-[0.95] mt-8 shadow-xl shadow-blue-500/20"
             >
               Simpan Konfigurasi
             </button>
