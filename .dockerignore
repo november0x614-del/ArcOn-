@@ -1,0 +1,9 @@
+node_modules
+dist
+build
+.git
+.env*
+contracts
+supabase_setup.sql
+README.md
+vendor
