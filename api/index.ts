@@ -466,6 +466,11 @@ app.post("/api/chat", async (req, res) => {
       }
     });
     
+    // Safely format history array to prevent conversion errors
+    const historyText = Array.isArray(history) 
+      ? history.map((msg: any) => `${msg.sender}: ${msg.text}`).join('\n')
+      : 'No message history available.';
+    
     const contents = `
 You are Arc AI Agent, a helpful virtual assistant for Arc Commerce and Arc Testnet Wallet.
 You help users with USDC transactions on Arc Testnet, wallet management, checking transaction history (simulated context), and troubleshooting web3 payments.
@@ -474,7 +479,7 @@ System State / Local Context (Latest data):
 ${localContext || 'No current state context available.'}
 
 User History Context:
-${history.map((msg: any) => `${msg.sender}: ${msg.text}`).join('\n')}
+${historyText}
 
 New User Message: ${message}
 
