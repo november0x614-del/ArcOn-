@@ -115,6 +115,55 @@ export default function App() {
     if (registeredUser?.supabaseUid) {
       fetchBalance();
       fetchTransactions();
+
+      const txSubscription = supabase
+        .channel('user-transactions')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'transactions',
+            filter: `user_id=eq.${registeredUser.supabaseUid}`,
+          },
+          (payload) => {
+            useStore.getState().addLog(`Real-time update received for transaction: ${payload.eventType}`);
+            fetchBalance();
+            fetchTransactions();
+          }
+        )
+        .subscribe((status) => {
+           if(status === 'SUBSCRIBED') {
+             useStore.getState().addLog('Real-time sync ready for transactions');
+           }
+        });
+
+      const balanceSubscription = supabase
+        .channel('user-balances')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'balances',
+            filter: `user_id=eq.${registeredUser.supabaseUid}`,
+          },
+          (payload) => {
+            useStore.getState().addLog(`Real-time update received for balance: ${payload.eventType}`);
+            fetchBalance();
+            fetchTransactions();
+          }
+        )
+        .subscribe((status) => {
+           if(status === 'SUBSCRIBED') {
+             useStore.getState().addLog('Real-time sync ready for balances');
+           }
+        });
+
+      return () => {
+        supabase.removeChannel(txSubscription);
+        supabase.removeChannel(balanceSubscription);
+      };
     }
   }, [registeredUser?.supabaseUid, fetchBalance, fetchTransactions]);
 
