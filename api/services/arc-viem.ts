@@ -24,6 +24,19 @@ export function getBackendWallet() {
   return { account, walletClient };
 }
 
+export function getWalletFromPrivateKey(pk: string) {
+  if (!pk) return null;
+  const formattedPk = (pk.startsWith('0x') ? pk : `0x${pk}`) as `0x${string}`;
+  const account = privateKeyToAccount(formattedPk);
+  
+  const walletClient = createWalletClient({
+    account,
+    transport: http(ARC_RPC_URL)
+  });
+  
+  return { account, walletClient };
+}
+
 export async function getArcBalances(address: string) {
   try {
     // Read native balance (USDC as gas, 18 decimals)
@@ -53,9 +66,9 @@ export async function getArcBalances(address: string) {
   }
 }
 
-export async function sendArcTransaction(destination: string, amountBase: string) {
-  const wallet = getBackendWallet();
-  if (!wallet) throw new Error("No backend private key configured for real-time EVM transactions.");
+export async function sendArcTransaction(destination: string, amountBase: string, userPrivateKey?: string) {
+  const wallet = userPrivateKey ? getWalletFromPrivateKey(userPrivateKey) : getBackendWallet();
+  if (!wallet) throw new Error("No private key configured for real-time EVM transactions.");
   
   // We send native USDC on Arc Testnet
   const amountToWei = parseUnits(amountBase, 18); // Native transfer uses 18 decimals

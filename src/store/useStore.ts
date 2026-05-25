@@ -70,6 +70,15 @@ interface AppState {
   setSourceAccount: (account: SourceAccount) => void;
   logs: string[];
   addLog: (log: string) => void;
+  
+  // Hybrid Wallet State
+  selectedWalletType: 'developer' | 'user';
+  setSelectedWalletType: (type: 'developer' | 'user') => void;
+  userControlledPrivateKey: string | null;
+  setUserControlledPrivateKey: (pk: string | null) => void;
+  userControlledAddress: string;
+  setUserControlledAddress: (addr: string) => void;
+
   resetState: () => void;
 }
 
@@ -100,7 +109,11 @@ export const useStore = create<AppState>()(
         if (!user?.supabaseUid) return;
         
         try {
-          const url = `/api/balance/${user.supabaseUid}`;
+          const state = useStore.getState();
+          let url = `/api/balance/${user.supabaseUid}`;
+          if (state.selectedWalletType === 'user' && state.userControlledAddress) {
+            url += `?walletType=user&customAddress=${state.userControlledAddress}`;
+          }
           useStore.getState().addLog(`Fetching balance: GET ${url}`);
           const response = await fetch(url);
           if (!response.ok) {
@@ -262,6 +275,25 @@ export const useStore = create<AppState>()(
       setSourceAccount: (account) => set({ sourceAccount: account }),
       logs: [],
       addLog: (log) => set((state) => ({ logs: [...state.logs.slice(-49), `[${new Date().toLocaleTimeString()}] ${log}`] })),
+      
+      // Hybrid Wallet Initial values
+      selectedWalletType: 'developer',
+      setSelectedWalletType: (type) => set({ selectedWalletType: type }),
+      userControlledPrivateKey: localStorage.getItem('arc_user_controlled_pk'),
+      setUserControlledPrivateKey: (pk) => {
+        if (pk) {
+          localStorage.setItem('arc_user_controlled_pk', pk);
+        } else {
+          localStorage.removeItem('arc_user_controlled_pk');
+        }
+        set({ userControlledPrivateKey: pk });
+      },
+      userControlledAddress: localStorage.getItem('arc_user_controlled_addr') || '',
+      setUserControlledAddress: (addr) => {
+        localStorage.setItem('arc_user_controlled_addr', addr);
+        set({ userControlledAddress: addr });
+      },
+      
       resetState: () => set({
         viewState: 'splash',
         registeredUser: null,

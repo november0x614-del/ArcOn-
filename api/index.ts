@@ -9,7 +9,8 @@ import { createClient } from "@supabase/supabase-js";
 import * as dotenv from "dotenv";
 import { createPublicClient, http, formatUnits } from "viem";
 
-import { sendArcTransaction, getBackendWallet } from "./services/arc-viem.js";
+import { sendArcTransaction, getBackendWallet, getArcBalances } from "./services/arc-viem.js";
+import { privateKeyToAccount } from "viem/accounts";
 
 dotenv.config();
 
@@ -130,6 +131,35 @@ app.post("/api/wallets/create", async (req, res) => {
   }
 });
 
+// Route to generate a random secure Private Key & Address for User-Controlled Wallet
+app.post("/api/wallets/generate-user-wallet", (_req, res) => {
+  try {
+    const pk = `0x${crypto.randomBytes(32).toString('hex')}`;
+    const account = privateKeyToAccount(pk as `0x${string}`);
+    res.json({
+      privateKey: pk,
+      address: account.address
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Route to derive Address from any custom Private Key
+app.post("/api/wallets/derive-address", (req, res) => {
+  try {
+    const { privateKey } = req.body;
+    if (!privateKey) {
+      return res.status(400).json({ error: "Private key is required" });
+    }
+    const pk = privateKey.startsWith('0x') ? privateKey : `0x${privateKey}`;
+    const account = privateKeyToAccount(pk as `0x${string}`);
+    res.json({ address: account.address });
+  } catch (err: any) {
+    res.status(400).json({ error: `Invalid private key format: ${err.message}` });
+  }
+});
+
 // Debug Route: Get wallet details
 app.get("/api/debug-wallet/:userId", async (req, res) => {
   try {
@@ -158,6 +188,23 @@ app.get("/api/debug-wallet/:userId", async (req, res) => {
 app.get("/api/balance/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
+    const { walletType, customAddress } = req.query;
+
+    // Direct live on-chain lookup for user-controlled self-custodied wallet
+    if (walletType === 'user' && typeof customAddress === 'string' && customAddress.startsWith('0x')) {
+      console.log(`Fetching real-time balances for user-controlled wallet address: ${customAddress}`);
+      const liveBalances = await getArcBalances(customAddress);
+      const usdcAmt = parseFloat(liveBalances.erc20Usdc);
+      return res.json({
+        balance: isNaN(usdcAmt) ? 0 : usdcAmt,
+        realBalance: isNaN(usdcAmt) ? 0 : usdcAmt,
+        currency: "USDC",
+        allBalances: [
+          { token: { symbol: 'USDC', name: 'USD Coin', decimals: 6, blockchain: 'ARC-TESTNET' }, amount: liveBalances.erc20Usdc },
+          { token: { symbol: 'ARC', name: 'Arc Network Native Gas Token', decimals: 18, blockchain: 'ARC-TESTNET' }, amount: liveBalances.nativeArcUsdc }
+        ]
+      });
+    }
     
     // Check if we have env variables
     if (!process.env.VITE_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -410,12 +457,21 @@ app.post("/api/webhook/simulate", async (req, res) => {
 // Transfer Real Execution
 app.post("/api/transfer/execute", async (req, res) => {
   try {
-    const { userId, amount, destinationAddress } = req.body;
+    const { userId, amount, destinationAddress, walletType, userPrivateKey } = req.body;
     
     let txId = `tx_${crypto.randomBytes(8).toString('hex')}`;
     
     // Check if we should execute a REAL Arc On-Chain using Viem
-    if (getBackendWallet()) {
+    if (walletType === 'user' && userPrivateKey) {
+       console.log("Deploying real on-chain transfer for User-Controlled Wallet via Viem...");
+       try {
+         const result = await sendArcTransaction(destinationAddress, amount.toString(), userPrivateKey);
+         txId = result.txId;
+       } catch (err: any) {
+         console.error("Viem custom user key transfer error:", err);
+         return res.status(500).json({ error: `On-chain execution failed: ${err.message}` });
+       }
+    } else if (getBackendWallet()) {
        console.log("Deploying real on-chain transaction via Viem...");
        try {
          const result = await sendArcTransaction(destinationAddress, amount.toString());
@@ -426,7 +482,10 @@ app.post("/api/transfer/execute", async (req, res) => {
     }
     
     // Deduct mock state
-    globalMockUsdcBalance -= parseFloat(amount);
+    if (walletType !== 'user') {
+      globalMockUsdcBalance -= parseFloat(amount);
+    }
+    
     globalMockTransactions.unshift({
       id: crypto.randomBytes(4).toString('hex'),
       user_id: userId,
@@ -438,15 +497,15 @@ app.post("/api/transfer/execute", async (req, res) => {
       metadata: {
          destinationAddress: destinationAddress,
          recipientName: "EVM Account",
-         real: !!getBackendWallet()
+         real: (walletType === 'user' && !!userPrivateKey) || !!getBackendWallet()
       }
     });
 
-    if (process.env.VITE_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    if (process.env.VITE_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY && walletType !== 'user') {
       await executeTransaction(getSupabaseAdmin(), userId, amount, destinationAddress, 'transfer', { destinationAddress });
     }
     
-    res.status(200).json({ message: "Transfer queued", txId });
+    res.status(200).json({ message: "Transfer completed", txId });
   } catch (error: any) {
     console.error("Transfer Error", error);
     res.status(500).json({ error: error.message });
@@ -456,11 +515,21 @@ app.post("/api/transfer/execute", async (req, res) => {
 // Swap Real Execution
 app.post("/api/swap/execute", async (req, res) => {
   try {
-    const { userId, amount, fromToken, toToken, tokenAddress } = req.body;
+    const { userId, amount, fromToken, toToken, tokenAddress, walletType, userPrivateKey } = req.body;
     const dexAddress = "0x3333333333333333333333333333333333333333";
     
     let txId = `swap_${crypto.randomBytes(8).toString('hex')}`;
-    if (getBackendWallet()) {
+    
+    if (walletType === 'user' && userPrivateKey) {
+       console.log("Deploying real on-chain swap for User-Controlled Wallet via Viem...");
+       try {
+         const result = await sendArcTransaction(dexAddress, amount.toString(), userPrivateKey);
+         txId = result.txId;
+       } catch (err: any) {
+         console.error("Viem custom user key swap error:", err);
+         return res.status(500).json({ error: `On-chain swap failed: ${err.message}` });
+       }
+    } else if (getBackendWallet()) {
        try {
          const result = await sendArcTransaction(dexAddress, amount.toString());
          txId = result.txId;
@@ -469,12 +538,14 @@ app.post("/api/swap/execute", async (req, res) => {
        }
     }
 
-    if (fromToken === 'USDC') {
-      globalMockUsdcBalance -= parseFloat(amount);
-      if (toToken === 'ARC') globalMockArcBalance += parseFloat(amount) * 0.9852;
-    } else if (fromToken === 'ARC') {
-      globalMockArcBalance -= parseFloat(amount);
-      if (toToken === 'USDC') globalMockUsdcBalance += parseFloat(amount) * (1/0.9852);
+    if (walletType !== 'user') {
+      if (fromToken === 'USDC') {
+        globalMockUsdcBalance -= parseFloat(amount);
+        if (toToken === 'ARC') globalMockArcBalance += parseFloat(amount) * 0.9852;
+      } else if (fromToken === 'ARC') {
+        globalMockArcBalance -= parseFloat(amount);
+        if (toToken === 'USDC') globalMockUsdcBalance += parseFloat(amount) * (1/0.9852);
+      }
     }
     
     globalMockTransactions.unshift({
@@ -485,13 +556,13 @@ app.post("/api/swap/execute", async (req, res) => {
       status: 'success',
       internal_ref: txId,
       created_at: new Date().toISOString(),
-      metadata: { fromToken, toToken, real: !!getBackendWallet() }
+      metadata: { fromToken, toToken, real: (walletType === 'user' && !!userPrivateKey) || !!getBackendWallet() }
     });
     
-    if (process.env.VITE_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    if (process.env.VITE_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY && walletType !== 'user') {
       await executeTransaction(getSupabaseAdmin(), userId, amount, dexAddress, 'swap', { fromToken, toToken, tokenAddress });
     }
-    res.status(200).json({ message: "Swap queued", txId });
+    res.status(200).json({ message: "Swap completed", txId });
   } catch (error: any) {
     console.error("Swap Error", error);
     res.status(500).json({ error: error.message });

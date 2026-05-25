@@ -2,7 +2,7 @@ import { useStore } from "../../store/useStore";
 
 export const ArcAppKitAdapter = {
     async swapTokens(amount: number, fromToken: string, toToken: string, tokenAddress: string) {
-        const { registeredUser } = useStore.getState();
+        const { registeredUser, selectedWalletType, userControlledPrivateKey } = useStore.getState();
         if (!registeredUser?.supabaseUid) throw new Error("User not registered");
 
         const response = await fetch('/api/swap/execute', {
@@ -13,7 +13,9 @@ export const ArcAppKitAdapter = {
                 amount,
                 fromToken,
                 toToken,
-                tokenAddress
+                tokenAddress,
+                walletType: selectedWalletType,
+                userPrivateKey: userControlledPrivateKey
             }),
         });
         
@@ -22,7 +24,7 @@ export const ArcAppKitAdapter = {
     },
 
     async sendUnifiedBalance(amount: number, destinationAddress: string) {
-        const { registeredUser } = useStore.getState();
+        const { registeredUser, selectedWalletType, userControlledPrivateKey } = useStore.getState();
         if (!registeredUser?.supabaseUid) throw new Error("User not registered");
 
         const response = await fetch('/api/transfer/execute', {
@@ -31,7 +33,9 @@ export const ArcAppKitAdapter = {
             body: JSON.stringify({
                 userId: registeredUser.supabaseUid,
                 amount,
-                destinationAddress
+                destinationAddress,
+                walletType: selectedWalletType,
+                userPrivateKey: userControlledPrivateKey
             }),
         });
 
@@ -95,10 +99,14 @@ export const ArcAppKitAdapter = {
     },
 
     async getBalance() {
-        const { registeredUser } = useStore.getState();
+        const { registeredUser, selectedWalletType, userControlledAddress } = useStore.getState();
         if (!registeredUser?.supabaseUid) throw new Error("User not registered");
 
-        const response = await fetch(`/api/balance/${registeredUser.supabaseUid}`);
+        let url = `/api/balance/${registeredUser.supabaseUid}`;
+        if (selectedWalletType === 'user' && userControlledAddress) {
+            url += `?walletType=user&customAddress=${userControlledAddress}`;
+        }
+        const response = await fetch(url);
         if (!response.ok) throw new Error('Failed to fetch balance');
         
         const contentType = response.headers.get("content-type");

@@ -51,7 +51,13 @@ export const HomeScreen = React.memo(({
     setVisibleTokenCodes,
     fetchTransactions,
     readReceiptIds,
-    displayToast
+    displayToast,
+    selectedWalletType,
+    setSelectedWalletType,
+    userControlledPrivateKey,
+    setUserControlledPrivateKey,
+    userControlledAddress,
+    setUserControlledAddress
   } = useApp();
 
   const unreadCount = transactions.filter((tx) => !readReceiptIds.includes(tx.id)).length;
@@ -373,8 +379,196 @@ export const HomeScreen = React.memo(({
 
               <AnimatePresence mode="wait">
                 {activeRekeningTab === 0 && (
-                  /* My Wallet Card (Visual Look) */
-                  <WalletCard userName={userName} onNavigate={() => onNavigate("accountDetail")} />
+                  <motion.div
+                    key="tab-0"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {/* My Wallet Card */}
+                    <WalletCard userName={userName} onNavigate={() => onNavigate("accountDetail")} />
+
+                    {/* Integrated Hybrid Wallet panel */}
+                    <div className="mt-4 p-4 rounded-2xl bg-slate-50 border border-slate-200/60 text-left">
+                      {/* Segmented Control */}
+                      <div className="flex bg-slate-200/60 p-1 rounded-xl mb-4">
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            setSelectedWalletType('developer');
+                            await fetchBalance();
+                          }}
+                          className={`flex-1 py-2 px-3 text-[11px] font-bold rounded-lg transition-all ${
+                            selectedWalletType === 'developer'
+                              ? "bg-white text-slate-800 shadow-sm"
+                              : "text-slate-500 hover:text-slate-800"
+                          }`}
+                        >
+                          Developer-Controlled (Circle)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            setSelectedWalletType('user');
+                            await fetchBalance();
+                          }}
+                          className={`flex-1 py-1 px-3 text-[11px] font-bold rounded-lg transition-all ${
+                            selectedWalletType === 'user'
+                              ? "bg-white text-slate-800 shadow-sm"
+                              : "text-slate-500 hover:text-slate-800"
+                          }`}
+                        >
+                          User-Controlled (Sains)
+                        </button>
+                      </div>
+
+                      {/* Dynamic Content based on Selection */}
+                      {selectedWalletType === 'developer' ? (
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-slate-500 font-medium">Model Arsitektur Wallet</span>
+                            <span className="bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded-full border border-blue-100 text-[9px] uppercase tracking-wide">
+                              Circle API-Gate (DCW)
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 leading-relaxed font-sans">
+                            Sistem secara otomatis mengelola infrastruktur dompet Anda menggunakan Circle Developer-Controlled Wallets SDK. Sangat handal, aman, dan mudah dioperasikan.
+                          </p>
+                        </div>
+                      ) : (
+                        /* User-Controlled UI */
+                        <div className="space-y-3">
+                          {userControlledPrivateKey ? (
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-center text-xs">
+                                <span className="text-slate-500 font-medium">Model Arsitektur Wallet</span>
+                                <span className="bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-100 text-[9px] uppercase tracking-wide">
+                                  Self-Custody (UCW)
+                                </span>
+                              </div>
+                              
+                              <div className="p-2.5 bg-white rounded-xl border border-slate-200 font-mono text-[10px] text-slate-800 break-all relative">
+                                <div className="text-[9px] text-slate-400 uppercase font-sans font-bold mb-1">Your EVM Address</div>
+                                <span>{userControlledAddress || "Generating..."}</span>
+                              </div>
+
+                              <div className="flex gap-2">
+                                <button
+                                   type="button"
+                                   onClick={() => {
+                                     navigator.clipboard.writeText(userControlledAddress);
+                                     displayToast("Alamat wallet berhasil disalin!");
+                                   }}
+                                   className="flex-1 py-1.5 px-3 bg-white border border-slate-200 text-[11px] text-slate-600 font-semibold rounded-lg hover:bg-slate-50 transition-colors"
+                                >
+                                   Salin Alamat
+                                </button>
+                                <button
+                                   type="button"
+                                   onClick={() => {
+                                     alert(`KUNCI PRIVAT ANDA (Hanya untuk Testing):\n\n${userControlledPrivateKey}`);
+                                   }}
+                                   className="flex-1 py-1.5 px-3 bg-white border border-slate-200 text-[11px] text-slate-600 font-semibold rounded-lg hover:bg-slate-50 transition-colors"
+                                >
+                                   Tampilkan Key
+                                </button>
+                                <button
+                                   type="button"
+                                   onClick={async () => {
+                                     setUserControlledPrivateKey(null);
+                                     setUserControlledAddress('');
+                                     displayToast("Wallet di-reset.");
+                                     await fetchBalance();
+                                   }}
+                                   className="py-1.5 px-3 bg-red-50 text-red-600 text-[11px] font-semibold rounded-lg hover:bg-red-100 transition-colors"
+                                >
+                                   Reset Wallet
+                                </button>
+                              </div>
+                              
+                              <p className="text-[10px] text-amber-700 bg-amber-50 p-2.5 rounded-lg border border-amber-100/80 leading-normal">
+                                 💡 Mode ini melewati Circle API sepenuhnya. Transaksi swap dan kirim USDC disign langsung menggunakan kunci privat Anda secara onchain di Arc Testnet. Gunakan Faucet untuk mengisi gas jika saldo kosong.
+                              </p>
+                            </div>
+                          ) : (
+                            /* Setup / Generation Mode */
+                            <div className="space-y-3">
+                              <p className="text-xs text-slate-500 leading-normal">
+                                 Anda berada di mode <strong>User-Controlled Wallet</strong>. Buat baru atau impor kunci privat yang sudah ada untuk menandatangani transaksi secara real-time.
+                              </p>
+                              
+                              <div className="space-y-2">
+                                <button
+                                   type="button"
+                                   onClick={async () => {
+                                     try {
+                                       const res = await fetch('/api/wallets/generate-user-wallet', { method: 'POST' });
+                                       if (!res.ok) throw new Error("Gagal membuat kunci wallet");
+                                       const data = await res.json();
+                                       setUserControlledPrivateKey(data.privateKey);
+                                       setUserControlledAddress(data.address);
+                                       displayToast("Self-custodial wallet berhasil digenerate!");
+                                       await fetchBalance();
+                                     } catch (e: any) {
+                                       displayToast(`Gagal: ${e.message}`);
+                                     }
+                                   }}
+                                   className="w-full py-2 px-4 bg-slate-900 text-white text-xs font-bold rounded-xl hover:bg-slate-800 shadow-sm transition-all text-center flex items-center justify-center gap-1.5"
+                                >
+                                   <span>Buat Kunci Wallet Baru</span>
+                                </button>
+                                
+                                <div className="relative flex py-1 items-center">
+                                  <div className="flex-grow border-t border-slate-200"></div>
+                                  <span className="flex-shrink mx-4 text-[9px] text-slate-400 uppercase font-sans font-bold">Atau Impor Kunci Privat</span>
+                                  <div className="flex-grow border-t border-slate-200"></div>
+                                </div>
+
+                                <div className="flex gap-2">
+                                  <input
+                                     id="imported_private_key"
+                                     type="password"
+                                     placeholder="0x... (64 hex characters)"
+                                     className="flex-1 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-mono outline-none"
+                                  />
+                                  <button
+                                     type="button"
+                                     onClick={async () => {
+                                       const inputEl = document.getElementById('imported_private_key') as HTMLInputElement;
+                                       const pk = inputEl?.value?.trim();
+                                       if (!pk) {
+                                         displayToast("Masukkan kunci privat terlebih dahulu!");
+                                         return;
+                                       }
+                                       try {
+                                         const res = await fetch('/api/wallets/derive-address', {
+                                           method: 'POST',
+                                           headers: { 'Content-Type': 'application/json' },
+                                           body: JSON.stringify({ privateKey: pk })
+                                         });
+                                         if (!res.ok) throw new Error("Format kunci privat tidak valid");
+                                         const data = await res.json();
+                                         setUserControlledPrivateKey(pk);
+                                         setUserControlledAddress(data.address);
+                                         displayToast("Wallet berhasil diimpor!");
+                                         await fetchBalance();
+                                       } catch (e: any) {
+                                         displayToast(`Gagal impor: ${e.message}`);
+                                       }
+                                     }}
+                                     className="py-1.5 px-3 bg-slate-100 border border-slate-200 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors"
+                                  >
+                                     Impor
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
                 )}
 
                 {activeRekeningTab === 1 && (
