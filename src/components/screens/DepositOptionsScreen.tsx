@@ -7,9 +7,21 @@ interface DepositOptionsScreenProps {
   onSelectVA: () => void;
   onSelectQRIS: () => void;
   onSelectWithdraw?: () => void;
+  platformConfig?: any;
 }
 
-export function DepositOptionsScreen({ onBack, onSelectUSDC, onSelectVA, onSelectQRIS, onSelectWithdraw }: DepositOptionsScreenProps) {
+export function DepositOptionsScreen({ 
+  onBack, 
+  onSelectUSDC, 
+  onSelectVA, 
+  onSelectQRIS, 
+  onSelectWithdraw,
+  platformConfig 
+}: DepositOptionsScreenProps) {
+  const isVaEnabled = !platformConfig || platformConfig.vaEnabled !== false;
+  const isQrisEnabled = !platformConfig || platformConfig.qrisEnabled !== false;
+  const isWithdrawEnabled = !platformConfig || platformConfig.withdrawEnabled !== false;
+
   return (
     <div className="absolute inset-0 z-[60] bg-white flex flex-col animate-in slide-in-from-bottom duration-300">
       {/* Header */}
@@ -39,51 +51,57 @@ export function DepositOptionsScreen({ onBack, onSelectUSDC, onSelectVA, onSelec
               </div>
             </button>
 
-            <button 
-              onClick={onSelectVA}
-              className="flex items-center gap-4 p-4 rounded-2xl border border-slate-100 hover:bg-slate-50 transition-all text-left bg-transparent cursor-pointer"
-            >
-              <div className="w-12 h-12 rounded-xl bg-emerald-500 flex items-center justify-center text-white shrink-0">
-                <ArrowDownToLine size={24} />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-bold text-[15px] text-slate-800">Virtual Account</h4>
-                <p className="text-[11px] text-slate-400">Top-up via Bank Transfer (USDC)</p>
-              </div>
-            </button>
+            {isVaEnabled && (
+              <button 
+                onClick={onSelectVA}
+                className="flex items-center gap-4 p-4 rounded-2xl border border-slate-100 hover:bg-slate-50 transition-all text-left bg-transparent cursor-pointer"
+              >
+                <div className="w-12 h-12 rounded-xl bg-emerald-500 flex items-center justify-center text-white shrink-0">
+                  <ArrowDownToLine size={24} />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-bold text-[15px] text-slate-800">Virtual Account</h4>
+                  <p className="text-[11px] text-slate-400">Top-up via Bank Transfer (USDC)</p>
+                </div>
+              </button>
+            )}
 
-            <button 
-              onClick={onSelectQRIS}
-              className="flex items-center gap-4 p-4 rounded-2xl border border-slate-100 hover:bg-slate-50 transition-all text-left bg-transparent cursor-pointer"
-            >
-              <div className="w-12 h-12 rounded-xl bg-rose-500 flex items-center justify-center text-white shrink-0">
-                <QrCode size={24} />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-bold text-[15px] text-slate-800">QRIS Receipt</h4>
-                <p className="text-[11px] text-slate-400">Receive from m-Banking / e-Wallet</p>
-              </div>
-            </button>
+            {isQrisEnabled && (
+              <button 
+                onClick={onSelectQRIS}
+                className="flex items-center gap-4 p-4 rounded-2xl border border-slate-100 hover:bg-slate-50 transition-all text-left bg-transparent cursor-pointer"
+              >
+                <div className="w-12 h-12 rounded-xl bg-rose-500 flex items-center justify-center text-white shrink-0">
+                  <QrCode size={24} />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-bold text-[15px] text-slate-800">QRIS Receipt</h4>
+                  <p className="text-[11px] text-slate-400">Receive from m-Banking / e-Wallet</p>
+                </div>
+              </button>
+            )}
           </div>
         </div>
 
-        <div>
-          <h4 className="text-[12px] font-black text-red-500 uppercase tracking-widest mb-3">Withdraw to Cash</h4>
-          <div className="flex flex-col gap-3">
-             <button 
-              onClick={onSelectWithdraw}
-              className="flex items-center gap-4 p-4 rounded-2xl border border-slate-100 hover:bg-slate-50 transition-all text-left bg-transparent cursor-pointer"
-            >
-              <div className="w-12 h-12 rounded-xl bg-red-500 flex items-center justify-center text-white shrink-0">
-                <ArrowUpToLine size={24} />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-bold text-[15px] text-slate-800">Withdraw to Bank</h4>
-                <p className="text-[11px] text-slate-400">Cash out USDC to your bank account</p>
-              </div>
-            </button>
+        {isWithdrawEnabled && (
+          <div>
+            <h4 className="text-[12px] font-black text-red-500 uppercase tracking-widest mb-3">Withdraw to Cash</h4>
+            <div className="flex flex-col gap-3">
+               <button 
+                onClick={onSelectWithdraw}
+                className="flex items-center gap-4 p-4 rounded-2xl border border-slate-100 hover:bg-slate-50 transition-all text-left bg-transparent cursor-pointer"
+              >
+                <div className="w-12 h-12 rounded-xl bg-red-500 flex items-center justify-center text-white shrink-0">
+                  <ArrowUpToLine size={24} />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-bold text-[15px] text-slate-800">Withdraw to Bank</h4>
+                  <p className="text-[11px] text-slate-400">Cash out USDC to your bank account</p>
+                </div>
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

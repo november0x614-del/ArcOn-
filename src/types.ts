@@ -39,7 +39,8 @@ export type ViewState =
   | 'arcbird'
   | 'withdraw'
   | 'bridge'
-  | 'batchTransfer';
+  | 'batchTransfer'
+  | 'adminDashboard';
 
 export interface ShortcutItem {
   id: string;

@@ -24,7 +24,6 @@ import {
   Bot,
   Check,
   X,
-  ExternalLink,
   ShieldCheck,
   Gamepad2,
   RefreshCw,
@@ -36,12 +35,14 @@ export interface HomeScreenProps {
   userName: string;
   selectedShortcuts: ShortcutItem[];
   onNavigate: (view: ViewState) => void;
+  platformConfig?: any;
 }
 
 export const HomeScreen = React.memo(({
   userName,
   selectedShortcuts,
   onNavigate,
+  platformConfig,
 }: HomeScreenProps) => {
   const {
     transactions,
@@ -49,7 +50,8 @@ export const HomeScreen = React.memo(({
     setVisibleTokenCodes,
     fetchTransactions,
     readReceiptIds,
-    displayToast
+    displayToast,
+    registeredUser
   } = useApp();
 
   const { refreshBalance } = useArc();
@@ -193,6 +195,49 @@ export const HomeScreen = React.memo(({
     return `${prefix}${absChange.toFixed(2)}`;
   }, []);
 
+  const filteredShortcuts = React.useMemo(() => {
+    if (!platformConfig) return selectedShortcuts;
+    return selectedShortcuts.filter((item) => {
+      const label = item.label;
+      if (label === "Transfer USDC" || label === "Transfer USDC On-chain" || label === "Receive USDC" || label === "Request Payment") {
+        return platformConfig.transferEnabled !== false;
+      }
+      if (label === "Swap USDC" || label === "Native Wallet Swap") {
+        return platformConfig.swapEnabled !== false;
+      }
+      if (label === "Withdraw") {
+        return platformConfig.withdrawEnabled !== false;
+      }
+      if (label === "Bridge USDC") {
+        return platformConfig.bridgeEnabled !== false;
+      }
+      if (label === "Staking Pool") {
+        return platformConfig.stableStakeEnabled !== false;
+      }
+      if (label === "Pay/VA") {
+        return platformConfig.vaEnabled !== false;
+      }
+      if (label === "DApp Browser") {
+        return platformConfig.ecommerceEnabled !== false;
+      }
+      return true;
+    });
+  }, [selectedShortcuts, platformConfig]);
+
+  const activeTabs = React.useMemo(() => {
+    const tabs = [{ name: "My Wallet", icon: <Wallet size={20} /> }];
+    if (platformConfig && platformConfig.ecommerceEnabled !== false) {
+      tabs.push({ name: "E-commerce", icon: <ShoppingBag size={20} /> });
+    }
+    return tabs;
+  }, [platformConfig]);
+
+  useEffect(() => {
+    if (activeRekeningTab >= activeTabs.length) {
+      setActiveRekeningTab(0);
+    }
+  }, [activeTabs, activeRekeningTab]);
+
 
 
   return (
@@ -270,10 +315,7 @@ export const HomeScreen = React.memo(({
 
               {/* Tabs */}
               <div className="flex overflow-x-auto gap-2 pt-1 pb-3 mb-4 scrollbar-hide text-[12px] font-medium relative">
-                {[
-                  { name: "My Wallet", icon: <Wallet size={20} /> },
-                  { name: "E-commerce", icon: <ShoppingBag size={20} /> },
-                ].map((tab, i) => (
+                {activeTabs.map((tab, i) => (
                   <div
                     key={tab.name}
                     onClick={() => setActiveRekeningTab(i)}
@@ -301,12 +343,12 @@ export const HomeScreen = React.memo(({
               </div>
 
               <AnimatePresence mode="wait">
-                {activeRekeningTab === 0 && (
+                {activeTabs[activeRekeningTab]?.name === "My Wallet" && (
                   /* My Wallet Card (Visual Look) */
                   <WalletCard userName={userName} onNavigate={() => onNavigate("accountDetail")} />
                 )}
 
-                {activeRekeningTab === 1 && (
+                {activeTabs[activeRekeningTab]?.name === "E-commerce" && (
                   /* E-commerce Card */
                   <motion.div
                     key="tab-1"
@@ -341,7 +383,7 @@ export const HomeScreen = React.memo(({
                 )}
 
                 {/* Real Recent Orders Section */}
-                {activeRekeningTab === 0 && transactions.filter(t => t.type === 'payment').length > 0 && (
+                {activeTabs[activeRekeningTab]?.name === "My Wallet" && transactions.filter(t => t.type === 'payment').length > 0 && (
                    <motion.div
                      initial={{ opacity: 0 }}
                      animate={{ opacity: 1 }}
@@ -370,6 +412,13 @@ export const HomeScreen = React.memo(({
                    </motion.div>
                 )}
               </AnimatePresence>
+
+              <button
+                onClick={() => onNavigate("otherAccounts")}
+                className="w-full text-center text-slate-800 text-[12px] font-bold mt-1 py-1.5 hover:bg-slate-100 rounded-lg transition-colors flex justify-center items-center gap-1.5 opacity-90 border-0 bg-transparent"
+              >
+                Other Personal Savings & Checking <PlusCircleIcon size={14} />
+              </button>
             </section>
 
             {/* Favorite Transactions Section */}
@@ -378,10 +427,16 @@ export const HomeScreen = React.memo(({
                 <h2 className="text-[17px] font-bold text-slate-800 tracking-tight">
                   Favorite Transactions
                 </h2>
+                <button
+                  className="text-slate-800 text-[13px] font-semibold flex items-center gap-1.5 hover:bg-slate-100 px-2 py-1 rounded-full transition-colors border-0 bg-transparent"
+                  onClick={() => onNavigate("manageFavorites")}
+                >
+                  Manage <Settings2 size={14} strokeWidth={1.5} />
+                </button>
               </div>
 
               <div className="grid grid-cols-4 gap-y-5 gap-x-2">
-                {selectedShortcuts.map((item) => (
+                {filteredShortcuts.filter(item => item.label !== "DApp Browser").map((item) => (
                     <MenuIcon
                       key={item.id}
                       icon={item.icon}
@@ -424,29 +479,54 @@ export const HomeScreen = React.memo(({
                 ))}
               </div>
 
-              <div
-                className="mt-6 bg-gradient-to-r from-indigo-50 to-blue-50 py-3 px-4 rounded-xl flex items-center justify-between gap-3 border border-indigo-100 relative cursor-pointer hover:bg-indigo-100/50 transition-colors"
-                onClick={() => onNavigate("aiAgent")}
-              >
-                {/* Tooltip triangle */}
-                <div className="absolute -top-2 right-10 w-4 h-4 bg-indigo-50 border-l border-t border-indigo-100 rotate-45"></div>
-                <div className="flex items-center gap-3">
-                  <div className="bg-white p-2 rounded-lg text-slate-800 shrink-0 border border-indigo-50 shadow-sm">
-                    <Bot size={18} />
+              {registeredUser?.email === (import.meta.env.VITE_ADMIN_EMAIL || 'admin@admin.com') && (
+                <div
+                  className="mt-6 bg-gradient-to-r from-slate-800 to-slate-900 py-3 px-4 rounded-xl flex items-center justify-between gap-3 border border-slate-700 relative cursor-pointer hover:bg-slate-700 transition-colors shadow-sm"
+                  onClick={() => onNavigate("adminDashboard")}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="bg-slate-700 p-2 rounded-lg text-white shrink-0 border border-slate-600 shadow-sm relative">
+                      <ShieldCheck size={18} />
+                      <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-slate-800"></div>
+                    </div>
+                    <div className="flex flex-col text-left">
+                      <span className="text-[13px] font-bold text-white leading-tight">
+                        Admin Dashboard
+                      </span>
+                      <span className="text-[11px] text-slate-300">
+                        Manage users, treasury & platform configs
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex flex-col text-left">
-                    <span className="text-[13px] font-bold text-slate-800">
-                      Tanya AI Assistant
-                    </span>
-                    <span className="text-[11.5px] text-slate-500">
-                      Bantu kamu kelola wallet
-                    </span>
+                  <ChevronRight size={16} className="text-slate-400" />
+                </div>
+              )}
+
+              {(!platformConfig || platformConfig.aiAgentEnabled !== false) && (
+                <div
+                  className="mt-6 bg-gradient-to-r from-indigo-50 to-blue-50 py-3 px-4 rounded-xl flex items-center justify-between gap-3 border border-indigo-100 relative cursor-pointer hover:bg-indigo-100/50 transition-colors"
+                  onClick={() => onNavigate("aiAgent")}
+                >
+                  {/* Tooltip triangle */}
+                  <div className="absolute -top-2 right-10 w-4 h-4 bg-indigo-50 border-l border-t border-indigo-100 rotate-45"></div>
+                  <div className="flex items-center gap-3">
+                    <div className="bg-white p-2 rounded-lg text-slate-800 shrink-0 border border-indigo-50 shadow-sm">
+                      <Bot size={18} />
+                    </div>
+                    <div className="flex flex-col text-left">
+                      <span className="text-[13px] font-bold text-slate-800">
+                        Tanya AI Assistant
+                      </span>
+                      <span className="text-[11.5px] text-slate-500">
+                        Bantu kamu kelola wallet
+                      </span>
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-full p-1 shadow-sm text-slate-800 shrink-0 border border-indigo-50">
+                    <ChevronRight size={14} />
                   </div>
                 </div>
-                <div className="bg-white rounded-full p-1 shadow-sm text-slate-800 shrink-0 border border-indigo-50">
-                  <ChevronRight size={14} />
-                </div>
-              </div>
+              )}
             </section>
 
             {/* Special For You (Promo Banner) */}
@@ -512,97 +592,106 @@ export const HomeScreen = React.memo(({
           {/* Right Column for Desktop */}
           <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-4">
             {/* Dapps */}
-            <section className="bg-white rounded-[24px] p-5 shadow-sm mb-4 lg:mb-0 mx-4 lg:mx-0 text-left">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-[17px] font-bold text-slate-800 tracking-tight font-sans">
-                  External DApps
-                </h2>
-                <button className="text-slate-400 hover:text-slate-600 transition-colors bg-transparent border-0 p-1">
-                  <Search size={18} strokeWidth={2.5} />
-                </button>
-              </div>
-
-              <div className="flex flex-col gap-3">
-                {/* ArcSwap */}
-                <div
-                  onClick={() => {
-                    // Show a toast message to simulate opening an external browser
-                    displayToast("Membuka external web browser ke ArcSwap...");
-                  }}
-                  className="flex items-center gap-3.5 p-3 rounded-2xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-all active:scale-[0.98]"
-                >
-                  <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-white shrink-0 shadow-sm">
-                    <RefreshCw size={20} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <h4 className="font-bold text-[14px] text-slate-800 font-sans">
-                        ArcSwap DEX
-                      </h4>
-                      <span className="text-[9px] font-semibold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded font-sans">
-                        DEX
-                      </span>
-                    </div>
-                    <p className="text-[11.5px] text-slate-400 truncate mt-0.5 font-sans">
-                      Swap USDC with Arc Native Tokens
-                    </p>
-                  </div>
-                  <ChevronRight size={16} className="text-slate-400" />
+            {/* External DApps */}
+            {(!platformConfig || platformConfig.swapEnabled !== false || platformConfig.arcBirdEnabled !== false || platformConfig.stableStakeEnabled !== false) && (
+              <section className="bg-white rounded-[24px] p-5 shadow-sm mb-4 lg:mb-0 mx-4 lg:mx-0 text-left">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-[17px] font-bold text-slate-800 tracking-tight font-sans">
+                    External DApps
+                  </h2>
+                  <button className="text-slate-400 hover:text-slate-600 transition-colors bg-transparent border-0 p-1">
+                    <Search size={18} strokeWidth={2.5} />
+                  </button>
                 </div>
 
-                {/* ArcBird Mini-Game */}
-                <div
-                  onClick={() => {
-                    onNavigate("arcbird");
-                  }}
-                  className="flex items-center gap-3.5 p-3 rounded-2xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-all active:scale-[0.98]"
-                >
-                  <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-purple-500 to-indigo-600 flex items-center justify-center text-white shrink-0 shadow-sm">
-                    <Gamepad2 size={20} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <h4 className="font-bold text-[14px] text-slate-800 font-sans">
-                        ArcBird Arcade
-                      </h4>
-                      <span className="text-[9px] font-semibold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded font-sans">
-                        Gaming
-                      </span>
+                <div className="flex flex-col gap-3">
+                  {/* ArcSwap */}
+                  {(!platformConfig || platformConfig.swapEnabled !== false) && (
+                    <div
+                      onClick={() => {
+                        // Show a toast message to simulate opening an external browser
+                        displayToast("Membuka external web browser ke ArcSwap...");
+                      }}
+                      className="flex items-center gap-3.5 p-3 rounded-2xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-all active:scale-[0.98]"
+                    >
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-white shrink-0 shadow-sm">
+                        <RefreshCw size={20} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <h4 className="font-bold text-[14px] text-slate-800 font-sans">
+                            ArcSwap DEX
+                          </h4>
+                          <span className="text-[9px] font-semibold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded font-sans">
+                            DEX
+                          </span>
+                        </div>
+                        <p className="text-[11.5px] text-slate-400 truncate mt-0.5 font-sans">
+                          Swap USDC with Arc Native Tokens
+                        </p>
+                      </div>
+                      <ChevronRight size={16} className="text-slate-400" />
                     </div>
-                    <p className="text-[11.5px] text-slate-400 truncate mt-0.5 font-sans">
-                      Tap to Jump & earn USDC rewards
-                    </p>
-                  </div>
-                  <ChevronRight size={16} className="text-slate-400" />
-                </div>
+                  )}
 
-                {/* StableStake Vault */}
-                <div
-                  onClick={() => {
-                    onNavigate("stablestake");
-                  }}
-                  className="flex items-center gap-3.5 p-3 rounded-2xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-all active:scale-[0.98]"
-                >
-                  <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-500 flex items-center justify-center text-white shrink-0 shadow-sm">
-                    <ShieldCheck size={20} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <h4 className="font-bold text-[14px] text-slate-800 font-sans">
-                        StableStake Vault
-                      </h4>
-                      <span className="text-[9px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded font-sans">
-                        Yield & DeFi
-                      </span>
+                  {/* ArcBird Mini-Game */}
+                  {(!platformConfig || platformConfig.arcBirdEnabled !== false) && (
+                    <div
+                      onClick={() => {
+                        onNavigate("arcbird");
+                      }}
+                      className="flex items-center gap-3.5 p-3 rounded-2xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-all active:scale-[0.98]"
+                    >
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-purple-500 to-indigo-600 flex items-center justify-center text-white shrink-0 shadow-sm">
+                        <Gamepad2 size={20} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <h4 className="font-bold text-[14px] text-slate-800 font-sans">
+                            ArcBird Arcade
+                          </h4>
+                          <span className="text-[9px] font-semibold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded font-sans">
+                            Gaming
+                          </span>
+                        </div>
+                        <p className="text-[11.5px] text-slate-400 truncate mt-0.5 font-sans">
+                          Tap to Jump & earn USDC rewards
+                        </p>
+                      </div>
+                      <ChevronRight size={16} className="text-slate-400" />
                     </div>
-                    <p className="text-[11.5px] text-slate-400 truncate mt-0.5 font-sans">
-                      Stake stablecoins & earn USDC yield
-                    </p>
-                  </div>
-                  <ChevronRight size={16} className="text-slate-400" />
+                  )}
+
+                  {/* StableStake Vault */}
+                  {(!platformConfig || platformConfig.stableStakeEnabled !== false) && (
+                    <div
+                      onClick={() => {
+                        onNavigate("stablestake");
+                      }}
+                      className="flex items-center gap-3.5 p-3 rounded-2xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-all active:scale-[0.98]"
+                    >
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-500 flex items-center justify-center text-white shrink-0 shadow-sm">
+                        <ShieldCheck size={20} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <h4 className="font-bold text-[14px] text-slate-800 font-sans">
+                            StableStake Vault
+                          </h4>
+                          <span className="text-[9px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded font-sans">
+                            Yield & DeFi
+                          </span>
+                        </div>
+                        <p className="text-[11.5px] text-slate-400 truncate mt-0.5 font-sans">
+                          Stake stablecoins & earn USDC yield
+                        </p>
+                      </div>
+                      <ChevronRight size={16} className="text-slate-400" />
+                    </div>
+                  )}
                 </div>
-              </div>
-            </section>
+              </section>
+            )}
 
             {/* Live Token Price Feed */}
             <section className="bg-white rounded-[24px] p-5 shadow-sm mx-4 lg:mx-0 mb-4 lg:mb-0">
@@ -650,25 +739,31 @@ export const HomeScreen = React.memo(({
             </section>
 
             {/* Developer Services */}
-            <section className="bg-white rounded-[24px] p-5 shadow-sm mx-4 lg:mx-0 mb-8 lg:mb-0">
-              <h2 className="text-[17px] font-bold text-slate-800 tracking-tight mb-4 text-left">
-                Developer Services
-              </h2>
-              <div className="grid grid-cols-2 gap-3">
-                <ProductCard
-                  title="Merchant"
-                  desc="On-chain USDC integration."
-                  icon={<Box size={20} className="text-slate-600" />}
-                  onClick={() => onNavigate("merchant")}
-                />
-                <ProductCard
-                  title="Testnet Faucet"
-                  desc="Claim USDC Gas Token."
-                  icon={<Coins size={20} className="text-slate-600" />}
-                  onClick={() => onNavigate("faucet")}
-                />
-              </div>
-            </section>
+            {(!platformConfig || platformConfig.merchantEnabled !== false || platformConfig.faucetEnabled !== false) && (
+              <section className="bg-white rounded-[24px] p-5 shadow-sm mx-4 lg:mx-0 mb-8 lg:mb-0">
+                <h2 className="text-[17px] font-bold text-slate-800 tracking-tight mb-4 text-left">
+                  Developer Services
+                </h2>
+                <div className={`grid ${(!platformConfig || (platformConfig.merchantEnabled !== false && platformConfig.faucetEnabled !== false)) ? 'grid-cols-2' : 'grid-cols-1'} gap-3`}>
+                  {(!platformConfig || platformConfig.merchantEnabled !== false) && (
+                    <ProductCard
+                      title="Merchant"
+                      desc="On-chain USDC integration."
+                      icon={<Box size={20} className="text-slate-600" />}
+                      onClick={() => onNavigate("merchant")}
+                    />
+                  )}
+                  {(!platformConfig || platformConfig.faucetEnabled !== false) && (
+                    <ProductCard
+                      title="Testnet Faucet"
+                      desc="Claim USDC Gas Token."
+                      icon={<Coins size={20} className="text-slate-600" />}
+                      onClick={() => onNavigate("faucet")}
+                    />
+                  )}
+                </div>
+              </section>
+            )}
           </div>
         </div>
       </div>
@@ -683,9 +778,13 @@ export const HomeScreen = React.memo(({
           className="relative bg-white h-[75px] md:h-[85px] px-6 lg:px-12 pb-2 flex items-center justify-between lg:justify-around pointer-events-auto rounded-t-2xl md:rounded-t-3xl"
           style={{
             maskImage:
-              "radial-gradient(circle at 50% 0px, transparent 34px, black 35px)",
+              platformConfig?.scanQrEnabled === false
+                ? "none"
+                : "radial-gradient(circle at 50% 0px, transparent 34px, black 35px)",
             WebkitMaskImage:
-              "radial-gradient(circle at 50% 0px, transparent 34px, black 35px)",
+              platformConfig?.scanQrEnabled === false
+                ? "none"
+                : "radial-gradient(circle at 50% 0px, transparent 34px, black 35px)",
           }}
         >
           <NavItem icon={<Home size={22} />} label="Home" active />
@@ -701,8 +800,9 @@ export const HomeScreen = React.memo(({
               ) : undefined
             }
           />
-          <div className="w-[50px] md:w-[60px] shrink-0"></div>{" "}
-          {/* Spacer for the notch */}
+          {(!platformConfig || platformConfig.scanQrEnabled !== false) && (
+            <div className="w-[50px] md:w-[60px] shrink-0"></div>
+          )}
           <NavItem
             icon={<Settings size={22} />}
             label="Settings"
@@ -716,20 +816,22 @@ export const HomeScreen = React.memo(({
         </nav>
 
         {/* Floating Action Button (QR/Pay) - overlapping the notch */}
-        <div className="absolute left-1/2 -translate-x-1/2 top-[-28px] pointer-events-auto">
-          <div
-            className="relative group cursor-pointer flex flex-col items-center justify-center"
-            onClick={() => onNavigate("scanQR")}
-          >
-            <div className="absolute inset-0 bg-slate-900 rounded-[22px] blur-md opacity-40 group-hover:opacity-60 transition-opacity"></div>
-            <div className="relative w-[56px] h-[56px] bg-slate-900 rounded-[22px] flex flex-col items-center justify-center text-white shadow-lg transform transition-all duration-300 group-hover:-translate-y-1 active:translate-y-0 border-2 border-white/20 hover:bg-[#328fdc]">
-              <Scan size={26} strokeWidth={2.2} />
-              <span className="text-[9px] font-bold mt-0.5 tracking-tight uppercase">
-                Pay
-              </span>
+        {(!platformConfig || platformConfig.scanQrEnabled !== false) && (
+          <div className="absolute left-1/2 -translate-x-1/2 top-[-28px] pointer-events-auto">
+            <div
+              className="relative group cursor-pointer flex flex-col items-center justify-center"
+              onClick={() => onNavigate("scanQR")}
+            >
+              <div className="absolute inset-0 bg-slate-900 rounded-[22px] blur-md opacity-40 group-hover:opacity-60 transition-opacity"></div>
+              <div className="relative w-[56px] h-[56px] bg-slate-900 rounded-[22px] flex flex-col items-center justify-center text-white shadow-lg transform transition-all duration-300 group-hover:-translate-y-1 active:translate-y-0 border-2 border-white/20 hover:bg-[#328fdc]">
+                <Scan size={26} strokeWidth={2.2} />
+                <span className="text-[9px] font-bold mt-0.5 tracking-tight uppercase">
+                  Pay
+                </span>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Deposit/Withdraw Initial Modal */}

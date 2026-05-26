@@ -16,7 +16,7 @@ export function ProductCard({ title, desc, icon, onClick }: ProductCardProps) {
       <div className="bg-white w-10 h-10 rounded-xl flex items-center justify-center shadow-sm mb-3">
          {icon}
       </div>
-      <h3 className="font-bold text-white text-[13px] mb-1 text-left">{title}</h3>
+      <h3 className="font-bold text-slate-800 text-[13px] mb-1 text-left">{title}</h3>
       <p className="text-[11px] text-slate-500 leading-snug text-left">{desc}</p>
       
       <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-blue-100/50 rounded-full blur-xl group-hover:bg-blue-200/50 transition-colors"></div>

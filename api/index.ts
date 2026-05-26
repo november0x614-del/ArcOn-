@@ -42,6 +42,16 @@ export function getSupabaseAdmin() {
   return supabaseAdminInstance;
 }
 
+export async function isUserBlocked(userId: string): Promise<boolean> {
+  if (!userId || userId === "00000000-0000-0000-0000-000000000000") return false;
+  try {
+    const { data } = await getSupabaseAdmin().auth.admin.getUserById(userId);
+    return data?.user?.user_metadata?.blocked === true || data?.user?.user_metadata?.deleted === true;
+  } catch (err) {
+    return false;
+  }
+}
+
 const app = express();
 
 // Important: Next.js API Routes / Vercel Serverless automatically parses JSON for you in some setups,
@@ -257,9 +267,12 @@ app.post("/api/webhook/simulate", async (req, res) => {
 app.post("/api/swap/execute", async (req, res) => {
   try {
     const { userId, amount, fromToken, toToken, tokenAddress } = req.body;
+    if (await isUserBlocked(userId)) {
+      return res.status(403).json({ error: "Akun Anda telah dinonaktifkan oleh administrator sistem. Semua operasi transaksi ditangguhkan." });
+    }
     const dexAddress = "0x3333333333333333333333333333333333333333";
     
-    const result = await executeTransaction(getSupabaseAdmin(), userId, Number(amount), dexAddress, 'swap', { fromToken, toToken, tokenAddress });
+    const result = await executeTransaction(getSupabaseAdmin(), userId, amount, dexAddress, 'swap', { fromToken, toToken, tokenAddress });
     res.status(200).json({ message: "Swap queued", txId: result.txId });
   } catch (error: any) {
     console.error("Swap Error", error);
@@ -271,9 +284,12 @@ app.post("/api/swap/execute", async (req, res) => {
 app.post("/api/bridge/execute", async (req, res) => {
   try {
     const { userId, amount, fromNetwork, toNetwork } = req.body;
+    if (await isUserBlocked(userId)) {
+      return res.status(403).json({ error: "Akun Anda telah dinonaktifkan oleh administrator sistem. Semua operasi transaksi ditangguhkan." });
+    }
     const bridgeAddress = "0x0000000000000000000000000000000000000000";
     
-    const result = await executeTransaction(getSupabaseAdmin(), userId, Number(amount), bridgeAddress, 'transfer', { fromNetwork, toNetwork });
+    const result = await executeTransaction(getSupabaseAdmin(), userId, amount, bridgeAddress, 'transfer', { fromNetwork, toNetwork });
     res.status(200).json({ message: "Bridge transfer queued", txId: result.txId });
   } catch (error: any) {
     console.error("Bridge execute error:", error);
@@ -284,11 +300,14 @@ app.post("/api/bridge/execute", async (req, res) => {
 app.post("/api/transfer/execute", async (req, res) => {
   try {
     const { userId, amount, destinationAddress, memo } = req.body;
+    if (await isUserBlocked(userId)) {
+      return res.status(403).json({ error: "Akun Anda telah dinonaktifkan oleh administrator sistem. Semua operasi transaksi ditangguhkan." });
+    }
     const supabase = getSupabaseAdmin();
     
     // 1. Determine the best source for funds (Unified Balance logic)
     // For now, we prioritize Circle for simplicity, but we can switch based on balance
-    const result = await executeTransaction(supabase, userId, Number(amount), destinationAddress, 'transfer', { 
+    const result = await executeTransaction(supabase, userId, amount, destinationAddress, 'transfer', { 
       intent: 'unified_transfer',
       finality: 'deterministic',
       memo: memo || ''
@@ -310,9 +329,12 @@ app.post("/api/transfer/execute", async (req, res) => {
 app.post("/api/withdraw/execute", async (req, res) => {
   try {
     const { userId, amount, bank, memo } = req.body;
+    if (await isUserBlocked(userId)) {
+      return res.status(403).json({ error: "Akun Anda telah dinonaktifkan oleh administrator sistem. Semua operasi transaksi ditangguhkan." });
+    }
     const treasuryAddress = "0x1111111111111111111111111111111111111111"; 
 
-    const result = await executeTransaction(getSupabaseAdmin(), userId, Number(amount), treasuryAddress, 'withdraw', { 
+    const result = await executeTransaction(getSupabaseAdmin(), userId, amount, treasuryAddress, 'withdraw', { 
       bank, 
       memo,
       finality: 'deterministic'
@@ -468,6 +490,9 @@ app.post("/api/payments/batch", async (req, res) => {
 app.post("/api/purchase/execute", async (req, res) => {
   try {
     const { userId, amount, product } = req.body;
+    if (await isUserBlocked(userId)) {
+      return res.status(403).json({ error: "Akun Anda telah dinonaktifkan oleh administrator sistem. Semua operasi transaksi ditangguhkan." });
+    }
     const merchantAddress = "0x2222222222222222222222222222222222222222"; 
 
     const result = await executeTransaction(getSupabaseAdmin(), userId, amount, merchantAddress, 'purchase', { product });
@@ -624,7 +649,7 @@ Please respond concisely and helpfully in Indonesian. Use the system state conte
 // Admin Initialization Root
 app.post("/api/admin/init", async (_req, res) => {
   try {
-    const adminEmail = "admin@admin.com";
+    const adminEmail = process.env.ADMIN_EMAIL || process.env.VITE_ADMIN_EMAIL || "admin@admin.com";
     const supabase = getSupabaseAdmin();
 
     console.log(`[AdminInit] Initializing default admin: ${adminEmail}`);
@@ -658,6 +683,238 @@ app.post("/api/admin/init", async (_req, res) => {
     });
   } catch (error: any) {
     console.error("Admin Init Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Real-Time Admin Dashboard Endpoint: Config
+let platformConfigs = {
+  // Transaksi & Batas Biaya
+  swapFee: "0.15%",
+  withdrawFee: "0.00 USDC",
+  bridgeFee: "2.00 USDC",
+  dailyTransferLimit: "5000.00 USDC",
+  gasSubsidyEnabled: true,
+
+  // Fitur Finansial Utama
+  transferEnabled: true,
+  withdrawEnabled: true,
+  swapEnabled: true,
+  stableStakeEnabled: true,
+  bridgeEnabled: true,
+  faucetEnabled: true,
+  batchTransferEnabled: true,
+
+  // Fitur Pembayaran & Dagang
+  ecommerceEnabled: true,
+  merchantEnabled: true,
+  vaEnabled: true,
+  qrisEnabled: true,
+  scanQrEnabled: true,
+
+  // Integrasi & Keamanan
+  registrationEnabled: true,
+  aiAgentEnabled: true,
+  eWalletConnectionEnabled: true,
+  arcBirdEnabled: true,
+  backupPhraseEnabled: true
+};
+
+app.get("/api/admin/config", (_req, res) => {
+  res.json(platformConfigs);
+});
+
+app.post("/api/admin/config", (req, res) => {
+  try {
+    platformConfigs = { ...platformConfigs, ...req.body };
+    res.json({ message: "Config updated successfully", config: platformConfigs });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Real-Time Admin Dashboard Endpoint: Users List
+app.get("/api/admin/users", async (_req, res) => {
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data: wallets, error: walletsError } = await supabase
+      .from('user_wallets')
+      .select('id, wallet_id, wallet_address, created_at');
+
+    if (walletsError) {
+      throw walletsError;
+    }
+
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, full_name, avatar_url');
+
+    let authUsers: any[] = [];
+    try {
+      const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
+      if (!authError && authData) {
+        authUsers = authData.users || [];
+      }
+    } catch (err) {
+      console.warn("Could not list auth users from Supabase admin client (possibly restricted/dry-run config):", err);
+    }
+
+    const adminEmail = process.env.ADMIN_EMAIL || process.env.VITE_ADMIN_EMAIL || "admin@admin.com";
+
+    const combined = (wallets || []).map(w => {
+      const profile = (profiles || []).find(p => p.id === w.id);
+      const authUser = authUsers.find(u => u.id === w.id);
+      
+      const isDeleted = authUser?.user_metadata?.deleted === true;
+      const isBlocked = authUser?.user_metadata?.blocked === true || !!authUser?.banned_until;
+      const status = isDeleted ? "Archived" : (isBlocked ? "Blocked" : "Active");
+      
+      let email = authUser?.email || `user_${w.wallet_address.substring(2, 6)}@testnet.com`;
+      if (w.id === "00000000-0000-0000-0000-000000000000") {
+        email = adminEmail;
+      }
+
+      return {
+        id: w.id,
+        name: profile?.full_name || (w.id === "00000000-0000-0000-0000-000000000000" ? "Platform Admin" : "Anonymous"),
+        email: email,
+        wallet: w.wallet_address,
+        walletId: w.wallet_id,
+        createdAt: w.created_at,
+        status: status
+      };
+    });
+
+    res.json(combined);
+  } catch (error: any) {
+    console.error("Failed to fetch admin users:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Block or Unblock user directly in database
+app.post("/api/admin/users/block", async (req, res) => {
+  try {
+    const { userId, block } = req.body;
+    if (!userId) {
+      return res.status(400).json({ error: "Missing userId" });
+    }
+    
+    if (userId === "00000000-0000-0000-0000-000000000000") {
+      return res.status(400).json({ error: "Cannot block platform admin" });
+    }
+
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase.auth.admin.updateUserById(userId, {
+      ban_duration: block ? "876000h" : "none", // 100 years or none
+      user_metadata: { blocked: block }
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    res.json({ message: `User successfully ${block ? "blocked" : "unblocked"}`, user: data.user });
+  } catch (error: any) {
+    console.error("Failed to toggle user block status:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete user soft-delete/archive from database for auditing
+app.delete("/api/admin/users/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    if (!userId) {
+      return res.status(400).json({ error: "Missing userId" });
+    }
+
+    if (userId === "00000000-0000-0000-0000-000000000000") {
+      return res.status(400).json({ error: "Cannot delete platform admin" });
+    }
+
+    const supabase = getSupabaseAdmin();
+    
+    // Soft Delete: update user metadata to marked as deleted & disable them (ban them for 100 years and mark as blocked and deleted)
+    const { error: updateError } = await supabase.auth.admin.updateUserById(userId, {
+      ban_duration: "876000h", // ban for 100 years so they can't login or access API
+      user_metadata: { 
+        blocked: true,
+        deleted: true,
+        deletedAt: new Date().toISOString()
+      }
+    });
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    // Insert into audit logs table so we have a record of the audit trail
+    try {
+      await supabase.from('audit_logs').insert({
+        user_id: userId,
+        action: "SOFT_DELETE_USER",
+        metadata: { deleted_by: "admin", timestamp: new Date().toISOString() }
+      });
+    } catch (auditErr) {
+      console.warn("Could not insert into audit_logs table (safe to ignore for this environment):", auditErr);
+    }
+
+    res.json({ message: "Pengguna berhasil diarsipkan (soft-delete). Semua database logs, info dompet, dan histori transaksi tetap disimpan untuk audit." });
+  } catch (error: any) {
+    console.error("Failed to soft delete user:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Real-Time Admin Dashboard Endpoint: Stats Overview
+app.get("/api/admin/stats", async (_req, res) => {
+  try {
+    const supabase = getSupabaseAdmin();
+
+    const { count: userCount } = await supabase
+      .from('user_wallets')
+      .select('*', { count: 'exact', head: true });
+
+    const { data: transactions, error: txError } = await supabase
+      .from('transactions')
+      .select('amount, status, type');
+
+    let totalVolume = 0;
+    if (!txError && transactions) {
+      transactions.forEach(tx => {
+        if (tx.status === 'success') {
+          const amt = Math.abs(parseFloat(tx.amount || "0"));
+          totalVolume += amt;
+        }
+      });
+    }
+
+    let treasuryBalanceStr = "0.00 USDC";
+    try {
+      const { data: adminWallet } = await supabase
+        .from('user_wallets')
+        .select('wallet_id, wallet_address')
+        .eq('id', '00000000-0000-0000-0000-000000000000')
+        .single();
+
+      if (adminWallet) {
+        const balanceResult = await fetchUnifiedBalance('00000000-0000-0000-0000-000000000000', adminWallet, supabase);
+        if (balanceResult && balanceResult.balance) {
+          treasuryBalanceStr = `${balanceResult.balance} USDC`;
+        }
+      }
+    } catch (balErr) {
+      console.log("Could not fetch real admin balance:", balErr);
+    }
+
+    res.json({
+      totalUsers: userCount || 0,
+      totalVolume: `${totalVolume.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC`,
+      treasuryBalance: treasuryBalanceStr
+    });
+  } catch (error: any) {
+    console.error("Failed to fetch admin stats:", error);
     res.status(500).json({ error: error.message });
   }
 });

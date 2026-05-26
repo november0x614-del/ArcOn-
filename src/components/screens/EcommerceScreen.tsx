@@ -330,8 +330,15 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
                     <span className="font-bold text-slate-800">{selectedProduct?.price} USDC</span>
                  </div>
                  <div className="flex justify-between items-center text-[14px]">
-                    <span className="text-slate-500 font-medium">Network Fee (Arc)</span>
-                    <span className="font-bold text-green-500">Free</span>
+                    <div className="flex flex-col">
+                       <span className="text-slate-500 font-medium">Platform Admin Fee (1.5%)</span>
+                       <span className="text-[10px] text-slate-400">Menutupi biaya infrastruktur & Gas Station</span>
+                    </div>
+                    <span className="font-bold text-slate-800">{(Number(selectedProduct?.price) * 0.015).toFixed(2)} USDC</span>
+                 </div>
+                 <div className="flex justify-between items-center text-[14px]">
+                    <span className="text-slate-500 font-medium">Network Gas Fee (Arc)</span>
+                    <span className="font-bold text-[12px] bg-green-100 text-green-700 px-2 py-0.5 rounded uppercase tracking-wider">Free (Sponsored)</span>
                  </div>
                  <div className="w-full border-t border-dashed border-slate-200 my-2"></div>
                  <div className="flex justify-between items-center">

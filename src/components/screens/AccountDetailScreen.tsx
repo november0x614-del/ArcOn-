@@ -64,24 +64,33 @@ export function AccountDetailScreen({
       return;
     }
     
+    const controller = new AbortController();
+
     const fetchLiveCustomBalances = async () => {
       try {
         const contracts = importedTokens.map(t => t.contractAddress).join(',');
-        const response = await fetch(`/api/balance/${registeredUser.supabaseUid}/tokens?contracts=${contracts}`);
+        const response = await fetch(`/api/balance/${registeredUser.supabaseUid}/tokens?contracts=${contracts}`, {
+          signal: controller.signal
+        });
         if (response.ok) {
           const data = await response.json();
-          if (data && data.balances) {
+          if (data && data.balances && !controller.signal.aborted) {
             setLiveCustomBalances(data.balances);
           }
         }
       } catch (error) {
-        console.error("Failed to fetch live custom token balances on-chain:", error);
+        if ((error as any).name !== 'AbortError') {
+          console.error("Failed to fetch live custom token balances on-chain:", error);
+        }
       }
     };
 
     fetchLiveCustomBalances();
     const interval = setInterval(fetchLiveCustomBalances, 15000);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      controller.abort();
+    };
   }, [registeredUser?.supabaseUid, importedTokens]);
   
   const filteredTransactions = transactions.filter((tx) => {

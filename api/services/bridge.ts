@@ -38,14 +38,13 @@ export async function finalizeInboundBridge(
     
     /* 
     const client = getCircleClientInstance();
-    const receiveTx = await client.createTransaction({
+    const receiveTx = await client.createContractExecutionTransaction({
         walletId: walletData.wallet_id,
-        blockchain: "ARC-TESTNET",
-        destinationAddress: MESSAGE_TRANSMITTER,
-        abiFunctionName: "receiveMessage",
+        contractAddress: MESSAGE_TRANSMITTER,
+        abiFunctionSignature: "receiveMessage(bytes,bytes)",
         abiParameters: [messageBytes, attestation],
         fee: { type: "level", config: { feeLevel: "LOW" } }
-    } as any);
+    });
     */
 
     console.log(`[BridgeService] Claim infrastructure for ${walletData.wallet_address} verified. Monitoring source hash...`);
@@ -83,15 +82,13 @@ export async function initiateOutboundBridge(
 
     // Step 1: Approve TokenMessenger to spend USDC on Arc
     // In Arc Commerce, we assume the user's wallet is developer-controlled and we can sign for them
-    const approveTx = await client.createTransaction({
+    const approveTx = await client.createContractExecutionTransaction({
         walletId: walletData.wallet_id,
-        blockchain: "ARC-TESTNET",
-        tokenId: "", 
-        destinationAddress: USDC_ADDRESS,
-        abiFunctionName: "approve",
+        contractAddress: USDC_ADDRESS,
+        abiFunctionSignature: "approve(address,uint256)",
         abiParameters: [TOKEN_MESSENGER, amountBigInt.toString()],
         fee: { type: "level", config: { feeLevel: "LOW" } }
-    } as any);
+    });
 
     console.log(`[BridgeService] Approval sent: ${approveTx.data?.id}`);
 
@@ -100,12 +97,10 @@ export async function initiateOutboundBridge(
     // Note: On Arc, blocks are instant, so sequential calls usually work well.
     const recipientBytes32 = formatRecipientForCCTP(destinationAddress);
     
-    const burnTx = await client.createTransaction({
+    const burnTx = await client.createContractExecutionTransaction({
         walletId: walletData.wallet_id,
-        blockchain: "ARC-TESTNET",
-        tokenId: "",
-        destinationAddress: TOKEN_MESSENGER,
-        abiFunctionName: "depositForBurn",
+        contractAddress: TOKEN_MESSENGER,
+        abiFunctionSignature: "depositForBurn(uint256,uint32,bytes32,address)",
         abiParameters: [
             amountBigInt.toString(), 
             destinationDomain.toString(), 
@@ -113,7 +108,7 @@ export async function initiateOutboundBridge(
             USDC_ADDRESS
         ],
         fee: { type: "level", config: { feeLevel: "LOW" } }
-    } as any);
+    });
 
     return {
         approveTxId: approveTx.data?.id,

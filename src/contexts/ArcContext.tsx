@@ -77,8 +77,8 @@ export const ArcProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // 2. Format with 18 decimals
       const formatted = formatUnits(balanceWei, 18);
       
-      // 3. Keep 2 decimals for display
-      const displayFormatted = Number(formatted).toFixed(2);
+      // 3. Keep 6 decimals for display
+      const displayFormatted = Number(formatted).toFixed(6);
       
       setBalance(displayFormatted);
       console.log(`[ArcContext] Refreshing balance for ${addr}: ${displayFormatted} USDC`);

@@ -21,8 +21,8 @@ export const WalletCard = React.memo(function WalletCard({ onNavigate, onClick, 
     balance: unifiedBalance
   } = useApp();
 
-  const balanceValue = typeof unifiedBalance === 'number' ? unifiedBalance : 0;
-  const formattedBalance = balanceValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const balanceValue = typeof unifiedBalance === 'number' ? unifiedBalance : Number(unifiedBalance) || 0;
+  const formattedBalance = balanceValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 6 });
 
   const currentTheme: Exclude<UIDCardTheme, undefined> = registeredUser?.uidTheme || 'default';
   const styles = THEME_STYLES[currentTheme];
