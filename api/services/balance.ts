@@ -1,6 +1,6 @@
 import { formatUnits } from "viem";
 import { publicClient, USDC_ADDRESS, getTokenBalance } from "./arcViem.js";
-import { getArcAppKit } from "./circleClient.js";
+import { getCircleClientInstance } from "./circleClient.js";
 
 export async function fetchUnifiedBalance(userId: string, walletData: any, supabaseAdmin: any) {
     if (!walletData?.wallet_address) {
@@ -15,14 +15,9 @@ export async function fetchUnifiedBalance(userId: string, walletData: any, supab
     const walletId = walletData.wallet_id;
     const walletAddress = walletData.wallet_address;
 
-    // 1. Parallel Fetch: Circle Balance (via App Kit) + Arc Native Balance (On-Chain) + Arc ERC20 USDC
-    const kit = getArcAppKit(walletId);
-    
-    // Attempt to fetch via adapter directly if AppKit method is unsure
-    console.log("[BalanceService] Adapter keys:", Object.keys((kit as any).adapter));
-    
-    const [kitBalances, nativeWei, nativeUSDCWei] = await Promise.all([
-        walletId ? (kit as any).adapter.getBalance({}).catch((e: any) => { console.error("[BalanceService] getBalance failed:", e); return []; }) : [],
+    // 1. Parallel Fetch: Circle Balance (Cloud) + Arc Native Balance (On-Chain) + Arc ERC20 USDC
+    const [circleResponse, nativeWei, nativeUSDCWei] = await Promise.all([
+        walletId ? getCircleClientInstance().getWalletTokenBalance({ id: walletId }).catch(() => null) : null,
         publicClient.getBalance({ address: walletAddress as `0x${string}` }),
         getTokenBalance(walletAddress, USDC_ADDRESS)
     ]);
@@ -34,12 +29,13 @@ export async function fetchUnifiedBalance(userId: string, walletData: any, supab
     const ARC_PRICE = 0.02;
     const USDC_PRICE = 1.0;
 
-    // 2. Process Circle Balances (via App Kit)
-    if (Array.isArray(kitBalances)) {
-        tokenBalances.push(...kitBalances);
+    // 2. Process Circle Balances
+    if (circleResponse?.data?.tokenBalances) {
+        const circleTokens = circleResponse.data.tokenBalances;
+        tokenBalances.push(...circleTokens);
         
         // Sum all Circle tokens for total value
-        for (const b of kitBalances) {
+        for (const b of circleTokens) {
             const amount = parseFloat(b.amount || "0");
             const symbol = b.token?.symbol || b.symbol;
             const price = (symbol === 'ARC') ? ARC_PRICE : USDC_PRICE;
