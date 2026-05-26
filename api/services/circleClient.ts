@@ -1,6 +1,4 @@
 import { initiateDeveloperControlledWalletsClient } from "@circle-fin/developer-controlled-wallets";
-import { AppKit } from "@circle-fin/app-kit";
-import { createCircleWalletsAdapter } from "@circle-fin/adapter-circle-wallets";
 
 /**
  * Singleton-like factory for Circle Developer-Controlled Wallets Client.
@@ -18,31 +16,4 @@ export const getCircleClientInstance = () => {
         apiKey,
         entitySecret,
     });
-};
-
-/**
- * Factory for Arc App Kit Instance using Circle Wallets Adapter.
- * Caches instances to prevent redundant adapter creation.
- */
-const kitCache = new Map<string, any>();
-
-export const getArcAppKit = (walletId: string) => {
-    if (kitCache.has(walletId)) {
-        return kitCache.get(walletId);
-    }
-
-    const apiKey = process.env.CIRCLE_API_KEY as string;
-    const entitySecret = process.env.CIRCLE_ENTITY_SECRET as string;
-    
-    const adapter = createCircleWalletsAdapter({
-        apiKey,
-        entitySecret,
-        walletId
-    } as any);
-
-    const kit = new AppKit();
-    (kit as any).adapter = adapter; // Store it for easier access since constructor might differ
-    
-    kitCache.set(walletId, kit);
-    return kit;
 };

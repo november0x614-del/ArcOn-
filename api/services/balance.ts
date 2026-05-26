@@ -37,8 +37,7 @@ export async function fetchUnifiedBalance(userId: string, walletData: any, supab
         // Sum all Circle tokens for total value
         for (const b of circleTokens) {
             const amount = parseFloat(b.amount || "0");
-            const symbol = b.token?.symbol || b.symbol;
-            const price = (symbol === 'ARC') ? ARC_PRICE : USDC_PRICE;
+            const price = (b.token?.symbol === 'ARC') ? ARC_PRICE : USDC_PRICE;
             totalValueUsd += amount * price;
         }
     }

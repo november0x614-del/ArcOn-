@@ -11,39 +11,7 @@ import {
     getArcScanUrl
 } from "./arcViem.js";
 import { logAuditEvent } from "./audit.js";
-import { getCircleClientInstance, getArcAppKit } from "./circleClient.js";
-
-/**
- * Sanitizes metadata to remove non-serializable objects (like BigInt) 
- * preventing "Cannot convert object to primitive value" errors.
- */
-export function sanitizeMetadata(data: any): any {
-    if (data === null || typeof data !== 'object') {
-        return typeof data === 'bigint' ? data.toString() : data;
-    }
-    
-    if (Array.isArray(data)) {
-        return data.map(sanitizeMetadata);
-    }
-    
-    // If it's not a plain object, try to serialize it or return a placeholder
-    if (Object.getPrototypeOf(data) !== Object.prototype) {
-        if (typeof data.toJSON === 'function') {
-            try {
-                return sanitizeMetadata(data.toJSON());
-            } catch {
-                return `[Object ${data.constructor?.name || 'Object'}]`;
-            }
-        }
-        return `[Object ${data.constructor?.name || 'Object'}]`;
-    }
-
-    const result: any = {};
-    for (const key of Object.keys(data)) {
-        result[key] = sanitizeMetadata(data[key]);
-    }
-    return result;
-}
+import { getCircleClientInstance } from "./circleClient.js";
 
 export async function createWallet(supabaseAdmin: any, userId: string) {
     const client = getCircleClientInstance();
@@ -153,38 +121,28 @@ export async function executeTransaction(
         throw new Error(`Insufficient native USDC for gas. Need ${gasInfo.costHuman.toFixed(6)} USDC, have ${(Number(nativeBalance) / 1e18).toFixed(6)} USDC`);
     }
 
-    // Perform transaction using App Kit Abstraction
-    const kit = getArcAppKit(walletData.wallet_id);
-    const adapter = (kit as any).adapter;
-    
-    console.log(`[CircleService] Executing ${type} via App Kit...`);
-    
-    let response: any;
-    if (type === 'swap') {
-        response = await (kit as any).swap({
-            from: { adapter, chain: "Arc_Testnet" as any },
-            toToken: metadata.toToken || "ARC",
-            fromToken: metadata.fromToken || "USDC",
-            amount: amount.toString()
-        } as any);
-    } else {
-        response = await kit.send({
-            from: { adapter, chain: "Arc_Testnet" as any },
-            to: validDest,
-            amount: amount.toString(),
-            token: metadata.fromToken || "USDC"
-        });
-    }
+    const client = getCircleClientInstance();
+
+    // Fase 3 Preview: Memo support (if provided in metadata)
+    const txParams: any = {
+        walletId: walletData.wallet_id,
+        destinationAddress: validDest,
+        amount: [amount.toFixed(decimals >= 6 ? 6 : decimals)], // Circle might expect standard decimal string
+        fee: { type: "level", config: { feeLevel: "LOW" } },
+        tokenAddress: metadata.tokenAddress || "", // Use provided token address or empty for native
+        blockchain: "ARC-TESTNET"
+    };
+
+    // Perform transaction using Developer SDK
+    const response = await client.createTransaction(txParams);
     
     // Circle return an internal tx ID first
-    const circleTxId = (response as any).txHash || (response as any).id;
+    const circleTxId = response.data?.id;
 
     const result = { 
         txId: circleTxId, 
-        explorerUrl: (response as any).explorerUrl || getArcScanUrl('tx', circleTxId || '')
+        explorerUrl: getArcScanUrl('tx', circleTxId || '')
     };
-
-    const sanitizedMetadata = sanitizeMetadata({ ...metadata, real: true, explorerUrl: result.explorerUrl });
 
     const { error } = await supabaseAdmin.from('transactions').insert({
         user_id: userId,
@@ -193,12 +151,10 @@ export async function executeTransaction(
         status: 'pending',
         internal_ref: circleTxId,
         description: metadata.memo || (type === 'transfer' ? `Transfer to ${validDest}` : undefined),
-        metadata: sanitizedMetadata
+        metadata: { ...metadata, real: true, explorerUrl: result.explorerUrl }
     });
 
     if (error) throw error;
-
-    const client = getCircleClientInstance();
 
     // Fase 3: Deterministic Finality Background Monitoring
     // In Arc, once the hash is published, we can wait for single-block confirmation
