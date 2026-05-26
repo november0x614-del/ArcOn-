@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from "motion/react";
 import { ViewState, ShortcutItem } from "../../types";
 import { useApp } from "../../context/AppContext";
 import { useArc } from "../../contexts/ArcContext";
-import { LogPanel } from "../common/LogPanel";
 import { MenuIcon } from "../common/MenuIcon";
 import { StockRow } from "../common/StockRow";
 import { ProductCard } from "../common/ProductCard";
@@ -233,6 +232,27 @@ export const HomeScreen = React.memo(({
             </div>
           </div>
         </div>
+
+        {/* Network Status Indicator */}
+        <a
+          href="https://testnet.arcscan.app"
+          target="_blank"
+          rel="noreferrer"
+          className="flex flex-col items-end hover:opacity-80 transition-opacity"
+        >
+          <div className="flex items-center gap-1">
+            <div className="relative flex h-1.5 w-1.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400"></span>
+            </div>
+            <span className="text-[8px] font-bold text-emerald-400 uppercase tracking-wider leading-none">
+              Arc Testnet Live
+            </span>
+          </div>
+          <span className="text-[7px] text-white/60 font-medium mt-0.5">
+            Unified USDC Gas System
+          </span>
+        </a>
       </header>
 
       {/* Scrollable Main Content */}
@@ -240,40 +260,8 @@ export const HomeScreen = React.memo(({
         <div className="flex flex-col lg:grid lg:grid-cols-12 lg:gap-6">
           {/* Left Column for Desktop */}
           <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-3">
-            {/* Arc Network Status Monitor (Enterprise Finality) */}
-            <div className="mx-4 lg:mx-0 mt-4 mb-2 flex items-center justify-between bg-white rounded-[20px] p-3 shadow-sm border border-slate-100/50">
-               <div className="flex items-center gap-2.5">
-                  <div className="relative">
-                    <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full"></div>
-                    <div className="absolute inset-0 w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping opacity-40"></div>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black text-slate-800 uppercase tracking-widest leading-none flex items-center gap-1.5">
-                       Arc Testnet Live
-                       <span className="bg-slate-900 text-white text-[8px] px-1.5 py-0.5 rounded-full font-bold">NATIVE-USDC</span>
-                    </p>
-                    <p className="text-[9px] text-slate-400 font-medium mt-1">Deterministic Finality: Sub-second Settlement</p>
-                  </div>
-               </div>
-               <div className="flex items-center gap-3">
-                 <div className="flex flex-col items-end">
-                    <span className="text-[9px] font-bold text-slate-800">Unified Gas System</span>
-                    <span className="text-[8px] text-slate-400">Native Asset Economy</span>
-                 </div>
-                 <div className="w-[1px] h-6 bg-slate-100"></div>
-                 <a 
-                   href="https://testnet.arcscan.app" 
-                   target="_blank" 
-                   rel="noreferrer" 
-                   className="p-1.5 bg-slate-50 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
-                 >
-                   <ExternalLink size={14} />
-                 </a>
-               </div>
-            </div>
-
             {/* Accounts Section */}
-            <section className="bg-white rounded-[24px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] mx-4 lg:mx-0 border border-slate-50/50 mt-0">
+            <section className="bg-white rounded-[24px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] mx-4 lg:mx-0 border border-slate-50/50 mt-4">
               <div className="flex justify-between items-center mb-3">
                 <h2 className="text-[17px] font-bold text-slate-800 tracking-tight">
                   Accounts
@@ -382,13 +370,6 @@ export const HomeScreen = React.memo(({
                    </motion.div>
                 )}
               </AnimatePresence>
-
-              <button
-                onClick={() => onNavigate("otherAccounts")}
-                className="w-full text-center text-slate-800 text-[12px] font-bold mt-1 py-1.5 hover:bg-slate-100 rounded-lg transition-colors flex justify-center items-center gap-1.5 opacity-90 border-0 bg-transparent"
-              >
-                Other Personal Savings & Checking <PlusCircleIcon size={14} />
-              </button>
             </section>
 
             {/* Favorite Transactions Section */}
@@ -397,12 +378,6 @@ export const HomeScreen = React.memo(({
                 <h2 className="text-[17px] font-bold text-slate-800 tracking-tight">
                   Favorite Transactions
                 </h2>
-                <button
-                  className="text-slate-800 text-[13px] font-semibold flex items-center gap-1.5 hover:bg-slate-100 px-2 py-1 rounded-full transition-colors border-0 bg-transparent"
-                  onClick={() => onNavigate("manageFavorites")}
-                >
-                  Manage <Settings2 size={14} strokeWidth={1.5} />
-                </button>
               </div>
 
               <div className="grid grid-cols-4 gap-y-5 gap-x-2">
@@ -536,7 +511,6 @@ export const HomeScreen = React.memo(({
 
           {/* Right Column for Desktop */}
           <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-4">
-            <LogPanel />
             {/* Dapps */}
             <section className="bg-white rounded-[24px] p-5 shadow-sm mb-4 lg:mb-0 mx-4 lg:mx-0 text-left">
               <div className="flex justify-between items-center mb-4">

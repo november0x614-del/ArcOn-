@@ -259,7 +259,7 @@ app.post("/api/swap/execute", async (req, res) => {
     const { userId, amount, fromToken, toToken, tokenAddress } = req.body;
     const dexAddress = "0x3333333333333333333333333333333333333333";
     
-    const result = await executeTransaction(getSupabaseAdmin(), userId, amount, dexAddress, 'swap', { fromToken, toToken, tokenAddress });
+    const result = await executeTransaction(getSupabaseAdmin(), userId, Number(amount), dexAddress, 'swap', { fromToken, toToken, tokenAddress });
     res.status(200).json({ message: "Swap queued", txId: result.txId });
   } catch (error: any) {
     console.error("Swap Error", error);
@@ -273,7 +273,7 @@ app.post("/api/bridge/execute", async (req, res) => {
     const { userId, amount, fromNetwork, toNetwork } = req.body;
     const bridgeAddress = "0x0000000000000000000000000000000000000000";
     
-    const result = await executeTransaction(getSupabaseAdmin(), userId, amount, bridgeAddress, 'transfer', { fromNetwork, toNetwork });
+    const result = await executeTransaction(getSupabaseAdmin(), userId, Number(amount), bridgeAddress, 'transfer', { fromNetwork, toNetwork });
     res.status(200).json({ message: "Bridge transfer queued", txId: result.txId });
   } catch (error: any) {
     console.error("Bridge execute error:", error);
@@ -288,7 +288,7 @@ app.post("/api/transfer/execute", async (req, res) => {
     
     // 1. Determine the best source for funds (Unified Balance logic)
     // For now, we prioritize Circle for simplicity, but we can switch based on balance
-    const result = await executeTransaction(supabase, userId, amount, destinationAddress, 'transfer', { 
+    const result = await executeTransaction(supabase, userId, Number(amount), destinationAddress, 'transfer', { 
       intent: 'unified_transfer',
       finality: 'deterministic',
       memo: memo || ''
@@ -312,7 +312,7 @@ app.post("/api/withdraw/execute", async (req, res) => {
     const { userId, amount, bank, memo } = req.body;
     const treasuryAddress = "0x1111111111111111111111111111111111111111"; 
 
-    const result = await executeTransaction(getSupabaseAdmin(), userId, amount, treasuryAddress, 'withdraw', { 
+    const result = await executeTransaction(getSupabaseAdmin(), userId, Number(amount), treasuryAddress, 'withdraw', { 
       bank, 
       memo,
       finality: 'deterministic'

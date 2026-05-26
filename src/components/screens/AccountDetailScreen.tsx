@@ -348,13 +348,14 @@ export function AccountDetailScreen({
         )}
 
         {activeTab === 'token' && (
-          <div className="flex-1 overflow-y-auto px-6 py-6 pb-24 flex flex-col gap-4 bg-slate-50/50">
-            {/* USDC Token Card */}
-            <div className="flex flex-col bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-              <div 
-                className="p-4 flex justify-between items-center hover:bg-slate-50 transition-colors cursor-pointer"
-                onClick={() => setShowUnifiedDetails(!showUnifiedDetails)}
-              >
+          <div className="flex-1 overflow-y-auto px-5 py-5 pb-24 bg-slate-50/50">
+            <div className="bg-white rounded-[24px] border border-slate-200/50 shadow-[0_4px_24px_rgba(0,0,0,0.02)] overflow-hidden">
+              {/* USDC Token Row */}
+              <div className="flex flex-col border-b border-slate-100">
+                <div 
+                  className="p-4 flex justify-between items-center hover:bg-slate-50/75 transition-colors cursor-pointer"
+                  onClick={() => setShowUnifiedDetails(!showUnifiedDetails)}
+                >
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-[#008fcd] shadow-inner shrink-0">
                     <Coins size={24} />
@@ -444,29 +445,29 @@ export function AccountDetailScreen({
                     </div>
                   </div>
 
-                  <div className="mt-4 p-3 rounded-xl bg-slate-50 border border-slate-100">
-                    <p className="text-[9.5px] text-slate-500 leading-relaxed font-medium">
+                  <div className="mt-3 p-2.5 rounded-xl bg-white border border-slate-100">
+                    <p className="text-[9.5px] text-slate-500 leading-relaxed font-medium font-sans">
                       💡 These balances are virtually unified. You can spend the combined total instantly on the Arc network without manual bridging.
                     </p>
                   </div>
                 </div>
               )}
-            </div>
+              </div>
 
-            {/* ARC Token Card */}
-            <div className="bg-white rounded-2xl p-4 flex justify-between items-center shadow-sm border border-slate-100 hover:shadow-md transition-shadow cursor-pointer">
+            {/* ARC Token Row */}
+            <div className="p-4 flex justify-between items-center hover:bg-slate-50/75 transition-colors cursor-pointer border-b border-slate-100">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-slate-900 rounded-full flex items-center justify-center text-white shadow-inner relative overflow-hidden">
+                <div className="w-11 h-11 bg-slate-900 rounded-full flex items-center justify-center text-white shadow-inner relative overflow-hidden shrink-0">
                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/40 via-transparent to-blue-500/40"></div>
-                   <span className="font-bold text-[10px] tracking-wider italic z-10">ARC</span>
+                   <span className="font-bold text-[9px] tracking-wider italic z-10">ARC</span>
                 </div>
-                <div className="flex flex-col">
-                  <span className="font-bold text-[16px] text-slate-800 leading-tight">ARC</span>
-                  <span className="text-[12px] text-slate-500 font-medium">Arc Network</span>
+                <div className="flex flex-col text-left">
+                  <span className="font-bold text-[15.5px] text-slate-800 leading-tight">ARC</span>
+                  <span className="text-[11.5px] text-slate-400 font-medium">Arc Network</span>
                 </div>
               </div>
               <div className="flex flex-col items-end">
-                <span className="font-bold text-[16px] text-slate-800 font-mono">
+                <span className="font-bold text-[15.5px] text-slate-800 font-mono">
                   {showBalance ? (() => {
                     const arcTokenData = balanceData?.allBalances?.find((b: any) => 
                       b.token?.symbol === 'ARC' || b.token?.name?.toUpperCase().includes('ARC')
@@ -475,7 +476,7 @@ export function AccountDetailScreen({
                     return amt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                   })() : '••••'}
                 </span>
-                <span className="text-[12px] text-slate-400 font-medium tracking-wide">
+                <span className="text-[11.5px] text-slate-400 font-medium tracking-wide">
                   {showBalance ? (() => {
                     const arcTokenData = balanceData?.allBalances?.find((b: any) => 
                       b.token?.symbol === 'ARC' || b.token?.name?.toUpperCase().includes('ARC')
@@ -491,25 +492,25 @@ export function AccountDetailScreen({
             {importedTokens.map((token) => (
               <div 
                 key={token.symbol} 
-                className="bg-white rounded-2xl p-4 flex justify-between items-center shadow-sm border border-slate-100 hover:shadow-md transition-all cursor-pointer group relative overflow-hidden"
+                className="p-4 flex justify-between items-center hover:bg-slate-50/75 transition-colors cursor-pointer border-b border-slate-100 relative overflow-hidden"
               >
                 <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 ${token.color || 'bg-blue-600'} rounded-full flex items-center justify-center text-white font-bold text-sm shadow-inner relative overflow-hidden shrink-0`}>
+                  <div className={`w-11 h-11 ${token.color || 'bg-blue-600'} rounded-full flex items-center justify-center text-white font-bold text-xs shadow-inner relative overflow-hidden shrink-0`}>
                      <span className="z-10 tracking-tight uppercase">{token.symbol.substring(0, 4)}</span>
                   </div>
-                  <div className="flex flex-col max-w-[150px] sm:max-w-[200px]">
-                    <span className="font-bold text-[16px] text-slate-800 leading-tight flex items-center gap-1.5 truncate">
+                  <div className="flex flex-col text-left max-w-[150px] sm:max-w-[200px]">
+                    <span className="font-bold text-[15.5px] text-slate-800 leading-tight flex items-center gap-1.5 truncate">
                       {token.symbol}
-                      <span className="bg-blue-50 text-[#008fcd] text-[8.5px] uppercase font-mono font-bold tracking-wider px-1.5 py-0.5 rounded border border-blue-100 leading-none">Imported</span>
+                      <span className="bg-blue-50 text-[#008fcd] text-[8px] uppercase font-mono font-bold tracking-wider px-1.5 py-0.5 rounded-[4px] border border-blue-100 leading-none">Imported</span>
                     </span>
-                    <span className="text-[11px] text-slate-400 font-medium truncate font-mono mt-0.5" title={token.contractAddress}>
+                    <span className="text-[10.5px] text-slate-400 font-medium truncate font-mono mt-0.5" title={token.contractAddress}>
                       {token.contractAddress.substring(0, 6)}...{token.contractAddress.substring(token.contractAddress.length - 4)}
                     </span>
                   </div>
                 </div>
                 <div className="flex items-center">
                   <div className="flex flex-col items-end">
-                    <span className="font-bold text-[16px] text-slate-800 font-mono">
+                    <span className="font-bold text-[15.5px] text-slate-800 font-mono">
                       {showBalance ? (() => {
                         const amt = liveCustomBalances[token.contractAddress.toLowerCase().trim()] !== undefined 
                           ? liveCustomBalances[token.contractAddress.toLowerCase().trim()] 
@@ -517,7 +518,7 @@ export function AccountDetailScreen({
                         return amt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: token.decimals > 6 ? 4 : 2 });
                       })() : '••••'}
                     </span>
-                    <span className="text-[12px] text-slate-400 font-medium tracking-wide">
+                    <span className="text-[11.5px] text-slate-400 font-medium tracking-wide">
                       {showBalance ? (() => {
                         const amt = liveCustomBalances[token.contractAddress.toLowerCase().trim()] !== undefined 
                           ? liveCustomBalances[token.contractAddress.toLowerCase().trim()] 
@@ -530,16 +531,17 @@ export function AccountDetailScreen({
               </div>
             ))}
 
-            {/* Empty State / Add Token */}
+            {/* Sleek Flat Add Token Row */}
             <button 
               onClick={() => {
                 setShowImportModal(true);
               }}
-              className="mt-2 w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center gap-2 text-slate-400 hover:text-slate-800 hover:border-blue-200 hover:bg-slate-100/50 transition-all font-semibold outline-none cursor-pointer"
+              className="w-full py-4 text-slate-500 hover:text-blue-600 hover:bg-slate-50/75 transition-colors flex items-center justify-center gap-2 font-bold text-[13.5px] outline-none cursor-pointer border-t border-slate-100 bg-transparent rounded-b-[24px]"
             >
-              <Plus size={18} />
-              <span className="text-[14px]">Import Token</span>
+              <Plus size={16} />
+              <span>Import Token</span>
             </button>
+          </div>
           </div>
         )}
       </div>
