@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { ArrowLeft, Copy, Check, Info } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import { useApp } from "../../context/AppContext";
+import { useApp } from "../../contexts/AppContext";
 
 interface DepositQRScreenProps {
   onBack: () => void;

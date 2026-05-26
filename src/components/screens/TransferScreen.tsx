@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Search, UserPlus, Plus, Users, Star, X } from 'lucide-react';
-import { useApp } from '../../context/AppContext';
+import { useApp } from '../../contexts/AppContext';
 import { useContacts } from '../../hooks/useContacts';
 
 interface TransferScreenProps {

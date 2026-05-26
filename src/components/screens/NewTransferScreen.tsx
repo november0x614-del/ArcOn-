@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { ArrowLeft, ArrowRight, ChevronDown, X, Zap, Landmark, AtSign } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, ArrowRight, ChevronDown, X, Zap, Landmark, AtSign, Loader2, CheckCircle2 } from 'lucide-react';
+import { supabase } from '../../lib/supabaseClient';
 
 interface NewTransferScreenProps {
   onBack: () => void;
@@ -12,7 +13,80 @@ export function NewTransferScreen({ onBack, onSelectContact }: NewTransferScreen
   const [showNetworkSelect, setShowNetworkSelect] = useState(false);
   const [selectedNetwork, setSelectedNetwork] = useState('EVM (Arc Testnet)');
   const [isChecking, setIsChecking] = useState(false);
+  const [isVerifyingAddress, setIsVerifyingAddress] = useState(false);
   const [showReceiverDetail, setShowReceiverDetail] = useState(false);
+  const [addressVerified, setAddressVerified] = useState(false);
+  const [addressError, setAddressError] = useState<string | null>(null);
+
+  // Helper to validate EVM address format
+  const validateAddressFormat = (addr: string) => {
+    const clean = addr.trim();
+    if (!clean) return null;
+    if (!clean.startsWith('0x')) return "Address must start with 0x";
+    if (!/^0x[a-fA-F0-9]*$/.test(clean)) return "Invalid characters in address";
+    if (clean.length < 42) return null; // No error while typing, only when complete but wrong
+    if (clean.length > 42) return "Address is too long";
+    return null;
+  };
+
+  // Auto-verify address when pasted/typed
+  useEffect(() => {
+    const cleanAddress = accountNumber.trim();
+    const formatError = validateAddressFormat(cleanAddress);
+    
+    setAddressError(formatError);
+
+    // Reset verified state if address changes
+    if (addressVerified && !isVerifyingAddress) {
+       setAddressVerified(false);
+    }
+
+    // Only verify with DB if the format is strictly valid (0x + 40 hex chars)
+    if (!formatError && cleanAddress.length === 42) {
+      const verifyAddress = async () => {
+        setIsVerifyingAddress(true);
+        try {
+          // Normalize to lowercase for consistency
+          const addrToSearch = cleanAddress.toLowerCase();
+          
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('full_name, username')
+            .ilike('wallet_address', addrToSearch)
+            .maybeSingle();
+
+          if (!error && data) {
+            const name = data.full_name || data.username || '';
+            if (name) {
+              setReceiverName(name);
+              setAddressVerified(true);
+            } else {
+              setAddressVerified(false);
+            }
+          } else {
+            setAddressVerified(false);
+          }
+        } catch (err) {
+          console.error("Verification error:", err);
+          setAddressVerified(false);
+        } finally {
+          setIsVerifyingAddress(false);
+        }
+      };
+
+      const timer = setTimeout(verifyAddress, 150); // Fast reaction
+      return () => clearTimeout(timer);
+    } else {
+      if (addressVerified) setAddressVerified(false);
+    }
+  }, [accountNumber]);
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const pastedText = e.clipboardData.getData('text').trim();
+    if (pastedText.startsWith('0x')) {
+       setAccountNumber(pastedText); 
+    }
+  };
 
   const handleContinue = () => {
     if (!accountNumber || !receiverName) return;
@@ -20,7 +94,7 @@ export function NewTransferScreen({ onBack, onSelectContact }: NewTransferScreen
     setTimeout(() => {
       setIsChecking(false);
       setShowReceiverDetail(true);
-    }, 1000);
+    }, 800);
   };
   
   const initials = receiverName.trim() ? receiverName.trim().split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : '?';
@@ -33,7 +107,7 @@ export function NewTransferScreen({ onBack, onSelectContact }: NewTransferScreen
            <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent">
              <ArrowLeft size={20} className="text-white" />
            </button>
-           <h2 className="font-bold text-[16px] text-white ml-2">NEW TRANSFER</h2>
+           <h2 className="font-bold text-[16px] text-white ml-2 uppercase tracking-tight">New Transfer</h2>
          </div>
        </div>
 
@@ -64,51 +138,68 @@ export function NewTransferScreen({ onBack, onSelectContact }: NewTransferScreen
           </div>
           
           {/* Account Number Input */}
-          <div className="bg-[#f6f8fb] rounded-[16px] px-4 py-4 mb-4 flex justify-between items-center border border-transparent focus-within:border-slate-900 transition-colors relative">
-             <input 
-               type="text" 
-               placeholder="Wallet Address" 
-               value={accountNumber}
-               onChange={(e) => setAccountNumber(e.target.value)}
-               className="w-full bg-transparent outline-none text-slate-800 font-medium placeholder:text-slate-400 text-[15px] pr-8" 
-             />
-             {accountNumber && (
-               <button onClick={() => setAccountNumber('')} className="absolute right-4 w-[22px] h-[22px] bg-[#d1d5db] rounded-full flex items-center justify-center text-white hover:bg-[#9ca3af] transition-colors">
-                 <X size={14} strokeWidth={2.5} />
-               </button>
+          <div className={`bg-[#f6f8fb] rounded-[16px] px-4 py-4 mb-4 flex flex-col border transition-colors relative ${addressError && accountNumber.length > 10 ? 'border-red-400' : 'border-transparent focus-within:border-slate-900'}`}>
+             <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 text-left">Wallet Address</label>
+             <div className="flex items-center justify-between">
+                <input 
+                  type="text" 
+                  placeholder="Paste or type 0x address" 
+                  value={accountNumber}
+                  onChange={(e) => setAccountNumber(e.target.value.trim())}
+                  onPaste={handlePaste}
+                  className="w-full bg-transparent outline-none text-slate-800 font-bold placeholder:text-slate-400 text-[15px] pr-8" 
+                />
+                <div className="absolute right-4 flex items-center gap-2">
+                  {isVerifyingAddress && <Loader2 size={16} className="text-slate-400 animate-spin" />}
+                  {addressVerified && <CheckCircle2 size={16} className="text-emerald-500" />}
+                  {accountNumber && (
+                    <button onClick={() => { setAccountNumber(''); setReceiverName(''); setAddressVerified(false); setAddressError(null); }} className="w-[20px] h-[20px] bg-[#d1d5db] rounded-full flex items-center justify-center text-white hover:bg-[#9ca3af] transition-colors border-0">
+                      <X size={12} strokeWidth={3} />
+                    </button>
+                  )}
+                </div>
+             </div>
+             {addressError && accountNumber.length > 20 && (
+               <span className="text-[10px] font-bold text-red-500 mt-1 uppercase tracking-widest text-left">{addressError}</span>
              )}
           </div>
           
           {/* Receiver Name Input */}
-          <div className="bg-[#f6f8fb] rounded-[16px] px-4 py-4 mb-4 flex justify-between items-center border border-transparent focus-within:border-slate-900 transition-colors relative">
-             <input 
-               type="text" 
-               placeholder="Account Name" 
-               value={receiverName}
-               onChange={(e) => setReceiverName(e.target.value)}
-               className="w-full bg-transparent outline-none text-slate-800 font-medium placeholder:text-slate-400 text-[15px] pr-8" 
-             />
-             {receiverName && (
-               <button onClick={() => setReceiverName('')} className="absolute right-4 w-[22px] h-[22px] bg-[#d1d5db] rounded-full flex items-center justify-center text-white hover:bg-[#9ca3af] transition-colors">
-                 <X size={14} strokeWidth={2.5} />
-               </button>
+          <div className="bg-[#f6f8fb] rounded-[16px] px-4 py-4 mb-4 flex flex-col border border-transparent focus-within:border-slate-900 transition-colors relative">
+             <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 text-left">Receiver Name</label>
+             <div className="flex items-center justify-between">
+                <input 
+                  type="text" 
+                  placeholder="Enter full name" 
+                  value={receiverName}
+                  onChange={(e) => setReceiverName(e.target.value)}
+                  className={`w-full bg-transparent outline-none font-bold placeholder:text-slate-400 text-[15px] pr-8 ${addressVerified ? 'text-emerald-600' : 'text-slate-800'}`} 
+                />
+                {!addressVerified && receiverName && (
+                  <button onClick={() => setReceiverName('')} className="absolute right-4 w-[20px] h-[20px] bg-[#d1d5db] rounded-full flex items-center justify-center text-white hover:bg-[#9ca3af] transition-colors border-0">
+                    <X size={12} strokeWidth={3} />
+                  </button>
+                )}
+             </div>
+             {addressVerified && (
+               <span className="text-[10px] font-bold text-emerald-500 mt-1 uppercase tracking-widest text-left">Verified Arc User</span>
              )}
           </div>
        </div>
 
-       {/* Bottom Button */}
-       <div className="px-5 pb-8 shrink-0 relative z-10 bg-white">
+        {/* Bottom Button */}
+        <div className="px-5 pb-8 shrink-0 relative z-10 bg-white">
           <button 
             onClick={handleContinue}
-            disabled={!accountNumber || accountNumber.length < 3 || !receiverName.trim()}
+            disabled={!!addressError || !accountNumber || accountNumber.length < 42 || !receiverName.trim()}
             className={`w-full py-[14px] rounded-full font-bold text-[15px] transition-all flex items-center justify-center gap-2
-              ${accountNumber.length > 3 && receiverName.trim().length > 0
+              ${!addressError && accountNumber.length === 42 && receiverName.trim().length > 0
                 ? 'bg-slate-900 text-white shadow-lg hover:bg-slate-800 active:scale-[0.98]' 
                 : 'bg-[#e5e7eb] text-[#9ca3af] shadow-none'}`}
           >
              Continue
           </button>
-       </div>
+        </div>
 
        {/* Check Receiver Details Modal */}
        {(isChecking || showReceiverDetail) && (

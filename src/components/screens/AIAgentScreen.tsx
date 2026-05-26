@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Bot, Sparkles, Send } from 'lucide-react';
-import { useApp } from '../../context/AppContext';
+import { useApp } from '../../contexts/AppContext';
 
 interface AIAgentScreenProps {
   onBack: () => void;

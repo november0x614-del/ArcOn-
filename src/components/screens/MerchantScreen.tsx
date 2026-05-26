@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Box, PlusCircle, BarChart3, Settings, MoreVertical, Search, Wallet, TrendingUp, Tags, Download, Eye, ExternalLink } from 'lucide-react';
-import { useApp } from '../../context/AppContext';
+import { useApp } from '../../contexts/AppContext';
 
 interface MerchantScreenProps {
   onBack: () => void;

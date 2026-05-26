@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Search, ShoppingBag, Heart, Wallet, CheckCircle2, Copy, ShieldCheck } from 'lucide-react';
-import { useApp } from '../../context/AppContext';
+import { useApp } from '../../contexts/AppContext';
 
 interface EcommerceScreenProps {
   onBack: () => void;

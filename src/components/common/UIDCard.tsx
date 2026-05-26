@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, useSpring, useTransform, useMotionValue } from 'motion/react';
-import { useApp } from "../../context/AppContext";
+import { useApp } from "../../contexts/AppContext";
 import { UIDCardTheme } from "../../types";
 import { THEME_STYLES } from "../../utils/theme";
 

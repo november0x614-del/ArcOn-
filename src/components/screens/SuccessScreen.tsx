@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Check, Share2, Download, Home } from 'lucide-react';
 import { useArc } from '../../contexts/ArcContext';
-import { useApp } from '../../context/AppContext';
+import { useApp } from '../../contexts/AppContext';
 
 interface SuccessScreenProps {
   amount: string;

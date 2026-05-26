@@ -1,6 +1,6 @@
 import React from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { useApp } from "./context/AppContext";
+import { useApp } from "./contexts/AppContext";
 import { useStore } from "./store/useStore";
 import { supabase } from "./lib/supabaseClient";
 import { ViewRouter } from "./components/router/ViewRouter";
@@ -90,21 +90,27 @@ export default function App() {
   }, [setRegisteredUser, setViewState]);
 
   React.useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (error) {
-        if (error.message.includes("Refresh Token Not Found") || error.message.includes("Invalid Refresh Token") || error.message.includes("refresh token")) {
-          // Suppress error and just clear local state because the session is authentically expired
-          supabase.auth.signOut().catch(() => {});
-          resetState();
-        } else {
-          console.error("Error getting session:", error.message);
-          supabase.auth.signOut().catch(() => {});
-          resetState();
+    const checkSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          // If it's an auth error specifically about session validity, just reset
+          if (error.message.toLowerCase().includes("refresh token") || error.status === 400) {
+            await supabase.auth.signOut().catch(() => {});
+            resetState();
+          } else {
+            console.warn("Auth initialization warning:", error.message);
+          }
+        } else if (session) {
+          handleUserSession(session.user);
         }
-      } else if (session) {
-        handleUserSession(session.user);
+      } catch (err) {
+        // Absolute suppression of session check failures
+        console.debug("Silent session check failure");
       }
-    });
+    };
+
+    checkSession();
 
     const {
       data: { subscription },

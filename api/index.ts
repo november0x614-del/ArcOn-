@@ -878,15 +878,14 @@ app.get("/api/admin/stats", async (_req, res) => {
 
     const { data: transactions, error: txError } = await supabase
       .from('transactions')
-      .select('amount, status, type');
+      .select('amount')
+      .eq('status', 'success');
 
     let totalVolume = 0;
     if (!txError && transactions) {
       transactions.forEach(tx => {
-        if (tx.status === 'success') {
-          const amt = Math.abs(parseFloat(tx.amount || "0"));
-          totalVolume += amt;
-        }
+        const amt = Math.abs(parseFloat(tx.amount || "0"));
+        totalVolume += amt;
       });
     }
 
@@ -920,3 +919,4 @@ app.get("/api/admin/stats", async (_req, res) => {
 });
 
 export default app;
+

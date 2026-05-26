@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, CheckCircle2, Loader2, ChevronRight, Info, AlertCircle, Globe, X } from 'lucide-react';
 import { motion } from 'motion/react';
-import { useApp } from '../../context/AppContext';
+import { useApp } from '../../contexts/AppContext';
 import { ArcAppKitAdapter } from '../../services/arc-app-kit/adapter';
 
 interface BridgeScreenProps {

@@ -12,6 +12,9 @@ import {
 } from "./arcViem.js";
 import { logAuditEvent } from "./audit.js";
 import { getCircleClientInstance } from "./circleClient.js";
+import { fetchUnifiedBalance } from "./balance.js";
+import { AppKit } from "@circle-fin/app-kit";
+import CircleWalletsAdapter from "@circle-fin/adapter-circle-wallets";
 
 export async function createWallet(supabaseAdmin: any, userId: string) {
     const client = getCircleClientInstance();
@@ -101,17 +104,29 @@ export async function executeTransaction(
     const amountInternal = BigInt(Math.floor(amount * 1_000_000)) * (10n ** 12n);
 
     // Fetch balances FIRST
-    const [nativeBalance, tokenBalanceRaw] = await Promise.all([
-        getNativeBalance(sourceAddress),
-        getTokenBalance(sourceAddress, tokenAddress)
-    ]);
+    let totalTokenBalanceInternal = 0n;
+    let nativeBalance = 0n;
+    if (metadata.intent === 'unified_transfer') {
+        const [unified, native] = await Promise.all([
+            fetchUnifiedBalance(userId, walletData, supabaseAdmin),
+            getNativeBalance(sourceAddress)
+        ]);
+        totalTokenBalanceInternal = BigInt(Math.floor(unified.balance * 1e18));
+        nativeBalance = native;
+    } else {
+        const [native, tokenBalanceRaw] = await Promise.all([
+            getNativeBalance(sourceAddress),
+            getTokenBalance(sourceAddress, tokenAddress)
+        ]);
+        nativeBalance = native;
+        // Consistently normalize token balance to 18 decimals internal for comparison
+        totalTokenBalanceInternal = tokenBalanceRaw * (10n ** BigInt(18 - decimals)); 
+    }
 
-    // Consistently normalize token balance to 18 decimals internal for comparison
-    const tokenBalanceInternal = tokenBalanceRaw * (10n ** BigInt(18 - decimals)); 
-
-    if (tokenBalanceInternal < amountInternal) {
+    if (totalTokenBalanceInternal < amountInternal) {
         const symbol = metadata.fromToken || "USDC";
-        throw new Error(`Insufficient ${symbol} balance. Need ${amount.toFixed(2)} ${symbol}, have ${(Number(tokenBalanceInternal) / 1e18).toFixed(2)} ${symbol}`);
+        const humanBalance = Number(totalTokenBalanceInternal) / 1e18;
+        throw new Error(`Insufficient ${symbol} balance. Need ${amount.toFixed(2)} ${symbol}, have ${humanBalance.toFixed(2)} ${symbol}`);
     }
 
     // Now estimate gas once we know we have the amount
@@ -122,22 +137,38 @@ export async function executeTransaction(
     }
 
     const client = getCircleClientInstance();
+    const entitySecret = process.env.CIRCLE_ENTITY_SECRET || "";
 
-    // Fase 3 Preview: Memo support (if provided in metadata)
-    const txParams: any = {
+    // App Kit Adapter-Based Execution
+    const kit = new AppKit();
+
+    const adapter = new (CircleWalletsAdapter as any)({
+        apiKey: process.env.CIRCLE_API_KEY || "",
+        entitySecret: entitySecret,
         walletId: walletData.wallet_id,
-        destinationAddress: validDest,
-        amount: [amount.toFixed(decimals >= 6 ? 6 : decimals)], // Circle might expect standard decimal string
-        fee: { type: "level", config: { feeLevel: "LOW" } },
-        tokenAddress: metadata.tokenAddress || "", // Use provided token address or empty for native
-        blockchain: "ARC-TESTNET"
-    };
+    });
 
-    // Perform transaction using Developer SDK
-    const response = await client.createTransaction(txParams);
-    
-    // Circle return an internal tx ID first
-    const circleTxId = response.data?.id;
+    let circleTxId: string;
+
+    if (metadata.intent === 'unified_transfer') {
+        console.log(`[AppKit] Initiating Unified Transfer intent for ${amount} USDC to ${validDest}`);
+        const response = (await (kit as any).unifiedBalance({
+            to: validDest,
+            amount: amount.toString(),
+            token: "USDC",
+            from: { adapter }
+        })) as any;
+        circleTxId = response.transactionId || response.id;
+    } else {
+        console.log(`[AppKit] Initiating send intent for ${amount} USDC to ${validDest} on ARC-TESTNET`);
+        const response = (await (kit as any).send({
+            from: { adapter, chain: "Arc_Testnet" },
+            to: validDest,
+            amount: amount.toString(),
+            token: "USDC",
+        })) as any;
+        circleTxId = response.transactionId || response.id;
+    }
 
     const result = { 
         txId: circleTxId, 

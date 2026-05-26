@@ -1,6 +1,6 @@
 import React from 'react';
 import { Eye, EyeOff, ShieldCheck } from "lucide-react";
-import { useApp } from "../../context/AppContext";
+import { useApp } from "../../contexts/AppContext";
 import { UIDCardTheme } from "../../types";
 import { THEME_STYLES } from "../../utils/theme";
 
@@ -93,7 +93,7 @@ export const WalletCard = React.memo(function WalletCard({ onNavigate, onClick, 
         </div>
 
         {/* UID Card Artwork */}
-        <div className={`w-20 h-13 sm:w-24 sm:h-16 rounded-lg sm:rounded-xl border border-slate-100 shadow-xl relative overflow-hidden shrink-0 group-hover:scale-105 transition-transform duration-500 flex flex-col justify-between p-2 sm:p-2.5 ${styles.cardBg}`}>
+        <div className={`w-20 h-13 sm:w-24 sm:h-16 mr-1.5 sm:mr-2 rounded-lg sm:rounded-xl border border-slate-100 shadow-xl relative overflow-hidden shrink-0 group-hover:scale-105 transition-transform duration-500 flex flex-col justify-between p-2 sm:p-2.5 ${styles.cardBg}`}>
           {/* Accent Graphic */}
           <div className={`absolute top-0 right-0 w-[50%] h-[120%] border-[2px] ${styles.accentBorder} rounded-full pointer-events-none rotate-12 translate-x-1/2 -translate-y-1/3`}></div>
 

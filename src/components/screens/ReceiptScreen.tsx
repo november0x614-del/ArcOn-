@@ -8,7 +8,7 @@ import {
   X,
   HelpCircle
 } from 'lucide-react';
-import { useApp } from '../../context/AppContext';
+import { useApp } from '../../contexts/AppContext';
 
 export function ReceiptScreen({ onBack }: { onBack: () => void }) {
   const { selectedTransaction: tx } = useApp();

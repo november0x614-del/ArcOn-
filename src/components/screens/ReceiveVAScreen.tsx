@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
-import { useApp } from '../../context/AppContext';
+import { useApp } from '../../contexts/AppContext';
 
 interface ReceiveVAScreenProps {
   onBack: () => void;
@@ -93,8 +93,8 @@ export function ReceiveVAScreen({ onBack }: ReceiveVAScreenProps) {
         </div>
         
         <div className="mt-8 flex gap-3 px-2">
-           <div className="w-8 h-8 rounded-full bg-[#008fcd]/10 flex items-center justify-center shrink-0">
-             <div className="w-2 h-2 bg-[#008fcd] rounded-full animate-pulse"></div>
+           <div className="w-8 h-8 rounded-full bg-slate-900/10 flex items-center justify-center shrink-0">
+             <div className="w-2 h-2 bg-slate-900 rounded-full animate-pulse"></div>
            </div>
            <div>
               <p className="text-[12px] font-bold text-slate-800 mb-1 leading-none uppercase tracking-widest">Instant Settlement</p>

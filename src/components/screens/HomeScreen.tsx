@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ViewState, ShortcutItem } from "../../types";
-import { useApp } from "../../context/AppContext";
+import { useApp } from "../../contexts/AppContext";
 import { useArc } from "../../contexts/ArcContext";
 import { MenuIcon } from "../common/MenuIcon";
 import { StockRow } from "../common/StockRow";
@@ -460,7 +460,6 @@ export const HomeScreen = React.memo(({
                         if (item.label === "Native Wallet Swap" || item.label === "Swap USDC") onNavigate("swap");
                         if (item.label === "Deposit/Withdraw")
                           onNavigate("depositOptions");
-                        if (item.label === "Top-up") onNavigate("topup");
                         if (item.label === "Pay/VA") onNavigate("bayarVA");
                         if (item.label === "DApp Browser")
                           onNavigate("ecommerce");

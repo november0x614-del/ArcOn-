@@ -1,7 +1,7 @@
 import React from "react";
 import { motion, AnimatePresence, Variants } from "motion/react";
 import { ViewState } from "../../types";
-import { useApp } from "../../context/AppContext";
+import { useApp } from "../../contexts/AppContext";
 import { LoginScreen } from "../screens/LoginScreen";
 import { RegisterWeb3Screen } from "../screens/RegisterWeb3Screen";
 import { RegisterSuccessScreen } from "../screens/RegisterSuccessScreen";
@@ -108,21 +108,32 @@ export const ViewRouter = React.memo(({ isLoggingIn, loginEmail, setLoginEmail, 
   const [platformConfig, setPlatformConfig] = React.useState<any>(null);
 
   React.useEffect(() => {
+    // Only fetch config if user is at least partially logged in or already at home
+    const shouldFetch = registeredUser !== null || viewState === 'home';
+    if (!shouldFetch) return;
+
+    const controller = new AbortController();
     const loadConfig = async () => {
       try {
-        const res = await fetch("/api/admin/config");
+        const res = await fetch("/api/admin/config", { signal: controller.signal });
         if (res.ok) {
           const data = await res.json();
           setPlatformConfig(data);
         }
-      } catch (err) {
-        console.error("Failed to load config in router:", err);
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          console.debug("Transient config fetch failure:", err.message);
+        }
       }
     };
+
     loadConfig();
-    const interval = setInterval(loadConfig, 10000);
-    return () => clearInterval(interval);
-  }, []);
+    const interval = setInterval(loadConfig, 15000);
+    return () => {
+      controller.abort();
+      clearInterval(interval);
+    };
+  }, [registeredUser, viewState]);
 
   const renderLockedScreen = (title: string, description: string) => {
     return (

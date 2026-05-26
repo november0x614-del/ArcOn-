@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Building2, ChevronRight, CheckCircle2, Loader2 } from 'lucide-react';
-import { useApp } from '../../context/AppContext';
+import { useApp } from '../../contexts/AppContext';
 import { useArc } from '../../contexts/ArcContext';
 
 interface WithdrawScreenProps {

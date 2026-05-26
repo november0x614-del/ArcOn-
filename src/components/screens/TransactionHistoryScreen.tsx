@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Clock, ExternalLink, CheckCircle2, Receipt, ArrowUpRight, ArrowDownToLine, RefreshCw, ShoppingBag, X } from 'lucide-react';
-import { useApp } from '../../context/AppContext';
+import { useApp } from '../../contexts/AppContext';
 import { ARC_TESTNET } from '../../lib/arcConfig';
 
 interface TransactionHistoryScreenProps {

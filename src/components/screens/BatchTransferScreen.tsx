@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Users, Send, Trash2, CheckCircle2, Loader2, Plus } from 'lucide-react';
 import { motion } from 'motion/react';
-import { useApp } from '../../context/AppContext';
+import { useApp } from '../../contexts/AppContext';
 
 interface Contact {
   id: string;
@@ -358,7 +358,9 @@ export function BatchTransferScreen({ onBack, contacts }: BatchTransferScreenPro
                       </div>
                       <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center overflow-hidden">
                          <span className="text-[12px] font-bold text-slate-500 italic">TxHash</span>
-                         <span className="font-mono text-emerald-600 font-bold text-[11px] truncate ml-4">ARC_BATCH_9921_X0FE22...</span>
+                         <span className="font-mono text-emerald-600 font-bold text-[11px] truncate ml-4 uppercase">
+                            {recipients.length > 0 ? `ARC_BATCH_${Math.floor(Math.random() * 9000) + 1000}_${Math.random().toString(36).substring(2, 10).toUpperCase()}` : 'ARC_BATCH_FINALIZED'}
+                         </span>
                       </div>
                    </div>
 

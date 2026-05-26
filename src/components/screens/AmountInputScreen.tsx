@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, CheckCircle2, Edit3, ChevronDown, ArrowRight, X, Delete } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Edit3, ChevronDown, ArrowRight, X } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { useArc } from '../../contexts/ArcContext';
 import { WalletCard } from '../common/WalletCard';
@@ -48,19 +48,6 @@ export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreen
   const [selectedSource, setSelectedSource] = useState(currentSource);
   const sources = [currentSource];
 
-  const handleNumpad = (num: string) => {
-    if (num === 'backspace') {
-      setAmount(prev => prev.slice(0, -1));
-    } else if (num === '.') {
-      if (!amount.includes('.')) {
-         setAmount(prev => prev === '' ? '0.' : prev + '.');
-      }
-    } else {
-      setAmount(prev => prev + num);
-    }
-  };
-
-  const formattedAmount = amount || '0';
   const numericAmount = amount ? parseFloat(amount) : 0;
 
   return (
@@ -73,26 +60,29 @@ export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreen
         <h2 className="font-bold text-[16px] text-white">INPUT AMOUNT</h2>
       </div>
 
-      <div className="flex-1 overflow-y-auto w-full pb-[380px]">
+      <div className="flex-1 overflow-y-auto w-full pb-32">
         {/* Target Contact */}
         <div className="flex flex-col items-center justify-center pt-8 pb-4">
           <div className="w-[52px] h-[52px] shadow-sm rounded-full bg-[#ecf5fc] flex items-center justify-center font-bold text-slate-800 text-[18px] shrink-0 mb-3 border border-[#ecf5fc]">
              {contact.initials}
           </div>
-          <h2 className="text-white font-bold text-[16px] uppercase tracking-tight leading-tight text-center">{contact.name}</h2>
+          <h2 className="text-slate-800 font-bold text-[16px] uppercase tracking-tight leading-tight text-center">{contact.name}</h2>
           <p className="text-slate-500 text-[13px] mt-[4px] text-center">{contact.bank || contact.network} - {contact.account}</p>
         </div>
 
         {/* Nominal */}
         <div className="px-6 py-4 border-b border-transparent">
-          <label className={`${amount && numericAmount < 1 ? 'text-[#db2e38]' : amount ? 'text-slate-500' : 'text-[#008fcd]'} text-[13px] font-medium mb-1 block`}>Amount</label>
-          <div className={`flex items-center relative border-b pb-1 ${amount && numericAmount < 1 ? 'border-[#db2e38] border-b-[2px]' : amount ? 'border-slate-300' : 'border-[#008fcd] border-b-[2px]'}`}>
+          <label className={`${amount && numericAmount < 1 ? 'text-[#db2e38]' : amount ? 'text-slate-500' : 'text-slate-800'} text-[13px] font-medium mb-1 block`}>Amount</label>
+          <div className={`flex items-center relative border-b pb-1 ${amount && numericAmount < 1 ? 'border-[#db2e38] border-b-[2px]' : amount ? 'border-slate-300' : 'border-slate-800 border-b-[2px]'}`}>
             <span className="text-[36px] font-medium text-slate-800 mr-2 tracking-tight">$</span>
             <input 
-              type="text" 
-              readOnly
-              value={formattedAmount}
-              className="text-[36px] font-medium text-slate-800 outline-none w-full bg-transparent tracking-tight relative z-10 pointer-events-none" 
+              type="number" 
+              inputMode="decimal"
+              placeholder="0.00"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="text-[36px] font-medium text-slate-800 outline-none w-full bg-transparent tracking-tight relative z-10" 
+              autoFocus
             />
             {amount && (
                <button onClick={() => setAmount('')} className="absolute right-0 w-[24px] h-[24px] bg-[#d1d5db] rounded-full flex items-center justify-center text-white hover:bg-[#9ca3af] transition-colors z-20">
@@ -158,12 +148,9 @@ export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreen
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Simple Numpad Area */}
-      <div className="absolute bottom-0 left-0 w-full bg-white z-20 pb-6 pt-4 border-t border-slate-100 shadow-[0_-10px_20px_rgba(0,0,0,0.02)]">
-        <div className="px-5 mb-4">
-          <button 
+        <div className="px-6 pt-10 pb-8">
+           <button 
             onClick={() => setShowConfirm(true)}
             disabled={!amount || parseFloat(amount) < 1}
             className={`w-full py-[14px] rounded-full font-bold text-[15px] transition-all flex items-center justify-center gap-2
@@ -174,19 +161,6 @@ export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreen
           >
             Continue
           </button>
-        </div>
-
-        <div className="px-5 grid grid-cols-3 gap-2 gap-y-3">
-           {[1,2,3,4,5,6,7,8,9].map(n => (
-             <button key={n} onClick={() => handleNumpad(n.toString())} className="h-12 bg-[#f8fafc] rounded-xl text-slate-700 font-semibold text-[20px] active:bg-slate-200 transition-colors flex items-center justify-center">
-                {n}
-             </button>
-           ))}
-           <button onClick={() => handleNumpad('.')} className="h-12 bg-[#f8fafc] rounded-xl text-slate-700 font-semibold text-[20px] active:bg-slate-200 transition-colors flex items-center justify-center">.</button>
-           <button onClick={() => handleNumpad('0')} className="h-12 bg-[#f8fafc] rounded-xl text-slate-700 font-semibold text-[20px] active:bg-slate-200 transition-colors flex items-center justify-center">0</button>
-           <button onClick={() => handleNumpad('backspace')} className="h-12 bg-white rounded-xl flex items-center justify-center text-slate-400 active:bg-slate-100 transition-colors border border-slate-100">
-             <Delete size={24} strokeWidth={2.5} className="ml-1"/>
-           </button>
         </div>
       </div>
 
@@ -226,7 +200,7 @@ export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreen
                     {selectedSource.isArc ? (
                        <div className="flex flex-col gap-1 w-full bg-slate-100/50 p-2.5 rounded-xl border border-slate-200/50">
                           <div className="flex justify-between items-center">
-                             <span className="text-slate-800 text-[14px] flex items-center gap-1.5"><div className="w-2 h-2 bg-[#008fcd] rounded-full animate-pulse"></div> Arc Native Gas</span>
+                             <span className="text-slate-800 text-[14px] flex items-center gap-1.5"><div className="w-2 h-2 bg-slate-900 rounded-full animate-pulse"></div> Arc Native Gas</span>
                              <span className="text-[#008fcd] font-bold text-[14px]">{feeDisplay}</span>
                           </div>
                           <p className="text-[10px] text-slate-500 leading-tight">Gas paid natively in USDC. Arc deterministic 1-confirmation finality applies.</p>

@@ -20,7 +20,7 @@ import {
   Zap,
   ShieldCheck
 } from 'lucide-react';
-import { useApp } from '../../context/AppContext';
+import { useApp } from '../../contexts/AppContext';
 import { UIDCard } from '../common/UIDCard';
 import { useBalances } from '../../hooks/useBalances';
 import { useStore } from '../../store/useStore';
@@ -141,7 +141,7 @@ export function AccountDetailScreen({
       contractAddress: '0x17ca85bcbb48d06992ad8ebd8833fd4038a8facc', 
       initialBalance: 750.00, 
       usdPrice: 1.08, 
-      color: 'bg-blue-600', 
+      color: 'bg-slate-800', 
       type: 'Stablecoin' 
     },
     { 
@@ -504,7 +504,7 @@ export function AccountDetailScreen({
                 className="p-4 flex justify-between items-center hover:bg-slate-50/75 transition-colors cursor-pointer border-b border-slate-100 relative overflow-hidden"
               >
                 <div className="flex items-center gap-4">
-                  <div className={`w-11 h-11 ${token.color || 'bg-blue-600'} rounded-full flex items-center justify-center text-white font-bold text-xs shadow-inner relative overflow-hidden shrink-0`}>
+                  <div className={`w-11 h-11 ${token.color || 'bg-slate-800'} rounded-full flex items-center justify-center text-white font-bold text-xs shadow-inner relative overflow-hidden shrink-0`}>
                      <span className="z-10 tracking-tight uppercase">{token.symbol.substring(0, 4)}</span>
                   </div>
                   <div className="flex flex-col text-left max-w-[150px] sm:max-w-[200px]">
@@ -545,7 +545,7 @@ export function AccountDetailScreen({
               onClick={() => {
                 setShowImportModal(true);
               }}
-              className="w-full py-4 text-slate-500 hover:text-blue-600 hover:bg-slate-50/75 transition-colors flex items-center justify-center gap-2 font-bold text-[13.5px] outline-none cursor-pointer border-t border-slate-100 bg-transparent rounded-b-[24px]"
+              className="w-full py-4 text-slate-500 hover:text-slate-600 hover:bg-slate-50/75 transition-colors flex items-center justify-center gap-2 font-bold text-[13.5px] outline-none cursor-pointer border-t border-slate-100 bg-transparent rounded-b-[24px]"
             >
               <Plus size={16} />
               <span>Import Token</span>
@@ -689,7 +689,7 @@ export function AccountDetailScreen({
                     </span>
                     <button 
                       onClick={handleAutoFillCustom}
-                      className="bg-blue-600 text-white hover:bg-blue-700 text-[11.5px] font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer border-0 shadow-sm"
+                      className="bg-slate-800 text-white hover:bg-blue-700 text-[11.5px] font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer border-0 shadow-sm"
                     >
                       Autofill
                     </button>
