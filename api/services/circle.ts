@@ -18,21 +18,31 @@ import { getCircleClientInstance, getArcAppKit } from "./circleClient.js";
  * preventing "Cannot convert object to primitive value" errors.
  */
 export function sanitizeMetadata(data: any): any {
-    if (!data) return data;
-    return JSON.parse(JSON.stringify(data, (_key, value) => {
-        if (typeof value === 'bigint') return value.toString();
-        
-        if (!value || typeof value !== 'object') return value;
+    if (data === null || typeof data !== 'object') {
+        return typeof data === 'bigint' ? data.toString() : data;
+    }
+    
+    if (Array.isArray(data)) {
+        return data.map(sanitizeMetadata);
+    }
+    
+    // If it's not a plain object, try to serialize it or return a placeholder
+    if (Object.getPrototypeOf(data) !== Object.prototype) {
+        if (typeof data.toJSON === 'function') {
+            try {
+                return sanitizeMetadata(data.toJSON());
+            } catch {
+                return `[Object ${data.constructor?.name || 'Object'}]`;
+            }
+        }
+        return `[Object ${data.constructor?.name || 'Object'}]`;
+    }
 
-        // Handle Array
-        if (Array.isArray(value)) return value;
-
-        // Handle Plain Object
-        if (value.constructor && value.constructor.name === 'Object') return value;
-
-        // Otherwise treat as non-serializable
-        return `[Object ${value.constructor ? value.constructor.name : 'Unknown'}]`;
-    }));
+    const result: any = {};
+    for (const key of Object.keys(data)) {
+        result[key] = sanitizeMetadata(data[key]);
+    }
+    return result;
 }
 
 export async function createWallet(supabaseAdmin: any, userId: string) {
