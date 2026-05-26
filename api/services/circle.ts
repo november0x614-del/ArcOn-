@@ -1,21 +1,17 @@
-import { initiateDeveloperControlledWalletsClient } from "@circle-fin/developer-controlled-wallets";
 import { ArcNativeService } from "./arcNative.js";
-import { validateDestination, isBlocklisted, estimateTransferGas, getUSDCBalance, getNativeBalance, waitForConfirmation } from "./arcViem.js";
+import { 
+    validateDestination, 
+    isBlocklisted, 
+    estimateTransferGas, 
+    getTokenBalance, 
+    getTokenDecimals, 
+    getNativeBalance, 
+    waitForConfirmation,
+    USDC_ADDRESS,
+    getArcScanUrl
+} from "./arcViem.js";
 import { logAuditEvent } from "./audit.js";
-
-const getCircleClientInstance = () => {
-    const apiKey = process.env.CIRCLE_API_KEY;
-    const entitySecret = process.env.CIRCLE_ENTITY_SECRET;
-
-    if (!apiKey || !entitySecret) {
-        throw new Error("CIRCLE_API_KEY and CIRCLE_ENTITY_SECRET are required for wallet operations.");
-    }
-
-    return initiateDeveloperControlledWalletsClient({
-        apiKey,
-        entitySecret,
-    });
-};
+import { getCircleClientInstance } from "./circleClient.js";
 
 export async function createWallet(supabaseAdmin: any, userId: string) {
     const client = getCircleClientInstance();
@@ -93,21 +89,36 @@ export async function executeTransaction(
     }
 
     // Fase 2: Gas Estimation & Balance Checks
-    const amountBigInt = BigInt(Math.floor(amount * 1_000_000)); // Assume 6 decimals for USDC
     const sourceAddress = walletData.wallet_address as `0x${string}`;
+    const tokenAddress = (metadata.tokenAddress || USDC_ADDRESS) as `0x${string}`;
     
-    const [gasInfo, nativeBalance, erc20Balance] = await Promise.all([
-        estimateTransferGas(sourceAddress, validDest, amountBigInt),
+    // Fetch token decimals for correct estimation
+    const decimals = await getTokenDecimals(tokenAddress);
+    
+    // Amount in token's raw decimals for on-chain simulation
+    const amountRaw = BigInt(Math.floor(amount * (Math.pow(10, decimals))));
+    // Amount in 18-decimal internal for logic checks
+    const amountInternal = BigInt(Math.floor(amount * 1_000_000)) * (10n ** 12n);
+
+    // Fetch balances FIRST
+    const [nativeBalance, tokenBalanceRaw] = await Promise.all([
         getNativeBalance(sourceAddress),
-        getUSDCBalance(sourceAddress)
+        getTokenBalance(sourceAddress, tokenAddress)
     ]);
+
+    // Consistently normalize token balance to 18 decimals internal for comparison
+    const tokenBalanceInternal = tokenBalanceRaw * (10n ** BigInt(18 - decimals)); 
+
+    if (tokenBalanceInternal < amountInternal) {
+        const symbol = metadata.fromToken || "USDC";
+        throw new Error(`Insufficient ${symbol} balance. Need ${amount.toFixed(2)} ${symbol}, have ${(Number(tokenBalanceInternal) / 1e18).toFixed(2)} ${symbol}`);
+    }
+
+    // Now estimate gas once we know we have the amount
+    const gasInfo = await estimateTransferGas(sourceAddress, validDest, amountRaw, tokenAddress);
 
     if (nativeBalance < gasInfo.totalCostWei) {
         throw new Error(`Insufficient native USDC for gas. Need ${gasInfo.costHuman.toFixed(6)} USDC, have ${(Number(nativeBalance) / 1e18).toFixed(6)} USDC`);
-    }
-
-    if (erc20Balance < amountBigInt) {
-        throw new Error(`Insufficient USDC balance. Need ${amount.toFixed(2)} USDC, have ${(Number(erc20Balance) / 1e6).toFixed(2)} USDC`);
     }
 
     const client = getCircleClientInstance();
@@ -116,7 +127,7 @@ export async function executeTransaction(
     const txParams: any = {
         walletId: walletData.wallet_id,
         destinationAddress: validDest,
-        amount: [amount.toString()],
+        amount: [amount.toFixed(decimals >= 6 ? 6 : decimals)], // Circle might expect standard decimal string
         fee: { type: "level", config: { feeLevel: "LOW" } },
         tokenAddress: metadata.tokenAddress || "", // Use provided token address or empty for native
         blockchain: "ARC-TESTNET"
@@ -130,7 +141,7 @@ export async function executeTransaction(
 
     const result = { 
         txId: circleTxId, 
-        explorerUrl: `https://testnet.arcscan.app/tx/${circleTxId}` 
+        explorerUrl: getArcScanUrl('tx', circleTxId || '')
     };
 
     const { error } = await supabaseAdmin.from('transactions').insert({
@@ -139,6 +150,7 @@ export async function executeTransaction(
         type: type,
         status: 'pending',
         internal_ref: circleTxId,
+        description: metadata.memo || (type === 'transfer' ? `Transfer to ${validDest}` : undefined),
         metadata: { ...metadata, real: true, explorerUrl: result.explorerUrl }
     });
 

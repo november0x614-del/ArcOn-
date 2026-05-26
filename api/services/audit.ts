@@ -5,8 +5,7 @@ export async function logAuditEvent(supabaseAdmin: any, userId: string, action: 
       const { error } = await supabaseAdmin.from('audit_logs').insert({
         user_id: userId,
         action: action,
-        metadata: metadata,
-        timestamp: new Date().toISOString()
+        metadata: metadata
       });
       
       if (error) {

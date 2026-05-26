@@ -3,13 +3,7 @@ import {
   USDC_ADDRESS,
   formatRecipientForCCTP
 } from "./arcViem.js";
-import { initiateDeveloperControlledWalletsClient } from "@circle-fin/developer-controlled-wallets";
-
-const getCircleClientInstance = () => {
-    const apiKey = process.env.CIRCLE_API_KEY!;
-    const entitySecret = process.env.CIRCLE_ENTITY_SECRET!;
-    return initiateDeveloperControlledWalletsClient({ apiKey, entitySecret });
-};
+import { getCircleClientInstance } from "./circleClient.js";
 
 /**
  * Handles the final step of a CCTP Inbound Bridge (Other Chain -> Arc).

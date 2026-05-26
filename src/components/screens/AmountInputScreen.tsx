@@ -1,29 +1,46 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, CheckCircle2, Edit3, ChevronDown, ArrowRight, X, Delete } from 'lucide-react';
 import { useStore } from '../../store/useStore';
+import { useArc } from '../../contexts/ArcContext';
+import { WalletCard } from '../common/WalletCard';
 
 interface AmountInputScreenProps {
   contact: any;
   onBack: () => void;
-  onNext: (amount: string) => void;
+  onNext: (amount: string, memo: string) => void;
 }
 
-import { WalletCard } from '../common/WalletCard';
-
 export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreenProps) {
-  const { registeredUser, balance, transferAmount } = useStore();
+  const { registeredUser, balance, transferAmount, transferMemo } = useStore();
+  const { getFeeEstimate } = useArc();
   const [amount, setAmount] = useState(transferAmount && transferAmount !== '0' ? transferAmount : '');
+  const [memo, setMemo] = useState(transferMemo || '');
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSourceSelect, setShowSourceSelect] = useState(false);
+  const [feeDisplay, setFeeDisplay] = useState('~0.0001 USDC');
+  const [isEditingMemo, setIsEditingMemo] = useState(false);
 
-  // Derive EVM Wallet account from registered user
-  const accountStr = registeredUser ? `0x${Math.random().toString(16).slice(2, 6).toUpperCase()}...${Math.random().toString(16).slice(2, 6).toUpperCase()}` : "0x00...0000"; // fallback if true wallet addr not stored locally easily
+  // Fetch real fee estimate
+  useEffect(() => {
+    const fetchFee = async () => {
+      const estimate = await getFeeEstimate(21000n);
+      if (estimate) {
+        setFeeDisplay(estimate.display);
+      }
+    };
+    fetchFee();
+  }, [getFeeEstimate]);
+
+  // Derive real EVM Wallet address from store
+  const accountStr = registeredUser?.walletAddress 
+    ? `${registeredUser.walletAddress.substring(0, 6)}...${registeredUser.walletAddress.substring(registeredUser.walletAddress.length - 4)}` 
+    : "0x00...0000";
 
   const currentSource = {
     id: 'source-arc',
     name: 'EVM (Arc Testnet)',
     account: registeredUser?.username ? `${registeredUser.username}'s Wallet` : accountStr,
-    balance: new Intl.NumberFormat('en-US').format(balance),
+    balance: new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(balance),
     dec: ' USDC',
     isArc: true 
   };
@@ -101,10 +118,32 @@ export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreen
         </div>
 
         {/* Notes */}
-        <div className="px-6 py-3 flex justify-center">
-          <button className="flex items-center gap-2 text-slate-700 font-medium text-[14px] hover:text-slate-900 transition-colors">
-            <Edit3 size={16} className="text-slate-500" /> Add Note
-          </button>
+        <div className="px-6 py-3 flex flex-col items-center">
+          {!isEditingMemo && !memo ? (
+            <button 
+              onClick={() => setIsEditingMemo(true)}
+              className="flex items-center gap-2 text-slate-700 font-medium text-[14px] hover:text-slate-900 transition-colors py-1 cursor-pointer border-0 bg-transparent"
+            >
+              <Edit3 size={16} className="text-slate-500" /> Add Berita Acara / Memo
+            </button>
+          ) : (
+            <div className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus-within:border-slate-400 transition-colors">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Berita Acara / Memo</span>
+                <button onClick={() => { setMemo(''); setIsEditingMemo(false); }} className="text-slate-400 hover:text-slate-600 cursor-pointer border-0 bg-transparent">
+                  <X size={14} />
+                </button>
+              </div>
+              <input 
+                type="text" 
+                autoFocus={isEditingMemo}
+                value={memo}
+                onChange={(e) => setMemo(e.target.value)}
+                placeholder="Ex: Payment for groceries"
+                className="w-full bg-transparent outline-none text-slate-700 text-[14px] font-medium"
+              />
+            </div>
+          )}
         </div>
 
         {/* Options */}
@@ -178,7 +217,7 @@ export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreen
                  <div className="flex flex-col gap-3.5 mb-6 text-left">
                     <div className="flex justify-between items-center">
                        <span className="text-slate-600 text-[14.5px]">Transfer Amount</span>
-                       <span className="text-slate-800 font-bold text-[14.5px]">{selectedSource.isArc ? `${new Intl.NumberFormat('en-US').format(numericAmount)} USDC` : `Rp ${new Intl.NumberFormat('id-ID').format(numericAmount)}`}</span>
+                       <span className="text-slate-800 font-bold text-[14.5px]">{selectedSource.isArc ? `${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(numericAmount)} USDC` : `Rp ${new Intl.NumberFormat('id-ID').format(numericAmount)}`}</span>
                     </div>
                     <div className="flex justify-between items-center">
                        <span className="text-slate-600 text-[14.5px]">Metode Transfer</span>
@@ -188,7 +227,7 @@ export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreen
                        <div className="flex flex-col gap-1 w-full bg-slate-100/50 p-2.5 rounded-xl border border-slate-200/50">
                           <div className="flex justify-between items-center">
                              <span className="text-slate-800 text-[14px] flex items-center gap-1.5"><div className="w-2 h-2 bg-[#008fcd] rounded-full animate-pulse"></div> Arc Native Gas</span>
-                             <span className="text-[#008fcd] font-bold text-[14px]">~0.0001 USDC</span>
+                             <span className="text-[#008fcd] font-bold text-[14px]">{feeDisplay}</span>
                           </div>
                           <p className="text-[10px] text-slate-500 leading-tight">Gas paid natively in USDC. Arc deterministic 1-confirmation finality applies.</p>
                        </div>
@@ -226,13 +265,13 @@ export function AmountInputScreen({ contact, onBack, onNext }: AmountInputScreen
                           // But we can just proceed for simplicity, or we can use onNext which passes through `TransferScreen` to `App`.
                           // Wait, App just does `setViewState('processing')`.
                       }
-                      onNext(amount);
+                      onNext(amount, memo);
                    }}
                    className={`w-full text-white py-[14px] rounded-full flex justify-between px-6 items-center transition-all ${selectedSource.isArc ? 'bg-slate-900 hover:bg-slate-800 shadow-[0_4px_14px_rgba(63,162,246,0.4)]' : 'bg-slate-900 hover:bg-slate-800 shadow-lg'}`}
                  >
                     <span className="font-bold text-[15px]">Continue Transfer</span>
                     <div className="flex items-center gap-2">
-                       <span className="font-bold text-[16px]">{selectedSource.isArc ? `${new Intl.NumberFormat('en-US').format(numericAmount)} USDC` : `Rp ${new Intl.NumberFormat('id-ID').format(numericAmount + (numericAmount >= 100000 ? 0 : 6500))}`}</span>
+                       <span className="font-bold text-[16px]">{selectedSource.isArc ? `${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(numericAmount)} USDC` : `Rp ${new Intl.NumberFormat('id-ID').format(numericAmount + (numericAmount >= 100000 ? 0 : 6500))}`}</span>
                        <div className="bg-white/20 p-1 rounded-full">
                          <ArrowRight size={16} strokeWidth={3} />
                        </div>

@@ -101,10 +101,10 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
       setSwapFinished(true);
       queryClient.invalidateQueries({ queryKey: ['balances'] });
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
       setIsSwapping(false);
-      useStore.getState().displayToast("Swap failed!");
+      useStore.getState().displayToast(error.message || "Swap failed!");
     }
   };
 

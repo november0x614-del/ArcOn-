@@ -28,37 +28,46 @@ export class ArcNativeService {
     }
 
     /**
-     * Normalizes native 18-decimal USDC to 6-decimal representation
+     * Normalizes native 18-decimal internal USDC to 6-decimal units (display/standard unit)
      */
-    static toUSDC(nativeValue: bigint): bigint {
-        return nativeValue / (10n ** 12n);
+    static toUnits6(internalValue: bigint): bigint {
+        return internalValue / (10n ** 12n);
     }
 
     /**
-     * Normalizes 6-decimal USDC to 18-decimal native for 'value' fields in tx
+     * Normalizes 6-decimal USDC units to 18-decimal internal native balance
      */
-    static toNative(usdcValue: bigint): bigint {
-        return usdcValue * (10n ** 12n);
+    static toInternal(units6Value: bigint): bigint {
+        return units6Value * (10n ** 12n);
     }
+
+    /**
+     * Arc Memo Contract Configuration
+     */
+    static MEMO_CONTRACT_ADDRESS = "0x9702466268ccF55eAB64cdf484d272Ac08d3b75b";
+    static MEMO_ABI = [
+        "event MemoSent(address indexed sender, address indexed recipient, uint256 amount, bytes memo)"
+    ];
 
     /**
      * Automates sweeping funds from a deposit address to the master hot wallet.
      * Uses Arc's unique USDC-as-gas feature.
+     * Amount should be provided in 18-decimal internal balance.
      */
-    static async sweepFunds(depositPrivateKey: string, amount: bigint): Promise<string> {
+    static async sweepFunds(depositPrivateKey: string, internalAmount: bigint): Promise<string> {
         const provider = new ethers.JsonRpcProvider(process.env.ARC_RPC_URL || "https://rpc.testnet.arc.network");
         const wallet = new ethers.Wallet(depositPrivateKey, provider);
         const hotWallet = process.env.ARC_HOT_WALLET_ADDRESS;
 
         if (!hotWallet) throw new Error("ARC_HOT_WALLET_ADDRESS not configured");
 
-        console.log(`[ArcNative] Sweeping ${amount} units to hot wallet ${hotWallet}`);
+        console.log(`[ArcNative] Sweeping ${internalAmount} units (internal) to hot wallet ${hotWallet}`);
 
         // Arc uses EIP-1559. Since USDC is gas, we just send a standard transaction.
         // The value field is native USDC (18 decimals).
         const tx = await wallet.sendTransaction({
             to: hotWallet,
-            value: this.toNative(amount), 
+            value: internalAmount, 
             gasLimit: 21000n, // Standard transfer gas limit
             type: 2
         });

@@ -4,6 +4,7 @@ import { useApp } from "./context/AppContext";
 import { useStore } from "./store/useStore";
 import { supabase } from "./lib/supabaseClient";
 import { ViewRouter } from "./components/router/ViewRouter";
+import { ArcProvider } from "./contexts/ArcContext";
 
 export default function App() {
   const [isLoggingIn, setIsLoggingIn] = React.useState(false);
@@ -58,6 +59,12 @@ export default function App() {
          }
       }
 
+      // Save to localStorage for ArcProvider to pick up
+      if (walletInfo?.wallet_address) {
+        localStorage.setItem('arc_wallet_address', walletInfo.wallet_address);
+      }
+      localStorage.setItem('arc_user_id', user.id);
+
       setRegisteredUser({
         username: user.user_metadata?.full_name || 'Arc User',
         email: user.email || '',
@@ -107,10 +114,14 @@ export default function App() {
          resetState();
       } else if (_event === 'SIGNED_OUT') {
          resetState();
+         localStorage.removeItem('arc_wallet_address');
+         localStorage.removeItem('arc_user_id');
       } else if (session) {
         handleUserSession(session.user);
       } else {
          resetState();
+         localStorage.removeItem('arc_wallet_address');
+         localStorage.removeItem('arc_user_id');
       }
     });
 
@@ -174,27 +185,29 @@ export default function App() {
   }, [registeredUser?.supabaseUid, fetchBalance, fetchTransactions]);
 
   return (
-    <div className="bg-[#EAF3FA] h-[100dvh] w-full overflow-hidden flex flex-col">
-      {/* Full screen responsive web application wrapper */}
-      <div className="w-full h-full bg-[#EAF3FA] relative overflow-hidden flex flex-col animate-in fade-in duration-500">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={viewState}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="w-full h-full relative"
-          >
-            <ViewRouter 
-              isLoggingIn={isLoggingIn}
-              loginEmail={loginEmail}
-              setLoginEmail={setLoginEmail}
-              setIsLoggingIn={setIsLoggingIn}
-            />
-          </motion.div>
-        </AnimatePresence>
+    <ArcProvider>
+      <div className="bg-[#EAF3FA] h-[100dvh] w-full overflow-hidden flex flex-col">
+        {/* Full screen responsive web application wrapper */}
+        <div className="w-full h-full bg-[#EAF3FA] relative overflow-hidden flex flex-col animate-in fade-in duration-500">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={viewState}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="w-full h-full relative"
+            >
+              <ViewRouter 
+                isLoggingIn={isLoggingIn}
+                loginEmail={loginEmail}
+                setLoginEmail={setLoginEmail}
+                setIsLoggingIn={setIsLoggingIn}
+              />
+            </motion.div>
+          </AnimatePresence>
+        </div>
       </div>
-    </div>
+    </ArcProvider>
   );
 }

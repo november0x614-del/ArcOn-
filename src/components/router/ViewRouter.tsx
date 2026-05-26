@@ -41,6 +41,7 @@ import { TransactionHistoryScreen } from "../screens/TransactionHistoryScreen";
 import { HomeScreen } from "../screens/HomeScreen";
 import { supabase } from "../../lib/supabaseClient";
 import { ArcAppKitAdapter } from "../../services/arc-app-kit/adapter";
+import { useContacts } from "../../hooks/useContacts";
 
 const slideFadeVariants: Variants = {
   initial: {
@@ -84,6 +85,7 @@ export const ViewRouter = React.memo(({ isLoggingIn, loginEmail, setLoginEmail, 
     setSelectedContact,
     transferAmount,
     setTransferAmount,
+    setTransferMemo,
     selectedShortcuts,
     setSelectedShortcuts,
     availableShortcuts,
@@ -94,6 +96,8 @@ export const ViewRouter = React.memo(({ isLoggingIn, loginEmail, setLoginEmail, 
     fetchBalance,
     fetchTransactions
   } = useApp();
+
+  const { realContacts } = useContacts();
 
   const onNavigate = React.useCallback((view: ViewState) => setViewState(view), [setViewState]);
 
@@ -345,22 +349,23 @@ export const ViewRouter = React.memo(({ isLoggingIn, loginEmail, setLoginEmail, 
         <AmountInputScreen
           contact={selectedContact}
           onBack={() => setViewState("transfer")}
-          onNext={async (amount) => {
+          onNext={async (amount, memo) => {
             const numAmount = parseFloat(amount);
             if (numAmount < 1) {
               displayToast("Minimum transfer amount is 1 USDC.");
               return;
             }
             if (numAmount > balance) {
-              displayToast("Insufficient balance.");
+              displayToast("Insufficient USDC for transfer or gas.");
               return;
             }
             
             setTransferAmount(amount);
+            setTransferMemo(memo);
             setViewState("processing");
             
             try {
-              await ArcAppKitAdapter.sendUnifiedBalance(numAmount, selectedContact.account);
+              await ArcAppKitAdapter.sendUnifiedBalance(numAmount, selectedContact.account, memo);
               
               await fetchBalance();
               await fetchTransactions();
@@ -412,13 +417,7 @@ export const ViewRouter = React.memo(({ isLoggingIn, loginEmail, setLoginEmail, 
       {viewState === "batchTransfer" && (
         <BatchTransferScreen
           onBack={() => setViewState("transfer")}
-          contacts={registeredUser ? [
-            { id: '1', letter: 'A', name: 'ANNISA PATRIA', network: 'EVM (Arc Testnet)', account: '0x1A2bc2f35497B6CEAc40eEb29037C9F306633c4A', initials: 'AP' },
-            { id: '2', letter: 'A', name: 'ARGA SATYAGRAHA', network: 'EVM (Arc Testnet)', account: '0x9F8eA5260cc7C3A899986326Eee2eEBE4fBe2d1B', initials: 'AS' },
-            { id: '3', letter: 'H', name: 'HERU SALAM', network: 'EVM (Arc Testnet)', account: '0x4E5fC6061989F4e44A142ce7904b779De8906a7C', initials: 'HS' },
-            { id: '4', letter: 'I', name: 'IDA RIDAWATI', network: 'EVM (Arc Testnet)', account: '0x7FaD6519E0dCe8A5ee94178bcdeEfFF1C1De9A2b', initials: 'IR' },
-            { id: '5', letter: 'L', name: 'LIGAR WENINGGALIH', network: 'EVM (Arc Testnet)', account: '0x2B3cDd95F72395FA4CFFb454e4c27279cfFF4D5e', initials: 'LW' }
-          ] : []}
+          contacts={realContacts}
         />
       )}
 

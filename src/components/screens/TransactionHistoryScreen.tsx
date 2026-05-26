@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Clock, ExternalLink, CheckCircle2, Receipt, ArrowUpRight, ArrowDownToLine, RefreshCw, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, Clock, ExternalLink, CheckCircle2, Receipt, ArrowUpRight, ArrowDownToLine, RefreshCw, ShoppingBag, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { ARC_TESTNET } from '../../lib/arcConfig';
 
@@ -83,10 +83,15 @@ export function TransactionHistoryScreen({ onBack }: TransactionHistoryScreenPro
                            <CheckCircle2 size={12} />
                            <span className="text-[10px] font-bold uppercase tracking-wider">Finalized</span>
                         </div>
+                     ) : tx.status === 'failed' ? (
+                        <div className="flex items-center gap-1 mt-1 text-red-500">
+                           <X size={12} />
+                           <span className="text-[10px] font-bold uppercase tracking-wider">Failed</span>
+                        </div>
                      ) : (
                         <div className="flex items-center gap-1 mt-1 text-amber-500">
                            <Clock size={12} />
-                           <span className="text-[10px] font-bold uppercase tracking-wider">{tx.status}</span>
+                           <span className="text-[10px] font-bold uppercase tracking-wider">Pending</span>
                         </div>
                      )}
                    </div>
@@ -120,11 +125,11 @@ export function TransactionHistoryScreen({ onBack }: TransactionHistoryScreenPro
                 </div>
                 <div className="w-full flex justify-between items-center text-[14px] mb-4">
                    <span className="text-slate-500">Date & Time</span>
-                   <span className="font-medium text-slate-800">{new Date().toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                   <span className="font-medium text-slate-800">{selectedTx.timestamp}</span>
                 </div>
                 <div className="w-full flex justify-between items-center text-[14px] mb-4">
                    <span className="text-slate-500">Network Fee (Gas)</span>
-                   <span className="font-medium text-slate-800 font-mono">{(Math.random() * 0.005).toFixed(4)} USDC</span>
+                   <span className="font-medium text-slate-800 font-mono">{selectedTx.metadata?.fee || (selectedTx.type === 'deposit' ? '0.0000' : '0.0001')} USDC</span>
                 </div>
                 {selectedTx.txHash && (
                   <div className="w-full bg-slate-100 border border-slate-200 rounded-xl p-4 mt-2 flex flex-col gap-2">

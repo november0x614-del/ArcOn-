@@ -74,7 +74,7 @@ export interface Transaction {
   amount: string;
   currency: string;
   timestamp: string;
-  status: 'pending' | 'processing' | 'success' | 'failed' | 'confirmed';
+  status: 'pending' | 'success' | 'failed';
   txHash?: string;
   explorerUrl?: string;
   internal_ref?: string;
@@ -98,6 +98,9 @@ export interface Contact {
   name: string;
   number: string;
   avatar: string;
+  letter?: string;
+  network?: string;
+  initials?: string;
 }
 
 export interface SourceAccount {

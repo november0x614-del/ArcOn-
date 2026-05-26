@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Building2, ChevronRight, CheckCircle2, Loader2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { useArc } from '../../contexts/ArcContext';
 
 interface WithdrawScreenProps {
   onBack: () => void;
@@ -9,11 +10,23 @@ interface WithdrawScreenProps {
 
 export function WithdrawScreen({ onBack, onSuccess }: WithdrawScreenProps) {
   const { balance, fetchBalance, fetchTransactions, displayToast, registeredUser } = useApp();
+  const { getFeeEstimate } = useArc();
   const [step, setStep] = useState<'form' | 'processing' | 'success'>('form');
   const [amount, setAmount] = useState('');
   const [memo, setMemo] = useState('');
   const [selectedBank] = useState('Central Asia Bank (BCA)');
   const [accountNumber] = useState('8830192831');
+  const [feeDisplay, setFeeDisplay] = useState('~0.000100 USDC');
+
+  useEffect(() => {
+    const fetchFee = async () => {
+      const estimate = await getFeeEstimate(65000n); // ERC-20 / Contract interaction is ~65k
+      if (estimate) {
+        setFeeDisplay(estimate.display);
+      }
+    };
+    fetchFee();
+  }, [getFeeEstimate]);
 
   const handleWithdraw = async () => {
     const numAmount = parseFloat(amount);
@@ -122,7 +135,7 @@ export function WithdrawScreen({ onBack, onSuccess }: WithdrawScreenProps) {
           </div>
           
           <div className="flex justify-between mt-3 px-1">
-            <span className="text-[12px] text-slate-500">Available: <span className="font-bold text-slate-800">{balance.toFixed(2)} USDC</span></span>
+            <span className="text-[12px] text-slate-500">Available: <span className="font-bold text-slate-800">{balance.toLocaleString('en-US', { minimumFractionDigits: 6, maximumFractionDigits: 6 })} USDC</span></span>
             <button 
               onClick={() => setAmount(balance.toString())}
               className="text-[12px] font-bold text-slate-800 bg-transparent border-0 cursor-pointer"
@@ -154,7 +167,7 @@ export function WithdrawScreen({ onBack, onSuccess }: WithdrawScreenProps) {
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Arc Gas Advantage</p>
               <h4 className="text-[14px] font-bold mb-3">Single-Asset Economy</h4>
               <p className="text-[11px] text-slate-300 leading-relaxed">
-                 Because Arc uses USDC as native gas, this transaction costs ~0.0001 USDC. No ETH required. Finalized in under 1s.
+                 Because Arc uses USDC as native gas, this transaction costs {feeDisplay}. Finalized in under 1s.
               </p>
            </div>
         </div>

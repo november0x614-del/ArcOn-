@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Check, Share2, Download, Home } from 'lucide-react';
+import { useArc } from '../../contexts/ArcContext';
+import { useApp } from '../../context/AppContext';
 
 interface SuccessScreenProps {
   amount: string;
@@ -13,8 +15,23 @@ interface SuccessScreenProps {
 }
 
 export function SuccessScreen({ amount, contact, onClose }: SuccessScreenProps) {
+  const { refreshBalance } = useArc();
+  const { fetchTransactions, transferMemo } = useApp();
   const targetName = contact?.name || "Fauzan";
   const targetAccount = contact?.account || "0x8823...32a1";
+
+  useEffect(() => {
+    // Refresh global states
+    refreshBalance();
+    fetchTransactions();
+    
+    // Also add a delayed one just in case the backend needs a second to index
+    const timer = setTimeout(() => {
+      refreshBalance();
+    }, 2000);
+    
+    return () => clearTimeout(timer);
+  }, [refreshBalance, fetchTransactions]);
 
   return (
     <div className="w-full h-full bg-white relative flex flex-col items-center pt-12 px-6 z-50 overflow-hidden animate-in fade-in duration-500">
@@ -50,6 +67,12 @@ export function SuccessScreen({ amount, contact, onClose }: SuccessScreenProps) 
                <span className="text-sm text-slate-500">Network Fee</span>
                <span className="text-sm font-bold text-green-500">Free (Subsidized)</span>
             </div>
+            {transferMemo && (
+              <div className="flex justify-between pt-2 border-t border-slate-100">
+                <span className="text-sm text-slate-500">Note</span>
+                <span className="text-sm font-bold text-slate-800 italic">"{transferMemo}"</span>
+              </div>
+            )}
          </div>
 
          {/* Receipt buttons */}

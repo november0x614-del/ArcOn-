@@ -5,33 +5,36 @@ import { formatUnits, parseUnits } from 'viem';
  * Handles the unique "Dual USDC Interface" of the Arc Network.
  */
 
-export const ARC_USDC_NATIVE_DECIMALS = 18;
-export const ARC_USDC_ERC20_DECIMALS = 6;
+export const ARC_INTERNAL_DECIMALS = 18;
+export const ARC_DISPLAY_DECIMALS = 6;
+export const ARC_DECIMAL_FACTOR = 10n ** 12n; // Factor between 6 and 18 decimals
 
 /**
- * Converts native Arc USDC balance (18 decimals) to a human-readable string.
+ * Converts internal Arc balance (18 decimals) to a human-readable display string (6 decimals).
  */
-export function formatArcNativeBalance(balance: bigint): string {
-  return formatUnits(balance, ARC_USDC_NATIVE_DECIMALS);
+export function toDisplayAmount(internalAmount: bigint): string {
+  return formatUnits(internalAmount, ARC_INTERNAL_DECIMALS);
 }
 
 /**
- * Converts ERC20 Arc USDC balance (6 decimals) to a human-readable string.
+ * Converts a display amount string to internal Arc balance (18 decimals).
  */
-export function formatArcERC20Balance(balance: bigint): string {
-  return formatUnits(balance, ARC_USDC_ERC20_DECIMALS);
+export function toInternalAmount(displayAmount: string): bigint {
+  return parseUnits(displayAmount, ARC_INTERNAL_DECIMALS);
 }
 
 /**
- * Normalizes a balance string to 18 decimals for storage or comparison.
+ * Normalizes 6-decimal units to 18-decimal internal balance.
  */
-export function normalizeToArcNative(amount: string, fromDecimals: number = ARC_USDC_ERC20_DECIMALS): bigint {
-  const parsed = parseUnits(amount, fromDecimals);
-  if (fromDecimals === ARC_USDC_ERC20_DECIMALS) {
-    // 6 -> 18: multiply by 10^12
-    return parsed * BigInt(10 ** 12);
-  }
-  return parsed;
+export function normalizeToInternal(units6: bigint): bigint {
+  return units6 * ARC_DECIMAL_FACTOR;
+}
+
+/**
+ * Scales down 18-decimal internal balance to 6-decimal units.
+ */
+export function toUnits6(internalAmount: bigint): bigint {
+  return internalAmount / ARC_DECIMAL_FACTOR;
 }
 
 /**

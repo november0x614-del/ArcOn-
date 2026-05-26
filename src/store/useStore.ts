@@ -52,6 +52,8 @@ interface AppState {
   setSelectedContact: (contact: any) => void;
   transferAmount: string;
   setTransferAmount: (amount: string) => void;
+  transferMemo: string;
+  setTransferMemo: (memo: string) => void;
 
   // Toast
   toast: { message: string; visible: boolean };
@@ -186,7 +188,7 @@ export const useStore = create<AppState>()(
               timestamp: new Date(tx.created_at).toLocaleString(),
               status: tx.status,
               txHash: tx.tx_hash || tx.metadata?.txHash || tx.internal_ref,
-              explorerUrl: tx.metadata?.explorerUrl || (tx.tx_hash || tx.internal_ref ? `https://explorer.arc.network/tx/${tx.tx_hash || tx.internal_ref}` : undefined),
+              explorerUrl: tx.metadata?.explorerUrl || (tx.tx_hash || tx.internal_ref ? `https://testnet.arcscan.app/tx/${tx.tx_hash || tx.internal_ref}` : undefined),
               metadata: tx.metadata
             };
           });
@@ -245,6 +247,8 @@ export const useStore = create<AppState>()(
       setSelectedContact: (contact) => set({ selectedContact: contact }),
       transferAmount: '0',
       setTransferAmount: (amount) => set({ transferAmount: amount }),
+      transferMemo: '',
+      setTransferMemo: (memo) => set({ transferMemo: memo }),
 
       // Toast
       toast: { message: '', visible: false },

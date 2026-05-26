@@ -15,13 +15,14 @@ export const WalletCard = React.memo(function WalletCard({ onNavigate, onClick, 
   const {
     showBalance,
     setShowBalance,
-    balance,
     pnlValue,
     pnlPercentage,
     registeredUser,
+    balance: unifiedBalance
   } = useApp();
 
-  const formattedBalance = balance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const balanceValue = typeof unifiedBalance === 'number' ? unifiedBalance : 0;
+  const formattedBalance = balanceValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const currentTheme: Exclude<UIDCardTheme, undefined> = registeredUser?.uidTheme || 'default';
   const styles = THEME_STYLES[currentTheme];

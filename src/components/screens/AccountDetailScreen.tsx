@@ -16,7 +16,9 @@ import {
   Clock,
   CheckCircle2,
   EyeOff,
-  ChevronDown
+  ChevronDown,
+  Zap,
+  ShieldCheck
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { UIDCard } from '../common/UIDCard';
@@ -198,7 +200,7 @@ export function AccountDetailScreen({
     }
     
     if (!customAddress.startsWith('0x') || customAddress.length < 20) {
-      displayToast("Invalid Ethereum-style contract address");
+      displayToast("Invalid Arc-style contract address");
       return;
     }
 
@@ -378,83 +380,73 @@ export function AccountDetailScreen({
                 </div>
               </div>
 
-              {/* Accordion Rincian Saldo Gabungan */}
+              {/* Simplified Unified Balance List */}
               {showUnifiedDetails && (
-                <div className="px-4 pb-4 pt-2 border-t border-slate-50 bg-slate-50/50 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="flex justify-between items-center mb-3 mt-1">
-                    <span className="font-extrabold tracking-wide uppercase text-[10px] text-slate-500">
-                      Cross-Chain Balance (USDC)
-                    </span>
-                    <span className="px-1.5 py-0.5 rounded bg-blue-100 text-[#008fcd] text-[8px] font-mono font-bold uppercase">
-                      Circle Gateway
+                <div className="px-4 pb-4 pt-2 border-t border-slate-50 bg-white/50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="flex flex-col gap-1 mb-3">
+                    <span className="font-extrabold tracking-wide uppercase text-[10px] text-slate-400">
+                      Balance Distribution
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2 mb-3">
-                    <div className="rounded-xl p-2.5 bg-white border border-slate-100 flex flex-col justify-between shadow-sm">
-                      <span className="text-[8.5px] font-mono font-extrabold text-slate-800">ARC NATIVE</span>
-                      <span className="font-bold text-[12px] sm:text-[13px] mt-1 text-slate-700 font-mono">
-                        {showBalance ? (() => {
-                          const nativeData = balanceData?.allBalances?.find((b: any) => 
-                            b.token?.isNative && (b.token?.symbol === 'USDC' || b.token?.name?.includes('USDC'))
-                          );
-                          const amt = nativeData ? parseFloat(nativeData.amount || '0') : 0;
-                          return amt.toLocaleString('en-US', { minimumFractionDigits: 2 });
-                        })() : '••••'}
-                      </span>
-                      <span className="text-[8px] text-slate-400 mt-1">Direct L1</span>
+                  <div className="space-y-3">
+                    {/* Circle Balance */}
+                    <div className="flex justify-between items-center py-1">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-[#008fcd]">
+                           <ShieldCheck size={16} />
+                        </div>
+                        <div className="flex flex-col text-left">
+                          <span className="text-[12px] font-bold text-slate-800">Circle Gateway</span>
+                          <span className="text-[10px] text-slate-400">Standard ERC-20 (6 Decimals)</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <span className="font-bold text-[13px] text-slate-700 font-mono">
+                          {showBalance ? (() => {
+                            const circleData = balanceData?.allBalances?.find((b: any) => 
+                              !b.token?.isNative && (b.token?.symbol === 'USDC' || b.token?.name?.includes('USDC')) && 
+                              (b.token?.blockchain?.toUpperCase() === 'ARC-TESTNET' || !b.token?.blockchain)
+                            );
+                            const amt = circleData ? parseFloat(circleData.amount || '0') : 0;
+                            return amt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                          })() : '••••'}
+                        </span>
+                        <span className="text-[9px] text-slate-400">USDC</span>
+                      </div>
                     </div>
 
-                    <div className="rounded-xl p-2.5 bg-white border border-slate-100 flex flex-col justify-between shadow-sm">
-                      <span className="text-[8.5px] font-mono font-extrabold text-[#008fcd]">CIRCLE ARC</span>
-                      <span className="font-bold text-[12px] sm:text-[13px] mt-1 text-slate-700 font-mono">
-                        {showBalance ? (() => {
-                          const circleData = balanceData?.allBalances?.find((b: any) => 
-                            !b.token?.isNative && (b.token?.symbol === 'USDC' || b.token?.name?.includes('USDC')) && 
-                            (b.token?.blockchain?.toUpperCase() === 'ARC-TESTNET' || !b.token?.blockchain)
-                          );
-                          const amt = circleData ? parseFloat(circleData.amount || '0') : 0;
-                          return amt.toLocaleString('en-US', { minimumFractionDigits: 2 });
-                        })() : '••••'}
-                      </span>
-                      <span className="text-[8px] text-slate-400 mt-1">Managed</span>
-                    </div>
+                    <div className="h-px bg-slate-100 w-full"></div>
 
-                    <div className="rounded-xl p-2.5 bg-white border border-slate-100 flex flex-col justify-between shadow-sm">
-                      <span className="text-[8.5px] font-mono font-extrabold text-[#0052FF]">UNIFIED</span>
-                      <span className="font-bold text-[12px] sm:text-[13px] mt-1 text-slate-700 font-mono">
-                        {showBalance ? (balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '••••'}
-                      </span>
-                      <span className="text-[8px] text-slate-400 mt-1">Aggregate</span>
+                    {/* Arc Native Balance */}
+                    <div className="flex justify-between items-center py-1">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600">
+                           <Zap size={16} />
+                        </div>
+                        <div className="flex flex-col text-left">
+                          <span className="text-[12px] font-bold text-slate-800">Arc Network Native</span>
+                          <span className="text-[10px] text-slate-400">Unified Gas Asset (18 Decimals)</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <span className="font-bold text-[13px] text-slate-700 font-mono">
+                          {showBalance ? (() => {
+                            const nativeData = balanceData?.allBalances?.find((b: any) => 
+                              b.token?.isNative && (b.token?.symbol === 'USDC' || b.token?.name?.includes('USDC'))
+                            );
+                            const amt = nativeData ? parseFloat(nativeData.amount || '0') : 0;
+                            return amt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                          })() : '••••'}
+                        </span>
+                        <span className="text-[9px] text-zinc-400">USDC</span>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="text-[10px] sm:text-[11px] leading-relaxed p-3 rounded-xl border border-blue-100 bg-blue-50/50 text-slate-600 mb-3">
-                    💡 <span className="font-bold text-slate-700">Unified Balance:</span> USDC from various networks (Arc, Base, Arbitrum) are virtually unified. You can spend or transfer your total balance instantly on Arc Testnet without tedious cross-chain bridging.
-                  </div>
-
-                  {/* Arc Specific: Dual USDC Interface Info */}
-                  <div className="bg-slate-900 rounded-xl p-3 text-white">
-                    <div className="flex justify-between items-center mb-2">
-                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Dual USDC Interface</span>
-                       <div className="px-1.5 py-0.5 rounded bg-white/10 text-slate-300 text-[8px] font-mono">DEBUG MODE</div>
-                    </div>
-                    <div className="space-y-2">
-                       <div className="flex justify-between items-center bg-white/5 p-2 rounded-lg border border-white/10">
-                          <span className="text-[11px] text-slate-300">Native (18 Decimals)</span>
-                          <span className="text-[11px] font-mono font-bold">
-                            {showBalance ? (balance * 0.5).toFixed(18) : '••••'}
-                          </span>
-                       </div>
-                       <div className="flex justify-between items-center bg-white/5 p-2 rounded-lg border border-white/10">
-                          <span className="text-[11px] text-slate-300">ERC-20 (6 Decimals)</span>
-                          <span className="text-[11px] font-mono font-bold">
-                            {showBalance ? (balance * 0.5).toFixed(6) : '••••'}
-                          </span>
-                       </div>
-                    </div>
-                    <p className="text-[8.5px] text-slate-500 mt-2 italic leading-tight">
-                      *Arc uses USDC as gas. The L1 native balance (18 decimals) and ERC-20 contract balance (6 decimals) share the same underlying vault.
+                  <div className="mt-4 p-3 rounded-xl bg-slate-50 border border-slate-100">
+                    <p className="text-[9.5px] text-slate-500 leading-relaxed font-medium">
+                      💡 These balances are virtually unified. You can spend the combined total instantly on the Arc network without manual bridging.
                     </p>
                   </div>
                 </div>

@@ -1,15 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Search, UserPlus, Plus, Users, Star, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-
-interface Contact {
-  id: string;
-  letter: string;
-  name: string;
-  network: string;
-  account: string;
-  initials: string;
-}
+import { useContacts } from '../../hooks/useContacts';
 
 interface TransferScreenProps {
   onBack: () => void;
@@ -104,7 +96,8 @@ function ContactItem({
 }
 
 export function TransferScreen({ onBack, onNewTransfer, onSelectContact, onBatchTransfer }: TransferScreenProps) {
-  const { transactions, fetchTransactions } = useApp();
+  const { fetchTransactions } = useApp();
+  const { realContacts: allContacts } = useContacts();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isAddingFavorite, setIsAddingFavorite] = useState(false);
   const [isEditFavorites, setIsEditFavorites] = useState(false);
@@ -134,62 +127,8 @@ export function TransferScreen({ onBack, onNewTransfer, onSelectContact, onBatch
   }, [fetchTransactions]);
 
   const realContacts = React.useMemo(() => {
-    // Generate contacts from transaction history - real data!
-    const contactMap = new Map<string, Contact>();
-    
-    // Default base contacts
-    const defaultContacts: Contact[] = [
-      { id: '1', letter: 'A', name: 'ANNISA PATRIA', network: 'EVM (Arc Testnet)', account: '0x1A2bc2f35497B6CEAc40eEb29037C9F306633c4A', initials: 'AP' },
-      { id: '2', letter: 'A', name: 'ARGA SATYAGRAHA', network: 'EVM (Arc Testnet)', account: '0x9F8eA5260cc7C3A899986326Eee2eEBE4fBe2d1B', initials: 'AS' },
-    ];
-    
-    defaultContacts.forEach(c => {
-      contactMap.set(c.account.toLowerCase(), c);
-    });
-    
-    if (transactions && transactions.length > 0) {
-      transactions.forEach((tx) => {
-        if (tx.type === 'transfer') {
-          const recipientAddress = tx.metadata?.destinationAddress;
-          const recipientName = tx.metadata?.recipientName;
-          
-          if (recipientAddress && recipientName) {
-            const cleanAddr = recipientAddress.trim();
-            const initials = recipientName.trim() 
-              ? recipientName.trim().split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() 
-              : '??';
-              
-            contactMap.set(cleanAddr.toLowerCase(), {
-              id: tx.id || cleanAddr,
-              letter: recipientName.trim()[0]?.toUpperCase() || '?',
-              name: recipientName.toUpperCase(),
-              network: 'EVM (Arc Testnet)',
-              account: cleanAddr,
-              initials: initials
-            });
-          }
-        } else if (tx.type === 'payment') {
-          const recipientAddress = tx.metadata?.destinationAddress || tx.internal_ref || '0x...';
-          const recipientName = tx.metadata?.recipientName || `Receiver ${tx.id.substring(0, 4)}`;
-          const cleanAddr = recipientAddress.trim();
-          const initials = recipientName.trim()
-            ? recipientName.trim().split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()
-            : '??';
-            
-          contactMap.set(cleanAddr.toLowerCase(), {
-            id: tx.id,
-            letter: recipientName.trim()[0]?.toUpperCase() || '?',
-            name: recipientName.toUpperCase(),
-            network: 'EVM (Arc Testnet)',
-            account: cleanAddr,
-            initials: initials
-          });
-        }
-      });
-    }
-    
-    return Array.from(contactMap.values()).filter(c => !deletedContactIds.includes(c.id));
-  }, [transactions, deletedContactIds]);
+    return allContacts.filter(c => !deletedContactIds.includes(c.id));
+  }, [allContacts, deletedContactIds]);
 
 
   const handleToggleFavorite = (contact: any) => {

@@ -50,8 +50,8 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
   };
 
   const txHash = tx?.txHash || (tx?.id && tx.id.startsWith('0x') ? tx.id : '0x' + (tx?.id ? tx.id.substring(0, 16) + 'abc' + tx.id.substring(tx.id.length - 8) : 'dc78e12b7fa120021c99f018a14b9c1d'));
-  const isSuccess = tx?.status === 'success' || tx?.status === 'confirmed';
-  const isPending = tx?.status === 'pending' || tx?.status === 'processing';
+  const isSuccess = tx?.status === 'success';
+  const isPending = tx?.status === 'pending';
   const blockNumber = tx?.metadata?.blockNumber;
 
   return (

@@ -1,17 +1,21 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Droplets, Coins, CheckCircle2, Copy, AlertCircle, Loader2, ExternalLink } from 'lucide-react';
+import { useStore } from '../../store/useStore';
 import { ARC_TESTNET } from '../../lib/arcConfig';
+import { useArc } from '../../contexts/ArcContext';
 
 interface FaucetScreenProps {
   onBack: () => void;
 }
 
 export function FaucetScreen({ onBack }: FaucetScreenProps) {
-  const [address, setAddress] = useState('');
+  const { registeredUser } = useStore();
+  const { refreshBalance } = useArc();
+  const [address, setAddress] = useState(registeredUser?.walletAddress || '');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [txHash, setTxHash] = useState('');
 
-  const handleClaim = () => {
+  const handleClaim = async () => {
     if (!address.startsWith('0x') || address.length !== 42) {
       setStatus('error');
       return;
@@ -19,11 +23,27 @@ export function FaucetScreen({ onBack }: FaucetScreenProps) {
 
     setStatus('loading');
     
-    // Simulate faucet network request on Arc Testnet
-    setTimeout(() => {
-      setStatus('success');
-      setTxHash('0x' + Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join(''));
-    }, 2000);
+    try {
+      const response = await fetch('/api/faucet/claim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        setStatus('success');
+        setTxHash(data.txHash);
+        // Refresh global balance after claim
+        setTimeout(() => refreshBalance(), 1500);
+      } else {
+        setStatus('error');
+      }
+    } catch (err) {
+      console.error("Faucet Error", err);
+      setStatus('error');
+    }
   };
 
   const getExplorerLink = (hash: string) => {
@@ -37,7 +57,7 @@ export function FaucetScreen({ onBack }: FaucetScreenProps) {
         <button onClick={onBack} className="absolute left-4 p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent">
           <ArrowLeft size={20} className="text-white" />
         </button>
-        <h1 className="font-bold text-[16px] text-white tracking-tight leading-tight">ARC FAUCET</h1>
+        <h1 className="font-bold text-[16px] text-white tracking-tight leading-tight">USDC FAUCET</h1>
       </div>
       
       <div className="flex-1 overflow-y-auto px-4 py-6 flex flex-col items-center">
@@ -45,12 +65,12 @@ export function FaucetScreen({ onBack }: FaucetScreenProps) {
           <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4 mt-2 ring-8 ring-blue-50/50">
             <Droplets size={36} className="text-[#008fcd]" />
           </div>
-          <h2 className="text-[20px] font-bold text-slate-800 mb-1 text-center">ARC FAUCET</h2>
+          <h2 className="text-[20px] font-bold text-slate-800 mb-1 text-center">USDC FAUCET</h2>
           <p className="text-[12px] text-slate-500 font-bold uppercase tracking-wider mb-6 text-center">Testnet Token</p>
         </div>
         
         <p className="text-[14px] text-slate-500 text-center mb-8 px-4 leading-relaxed">
-          Request testnet ARC tokens to pay for transaction gas fees on the Arc Network.
+          Request testnet USDC tokens to pay for transaction gas fees on the Arc Network.
         </p>
 
         <div className="w-full bg-white rounded-[20px] p-5 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col gap-5">
@@ -61,7 +81,7 @@ export function FaucetScreen({ onBack }: FaucetScreenProps) {
               </div>
               <h3 className="font-bold text-[18px] text-slate-800 mb-1">Tokens Sent!</h3>
               <p className="text-[13px] text-slate-500 mb-4 text-center">
-                10 ARC has been sent to your wallet.
+                10 USDC has been sent to your wallet.
               </p>
               
               <div className="bg-slate-50 border border-slate-100 w-full p-4 rounded-xl flex items-center justify-between">
@@ -141,7 +161,7 @@ export function FaucetScreen({ onBack }: FaucetScreenProps) {
                 ) : (
                   <div className="flex items-center justify-center gap-2">
                     <Coins size={18} />
-                    Claim 10 ARC
+                    Claim 10 USDC
                   </div>
                 )}
               </button>
