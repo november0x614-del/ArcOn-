@@ -21,11 +21,17 @@ export function sanitizeMetadata(data: any): any {
     if (!data) return data;
     return JSON.parse(JSON.stringify(data, (_key, value) => {
         if (typeof value === 'bigint') return value.toString();
-        // Skip potential non-serializable objects that might be passed accidentally
-        if (value && typeof value === 'object' && value.constructor.name !== 'Object' && value.constructor.name !== 'Array') {
-            return `[Object ${value.constructor.name}]`;
-        }
-        return value;
+        
+        if (!value || typeof value !== 'object') return value;
+
+        // Handle Array
+        if (Array.isArray(value)) return value;
+
+        // Handle Plain Object
+        if (value.constructor && value.constructor.name === 'Object') return value;
+
+        // Otherwise treat as non-serializable
+        return `[Object ${value.constructor ? value.constructor.name : 'Unknown'}]`;
     }));
 }
 

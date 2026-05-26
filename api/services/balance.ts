@@ -19,8 +19,10 @@ export async function fetchUnifiedBalance(userId: string, walletData: any, supab
     const kit = getArcAppKit(walletId);
     
     // Attempt to fetch via adapter directly if AppKit method is unsure
+    console.log("[BalanceService] Adapter keys:", Object.keys((kit as any).adapter));
+    
     const [kitBalances, nativeWei, nativeUSDCWei] = await Promise.all([
-        walletId ? (kit as any).adapter.getBalances({}).catch(() => []) : [],
+        walletId ? (kit as any).adapter.getBalance({}).catch((e: any) => { console.error("[BalanceService] getBalance failed:", e); return []; }) : [],
         publicClient.getBalance({ address: walletAddress as `0x${string}` }),
         getTokenBalance(walletAddress, USDC_ADDRESS)
     ]);
