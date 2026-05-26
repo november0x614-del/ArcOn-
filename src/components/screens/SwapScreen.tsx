@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useStore } from '../../store/useStore';
 import { ArcAppKitAdapter } from '../../services/arc-app-kit/adapter';
 import { useBalances } from '../../hooks/useBalances';
+import { ARC_TESTNET } from '../../lib/arcConfig';
 
 interface SwapScreenProps {
   onBack: () => void;
@@ -147,7 +148,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
                    <div className="flex justify-between items-center">
                       <span className="text-[12px] text-slate-400">Tx Hash</span>
                       <a 
-                        href={`https://testnet.arcexplorer.com/tx/${txHash}`} 
+                        href={`${ARC_TESTNET.blockExplorers.default.url}/tx/${txHash}`} 
                         target="_blank" 
                         rel="noopener noreferrer" 
                         className="text-[12px] font-mono text-slate-600 break-all hover:underline text-right"

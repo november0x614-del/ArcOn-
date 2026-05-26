@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Droplets, Coins, CheckCircle2, Copy, AlertCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, Droplets, Coins, CheckCircle2, Copy, AlertCircle, Loader2, ExternalLink } from 'lucide-react';
+import { ARC_TESTNET } from '../../lib/arcConfig';
 
 interface FaucetScreenProps {
   onBack: () => void;
@@ -18,11 +19,15 @@ export function FaucetScreen({ onBack }: FaucetScreenProps) {
 
     setStatus('loading');
     
-    // Simulate faucet network request
+    // Simulate faucet network request on Arc Testnet
     setTimeout(() => {
       setStatus('success');
-      setTxHash('0x9a3f...4b8d');
+      setTxHash('0x' + Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join(''));
     }, 2000);
+  };
+
+  const getExplorerLink = (hash: string) => {
+    return `${ARC_TESTNET.blockExplorers.default.url}/tx/${hash}`;
   };
 
   return (
@@ -60,14 +65,28 @@ export function FaucetScreen({ onBack }: FaucetScreenProps) {
               </p>
               
               <div className="bg-slate-50 border border-slate-100 w-full p-4 rounded-xl flex items-center justify-between">
-                <div>
-                  <p className="text-[11px] font-bold text-slate-400 mb-1 leading-none">TX HASH</p>
-                  <p className="text-[13px] font-mono text-slate-700">{txHash}</p>
+                <div className="overflow-hidden mr-2">
+                  <p className="text-[11px] font-bold text-slate-400 mb-1 leading-none uppercase">TX HASH</p>
+                  <p className="text-[13px] font-mono text-slate-700 truncate">{txHash}</p>
                 </div>
-                <button className="text-slate-400 hover:text-slate-600 bg-transparent border-0 p-1">
+                <button 
+                  onClick={() => {
+                    navigator.clipboard.writeText(txHash);
+                  }}
+                  className="text-slate-400 hover:text-[#008fcd] bg-transparent border-0 p-1 flex-shrink-0"
+                >
                   <Copy size={16} />
                 </button>
               </div>
+
+              <a 
+                href={getExplorerLink(txHash)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 text-[12px] text-[#008fcd] font-bold flex items-center gap-1 hover:underline underline-offset-4"
+              >
+                View on ArcScan <ExternalLink size={12} />
+              </a>
               
               <button 
                 onClick={() => {

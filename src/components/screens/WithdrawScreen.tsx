@@ -11,6 +11,7 @@ export function WithdrawScreen({ onBack, onSuccess }: WithdrawScreenProps) {
   const { balance, fetchBalance, fetchTransactions, displayToast, registeredUser } = useApp();
   const [step, setStep] = useState<'form' | 'processing' | 'success'>('form');
   const [amount, setAmount] = useState('');
+  const [memo, setMemo] = useState('');
   const [selectedBank] = useState('Central Asia Bank (BCA)');
   const [accountNumber] = useState('8830192831');
 
@@ -34,7 +35,8 @@ export function WithdrawScreen({ onBack, onSuccess }: WithdrawScreenProps) {
          body: JSON.stringify({
            userId: registeredUser?.supabaseUid,
            amount: amount,
-           bank: selectedBank
+           bank: selectedBank,
+           memo: memo || undefined
          })
        });
        
@@ -128,15 +130,42 @@ export function WithdrawScreen({ onBack, onSuccess }: WithdrawScreenProps) {
               Withdraw All
             </button>
           </div>
+
+          <div className="mt-6">
+             <label className="text-[12px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">Withdrawal Memo (Optional)</label>
+             <input 
+               type="text"
+               value={memo}
+               onChange={(e) => setMemo(e.target.value)}
+               placeholder="e.g. Account identifier for exchange"
+               className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-[14px] font-medium text-slate-800 outline-none focus:border-slate-400 transition-colors"
+             />
+             <p className="text-[10px] text-slate-400 mt-2 px-1 leading-relaxed">
+               *Important for sending to exchanges. Arc uses Memo metadata for destination routing.
+             </p>
+          </div>
+        </div>
+
+        <div className="bg-slate-900 p-5 rounded-[24px] mb-6 text-white shadow-xl relative overflow-hidden">
+           <div className="absolute top-0 right-0 p-4 opacity-10">
+              <Building2 size={64} className="text-white" />
+           </div>
+           <div className="relative z-10">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Arc Gas Advantage</p>
+              <h4 className="text-[14px] font-bold mb-3">Single-Asset Economy</h4>
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                 Because Arc uses USDC as native gas, this transaction costs ~0.0001 USDC. No ETH required. Finalized in under 1s.
+              </p>
+           </div>
         </div>
 
         <div className="bg-slate-100/50 p-4 rounded-2xl border border-slate-200 flex gap-3">
-          <div className="text-slate-800 shrink-0 mt-0.5">
-             <CheckCircle2 size={16} />
-          </div>
-          <p className="text-[12px] text-blue-700 leading-relaxed font-medium">
-            Funds will be converted to local currency and sent to your bank account via partner liquidity nodes. Settlement usually takes 5-15 minutes.
-          </p>
+           <div className="text-slate-800 shrink-0 mt-0.5">
+              <CheckCircle2 size={16} />
+           </div>
+           <p className="text-[12px] text-blue-700 leading-relaxed font-medium">
+             Funds will be converted to local currency and sent to your bank account via partner liquidity nodes. Settlement usually takes 5-15 minutes.
+           </p>
         </div>
       </div>
 

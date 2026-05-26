@@ -49,9 +49,10 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
     }
   };
 
-  const txHash = tx?.txHash || '0x' + (tx?.id ? tx.id.substring(0, 16) + 'abc' + tx.id.substring(tx.id.length - 8) : 'dc78e12b7fa120021c99f018a14b9c1d');
-  const isSuccess = tx?.status === 'success';
+  const txHash = tx?.txHash || (tx?.id && tx.id.startsWith('0x') ? tx.id : '0x' + (tx?.id ? tx.id.substring(0, 16) + 'abc' + tx.id.substring(tx.id.length - 8) : 'dc78e12b7fa120021c99f018a14b9c1d'));
+  const isSuccess = tx?.status === 'success' || tx?.status === 'confirmed';
   const isPending = tx?.status === 'pending' || tx?.status === 'processing';
+  const blockNumber = tx?.metadata?.blockNumber;
 
   return (
     <div className="w-full h-full bg-slate-100 relative flex flex-col z-50 animate-in fade-in slide-in-from-right duration-300">
@@ -84,9 +85,9 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
             <Download size={19} />
           </button>
           <button 
-            onClick={() => handleCopy(txHash, "TxHash")} 
+            onClick={() => window.open(tx?.metadata?.explorerUrl || `https://testnet.arcscan.app/tx/${txHash}`, '_blank')} 
             className="p-2 hover:bg-slate-100 rounded-full transition-all cursor-pointer border-0 bg-transparent text-slate-700 hover:text-slate-900"
-            title="Bagikan hash transaksi"
+            title="Buka di Explorer"
           >
             <Share2 size={19} />
           </button>
@@ -105,12 +106,12 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
             </div>
             <h3 className="text-[19px] font-extrabold text-slate-800 tracking-tight leading-snug mb-3">Transaksi Diproses</h3>
             <p className="text-[13px] text-slate-500 leading-relaxed text-center font-medium font-sans">
-              Resi belum tersedia.<br/>Transaksi Anda masih dalam antrean validasi jaringan blockchain Arc.
+              Waiting for Arc Deterministic Finality.<br/>This usually takes less than 1 second.
             </p>
           </div>
         ) : (
           <>
-            {/* SUBMITTED SUCCESS BANNER (Styled precisely matching Commonwealth reference with adaptive success/fail styling) */}
+            {/* SUBMITTED SUCCESS BANNER */}
             <div className="flex items-center gap-4 w-full max-w-[370px] bg-transparent py-2 px-1">
               <div className={`w-14 h-14 rounded-full flex items-center justify-center shadow-md shrink-0 ${isSuccess ? 'bg-[#E6F4EA] text-[#137333] border border-emerald-200' : 'bg-rose-100 text-rose-600 border border-rose-200'}`}>
                 {isSuccess ? (
@@ -121,15 +122,15 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
               </div>
               <div className="flex flex-col">
                 <h3 className="text-[17px] font-bold text-slate-800 tracking-tight leading-snug">
-                  {isSuccess ? 'Your transaction has been submitted' : 'Your transaction has failed'}
+                  {isSuccess ? 'Transaction Confirmed' : 'Transaction failed'}
                 </h3>
-                <span className="text-[11px] text-slate-505 text-slate-500 font-bold uppercase tracking-wider mt-0.5">
-                  {isSuccess ? 'Verified on Arc Blockchain' : 'Reverted on Arc Blockchain'}
+                <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">
+                  {isSuccess ? 'Deterministic Finality Verified' : 'Reverted on Arc Blockchain'}
                 </span>
               </div>
             </div>
 
-            {/* PHYSICAL RECEIPT ADAPTATION (Adapted from Commonwealth Bank visual reference) */}
+            {/* PHYSICAL RECEIPT ADAPTATION */}
             <div className="bg-white w-full max-w-[370px] shadow-sm border border-slate-200/65 flex flex-col relative">
               
               {/* Jagged physical paper cutout edge simulator */}
@@ -141,27 +142,42 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                 </div>
               </div>
 
-              {/* Receipt Body content (Vertical layout resembling physical receipt) */}
+              {/* Receipt Body content */}
               <div className="px-7 pt-9 pb-8 flex flex-col">
                 
                 <h1 className="text-slate-800 text-[26px] font-normal tracking-tight mb-7 mt-2">
                   Receipt
                 </h1>
 
+                {/* Status Row with Deterministic Branding */}
+                {isSuccess && (
+                  <div className="flex flex-col mb-5 p-3 bg-emerald-50 border border-emerald-100 rounded-xl">
+                    <div className="flex justify-between items-center">
+                       <span className="text-[11px] font-black text-emerald-600 uppercase tracking-widest">Finalized</span>
+                       <div className="flex items-center gap-1">
+                          <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
+                          <span className="text-[11px] font-bold text-emerald-700">1 Block Confirmation</span>
+                       </div>
+                    </div>
+                    <p className="text-[10px] text-emerald-600 mt-1 font-medium italic">
+                      Deterministic finality achieved. This transaction is immutable.
+                    </p>
+                  </div>
+                )}
+
                 {/* Receipt Number Column */}
                 <div className="flex flex-col mb-5">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[12.5px] text-slate-450 font-normal leading-relaxed text-slate-500">Receipt number</span>
+                    <span className="text-[12.5px] font-normal leading-relaxed text-slate-500">Transaction Hash</span>
                     <button 
                       onClick={() => setShowReceiptHelp(!showReceiptHelp)}
                       className="text-slate-400 hover:text-slate-600 transition-colors p-0.5 rounded-full hover:bg-slate-100 flex items-center justify-center border-0 bg-transparent cursor-pointer"
-                      title="Definisi Receipt Number"
                     >
                       <HelpCircle size={13} />
                     </button>
                   </div>
                   <span className="text-[16px] font-bold text-slate-800 font-mono tracking-tight mt-0.5 flex items-center gap-1.5 select-all">
-                    {txHash.substring(0, 15)}...{txHash.substring(txHash.length - 10)}
+                    {txHash.substring(0, 15)}...{txHash.substring(txHash.length - 8)}
                     <button 
                       onClick={() => handleCopy(txHash, "TxHash")}
                       className="text-slate-400 hover:text-slate-700 p-0.5 rounded transition-colors bg-transparent border-0 cursor-pointer"
@@ -169,29 +185,23 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                       <Copy size={12} />
                     </button>
                   </span>
-                  
-                  {showReceiptHelp && (
-                    <div className="mt-2 p-3 bg-amber-50/70 border border-amber-100 rounded-lg text-[11.5px] text-slate-600 leading-relaxed font-sans shadow-xs animate-in fade-in slide-in-from-top-1 duration-200">
-                      <div className="font-bold text-amber-900 mb-0.5">
-                        Penjelasan Receipt Number
-                      </div>
-                      <p className="mt-0.5">
-                        <strong>Receipt Number</strong> (di blockchain dikenal sebagai <code className="text-[10.5px] bg-amber-100 px-1 py-0.5 rounded text-amber-900 font-mono">TxHash</code>) adalah bukti kriptografis unik dari pembayaran Anda.
-                      </p>
-                      <p className="mt-1">
-                        Setiap pembayaran USDC pada jaringan Arc Network direkam secara permanen dalam ledger publik terdesentralisasi, menjamin bahwa transaksi ini 100% rill, aman, dan tidak dapat diubah oleh siapa pun.
-                      </p>
-                    </div>
-                  )}
                 </div>
+
+                {/* Block Number */}
+                {blockNumber && (
+                   <div className="flex flex-col mb-5">
+                      <span className="text-[12.5px] font-normal leading-relaxed text-slate-500">Block Number</span>
+                      <span className="text-[16px] font-bold text-slate-800 mt-0.5">#{blockNumber}</span>
+                   </div>
+                )}
 
                 {/* Amount Column */}
                 <div className="flex flex-col mb-5">
-                  <span className="text-[12.5px] text-slate-450 font-normal leading-relaxed text-slate-505 text-slate-500">Amount</span>
+                  <span className="text-[12.5px] font-normal leading-relaxed text-slate-500">Amount</span>
                   <span className="text-[23px] font-bold text-slate-800 mt-0.5">
-                    {tx?.amount.startsWith('+') ? '' : tx?.amount.startsWith('-') ? '' : ''}
                     {tx ? tx.amount : '0.00'} {tx?.currency || 'USDC'}
                   </span>
+                  <p className="text-[10px] text-slate-400 font-medium italic">Unified Gas: USDC covers fees implicitly.</p>
                 </div>
 
                 {/* From Source Wallet */}

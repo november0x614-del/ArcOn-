@@ -1,30 +1,17 @@
 import { verifyAndProcessWebhook } from "./services/webhook.js";
 import { logAuditEvent } from "./services/audit.js";
 import { createWallet, executeTransaction } from "./services/circle.js";
+import { publicClient } from "./services/arcViem.js";
+import { initiateOutboundBridge, finalizeInboundBridge } from "./services/bridge.js";
 import express from "express";
 import * as crypto from "crypto";
 import { GoogleGenAI } from "@google/genai";
 import { initiateDeveloperControlledWalletsClient } from "@circle-fin/developer-controlled-wallets";
 import { createClient } from "@supabase/supabase-js";
 import * as dotenv from "dotenv";
-import { createPublicClient, http, formatUnits } from "viem";
-
-import { sendArcTransaction, getBackendWallet, getArcBalances } from "./services/arc-viem.js";
-import { privateKeyToAccount } from "viem/accounts";
+import { formatUnits } from "viem";
 
 dotenv.config();
-
-// Mutable Mock State for Seamless Demo Experience
-let globalMockUsdcBalance = 1540.23;
-let globalMockArcBalance = 12450.0;
-let globalMockTransactions: any[] = [
-  { id: '1', amount: '50', type: 'receive', status: 'success', created_at: new Date(Date.now() - 3600000).toISOString() },
-  { id: '2', amount: '-10.5', type: 'transfer', status: 'success', created_at: new Date(Date.now() - 86400000).toISOString(), metadata: { recipientName: "Coffee Shop" } },
-];
-
-const publicClient = createPublicClient({
-  transport: http(process.env.VITE_ARC_RPC_URL || "https://rpc.testnet.arc.network")
-});
 
 process.on('uncaughtException', (err) => {
   console.error('Unhandled Exception:', err);
@@ -36,7 +23,7 @@ process.on('unhandledRejection', (reason, promise) => {
 
 let supabaseAdminInstance: any = null;
 
-function getSupabaseAdmin() {
+export function getSupabaseAdmin() {
   if (!supabaseAdminInstance) {
     const rawBackendUrl = process.env.VITE_SUPABASE_URL || "";
     const cleanUrl = rawBackendUrl.replace(/\/rest\/v1\/?$/, '').replace(/\/$/, '');
@@ -131,35 +118,6 @@ app.post("/api/wallets/create", async (req, res) => {
   }
 });
 
-// Route to generate a random secure Private Key & Address for User-Controlled Wallet
-app.post("/api/wallets/generate-user-wallet", (_req, res) => {
-  try {
-    const pk = `0x${crypto.randomBytes(32).toString('hex')}`;
-    const account = privateKeyToAccount(pk as `0x${string}`);
-    res.json({
-      privateKey: pk,
-      address: account.address
-    });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Route to derive Address from any custom Private Key
-app.post("/api/wallets/derive-address", (req, res) => {
-  try {
-    const { privateKey } = req.body;
-    if (!privateKey) {
-      return res.status(400).json({ error: "Private key is required" });
-    }
-    const pk = privateKey.startsWith('0x') ? privateKey : `0x${privateKey}`;
-    const account = privateKeyToAccount(pk as `0x${string}`);
-    res.json({ address: account.address });
-  } catch (err: any) {
-    res.status(400).json({ error: `Invalid private key format: ${err.message}` });
-  }
-});
-
 // Debug Route: Get wallet details
 app.get("/api/debug-wallet/:userId", async (req, res) => {
   try {
@@ -188,35 +146,18 @@ app.get("/api/debug-wallet/:userId", async (req, res) => {
 app.get("/api/balance/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
-    const { walletType, customAddress } = req.query;
-
-    // Direct live on-chain lookup for user-controlled self-custodied wallet
-    if (walletType === 'user' && typeof customAddress === 'string' && customAddress.startsWith('0x')) {
-      console.log(`Fetching real-time balances for user-controlled wallet address: ${customAddress}`);
-      const liveBalances = await getArcBalances(customAddress);
-      const usdcAmt = parseFloat(liveBalances.erc20Usdc);
-      return res.json({
-        balance: isNaN(usdcAmt) ? 0 : usdcAmt,
-        realBalance: isNaN(usdcAmt) ? 0 : usdcAmt,
-        currency: "USDC",
-        allBalances: [
-          { token: { symbol: 'USDC', name: 'USD Coin', decimals: 6, blockchain: 'ARC-TESTNET' }, amount: liveBalances.erc20Usdc },
-          { token: { symbol: 'ARC', name: 'Arc Network Native Gas Token', decimals: 18, blockchain: 'ARC-TESTNET' }, amount: liveBalances.nativeArcUsdc }
-        ]
-      });
-    }
     
     // Check if we have env variables
     if (!process.env.VITE_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      console.log("Mocking balance as Supabase is not configured yet. Live mutable balances returned.");
+      console.log("Mocking balance as Supabase is not configured yet.");
       return res.json({
-        balance: globalMockUsdcBalance,
-        realBalance: globalMockUsdcBalance,
+        balance: 1540.23,
+        realBalance: 1540.23,
         currency: "USDC",
         allBalances: [
-          { token: { symbol: 'USDC', name: 'USD Coin', decimals: 6, blockchain: 'ARC-TESTNET' }, amount: globalMockUsdcBalance.toFixed(2) },
+          { token: { symbol: 'USDC', name: 'USD Coin', decimals: 6, blockchain: 'ARC-TESTNET' }, amount: '1540.23' },
           { token: { symbol: 'EURC', name: 'Euro Coin', decimals: 6, blockchain: 'ARC-TESTNET' }, amount: '42.50' },
-          { token: { symbol: 'ARC', name: 'Arc Network Native Gas Token', decimals: 18, blockchain: 'ARC-TESTNET' }, amount: globalMockArcBalance.toFixed(2) }
+          { token: { symbol: 'ARC', name: 'Arc Network Native Gas Token', decimals: 18, blockchain: 'ARC-TESTNET' }, amount: '12450.0' }
         ]
       });
     }
@@ -239,6 +180,7 @@ app.get("/api/balance/:userId", async (req, res) => {
     let nativeBalanceFormatted = "12450.0"; // Sane fallback seed if query fails or wallet is empty
 
     // Fetch live ARC native balance on-chain via viem
+    let nativeUSDCBalance = 0;
     if (walletAddress) {
       try {
         const blockchainBalance = await publicClient.getBalance({
@@ -246,6 +188,21 @@ app.get("/api/balance/:userId", async (req, res) => {
         });
         nativeBalanceFormatted = formatUnits(blockchainBalance, 18);
         console.log(`Live native L1 ARC balance fetched on-chain: ${nativeBalanceFormatted}`);
+        
+        // Arc Unified Balance: check USDC (ERC20) on native address as well
+        const usdcContract = process.env.ARC_USDC_CONTRACT || "0x3600000000000000000000000000000000000000";
+        try {
+          const rawUsdc = (await publicClient.readContract({
+            address: usdcContract as `0x${string}`,
+            abi: [{ name: 'balanceOf', type: 'function', inputs: [{ name: 'owner', type: 'address' }], outputs: [{ name: 'balance', type: 'uint256' }] }],
+            functionName: 'balanceOf',
+            args: [walletAddress as `0x${string}`]
+          } as any)) as bigint;
+          nativeUSDCBalance = parseFloat(formatUnits(rawUsdc, 6)); // USDC is 6 decimals
+          console.log(`Live native USDC balance on Arc: ${nativeUSDCBalance}`);
+        } catch (usdcErr) {
+          console.warn("Failed to fetch native USDC balance on-chain:", usdcErr);
+        }
       } catch (nativeErr) {
         console.error("Failed to fetch native balance on-chain via publicClient:", nativeErr);
       }
@@ -266,11 +223,18 @@ app.get("/api/balance/:userId", async (req, res) => {
             tokenBalances = balanceResponse.data.tokenBalances;
         }
         
+        // Arc Hardening: ERC-20 Exclusive Accounting
+        // We prioritize the 6-decimal interface for USDC accounting as per Arc docs
         const usdcToken = tokenBalances.find((b: any) => 
           b.token?.symbol === 'USDC' || b.token?.name?.includes('USDC')
         );
-        baseBalance = parseFloat(usdcToken?.amount || '0');
-        console.log(`USDC Balance found: ${baseBalance}`);
+        
+        if (usdcToken) {
+          baseBalance = parseFloat(usdcToken.amount);
+          // If Circle somehow returned 18 decimals, we would normalize here, 
+          // but Circle's Arc integration typically uses 6 for the ERC20 aspect.
+          console.log(`[API] USDC Audit: ${usdcToken.amount} (${usdcToken.token?.decimals || 6} decimals)`);
+        }
       } catch (e) {
         console.error("Circle API balance fetch failed", e);
       }
@@ -315,6 +279,45 @@ app.get("/api/balance/:userId", async (req, res) => {
         },
         amount: nativeBalanceFormatted
       });
+    }
+
+    // Handle Dual USDC representation logic if USDC is present
+    const usdcIndex = tokenBalances.findIndex((b: any) => b.token?.symbol === 'USDC');
+    if (usdcIndex >= 0) {
+      const usdcItem = tokenBalances[usdcIndex];
+      usdcItem.token.decimals = usdcItem.token.decimals || 6;
+      
+      const circleAmount = parseFloat(usdcItem.amount);
+      const totalAmount = circleAmount + nativeUSDCBalance;
+      
+      // We'll keep the Circle one as is, but add a new entry for Native USDC for clarity
+      if (nativeUSDCBalance > 0) {
+        tokenBalances.push({
+          token: { 
+            symbol: 'USDC', 
+            name: 'USD Coin (Arc Native)', 
+            decimals: 6, 
+            blockchain: 'ARC-TESTNET',
+            isNative: true 
+          },
+          amount: nativeUSDCBalance.toString()
+        });
+      }
+      
+      baseBalance = totalAmount; // Update base balance with unified sum
+      console.log(`[API] Unified USDC: Circle(${circleAmount}) + Native(${nativeUSDCBalance}) = ${totalAmount}`);
+    } else if (nativeUSDCBalance > 0) {
+      tokenBalances.push({
+        token: { 
+          symbol: 'USDC', 
+          name: 'USD Coin (Arc Native)', 
+          decimals: 6, 
+          blockchain: 'ARC-TESTNET',
+          isNative: true 
+        },
+        amount: nativeUSDCBalance.toString()
+      });
+      baseBalance = nativeUSDCBalance;
     }
 
     res.json({ 
@@ -412,8 +415,12 @@ app.get("/api/balance/:userId/tokens", async (req, res) => {
 app.get("/api/transactions/:userId", async (req, res) => {
   try {
     if (!process.env.VITE_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      console.log("Returning live mocked transactions memory.");
-      return res.json(globalMockTransactions);
+      console.log("Mocking transactions as Supabase is not configured yet.");
+      return res.json([
+        { id: '1', user_id: req.params.userId, amount: '50', type: 'receive', status: 'success', created_at: new Date(Date.now() - 3600000).toISOString() },
+        { id: '2', user_id: req.params.userId, amount: '-10.5', type: 'transfer', status: 'success', created_at: new Date(Date.now() - 86400000).toISOString(), metadata: { recipientName: "Coffee Shop" } },
+        { id: '3', user_id: req.params.userId, amount: '100', type: 'swap', status: 'success', created_at: new Date(Date.now() - 172800000).toISOString(), metadata: { fromToken: "USDC", toToken: "ARC" } }
+      ]);
     }
 
     const { data, error } = await getSupabaseAdmin()
@@ -454,115 +461,14 @@ app.post("/api/webhook/simulate", async (req, res) => {
   }
 });
 
-// Transfer Real Execution
-app.post("/api/transfer/execute", async (req, res) => {
-  try {
-    const { userId, amount, destinationAddress, walletType, userPrivateKey } = req.body;
-    
-    let txId = `tx_${crypto.randomBytes(8).toString('hex')}`;
-    
-    // Check if we should execute a REAL Arc On-Chain using Viem
-    if (walletType === 'user' && userPrivateKey) {
-       console.log("Deploying real on-chain transfer for User-Controlled Wallet via Viem...");
-       try {
-         const result = await sendArcTransaction(destinationAddress, amount.toString(), userPrivateKey);
-         txId = result.txId;
-       } catch (err: any) {
-         console.error("Viem custom user key transfer error:", err);
-         return res.status(500).json({ error: `On-chain execution failed: ${err.message}` });
-       }
-    } else if (getBackendWallet()) {
-       console.log("Deploying real on-chain transaction via Viem...");
-       try {
-         const result = await sendArcTransaction(destinationAddress, amount.toString());
-         txId = result.txId;
-       } catch (err) {
-         console.error("Viem Error:", err);
-       }
-    }
-    
-    // Deduct mock state
-    if (walletType !== 'user') {
-      globalMockUsdcBalance -= parseFloat(amount);
-    }
-    
-    globalMockTransactions.unshift({
-      id: crypto.randomBytes(4).toString('hex'),
-      user_id: userId,
-      amount: `-${amount}`,
-      type: 'transfer',
-      status: 'success',
-      internal_ref: txId,
-      created_at: new Date().toISOString(),
-      metadata: {
-         destinationAddress: destinationAddress,
-         recipientName: "EVM Account",
-         real: (walletType === 'user' && !!userPrivateKey) || !!getBackendWallet()
-      }
-    });
-
-    if (process.env.VITE_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY && walletType !== 'user') {
-      await executeTransaction(getSupabaseAdmin(), userId, amount, destinationAddress, 'transfer', { destinationAddress });
-    }
-    
-    res.status(200).json({ message: "Transfer completed", txId });
-  } catch (error: any) {
-    console.error("Transfer Error", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
 // Swap Real Execution
 app.post("/api/swap/execute", async (req, res) => {
   try {
-    const { userId, amount, fromToken, toToken, tokenAddress, walletType, userPrivateKey } = req.body;
+    const { userId, amount, fromToken, toToken, tokenAddress } = req.body;
     const dexAddress = "0x3333333333333333333333333333333333333333";
     
-    let txId = `swap_${crypto.randomBytes(8).toString('hex')}`;
-    
-    if (walletType === 'user' && userPrivateKey) {
-       console.log("Deploying real on-chain swap for User-Controlled Wallet via Viem...");
-       try {
-         const result = await sendArcTransaction(dexAddress, amount.toString(), userPrivateKey);
-         txId = result.txId;
-       } catch (err: any) {
-         console.error("Viem custom user key swap error:", err);
-         return res.status(500).json({ error: `On-chain swap failed: ${err.message}` });
-       }
-    } else if (getBackendWallet()) {
-       try {
-         const result = await sendArcTransaction(dexAddress, amount.toString());
-         txId = result.txId;
-       } catch (e) {
-         console.warn("Viem swap failed", e);
-       }
-    }
-
-    if (walletType !== 'user') {
-      if (fromToken === 'USDC') {
-        globalMockUsdcBalance -= parseFloat(amount);
-        if (toToken === 'ARC') globalMockArcBalance += parseFloat(amount) * 0.9852;
-      } else if (fromToken === 'ARC') {
-        globalMockArcBalance -= parseFloat(amount);
-        if (toToken === 'USDC') globalMockUsdcBalance += parseFloat(amount) * (1/0.9852);
-      }
-    }
-    
-    globalMockTransactions.unshift({
-      id: crypto.randomBytes(4).toString('hex'),
-      user_id: userId,
-      amount: `-${amount}`,
-      type: 'swap',
-      status: 'success',
-      internal_ref: txId,
-      created_at: new Date().toISOString(),
-      metadata: { fromToken, toToken, real: (walletType === 'user' && !!userPrivateKey) || !!getBackendWallet() }
-    });
-    
-    if (process.env.VITE_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY && walletType !== 'user') {
-      await executeTransaction(getSupabaseAdmin(), userId, amount, dexAddress, 'swap', { fromToken, toToken, tokenAddress });
-    }
-    res.status(200).json({ message: "Swap completed", txId });
+    const result = await executeTransaction(getSupabaseAdmin(), userId, amount, dexAddress, 'swap', { fromToken, toToken, tokenAddress });
+    res.status(200).json({ message: "Swap queued", txId: result.txId });
   } catch (error: any) {
     console.error("Swap Error", error);
     res.status(500).json({ error: error.message });
@@ -583,13 +489,40 @@ app.post("/api/bridge/execute", async (req, res) => {
   }
 });
 
+app.post("/api/transfer/execute", async (req, res) => {
+  try {
+    const { userId, amount, destinationAddress } = req.body;
+    const supabase = getSupabaseAdmin();
+    
+    // 1. Determine the best source for funds (Unified Balance logic)
+    // For now, we prioritize Circle for simplicity, but we can switch based on balance
+    const result = await executeTransaction(supabase, userId, amount, destinationAddress, 'transfer', { 
+      intent: 'unified_transfer',
+      finality: 'deterministic'
+    });
+    
+    res.status(200).json({ 
+      message: "Unified Transfer initiated", 
+      txId: result.txId,
+      status: 'pending'
+    });
+  } catch (error: any) {
+    console.error("Unified Transfer Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Real Withdraw Execution (Burn / Treasury destination)
 app.post("/api/withdraw/execute", async (req, res) => {
   try {
-    const { userId, amount, bank } = req.body;
+    const { userId, amount, bank, memo } = req.body;
     const treasuryAddress = "0x1111111111111111111111111111111111111111"; 
 
-    const result = await executeTransaction(getSupabaseAdmin(), userId, amount, treasuryAddress, 'withdraw', { bank });
+    const result = await executeTransaction(getSupabaseAdmin(), userId, amount, treasuryAddress, 'withdraw', { 
+      bank, 
+      memo,
+      finality: 'deterministic'
+    });
     res.status(200).json({ message: "Withdraw queued", txId: result.txId });
   } catch (error: any) {
     console.error("Withdraw Error", error);
@@ -669,48 +602,27 @@ app.post("/api/payments/batch", async (req, res) => {
 
     for (const rec of recipients) {
        try {
-         // Fallback tracking for demo memory
-         globalMockUsdcBalance -= parseFloat(rec.amount);
-         const internalRef = `batch_${crypto.randomBytes(4).toString('hex')}`;
-         globalMockTransactions.unshift({
-            id: crypto.randomBytes(4).toString('hex'),
+         const response = await client.createTransaction({
+           walletId: walletId,
+           destinationAddress: rec.address,
+           amount: [rec.amount.toString()],
+           fee: { type: "level", config: { feeLevel: "LOW" } },
+           tokenAddress: "",
+           blockchain: "ARC-TESTNET"
+         } as any);
+         
+         await getSupabaseAdmin().from('transactions').insert({
             user_id: userId,
             amount: `-${rec.amount}`,
             type: 'transfer',
-            status: 'success',
-            internal_ref: internalRef,
-            created_at: new Date().toISOString(),
+            status: 'pending',
+            internal_ref: response.data?.id || `req_${crypto.randomBytes(8).toString('hex')}`,
             metadata: {
               recipientName: rec.name || "EVM Account",
               destinationAddress: rec.address,
-              real: false
+              real: true
             }
          });
-         
-         let response: any = { data: { id: internalRef } };
-         if (process.env.VITE_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-           response = await client.createTransaction({
-             walletId: walletId,
-             destinationAddress: rec.address,
-             amount: [rec.amount.toString()],
-             fee: { type: "level", config: { feeLevel: "LOW" } },
-             tokenAddress: "",
-             blockchain: "ARC-TESTNET"
-           } as any);
-           
-           await getSupabaseAdmin().from('transactions').insert({
-              user_id: userId,
-              amount: `-${rec.amount}`,
-              type: 'transfer',
-              status: 'pending',
-              internal_ref: response.data?.id || `req_${crypto.randomBytes(8).toString('hex')}`,
-              metadata: {
-                recipientName: rec.name || "EVM Account",
-                destinationAddress: rec.address,
-                real: true
-              }
-           });
-         }
          
          responses.push({
            address: rec.address,
@@ -788,6 +700,51 @@ app.get("/api/tokens", async (_req, res) => {
   ]);
 });
 
+app.post("/api/bridge/cctp", async (req, res) => {
+  try {
+    const { userId, amount, destinationAddress, destinationDomain } = req.body;
+    
+    // In Arc Network, CCTP involves calling the TokenMessenger contract
+    const result = await initiateOutboundBridge(
+      getSupabaseAdmin(),
+      userId,
+      destinationDomain || 0, // Default to Ethereum (0) if not provided
+      destinationAddress,
+      amount
+    );
+    
+    res.status(200).json({ 
+      message: "CCTP Outbound Bridge initiated", 
+      approveTxId: result.approveTxId,
+      burnTxId: result.burnTxId,
+      status: 'pending_burn'
+    });
+  } catch (error: any) {
+    console.error("CCTP Bridge error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post("/api/bridge/inbound/claim", async (req, res) => {
+  try {
+    const { userId, sourceTxHash, sourceChainRpc } = req.body;
+    
+    // Finalize the inbound bridge by submitting receiveMessage on Arc
+    // This is useful when user has already burned on source chain
+    await finalizeInboundBridge(
+      getSupabaseAdmin(),
+      userId,
+      sourceTxHash,
+      sourceChainRpc
+    );
+
+    res.status(200).json({ message: "Inbound bridge claim initiated" });
+  } catch (error: any) {
+    console.error("Inbound Bridge Claim error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // AI Route
 app.post("/api/chat", async (req, res) => {
   try {
@@ -824,6 +781,47 @@ Please respond concisely and helpfully in Indonesian. Use the system state conte
   } catch (error: any) {
     console.error(error);
     res.status(500).json({ error: error.message || 'Failed to generate response' });
+  }
+});
+
+// Admin Initialization Root
+app.post("/api/admin/init", async (_req, res) => {
+  try {
+    const adminEmail = "admin@admin.com";
+    const supabase = getSupabaseAdmin();
+
+    console.log(`[AdminInit] Initializing default admin: ${adminEmail}`);
+
+    // 1. Check if user exists in auth.users
+    // Note: In typical Supabase, we might not have direct access to auth.users depending on the service role power,
+    // but we can try to look up in our public 'profiles' or 'users' table if it exists.
+    // For this app, we assume 'user_wallets' is the source of truth for app users.
+    
+    // We'll create a dummy entry in user_wallets if not exists to facilitate testing
+    const userId = "00000000-0000-0000-0000-000000000000"; // Statical UUID for admin fallback
+    
+    const { data: existingWallet } = await supabase
+      .from('user_wallets')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (existingWallet) {
+      return res.json({ message: "Admin already initialized", wallet: existingWallet });
+    }
+
+    // 2. Create Circle Wallet for Admin
+    console.log("[AdminInit] Creating Circle Wallet for Admin...");
+    const circleResult = await createWallet(supabase, userId);
+
+    res.json({
+      message: "Admin initialized successfully",
+      adminId: userId,
+      wallet: circleResult
+    });
+  } catch (error: any) {
+    console.error("Admin Init Error:", error);
+    res.status(500).json({ error: error.message });
   }
 });
 

@@ -70,15 +70,6 @@ interface AppState {
   setSourceAccount: (account: SourceAccount) => void;
   logs: string[];
   addLog: (log: string) => void;
-  
-  // Hybrid Wallet State
-  selectedWalletType: 'developer' | 'user';
-  setSelectedWalletType: (type: 'developer' | 'user') => void;
-  userControlledPrivateKey: string | null;
-  setUserControlledPrivateKey: (pk: string | null) => void;
-  userControlledAddress: string;
-  setUserControlledAddress: (addr: string) => void;
-
   resetState: () => void;
 }
 
@@ -109,11 +100,7 @@ export const useStore = create<AppState>()(
         if (!user?.supabaseUid) return;
         
         try {
-          const state = useStore.getState();
-          let url = `/api/balance/${user.supabaseUid}`;
-          if (state.selectedWalletType === 'user' && state.userControlledAddress) {
-            url += `?walletType=user&customAddress=${state.userControlledAddress}`;
-          }
+          const url = `/api/balance/${user.supabaseUid}`;
           useStore.getState().addLog(`Fetching balance: GET ${url}`);
           const response = await fetch(url);
           if (!response.ok) {
@@ -181,11 +168,19 @@ export const useStore = create<AppState>()(
 
           const transactions: Transaction[] = dbTransactions.map((tx: any) => {
             const rawAmount = parseFloat(tx.amount) || 0;
-            const sign = tx.type === 'receive' || tx.type === 'deposit' ? '+' : '-';
+            const direction = tx.metadata?.direction || (tx.type === 'receive' || tx.type === 'deposit' ? 'inbound' : 'outbound');
+            const sign = direction === 'inbound' ? '+' : '-';
+            
+            let title = tx.type.charAt(0).toUpperCase() + tx.type.slice(1);
+            if (tx.type === 'receive') title = 'Inbound Transfer';
+            if (tx.type === 'bridge') {
+               title = direction === 'inbound' ? 'CCTP Inbound Bridge' : 'CCTP Outbound Bridge';
+            }
+
             return {
               id: tx.id || tx.internal_ref,
               type: tx.type,
-              title: tx.type === 'receive' ? 'Inbound Transfer' : tx.type.charAt(0).toUpperCase() + tx.type.slice(1),
+              title,
               amount: sign + Math.abs(rawAmount).toString(),
               currency: 'USDC',
               timestamp: new Date(tx.created_at).toLocaleString(),
@@ -275,25 +270,6 @@ export const useStore = create<AppState>()(
       setSourceAccount: (account) => set({ sourceAccount: account }),
       logs: [],
       addLog: (log) => set((state) => ({ logs: [...state.logs.slice(-49), `[${new Date().toLocaleTimeString()}] ${log}`] })),
-      
-      // Hybrid Wallet Initial values
-      selectedWalletType: 'developer',
-      setSelectedWalletType: (type) => set({ selectedWalletType: type }),
-      userControlledPrivateKey: localStorage.getItem('arc_user_controlled_pk'),
-      setUserControlledPrivateKey: (pk) => {
-        if (pk) {
-          localStorage.setItem('arc_user_controlled_pk', pk);
-        } else {
-          localStorage.removeItem('arc_user_controlled_pk');
-        }
-        set({ userControlledPrivateKey: pk });
-      },
-      userControlledAddress: localStorage.getItem('arc_user_controlled_addr') || '',
-      setUserControlledAddress: (addr) => {
-        localStorage.setItem('arc_user_controlled_addr', addr);
-        set({ userControlledAddress: addr });
-      },
-      
       resetState: () => set({
         viewState: 'splash',
         registeredUser: null,

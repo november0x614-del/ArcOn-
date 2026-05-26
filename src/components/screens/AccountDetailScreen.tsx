@@ -392,53 +392,70 @@ export function AccountDetailScreen({
 
                   <div className="grid grid-cols-3 gap-2 mb-3">
                     <div className="rounded-xl p-2.5 bg-white border border-slate-100 flex flex-col justify-between shadow-sm">
-                      <span className="text-[8.5px] font-mono font-extrabold text-slate-800">ARC L1</span>
+                      <span className="text-[8.5px] font-mono font-extrabold text-slate-800">ARC NATIVE</span>
                       <span className="font-bold text-[12px] sm:text-[13px] mt-1 text-slate-700 font-mono">
                         {showBalance ? (() => {
-                          const usdcArcData = balanceData?.allBalances?.find((b: any) => 
-                            (b.token?.symbol === 'USDC' || b.token?.name?.includes('USDC')) && 
-                            (b.token?.blockchain?.toUpperCase() === 'ARC-TESTNET' || b.token?.blockchain?.toLowerCase() === 'arc-testnet' || !b.token?.blockchain)
+                          const nativeData = balanceData?.allBalances?.find((b: any) => 
+                            b.token?.isNative && (b.token?.symbol === 'USDC' || b.token?.name?.includes('USDC'))
                           );
-                          const amt = usdcArcData ? parseFloat(usdcArcData.amount || '0') : (balance * 0.50);
-                          return amt.toFixed(2).replace('.', ',');
+                          const amt = nativeData ? parseFloat(nativeData.amount || '0') : 0;
+                          return amt.toLocaleString('en-US', { minimumFractionDigits: 2 });
                         })() : '••••'}
                       </span>
-                      <span className="text-[8px] text-slate-400 mt-1">Native (50%)</span>
+                      <span className="text-[8px] text-slate-400 mt-1">Direct L1</span>
                     </div>
 
                     <div className="rounded-xl p-2.5 bg-white border border-slate-100 flex flex-col justify-between shadow-sm">
-                      <span className="text-[8.5px] font-mono font-extrabold text-[#0052FF]">BASE</span>
+                      <span className="text-[8.5px] font-mono font-extrabold text-[#008fcd]">CIRCLE ARC</span>
                       <span className="font-bold text-[12px] sm:text-[13px] mt-1 text-slate-700 font-mono">
                         {showBalance ? (() => {
-                          const usdcBaseData = balanceData?.allBalances?.find((b: any) => 
-                            (b.token?.symbol === 'USDC' || b.token?.name?.includes('USDC')) && 
-                            (b.token?.blockchain?.toUpperCase().includes('BASE') || b.token?.blockchain?.toLowerCase().includes('base'))
+                          const circleData = balanceData?.allBalances?.find((b: any) => 
+                            !b.token?.isNative && (b.token?.symbol === 'USDC' || b.token?.name?.includes('USDC')) && 
+                            (b.token?.blockchain?.toUpperCase() === 'ARC-TESTNET' || !b.token?.blockchain)
                           );
-                          const amt = usdcBaseData ? parseFloat(usdcBaseData.amount || '0') : (balance * 0.25);
-                          return amt.toFixed(2).replace('.', ',');
+                          const amt = circleData ? parseFloat(circleData.amount || '0') : 0;
+                          return amt.toLocaleString('en-US', { minimumFractionDigits: 2 });
                         })() : '••••'}
                       </span>
-                      <span className="text-[8px] text-slate-400 mt-1">L2 (25%)</span>
+                      <span className="text-[8px] text-slate-400 mt-1">Managed</span>
                     </div>
 
                     <div className="rounded-xl p-2.5 bg-white border border-slate-100 flex flex-col justify-between shadow-sm">
-                      <span className="text-[8.5px] font-mono font-extrabold text-[#28A0F0]">ARBITRUM</span>
+                      <span className="text-[8.5px] font-mono font-extrabold text-[#0052FF]">UNIFIED</span>
                       <span className="font-bold text-[12px] sm:text-[13px] mt-1 text-slate-700 font-mono">
-                        {showBalance ? (() => {
-                          const usdcArbData = balanceData?.allBalances?.find((b: any) => 
-                            (b.token?.symbol === 'USDC' || b.token?.name?.includes('USDC')) && 
-                            (b.token?.blockchain?.toUpperCase().includes('ARBITRUM') || b.token?.blockchain?.toLowerCase().includes('arbitrum'))
-                          );
-                          const amt = usdcArbData ? parseFloat(usdcArbData.amount || '0') : (balance * 0.25);
-                          return amt.toFixed(2).replace('.', ',');
-                        })() : '••••'}
+                        {showBalance ? (balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '••••'}
                       </span>
-                      <span className="text-[8px] text-slate-400 mt-1">L2 (25%)</span>
+                      <span className="text-[8px] text-slate-400 mt-1">Aggregate</span>
                     </div>
                   </div>
 
-                  <div className="text-[10px] sm:text-[11px] leading-relaxed p-3 rounded-xl border border-blue-100 bg-blue-50/50 text-slate-600">
+                  <div className="text-[10px] sm:text-[11px] leading-relaxed p-3 rounded-xl border border-blue-100 bg-blue-50/50 text-slate-600 mb-3">
                     💡 <span className="font-bold text-slate-700">Unified Balance:</span> USDC from various networks (Arc, Base, Arbitrum) are virtually unified. You can spend or transfer your total balance instantly on Arc Testnet without tedious cross-chain bridging.
+                  </div>
+
+                  {/* Arc Specific: Dual USDC Interface Info */}
+                  <div className="bg-slate-900 rounded-xl p-3 text-white">
+                    <div className="flex justify-between items-center mb-2">
+                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Dual USDC Interface</span>
+                       <div className="px-1.5 py-0.5 rounded bg-white/10 text-slate-300 text-[8px] font-mono">DEBUG MODE</div>
+                    </div>
+                    <div className="space-y-2">
+                       <div className="flex justify-between items-center bg-white/5 p-2 rounded-lg border border-white/10">
+                          <span className="text-[11px] text-slate-300">Native (18 Decimals)</span>
+                          <span className="text-[11px] font-mono font-bold">
+                            {showBalance ? (balance * 0.5).toFixed(18) : '••••'}
+                          </span>
+                       </div>
+                       <div className="flex justify-between items-center bg-white/5 p-2 rounded-lg border border-white/10">
+                          <span className="text-[11px] text-slate-300">ERC-20 (6 Decimals)</span>
+                          <span className="text-[11px] font-mono font-bold">
+                            {showBalance ? (balance * 0.5).toFixed(6) : '••••'}
+                          </span>
+                       </div>
+                    </div>
+                    <p className="text-[8.5px] text-slate-500 mt-2 italic leading-tight">
+                      *Arc uses USDC as gas. The L1 native balance (18 decimals) and ERC-20 contract balance (6 decimals) share the same underlying vault.
+                    </p>
                   </div>
                 </div>
               )}

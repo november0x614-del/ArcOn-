@@ -94,6 +94,9 @@ export async function verifyAndProcessWebhook(
     if (type === 'transfers.updated' || type === 'transfers.created') {
       const transfer = data;
       const internalRef = transfer.id;
+      
+      // Arc Deterministic Finality: Arc transactions are immutable after 1 confirmation
+      // Circle marks COMPLETE when fully settled, we align with that.
       const newStatus = transfer.status === 'COMPLETE' ? 'success' : 
                         transfer.status === 'FAILED' ? 'failed' : 'pending';
 
@@ -109,12 +112,17 @@ export async function verifyAndProcessWebhook(
       }
     } else if (type === 'transactions.inbound') {
       console.log("Processing inbound transaction:", JSON.stringify(data));
-      const { id, amounts, destinationAddress, sourceAddress, createDate } = data;
-      const amountValue = amounts[0]; // Take the first amount
+      const { id, amounts, destinationAddress, sourceAddress, createDate, txHash } = data;
+      const amountValue = amounts[0]; // Take the first amount (USDC)
       
+      // Arc Hardening: Memo Parsing
+      // In a real exchange, we would check the 'memo' field if provided via a Memo contract
+      const memo = data.memo || data.metadata?.memo;
+      console.log(`[Webhook] Inbound transaction ${id} has memo: ${memo || 'none'}`);
+
       const { data: walletData, error: walletError } = await supabaseAdmin
         .from('user_wallets')
-        .select('user_id, wallet_address')
+        .select('id, wallet_address') // Changed from user_id to id to match schema
         .ilike('wallet_address', destinationAddress)
         .single();
         
@@ -124,12 +132,19 @@ export async function verifyAndProcessWebhook(
           const { error } = await supabaseAdmin
             .from('transactions')
             .insert({
-              user_id: walletData.user_id,
+              user_id: walletData.id,
               amount: amountValue,
               type: 'receive',
-              status: 'success',
+              status: 'success', // Deterministic finality: immediate success for inbound detected by Circle
               internal_ref: id,
-              metadata: { sourceAddress, createDate, destinationAddress }
+              metadata: { 
+                sourceAddress, 
+                createDate, 
+                destinationAddress, 
+                txHash,
+                finality: 'deterministic',
+                memo: memo || null
+              }
             });
           
           if (error) {

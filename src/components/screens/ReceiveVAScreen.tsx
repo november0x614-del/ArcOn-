@@ -91,6 +91,18 @@ export function ReceiveVAScreen({ onBack }: ReceiveVAScreenProps) {
             {isSimulating ? "Processing..." : "Simulasikan Pembayaran"}
           </button>
         </div>
+        
+        <div className="mt-8 flex gap-3 px-2">
+           <div className="w-8 h-8 rounded-full bg-[#008fcd]/10 flex items-center justify-center shrink-0">
+             <div className="w-2 h-2 bg-[#008fcd] rounded-full animate-pulse"></div>
+           </div>
+           <div>
+              <p className="text-[12px] font-bold text-slate-800 mb-1 leading-none uppercase tracking-widest">Instant Settlement</p>
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                 Arc uses deterministic finality. Your USDC deposit will be credited after 1 confirmation, typically in under 1 second.
+              </p>
+           </div>
+        </div>
       </div>
     </div>
   );

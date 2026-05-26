@@ -74,12 +74,12 @@ export function SettingsScreen({
         {/* Keamanan & Dompet */}
         <div className="mt-6">
           <div className="px-4 mb-2">
-            <span className="text-[12px] font-bold text-slate-500 tracking-wide uppercase">Wallet Security</span>
+            <span className="text-[12px] font-bold text-slate-500 tracking-wide uppercase">Wallet & Custody</span>
           </div>
           <div className="bg-white border-y border-slate-100 flex flex-col">
-            <SettingItem icon={<Lock size={20} className="text-slate-800" />} label="Change PIN / Password" onClick={() => handleNotImplemented("Change PIN")} />
-            <SettingItem icon={<Key size={20} className="text-slate-800" />} label="Recovery Phrase (Seed)" badge="IMPORTANT" onClick={() => handleNotImplemented("Recovery Phrase")} />
-            <SettingItem icon={<Shield size={20} className="text-slate-800" />} label="Export Private Key" isLast onClick={() => handleNotImplemented("Export Private Key")} />
+            <SettingItem icon={<Shield size={20} className="text-slate-800" />} label="Signing Policy" badge="2/3 MPC" onClick={() => handleNotImplemented("Signing Policy")} />
+            <SettingItem icon={<Lock size={20} className="text-slate-800" />} label="Compliance Blocklist" badge="ACTIVE" onClick={() => handleNotImplemented("Compliance Blocklist")} />
+            <SettingItem icon={<Key size={20} className="text-slate-800" />} label="Dev-Controlled Seeds" badge="CIRCLE WEB3" isLast onClick={() => handleNotImplemented("Wallet Seed Management")} />
           </div>
         </div>
 

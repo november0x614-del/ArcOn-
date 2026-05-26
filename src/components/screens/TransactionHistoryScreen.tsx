@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Clock, ExternalLink, CheckCircle2, Receipt, ArrowUpRight, ArrowDownToLine, RefreshCw, ShoppingBag } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { ARC_TESTNET } from '../../lib/arcConfig';
 
 interface TransactionHistoryScreenProps {
   onBack: () => void;
@@ -9,6 +10,10 @@ interface TransactionHistoryScreenProps {
 export function TransactionHistoryScreen({ onBack }: TransactionHistoryScreenProps) {
   const { transactions } = useApp();
   const [selectedTx, setSelectedTx] = useState<any>(null);
+
+  const getExplorerUrl = (txHash: string) => {
+    return `${ARC_TESTNET.blockExplorers.default.url}/tx/${txHash}`;
+  };
 
   const getTxIcon = (type: string) => {
     switch (type) {
@@ -76,7 +81,7 @@ export function TransactionHistoryScreen({ onBack }: TransactionHistoryScreenPro
                      {tx.status === 'success' ? (
                         <div className="flex items-center gap-1 mt-1 text-emerald-500">
                            <CheckCircle2 size={12} />
-                           <span className="text-[10px] font-bold uppercase tracking-wider">Success</span>
+                           <span className="text-[10px] font-bold uppercase tracking-wider">Finalized</span>
                         </div>
                      ) : (
                         <div className="flex items-center gap-1 mt-1 text-amber-500">
@@ -103,8 +108,9 @@ export function TransactionHistoryScreen({ onBack }: TransactionHistoryScreenPro
                 
                 <div className="flex items-center gap-1.5 text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full mt-2 border border-emerald-100 shadow-sm">
                    <CheckCircle2 size={16} />
-                   <span className="text-[13px] font-bold tracking-wide uppercase">Transaction Success</span>
+                   <span className="text-[13px] font-bold tracking-wide uppercase">Arc Native Finalized</span>
                 </div>
+                <p className="text-[10px] text-emerald-600/70 mt-1 font-bold tracking-wider uppercase">Deterministic 1-Conf</p>
                 
                 <div className="w-full h-px bg-slate-100 my-6"></div>
                 
@@ -130,7 +136,7 @@ export function TransactionHistoryScreen({ onBack }: TransactionHistoryScreenPro
                        {selectedTx.txHash}
                      </p>
                      
-                     <a href={selectedTx.explorerUrl || '#'} target="_blank" rel="noopener noreferrer" className="mt-2 w-full bg-white border border-blue-200 text-slate-800 font-bold py-2 rounded-lg text-[13px] flex items-center justify-center gap-1 hover:bg-slate-200 active:scale-95 transition-all">
+                     <a href={selectedTx.txHash ? getExplorerUrl(selectedTx.txHash) : (selectedTx.explorerUrl || '#')} target="_blank" rel="noopener noreferrer" className="mt-2 w-full bg-white border border-blue-200 text-slate-800 font-bold py-2 rounded-lg text-[13px] flex items-center justify-center gap-1 hover:bg-slate-200 active:scale-95 transition-all">
                         View on Arc Explorer <ExternalLink size={14} />
                      </a>
                   </div>

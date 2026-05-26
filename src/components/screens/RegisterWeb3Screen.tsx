@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Wallet, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Wallet, Eye, EyeOff, Zap } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
+import { useArcWallet } from '../../lib/useArcWallet';
 
 interface RegisterWeb3ScreenProps {
   onBack: () => void;
@@ -24,6 +25,26 @@ export function RegisterWeb3Screen({ onBack, onComplete }: RegisterWeb3ScreenPro
   
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const { status, address: externalAddress, connect: connectExternal, isBusy: isExternalBusy } = useArcWallet();
+
+  const handleExternalConnect = async () => {
+    await connectExternal();
+  };
+
+  React.useEffect(() => {
+    if (status === 'connected' && externalAddress) {
+      onComplete({
+        username: username || 'User',
+        email: email || `${externalAddress.slice(0, 6)}@arc.io`,
+        isVerified: true,
+        walletId: 'external',
+        walletAddress: externalAddress,
+        supabaseUid: 'external-user',
+        registrationDate: new Date().toLocaleDateString('id-ID')
+      });
+    }
+  }, [status, externalAddress]);
 
   const createWallet = async () => {
     if (isCreating) return;
@@ -177,14 +198,34 @@ export function RegisterWeb3Screen({ onBack, onComplete }: RegisterWeb3ScreenPro
             </div>
           </div>
           
-          <div className="mt-auto pt-6 pb-6">
+          <div className="mt-auto pt-6 pb-6 space-y-3">
             <button 
-              disabled={!username || !email || !password}
+              disabled={!username || !email || !password || isCreating}
               onClick={() => setStep(2)}
               className="w-full bg-[#005faa] text-white font-bold py-[14px] rounded-full hover:bg-[#004780] transition-colors active:scale-[0.98] disabled:opacity-50"
             >
-              Continue
+              {isCreating ? 'Creating...' : 'Create Managed Wallet'}
             </button>
+            
+            <div className="relative flex items-center justify-center py-2">
+               <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-100"></div>
+               </div>
+               <span className="relative px-3 bg-white text-[11px] font-bold text-slate-400 uppercase tracking-widest">Or Secure via Arc</span>
+            </div>
+
+            <button 
+              onClick={handleExternalConnect}
+              disabled={isExternalBusy}
+              className="w-full bg-slate-900 text-white font-bold py-[14px] rounded-full hover:bg-black transition-colors active:scale-[0.98] flex items-center justify-center gap-2"
+            >
+              <Zap size={18} className="text-[#008fcd]" />
+              {isExternalBusy ? 'Connecting...' : 'Connect External Wallet'}
+            </button>
+            
+            <p className="text-[11px] text-slate-400 text-center mt-4">
+               By continuing, you agree to Arc Commerce Terms and Security Guidelines.
+            </p>
           </div>
         </div>
       )}

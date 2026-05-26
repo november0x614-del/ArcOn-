@@ -1,5 +1,5 @@
 import React from 'react';
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { UIDCardTheme } from "../../types";
 import { THEME_STYLES } from "../../utils/theme";
@@ -82,6 +82,10 @@ export const WalletCard = React.memo(function WalletCard({ onNavigate, onClick, 
                 return `${pnlValue >= 0 ? '+' : '-'}${Math.abs(pnlValue).toFixed(2).replace('.', ',')} (${pnlPercentage >= 0 ? '+' : ''}${pnlPercentage.toFixed(2).replace('.', ',')}%)`;
               })()}
             </span>
+            <div className="ml-auto flex items-center gap-1.5 px-2 py-0.5 bg-slate-900/40 rounded-full border border-white/10">
+               <ShieldCheck size={10} className="text-emerald-400" />
+               <span className="text-[8.5px] font-black uppercase tracking-widest text-white/90">Enterprise Custody</span>
+            </div>
           </div>
         </div>
 

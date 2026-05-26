@@ -1,7 +1,7 @@
 {
-  "name": "Arc Commerce UI Frontend",
-  "description": "Frontend UI Clone for Arc Commerce App featuring native-stablecoin Circle SDK integration.",
-  "requestFramePermissions": [],
+  "name": "Arc Commerce: Gas-Native USDC Web3 App",
+  "description": "Enterprise-grade Arc Network e-commerce utilizing native-stablecoin Circle SDK integration for high-performance USDC transactions.",
+  "requestFramePermissions": ["camera", "microphone"],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
   ]

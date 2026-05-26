@@ -11,10 +11,19 @@ export const useBalances = () => {
     enabled: !!registeredUser?.supabaseUid,
     queryFn: async () => {
       const data = await ArcAppKitAdapter.getBalance();
+      
+      // Update global store with the primary balance (usually USDC)
       if (data && typeof data.balance === 'number') {
         setBalance(data.balance);
       }
-      return data;
+      
+      // We can also compute or extract specific Arc-native balances if needed
+      // but for now we follow the standard adapter structure.
+      return {
+        ...data,
+        network: 'Arc Testnet',
+        timestamp: new Date().toISOString()
+      };
     },
     staleTime: 2000,
     refetchInterval: 15000,

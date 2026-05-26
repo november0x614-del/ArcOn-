@@ -69,12 +69,12 @@ export interface UserIdentity {
 
 export interface Transaction {
   id: string;
-  type: 'deposit' | 'withdraw' | 'transfer' | 'purchase' | 'swap' | 'payment' | 'receive';
+  type: 'deposit' | 'withdraw' | 'transfer' | 'purchase' | 'swap' | 'payment' | 'receive' | 'bridge';
   title: string;
   amount: string;
   currency: string;
   timestamp: string;
-  status: 'pending' | 'processing' | 'success' | 'failed';
+  status: 'pending' | 'processing' | 'success' | 'failed' | 'confirmed';
   txHash?: string;
   explorerUrl?: string;
   internal_ref?: string;
@@ -87,6 +87,9 @@ export interface Transaction {
     toToken?: string;
     destinationAddress?: string;
     recipientName?: string;
+    direction?: 'inbound' | 'outbound';
+    blockNumber?: number;
+    explorerUrl?: string;
   };
 }
 
