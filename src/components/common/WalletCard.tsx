@@ -36,6 +36,12 @@ export const WalletCard = React.memo(function WalletCard({ onNavigate, onClick, 
       className={`${styles.walletBg} rounded-[24px] p-4 sm:p-5 ${styles.textColor} shadow-xl relative overflow-hidden mb-3 border ${styles.borderClass} cursor-pointer transition-all active:scale-[0.98] group ${className}`}
       onClick={onClick || onNavigate}
     >
+      {/* Enterprise Custody Badge in Top Right */}
+      <div className="absolute top-2.5 sm:top-3.5 right-3.5 sm:right-4.5 z-20 flex items-center gap-1 px-1.5 py-[1.5px] bg-slate-950/40 rounded-full border border-white/10 shadow-sm backdrop-blur-[1px] select-none">
+         <ShieldCheck size={7.5} className="text-emerald-400" strokeWidth={2.5} />
+         <span className="text-[6.5px] sm:text-[7px] font-extrabold uppercase tracking-widest text-white/90">Enterprise Custody</span>
+      </div>
+
       <div className="flex justify-between items-center z-10 relative gap-3">
         <div className="flex flex-col text-left flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
@@ -83,10 +89,6 @@ export const WalletCard = React.memo(function WalletCard({ onNavigate, onClick, 
                 return `${pnlValue >= 0 ? '+' : '-'}${Math.abs(pnlValue).toFixed(2).replace('.', ',')} (${pnlPercentage >= 0 ? '+' : ''}${pnlPercentage.toFixed(2).replace('.', ',')}%)`;
               })()}
             </span>
-            <div className="ml-auto flex items-center gap-1.5 px-2 py-0.5 bg-slate-900/40 rounded-full border border-white/10">
-               <ShieldCheck size={10} className="text-emerald-400" />
-               <span className="text-[8.5px] font-black uppercase tracking-widest text-white/90">Enterprise Custody</span>
-            </div>
           </div>
         </div>
 
