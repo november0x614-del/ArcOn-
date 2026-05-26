@@ -1,10 +1,10 @@
 import { verifyAndProcessWebhook } from "./services/webhook.js";
 import { logAuditEvent } from "./services/audit.js";
-import { createWallet, executeTransaction } from "./services/circle.js";
+import { createWallet, executeTransaction, sanitizeMetadata } from "./services/circle.js";
 import { publicClient } from "./services/arcViem.js";
 import { fetchUnifiedBalance } from "./services/balance.js";
 import { initiateOutboundBridge, finalizeInboundBridge } from "./services/bridge.js";
-import { getCircleClientInstance } from "./services/circleClient.js";
+import { getArcAppKit } from "./services/circleClient.js";
 import express from "express";
 import * as crypto from "crypto";
 import { GoogleGenAI } from "@google/genai";
@@ -356,7 +356,6 @@ app.post("/api/circle/webhook", express.raw({ type: "application/json" }), async
 app.post("/api/payments/create", async (req, res) => {
   try {
     const { walletId, destinationAddress, amount, userId, recipientName } = req.body;
-    const client = getCircleClientInstance();
     
     // Audit Log for critical transfers
     if (parseFloat(amount) > 100) {
@@ -366,31 +365,33 @@ app.post("/api/payments/create", async (req, res) => {
       });
     }
 
-    // Initiate transfer
-    const response = await client.createTransaction({
-      walletId: walletId,
-      destinationAddress: destinationAddress,
-      amount: [amount.toString()],
-      fee: { type: "level", config: { feeLevel: "LOW" } },
-      tokenAddress: "",
-      blockchain: "ARC-TESTNET"
-    } as any);
+    // Initiate transfer via App Kit
+    const kit = getArcAppKit(walletId);
+    const response = await kit.send({
+      from: { adapter: (kit as any).adapter, chain: "Arc_Testnet" as any },
+      to: destinationAddress,
+      amount: amount.toString(),
+      token: "USDC"
+    });
     
     // Record in Supabase
+    const sanitizedMetadata = sanitizeMetadata({ 
+      recipientName: recipientName || "EVM Account", 
+      destinationAddress: destinationAddress,
+      real: true,
+      txHash: (response as any).txHash
+    });
+
     await getSupabaseAdmin().from('transactions').insert({
       user_id: userId,
       amount: `-${amount}`,
       type: 'transfer',
       status: 'pending',
-      internal_ref: response.data?.id || `req_${crypto.randomBytes(8).toString('hex')}`,
-      metadata: { 
-        recipientName: recipientName || "EVM Account", 
-        destinationAddress: destinationAddress,
-        real: true 
-      }
+      internal_ref: (response as any).txHash || (response as any).id || `req_${crypto.randomBytes(8).toString('hex')}`,
+      metadata: sanitizedMetadata
     });
     
-    res.json(response.data);
+    res.json(response);
   } catch (error: any) {
     console.error("Payment Execution Error:", error);
     res.status(500).json({ error: error.message });
@@ -401,16 +402,8 @@ app.post("/api/payments/create", async (req, res) => {
 app.post("/api/payments/batch", async (req, res) => {
   try {
     const { walletId, recipients, userId } = req.body;
-    const client = getCircleClientInstance();
-    
-    // Log batch initiation audit trail
-    const totalAmount = recipients.reduce((sum: number, r: any) => sum + parseFloat(r.amount || "0"), 0);
-    if (totalAmount > 500) {
-      await logAuditEvent(getSupabaseAdmin(), userId, 'BATCH_TRANSFER_HIGH_VALUE', { 
-          totalAmount, 
-          recipientCount: recipients.length
-      });
-    }
+    const kit = getArcAppKit(walletId);
+    const adapter = (kit as any).adapter;
 
     const responses = [] as any[];
     let successCount = 0;
@@ -418,33 +411,36 @@ app.post("/api/payments/batch", async (req, res) => {
 
     for (const rec of recipients) {
        try {
-         const response = await client.createTransaction({
-           walletId: walletId,
-           destinationAddress: rec.address,
-           amount: [rec.amount.toString()],
-           fee: { type: "level", config: { feeLevel: "LOW" } },
-           tokenAddress: "",
-           blockchain: "ARC-TESTNET"
-         } as any);
+         const response = await kit.send({
+           from: { adapter, chain: "Arc_Testnet" as any },
+           to: rec.address,
+           amount: rec.amount.toString(),
+           token: "USDC"
+         });
          
+         const txId = (response as any).txHash || (response as any).id;
+         
+         const sanitizedMetadata = sanitizeMetadata({
+           recipientName: rec.name || "EVM Account",
+           destinationAddress: rec.address,
+           real: true,
+           txHash: (response as any).txHash
+         });
+
          await getSupabaseAdmin().from('transactions').insert({
             user_id: userId,
             amount: `-${rec.amount}`,
             type: 'transfer',
             status: 'pending',
-            internal_ref: response.data?.id || `req_${crypto.randomBytes(8).toString('hex')}`,
-            metadata: {
-              recipientName: rec.name || "EVM Account",
-              destinationAddress: rec.address,
-              real: true
-            }
+            internal_ref: txId || `req_${crypto.randomBytes(8).toString('hex')}`,
+            metadata: sanitizedMetadata
          });
          
          responses.push({
            address: rec.address,
            amount: rec.amount,
            status: 'success',
-           txId: response.data?.id
+           txId: txId
          });
          successCount++;
        } catch (txError: any) {
@@ -577,9 +573,8 @@ app.post("/api/bridge/cctp", async (req, res) => {
     
     res.status(200).json({ 
       message: "CCTP Outbound Bridge initiated", 
-      approveTxId: result.approveTxId,
-      burnTxId: result.burnTxId,
-      status: 'pending_burn'
+      txId: result.txId,
+      status: 'pending'
     });
   } catch (error: any) {
     console.error("CCTP Bridge error:", error);

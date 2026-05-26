@@ -11,10 +11,23 @@ import {
     getArcScanUrl
 } from "./arcViem.js";
 import { logAuditEvent } from "./audit.js";
-import { getCircleClientInstance } from "./circleClient.js";
-import { fetchUnifiedBalance } from "./balance.js";
-import { AppKit } from "@circle-fin/app-kit";
-import CircleWalletsAdapter from "@circle-fin/adapter-circle-wallets";
+import { getCircleClientInstance, getArcAppKit } from "./circleClient.js";
+
+/**
+ * Sanitizes metadata to remove non-serializable objects (like BigInt) 
+ * preventing "Cannot convert object to primitive value" errors.
+ */
+export function sanitizeMetadata(data: any): any {
+    if (!data) return data;
+    return JSON.parse(JSON.stringify(data, (_key, value) => {
+        if (typeof value === 'bigint') return value.toString();
+        // Skip potential non-serializable objects that might be passed accidentally
+        if (value && typeof value === 'object' && value.constructor.name !== 'Object' && value.constructor.name !== 'Array') {
+            return `[Object ${value.constructor.name}]`;
+        }
+        return value;
+    }));
+}
 
 export async function createWallet(supabaseAdmin: any, userId: string) {
     const client = getCircleClientInstance();
@@ -104,29 +117,17 @@ export async function executeTransaction(
     const amountInternal = BigInt(Math.floor(amount * 1_000_000)) * (10n ** 12n);
 
     // Fetch balances FIRST
-    let totalTokenBalanceInternal = 0n;
-    let nativeBalance = 0n;
-    if (metadata.intent === 'unified_transfer') {
-        const [unified, native] = await Promise.all([
-            fetchUnifiedBalance(userId, walletData, supabaseAdmin),
-            getNativeBalance(sourceAddress)
-        ]);
-        totalTokenBalanceInternal = BigInt(Math.floor(unified.balance * 1e18));
-        nativeBalance = native;
-    } else {
-        const [native, tokenBalanceRaw] = await Promise.all([
-            getNativeBalance(sourceAddress),
-            getTokenBalance(sourceAddress, tokenAddress)
-        ]);
-        nativeBalance = native;
-        // Consistently normalize token balance to 18 decimals internal for comparison
-        totalTokenBalanceInternal = tokenBalanceRaw * (10n ** BigInt(18 - decimals)); 
-    }
+    const [nativeBalance, tokenBalanceRaw] = await Promise.all([
+        getNativeBalance(sourceAddress),
+        getTokenBalance(sourceAddress, tokenAddress)
+    ]);
 
-    if (totalTokenBalanceInternal < amountInternal) {
+    // Consistently normalize token balance to 18 decimals internal for comparison
+    const tokenBalanceInternal = tokenBalanceRaw * (10n ** BigInt(18 - decimals)); 
+
+    if (tokenBalanceInternal < amountInternal) {
         const symbol = metadata.fromToken || "USDC";
-        const humanBalance = Number(totalTokenBalanceInternal) / 1e18;
-        throw new Error(`Insufficient ${symbol} balance. Need ${amount.toFixed(2)} ${symbol}, have ${humanBalance.toFixed(2)} ${symbol}`);
+        throw new Error(`Insufficient ${symbol} balance. Need ${amount.toFixed(2)} ${symbol}, have ${(Number(tokenBalanceInternal) / 1e18).toFixed(2)} ${symbol}`);
     }
 
     // Now estimate gas once we know we have the amount
@@ -136,44 +137,38 @@ export async function executeTransaction(
         throw new Error(`Insufficient native USDC for gas. Need ${gasInfo.costHuman.toFixed(6)} USDC, have ${(Number(nativeBalance) / 1e18).toFixed(6)} USDC`);
     }
 
-    const client = getCircleClientInstance();
-    const entitySecret = process.env.CIRCLE_ENTITY_SECRET || "";
-
-    // App Kit Adapter-Based Execution
-    const kit = new AppKit();
-
-    const adapter = new (CircleWalletsAdapter as any)({
-        apiKey: process.env.CIRCLE_API_KEY || "",
-        entitySecret: entitySecret,
-        walletId: walletData.wallet_id,
-    });
-
-    let circleTxId: string;
-
-    if (metadata.intent === 'unified_transfer') {
-        console.log(`[AppKit] Initiating Unified Transfer intent for ${amount} USDC to ${validDest}`);
-        const response = (await (kit as any).unifiedBalance({
-            to: validDest,
-            amount: amount.toString(),
-            token: "USDC",
-            from: { adapter }
-        })) as any;
-        circleTxId = response.transactionId || response.id;
+    // Perform transaction using App Kit Abstraction
+    const kit = getArcAppKit(walletData.wallet_id);
+    const adapter = (kit as any).adapter;
+    
+    console.log(`[CircleService] Executing ${type} via App Kit...`);
+    
+    let response: any;
+    if (type === 'swap') {
+        response = await (kit as any).swap({
+            from: { adapter, chain: "Arc_Testnet" as any },
+            toToken: metadata.toToken || "ARC",
+            fromToken: metadata.fromToken || "USDC",
+            amount: amount.toString()
+        } as any);
     } else {
-        console.log(`[AppKit] Initiating send intent for ${amount} USDC to ${validDest} on ARC-TESTNET`);
-        const response = (await (kit as any).send({
-            from: { adapter, chain: "Arc_Testnet" },
+        response = await kit.send({
+            from: { adapter, chain: "Arc_Testnet" as any },
             to: validDest,
             amount: amount.toString(),
-            token: "USDC",
-        })) as any;
-        circleTxId = response.transactionId || response.id;
+            token: metadata.fromToken || "USDC"
+        });
     }
+    
+    // Circle return an internal tx ID first
+    const circleTxId = (response as any).txHash || (response as any).id;
 
     const result = { 
         txId: circleTxId, 
-        explorerUrl: getArcScanUrl('tx', circleTxId || '')
+        explorerUrl: (response as any).explorerUrl || getArcScanUrl('tx', circleTxId || '')
     };
+
+    const sanitizedMetadata = sanitizeMetadata({ ...metadata, real: true, explorerUrl: result.explorerUrl });
 
     const { error } = await supabaseAdmin.from('transactions').insert({
         user_id: userId,
@@ -182,10 +177,12 @@ export async function executeTransaction(
         status: 'pending',
         internal_ref: circleTxId,
         description: metadata.memo || (type === 'transfer' ? `Transfer to ${validDest}` : undefined),
-        metadata: { ...metadata, real: true, explorerUrl: result.explorerUrl }
+        metadata: sanitizedMetadata
     });
 
     if (error) throw error;
+
+    const client = getCircleClientInstance();
 
     // Fase 3: Deterministic Finality Background Monitoring
     // In Arc, once the hash is published, we can wait for single-block confirmation
