@@ -150,8 +150,11 @@ export async function executeTransaction(
         type: type,
         status: 'pending',
         internal_ref: circleTxId,
-        description: metadata.memo || (type === 'transfer' ? `Transfer to ${validDest}` : undefined),
-        metadata: { ...metadata, real: true, explorerUrl: result.explorerUrl }
+        metadata: { 
+            ...metadata, 
+            real: true, 
+            explorerUrl: result.explorerUrl 
+        }
     });
 
     if (error) throw error;

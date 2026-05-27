@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { WalletConnector } from '../common/WalletConnector';
 import { ArrowLeft, CheckCircle2, Loader2, ChevronRight, Info, AlertCircle, Globe, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useApp } from '../../contexts/AppContext';
@@ -240,12 +241,7 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
           <div className="flex flex-col gap-2 border-t border-slate-100 pt-5 mt-2">
              <div className="flex justify-between items-center mb-1">
                <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] ml-1">Destination Wallet</label>
-               <button 
-                 onClick={() => setDestinationAddress('0x' + Array.from({length: 40}, () => Math.floor(Math.random()*16).toString(16)).join(''))} 
-                 className="text-[10px] font-bold text-indigo-500 hover:text-indigo-600 bg-indigo-50 px-2 py-1.5 rounded-lg border-0 cursor-pointer flex items-center gap-1 transition-all"
-               >
-                 Connect External
-               </button>
+               <WalletConnector onAddressConnected={setDestinationAddress} />
              </div>
              <input
                value={destinationAddress}

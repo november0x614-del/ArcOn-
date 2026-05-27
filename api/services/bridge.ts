@@ -1,5 +1,5 @@
-import { 
-  TOKEN_MESSENGER, 
+import {
+  TOKEN_MESSENGER,
   USDC_ADDRESS,
   formatRecipientForCCTP
 } from "./arcViem.js";
@@ -21,38 +21,11 @@ export async function finalizeInboundBridge(
         .from('user_wallets').select('wallet_id, wallet_address').eq('id', userId).single();
     if (!walletData?.wallet_id) throw new Error("User has no wallet");
 
-    // 1. In a real scenario, we would use sourceChainRpc to fetch the receipt and extract message
-    // Since we don't have multiple source public clients initialized here, 
-    // we'll simulate the extraction or rely on the user providing a valid hash that we can track.
-    
-    // For the sake of this expert implementation, let's assume we can fetch the attestation 
-    // using the message hash if we can derive it.
-    // In Arc Commerce, we'll log this attempt.
     console.log(`[BridgeService] Attempting to track CCTP message for hash: ${sourceTxHash}`);
 
-    // Execution on Arc side using Circle Wallet
-    // We would call MESSAGE_TRANSMITTER.receiveMessage(...)
-    
-    // In Phase 4/5, we transition to actually submitting the receiveMessage.
-    // However, Circle SDK usually handles this via 'createTransaction' to a contract.
-    
-    /* 
-    const client = getCircleClientInstance();
-    const receiveTx = await client.createContractExecutionTransaction({
-        walletId: walletData.wallet_id,
-        contractAddress: MESSAGE_TRANSMITTER,
-        abiFunctionSignature: "receiveMessage(bytes,bytes)",
-        abiParameters: [messageBytes, attestation],
-        fee: { type: "level", config: { feeLevel: "LOW" } }
-    });
-    */
-
-    console.log(`[BridgeService] Claim infrastructure for ${walletData.wallet_address} verified. Monitoring source hash...`);
-    
-    // We'll insert a pending inbound transaction for the user
     await supabaseAdmin.from('transactions').insert({
         user_id: userId,
-        amount: "+0.00", // Will be updated once minted
+        amount: "+0.00",
         type: 'bridge',
         status: 'pending',
         internal_ref: sourceTxHash,
@@ -61,8 +34,7 @@ export async function finalizeInboundBridge(
 }
 
 /**
- * Handles an Outbound Bridge (Arc -> Other Chain) using CCTP.
- * Arc instant finality ensures rapid outbound attestation.
+ * Handles an Outbound Bridge (Arc -> Other Chain) using App Kit Bridge Kit.
  */
 export async function initiateOutboundBridge(
     supabaseAdmin: any,
@@ -71,47 +43,38 @@ export async function initiateOutboundBridge(
     destinationAddress: string,
     amount: number
 ) {
-    const amountBigInt = BigInt(Math.floor(amount * 1_000_000)); // 6 decimals
     const { data: walletData } = await supabaseAdmin
         .from('user_wallets').select('wallet_id, wallet_address').eq('id', userId).single();
     if (!walletData?.wallet_id) throw new Error("User has no wallet");
 
     const client = getCircleClientInstance();
 
-    console.log(`[BridgeService] Initiating CCTP outbound: ${amount} USDC to domain ${destinationDomain}`);
+    // Lazy load heavy dependencies
+    const bridgeKitMod = await import("@circle-fin/bridge-kit");
+    const BridgeKit = bridgeKitMod.default || bridgeKitMod.BridgeKit;
+    
+    const circleWalletsAdapterMod = await import("@circle-fin/adapter-circle-wallets");
+    console.log('[BridgeService] circleWalletsAdapterMod:', circleWalletsAdapterMod);
+    const CircleWalletsAdapter = circleWalletsAdapterMod.CircleWalletsAdapter || circleWalletsAdapterMod.default || circleWalletsAdapterMod;
 
-    // Step 1: Approve TokenMessenger to spend USDC on Arc
-    // In Arc Commerce, we assume the user's wallet is developer-controlled and we can sign for them
-    const approveTx = await client.createContractExecutionTransaction({
-        walletId: walletData.wallet_id,
-        contractAddress: USDC_ADDRESS,
-        abiFunctionSignature: "approve(address,uint256)",
-        abiParameters: [TOKEN_MESSENGER, amountBigInt.toString()],
-        fee: { type: "level", config: { feeLevel: "LOW" } }
+    // Initialize BridgeKit
+    const kit = new BridgeKit({ environment: "sandbox" });
+    const adapter = new CircleWalletsAdapter({
+        client: client,
+        walletId: walletData.wallet_id
     });
 
-    console.log(`[BridgeService] Approval sent: ${approveTx.data?.id}`);
+    console.log(`[BridgeService] Initiating BridgeKit outbound: ${amount} USDC`);
 
-    // Step 2: depositForBurn
-    // In a real automated flow, we'd wait for approval but for now we'll trigger it.
-    // Note: On Arc, blocks are instant, so sequential calls usually work well.
-    const recipientBytes32 = formatRecipientForCCTP(destinationAddress);
-    
-    const burnTx = await client.createContractExecutionTransaction({
-        walletId: walletData.wallet_id,
-        contractAddress: TOKEN_MESSENGER,
-        abiFunctionSignature: "depositForBurn(uint256,uint32,bytes32,address)",
-        abiParameters: [
-            amountBigInt.toString(), 
-            destinationDomain.toString(), 
-            recipientBytes32, 
-            USDC_ADDRESS
-        ],
-        fee: { type: "level", config: { feeLevel: "LOW" } }
+    // Using BridgeKit to abstract CCTP
+    const result = await kit.bridge({
+        from: { adapter: adapter, chain: "Arc_Testnet" },
+        to: { adapter: null as any, chain: destinationDomain.toString() }, // Simplified/placeholder
+        amount: amount.toString(),
     });
 
     return {
-        approveTxId: approveTx.data?.id,
-        burnTxId: burnTx.data?.id
+        approveTxId: result.transactionId,
+        burnTxId: result.transactionId
     };
 }
