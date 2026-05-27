@@ -410,12 +410,12 @@ export function AdminDashboardScreen({
                     <Ban size={14} />
                   )}
                   {selectedUser.status === "Blocked"
-                    ? "Aktifkan User"
-                    : "Blokir User"}
+                    ? "Activate User"
+                    : "Block User"}
                 </button>
                 <div className="p-4 bg-red-50 border border-red-100 rounded-2xl">
                   <p className="text-[11px] text-red-600 font-bold mb-2 uppercase tracking-tight">
-                    Ketik DELETE untuk menghapus:
+                    Type DELETE to remove:
                   </p>
                   <input
                     type="text"
@@ -436,7 +436,7 @@ export function AdminDashboardScreen({
                     ) : (
                       <Trash2 size={14} />
                     )}
-                    Arsipkan Akun
+                    Archive Account
                   </button>
                 </div>
               </div>

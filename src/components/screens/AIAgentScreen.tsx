@@ -11,7 +11,7 @@ export function AIAgentScreen({ onBack }: AIAgentScreenProps) {
     {
       id: 1,
       sender: "bot",
-      text: "Halo! Saya Arc AI Agent. Ada yang bisa saya bantu dengan wallet atau transaksi USDC kamu hari ini?",
+      text: "Hello! I'm Arc AI Agent. Is there anything I can help you with regarding your wallet or USDC transactions today?",
       time: new Date().toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
@@ -68,7 +68,7 @@ ${transactions
         {
           id: prev.length + 1,
           sender: "bot",
-          text: data.reply || "Maaf, saya tidak dapat merespons saat ini.",
+          text: data.reply || "Sorry, I can't respond right now.",
           time: new Date().toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
@@ -81,7 +81,7 @@ ${transactions
         {
           id: prev.length + 1,
           sender: "bot",
-          text: "Terjadi kesalahan jaringan. Coba lagi nanti.",
+          text: "Network error occurred. Try again later.",
           time: new Date().toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
@@ -120,7 +120,7 @@ ${transactions
       <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4">
         <div className="text-center my-4">
           <span className="bg-slate-200/50 text-slate-500 font-semibold px-3 py-1 rounded-full text-[10px] uppercase tracking-widest">
-            Hari Ini
+            Today
           </span>
         </div>
 
@@ -162,7 +162,7 @@ ${transactions
         <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-full py-1.5 px-4 focus-within:border-slate-900 transition-colors">
           <input
             type="text"
-            placeholder="Tanya sesuatu ke AI..."
+            placeholder="Ask something to AI..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}

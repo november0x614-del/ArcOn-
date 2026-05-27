@@ -14,7 +14,7 @@ export function BayarVAScreen({ onBack }: BayarVAScreenProps) {
 
   const handleNext = () => {
     setIsValidating(true);
-    // Simulasi validasi nomor VA
+    // Simulated VA number validation
     setTimeout(() => {
       setIsValidating(false);
       setStep("confirm");

@@ -1,5 +1,5 @@
 import React from "react";
-import { X, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 
 interface LogoutScreenProps {
   onBack: () => void;
@@ -11,12 +11,6 @@ export function LogoutScreen({ onBack, onLogout }: LogoutScreenProps) {
     <div className="absolute inset-0 z-[100] bg-white flex flex-col animate-in slide-in-from-bottom duration-300">
       <div className="flex items-center justify-between px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10">
         <h3 className="font-bold text-[16px] text-white ml-2">LOGOUT</h3>
-        <button
-          onClick={onBack}
-          className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 bg-transparent border-0 cursor-pointer"
-        >
-          <X size={20} className="text-white" strokeWidth={2.5} />
-        </button>
       </div>
 
       <div className="flex-1 p-8 flex flex-col items-center justify-center text-center">

@@ -4,6 +4,7 @@ import {
   formatRecipientForCCTP,
 } from "./arcViem.js";
 import { getCircleClientInstance } from "./circleClient.js";
+import * as crypto from "crypto";
 
 /**
  * Handles the final step of a CCTP Inbound Bridge (Other Chain -> Arc).
@@ -97,11 +98,17 @@ export async function initiateOutboundBridge(
   // Step 1: Approve TokenMessenger to spend USDC on Arc
   // In Lounge, we assume the user's wallet is developer-controlled and we can sign for them
   const approveTx = await client.createContractExecutionTransaction({
-    walletId: walletData.wallet_id,
+    idempotencyKey: crypto.randomUUID(),
+    walletId: walletData.wallet_id as string,
     contractAddress: USDC_ADDRESS,
     abiFunctionSignature: "approve(address,uint256)",
     abiParameters: [TOKEN_MESSENGER, amountBigInt.toString()],
-    fee: { type: "SPONSORED" } as any,
+    fee: { 
+      type: "level", 
+      config: { 
+        feeLevel: "MEDIUM" 
+      } 
+    },
   });
 
   console.log(`[BridgeService] Approval sent: ${approveTx.data?.id}`);
@@ -112,7 +119,8 @@ export async function initiateOutboundBridge(
   const recipientBytes32 = formatRecipientForCCTP(destinationAddress);
 
   const burnTx = await client.createContractExecutionTransaction({
-    walletId: walletData.wallet_id,
+    idempotencyKey: crypto.randomUUID(),
+    walletId: walletData.wallet_id as string,
     contractAddress: TOKEN_MESSENGER,
     abiFunctionSignature: "depositForBurn(uint256,uint32,bytes32,address)",
     abiParameters: [
@@ -121,7 +129,12 @@ export async function initiateOutboundBridge(
       recipientBytes32,
       USDC_ADDRESS,
     ],
-    fee: { type: "SPONSORED" } as any,
+    fee: { 
+      type: "level", 
+      config: { 
+        feeLevel: "MEDIUM" 
+      } 
+    },
   });
 
   return {

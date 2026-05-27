@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import {
   ArrowLeft,
-  Trash2,
   Search,
   Calendar,
   Wallet,
@@ -10,8 +9,6 @@ import {
   Smartphone,
   Circle,
   Info,
-  CheckSquare,
-  Square,
 } from "lucide-react";
 import { useApp } from "../../contexts/AppContext";
 
@@ -22,251 +19,98 @@ interface InboxScreenProps {
 
 export function InboxScreen({ onBack, onTransactionClick }: InboxScreenProps) {
   const { transactions, readReceiptIds, markAsRead } = useApp();
-  const [activeTab, setActiveTab] = useState<"resi" | "notifikasi" | "promo">(
-    "resi",
+  const [activeTab, setActiveTab] = useState<"receipts" | "notifications" | "promos">(
+    "receipts",
   );
   const [selectedNotification, setSelectedNotification] = useState<{
     title: string;
     desc: string;
     date: string;
   } | null>(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [isSelectionMode, setIsSelectionMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [deletedIds, setDeletedIds] = useState<Record<string, boolean>>({});
 
-  // Mendefinisikan fungsi receipts untuk mengambil daftar resi transaksi yang aktif
   const getReceipts = () => {
     return transactions.filter(
-      (t) =>
-        !deletedIds[t.id] && (t.status === "success" || t.status === "failed"),
+      (t) => t.status === "success" || t.status === "failed",
     );
-  };
-
-  const handleToggleSelect = (id: string) => {
-    // Check if it's an unread receipt
-    if (activeTab === "resi" && !readReceiptIds.includes(id)) {
-      // Allow selection but maybe we won't let it be deleted?
-      // The requirement says "tidak bisa di hapus", so maybe we shouldn't even allow selection
-      // But usually it's better to allow selection and then block deletion or show warning.
-      // However, "tidak bisa di hapus" is strict. Let's prevent selection or filter it out.
-      return;
-    }
-
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
-    );
-  };
-
-  const confirmDelete = () => {
-    const newDeleted = { ...deletedIds };
-    selectedIds.forEach((id) => {
-      newDeleted[id] = true;
-    });
-    setDeletedIds(newDeleted);
-    setIsSelectionMode(false);
-    setSelectedIds([]);
-    setShowDeleteConfirm(false);
-  };
-
-  const handleSelectAll = () => {
-    let allIds: string[] = [];
-    if (activeTab === "resi") {
-      allIds = transactions
-        .filter(
-          (t) =>
-            !deletedIds[t.id] &&
-            readReceiptIds.includes(t.id) &&
-            (t.status === "success" || t.status === "failed"),
-        )
-        .map((t) => t.id);
-    } else if (activeTab === "notifikasi") {
-      // Mock IDs for notifications as they are hardcoded in the component
-      allIds = ["n1", "n2", "n3", "n4", "n5"].filter((id) => !deletedIds[id]);
-    } else if (activeTab === "promo") {
-      allIds = ["p1"].filter((id) => !deletedIds[id]);
-    }
-
-    if (selectedIds.length === allIds.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(allIds);
-    }
-  };
-
-  const toggleSelectionMode = () => {
-    setIsSelectionMode(!isSelectionMode);
-    setSelectedIds([]);
   };
 
   const handleReceiptClick = (tx: any) => {
     markAsRead(tx.id);
-    if (true) {
-      onTransactionClick?.(tx);
-    } else {
-      /* dead branch */
-    }
+    onTransactionClick?.(tx);
   };
 
   return (
     <div className="w-full h-full bg-white relative flex flex-col z-50 animate-in slide-in-from-bottom duration-300">
-      {/* Search & Back Header */}
+      {/* Header */}
       <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between shrink-0">
-        {isSelectionMode ? (
-          <div className="flex items-center justify-between w-full">
-            <button
-              onClick={toggleSelectionMode}
-              className="text-slate-300 font-bold text-[14px] hover:text-white transition-colors cursor-pointer border-0 bg-transparent"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSelectAll}
-              className="text-slate-900 font-bold text-[14px] px-3 py-1 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
-            >
-              {selectedIds.length > 0 ? "Deselect All" : "Select All"}
-            </button>
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              disabled={selectedIds.length === 0}
-              className={`font-bold text-[14px] transition-colors bg-transparent border-0 cursor-pointer ${selectedIds.length > 0 ? "text-red-400" : "text-slate-400"}`}
-            >
-              Delete ({selectedIds.length})
-            </button>
-          </div>
-        ) : (
-          <>
-            <div className="flex items-center">
-              <button
-                onClick={onBack}
-                className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent -ml-2"
-              >
-                <ArrowLeft size={20} className="text-white" />
-              </button>
-              <h2 className="font-bold text-[16px] text-white ml-2">INBOX</h2>
-            </div>
-            <div className="flex items-center gap-3">
-              <button className="text-white bg-white/10 p-2.5 rounded-full hover:bg-white/20 transition-colors border-0 cursor-pointer">
-                <Search size={18} strokeWidth={2.5} />
-              </button>
-              <button
-                onClick={toggleSelectionMode}
-                className="text-slate-300 p-2.5 rounded-full bg-white/5 hover:bg-red-500/20 hover:text-red-400 transition-colors border-0 cursor-pointer"
-              >
-                <Trash2 size={18} />
-              </button>
-            </div>
-          </>
-        )}
+        <div className="flex items-center">
+          <button
+            onClick={onBack}
+            className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent -ml-2"
+          >
+            <ArrowLeft size={20} className="text-white" />
+          </button>
+          <h2 className="font-bold text-[16px] text-white ml-2">INBOX</h2>
+        </div>
       </div>
 
       {/* Segmented Tabs Control */}
       <div className="px-4 py-2 shrink-0 border-b border-slate-100 bg-white">
         <div className="bg-slate-100 p-1 rounded-2xl flex items-center relative gap-1">
           <button
-            onClick={() => setActiveTab("resi")}
+            onClick={() => setActiveTab("receipts")}
             className={`flex-1 py-2.5 rounded-xl font-bold text-[13px] transition-all relative z-10 ${
-              activeTab === "resi"
+              activeTab === "receipts"
                 ? "bg-white text-slate-850 shadow-sm"
                 : "text-slate-500 hover:text-slate-800"
             }`}
           >
-            Resi
+            Receipts
           </button>
           <button
-            onClick={() => setActiveTab("notifikasi")}
+            onClick={() => setActiveTab("notifications")}
             className={`flex-1 py-2.5 rounded-xl font-bold text-[13px] transition-all relative z-10 ${
-              activeTab === "notifikasi"
+              activeTab === "notifications"
                 ? "bg-white text-slate-850 shadow-sm"
                 : "text-slate-500 hover:text-slate-800"
             }`}
           >
-            Notifikasi
+            Notifications
           </button>
           <button
-            onClick={() => setActiveTab("promo")}
+            onClick={() => setActiveTab("promos")}
             className={`flex-1 py-2.5 rounded-xl font-bold text-[13px] transition-all relative z-10 ${
-              activeTab === "promo"
+              activeTab === "promos"
                 ? "bg-white text-slate-850 shadow-sm"
                 : "text-slate-500 hover:text-slate-800"
             }`}
           >
-            Promo
+            Promos
           </button>
         </div>
       </div>
 
       {/* Tabs Content */}
       <div className="flex-1 overflow-y-auto">
-        {activeTab === "resi" && (
+        {activeTab === "receipts" && (
           <ResiContent
             transactions={getReceipts()}
             onTransactionClick={handleReceiptClick}
-            isSelectionMode={isSelectionMode}
-            selectedIds={selectedIds}
-            onToggleSelect={handleToggleSelect}
             readReceiptIds={readReceiptIds}
           />
         )}
-        {activeTab === "notifikasi" && (
+        {activeTab === "notifications" && (
           <NotifikasiContent
             onNotificationClick={(title, desc, date) =>
               setSelectedNotification({ title, desc, date })
             }
-            isSelectionMode={isSelectionMode}
-            selectedIds={selectedIds}
-            onToggleSelect={handleToggleSelect}
-            deletedIds={deletedIds}
           />
         )}
-        {activeTab === "promo" && (
-          <PromoContent
-            isSelectionMode={isSelectionMode}
-            selectedIds={selectedIds}
-            onToggleSelect={handleToggleSelect}
-            deletedIds={deletedIds}
-          />
-        )}
+        {activeTab === "promos" && <PromoContent />}
       </div>
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div className="absolute inset-0 z-[110] flex items-center justify-center p-6">
-          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in"></div>
-          <div className="bg-white rounded-[28px] p-8 w-full max-w-[340px] relative z-10 flex flex-col items-center text-center animate-in zoom-in-95 duration-200 shadow-2xl border border-slate-100">
-            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6">
-              <Trash2 size={32} className="text-red-500" />
-            </div>
-            <h3 className="font-black text-[20px] text-slate-800 mb-2">
-              Delete Items?
-            </h3>
-            <p className="text-[14px] text-slate-500 leading-relaxed mb-8">
-              Are you sure you want to delete{" "}
-              <span className="font-bold text-slate-800">
-                {selectedIds.length}
-              </span>{" "}
-              selected items? This action cannot be undone.
-            </p>
-            <div className="flex flex-col w-full gap-3">
-              <button
-                onClick={confirmDelete}
-                className="w-full py-4 bg-red-500 text-white font-black text-[15px] rounded-2xl hover:bg-red-600 active:scale-[0.98] transition-all shadow-lg shadow-red-500/20"
-              >
-                Yes, Delete
-              </button>
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="w-full py-4 bg-slate-100 text-slate-700 font-bold text-[15px] rounded-2xl hover:bg-slate-200 active:scale-[0.98] transition-all"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Notification Modal */}
-      {selectedNotification && !isSelectionMode && (
+      {selectedNotification && (
         <div className="absolute inset-0 z-[100] flex items-center justify-center p-4">
           <div
             className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in"
@@ -302,24 +146,21 @@ export function InboxScreen({ onBack, onTransactionClick }: InboxScreenProps) {
 function ResiContent({
   transactions,
   onTransactionClick,
-  isSelectionMode,
-  selectedIds = [],
-  onToggleSelect,
-  deletedIds = {},
   readReceiptIds = [],
 }: {
   transactions: any[];
   onTransactionClick?: (tx: any) => void;
-  isSelectionMode?: boolean;
-  selectedIds?: string[];
-  onToggleSelect?: (id: string) => void;
-  deletedIds?: Record<string, boolean>;
   readReceiptIds?: string[];
 }) {
+  const [sortOrder, setSortOrder] = React.useState<"desc" | "asc">("desc");
   const visibleTransactions = transactions.filter(
-    (t) =>
-      !deletedIds[t.id] && (t.status === "success" || t.status === "failed"),
+    (t) => t.status === "success" || t.status === "failed",
   );
+
+  const sortedTransactions =
+    sortOrder === "asc"
+      ? [...visibleTransactions].reverse()
+      : visibleTransactions;
 
   if (visibleTransactions.length === 0) {
     return (
@@ -341,23 +182,23 @@ function ResiContent({
     <div className="flex flex-col gap-6 pb-8 animate-in fade-in duration-300">
       <div className="flex items-center justify-between px-4 mt-6">
         <h3 className="font-extrabold text-[18px] text-slate-800 tracking-tight">
-          Recent
+          Recent {sortOrder === "asc" && "(Oldest First)"}
         </h3>
-        <button className="text-slate-400 p-2 rounded-full bg-slate-50">
+        <button
+          onClick={() => setSortOrder(sortOrder === "desc" ? "asc" : "desc")}
+          className={`p-2 rounded-full transition-colors cursor-pointer border-0 ${sortOrder === "asc" ? "bg-emerald-100 text-emerald-600" : "text-slate-400 bg-slate-50 hover:bg-slate-100"}`}
+        >
           <Calendar size={18} />
         </button>
       </div>
 
       <div className="flex flex-col gap-4 px-4">
-        {visibleTransactions.map((tx: any) => {
+        {sortedTransactions.map((tx: any) => {
           const isRead = readReceiptIds.includes(tx.id);
           return (
             <div key={tx.id} className="relative">
               <TransactionItem
                 id={tx.id}
-                isSelectionMode={isSelectionMode}
-                isSelected={selectedIds.includes(tx.id)}
-                onToggleSelect={onToggleSelect}
                 icon={
                   tx.type === "purchase" || tx.type === "transfer" ? (
                     <Wallet size={22} className="text-slate-800" />
@@ -370,9 +211,8 @@ function ResiContent({
                 amount={`${tx.amount} ${tx.currency}`}
                 onClick={() => onTransactionClick?.(tx)}
                 isRead={isRead}
-                disabledSelection={!isRead}
               />
-              {!isRead && !isSelectionMode && (
+              {!isRead && (
                 <div className="absolute top-2 left-10 w-2 h-2 bg-slate-900 rounded-full border border-white z-20"></div>
               )}
             </div>
@@ -390,62 +230,32 @@ interface TransactionItemProps {
   title: string;
   status: string;
   amount: string;
-  isSelectionMode?: boolean;
-  isSelected?: boolean;
-  onToggleSelect?: (id: string) => void;
   onClick?: () => void;
   isRead?: boolean;
-  disabledSelection?: boolean;
 }
 
 function TransactionItem({
-  id,
   icon,
   title,
   status,
   amount,
-  isSelectionMode,
-  isSelected,
-  onToggleSelect,
   onClick,
   isRead,
-  disabledSelection,
 }: TransactionItemProps) {
-  const handleClick = () => {
-    if (isSelectionMode && id) {
-      if (disabledSelection) return;
-      onToggleSelect?.(id);
-    } else {
-      onClick?.();
-    }
-  };
-
   return (
     <div
-      className={`flex items-start justify-between bg-white cursor-pointer active:scale-[0.98] transition-all group p-1 rounded-xl ${isSelectionMode && disabledSelection ? "opacity-40 grayscale pointer-events-none" : "opacity-100"}`}
-      onClick={handleClick}
+      className="flex items-start justify-between bg-white cursor-pointer active:scale-[0.98] transition-all group p-1 rounded-xl"
+      onClick={onClick}
     >
       <div className="flex gap-3 items-start pr-4">
-        {isSelectionMode && (
-          <div className="mt-1 shrink-0 w-6 flex items-center justify-center -mr-1">
-            {isSelected ? (
-              <CheckSquare size={20} className="text-slate-600" />
-            ) : (
-              <Square
-                size={20}
-                className={`text-slate-300 ${disabledSelection ? "text-slate-100" : ""}`}
-              />
-            )}
-          </div>
-        )}
         <div
-          className={`mt-0.5 w-8 h-8 flex items-center justify-center shrink-0 group-hover:bg-slate-100 transition-colors rounded-full ${!isRead && !isSelectionMode ? "bg-slate-100/30" : ""}`}
+          className={`mt-0.5 w-8 h-8 flex items-center justify-center shrink-0 group-hover:bg-slate-100 transition-colors rounded-full ${!isRead ? "bg-slate-100/30" : ""}`}
         >
           {icon}
         </div>
         <div className="flex flex-col">
           <h5
-            className={`font-medium text-[14px] leading-snug mb-1 transition-colors ${!isRead && !isSelectionMode ? "text-slate-950 font-bold" : "text-slate-700"}`}
+            className={`font-medium text-[14px] leading-snug mb-1 transition-colors ${!isRead ? "text-slate-950 font-bold" : "text-slate-700"}`}
           >
             {title}
           </h5>
@@ -458,7 +268,7 @@ function TransactionItem({
       </div>
       <div className="flex shrink-0">
         <span
-          className={`font-medium text-[14px] transition-colors ${!isRead && !isSelectionMode ? "text-slate-900 font-bold" : "text-slate-600"}`}
+          className={`font-medium text-[14px] transition-colors ${!isRead ? "text-slate-900 font-bold" : "text-slate-600"}`}
         >
           {amount}
         </span>
@@ -472,16 +282,8 @@ function TransactionItem({
 
 function NotifikasiContent({
   onNotificationClick,
-  isSelectionMode,
-  selectedIds = [],
-  onToggleSelect,
-  deletedIds = {},
 }: {
   onNotificationClick?: (title: string, desc: string, date: string) => void;
-  isSelectionMode?: boolean;
-  selectedIds?: string[];
-  onToggleSelect?: (id: string) => void;
-  deletedIds?: Record<string, boolean>;
 }) {
   const [readIds, setReadIds] = useState<string[]>([]);
 
@@ -501,81 +303,32 @@ function NotifikasiContent({
     setReadIds(["n1", "n2", "n3", "n4", "n5"]);
   };
 
-  if (deletedIds["allNotifikasiLuarBiasa"]) {
-    return (
-      <div className="flex flex-col items-center justify-center p-8 mt-12 animate-in fade-in">
-        <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-4">
-          <Info size={32} />
-        </div>
-        <h3 className="font-bold text-[16px] text-slate-800 mb-1">
-          No notifications yet
-        </h3>
-        <p className="text-[13px] text-slate-500 text-center">
-          Your activity notifications will appear here.
-        </p>
-      </div>
-    );
-  }
-
-  const notificationsLuarBiasaSatu = !deletedIds["n1"];
-  const notificationsLuarBiasaDua = !deletedIds["n2"];
-  const notificationsLuarBiasaTiga = !deletedIds["n3"];
-  const notificationsLuarBiasaEmpat = !deletedIds["n4"];
-  const notificationsLuarBiasaLima = !deletedIds["n5"];
-
-  if (
-    !notificationsLuarBiasaSatu &&
-    !notificationsLuarBiasaDua &&
-    !notificationsLuarBiasaTiga &&
-    !notificationsLuarBiasaEmpat &&
-    !notificationsLuarBiasaLima
-  ) {
-    return (
-      <div className="flex flex-col items-center justify-center p-8 mt-12 animate-in fade-in">
-        <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-4">
-          <Info size={32} />
-        </div>
-        <h3 className="font-bold text-[16px] text-slate-800 mb-1">
-          All messages deleted
-        </h3>
-        <p className="text-[13px] text-slate-500 text-center">
-          No notifications left.
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div className="flex flex-col gap-6 pb-8 animate-in fade-in duration-300">
       <div className="flex flex-col gap-4 px-4 mt-6">
         <h3 className="font-bold text-[18px] text-slate-800 tracking-tight mb-2">
           Priority
         </h3>
-        {notificationsLuarBiasaSatu && (
-          <NotificationItem
-            id="n1"
-            isRead={readIds.includes("n1")}
-            isSelectionMode={isSelectionMode}
-            isSelected={selectedIds.includes("n1")}
-            onToggleSelect={onToggleSelect}
-            icon={
-              <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
-                <Shield size={16} className="text-amber-500 fill-amber-100" />
-              </div>
-            }
-            title="Complete Your TIN Data Now, Y..."
-            desc="Complete the registration process by entering your Tax Identification Number (TIN) data first."
-            date="10/03/2025"
-            onClick={() =>
-              handleClick(
-                "n1",
-                "Let's Complete Your TIN Data Now!",
-                "Complete the registration process by entering your Tax Identification Number (TIN) data first to meet regulatory requirements and unlock all features of Lounge.",
-                "10/03/2025",
-              )
-            }
-          />
-        )}
+        <NotificationItem
+          id="n1"
+          isRead={readIds.includes("n1")}
+          icon={
+            <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+              <Shield size={16} className="text-amber-500 fill-amber-100" />
+            </div>
+          }
+          title="Complete Your TIN Data Now, Y..."
+          desc="Complete the registration process by entering your Tax Identification Number (TIN) data first."
+          date="10/03/2025"
+          onClick={() =>
+            handleClick(
+              "n1",
+              "Let's Complete Your TIN Data Now!",
+              "Complete the registration process by entering your Tax Identification Number (TIN) data first to meet regulatory requirements and unlock all features of Lounge.",
+              "10/03/2025",
+            )
+          }
+        />
       </div>
 
       <div className="w-full h-2 bg-slate-50 mt-4 border-y border-slate-100"></div>
@@ -593,117 +346,97 @@ function NotifikasiContent({
           </button>
         </div>
 
-        {notificationsLuarBiasaDua && (
-          <NotificationItem
-            id="n2"
-            isRead={readIds.includes("n2")}
-            isSelectionMode={isSelectionMode}
-            isSelected={selectedIds.includes("n2")}
-            onToggleSelect={onToggleSelect}
-            icon={
-              <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
-                <span className="w-3 h-3 bg-yellow-400 rounded-sm"></span>
-              </div>
-            }
-            title="GoPay Is No Longer Connected"
-            desc="Your GoPay account is no longer connected to Lounge. Reconnect your GoPay account anytime th..."
-            date="27 Apr"
-            onClick={() =>
-              handleClick(
-                "n2",
-                "GoPay Is No Longer Connected",
-                "Your GoPay account is no longer connected to Lounge. Reconnect your GoPay account anytime through the Settings menu.",
-                "27 Apr",
-              )
-            }
-          />
-        )}
+        <NotificationItem
+          id="n2"
+          isRead={readIds.includes("n2")}
+          icon={
+            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+              <span className="w-3 h-3 bg-yellow-400 rounded-sm"></span>
+            </div>
+          }
+          title="GoPay Is No Longer Connected"
+          desc="Your GoPay account is no longer connected to Lounge. Reconnect your GoPay account anytime th..."
+          date="27 Apr"
+          onClick={() =>
+            handleClick(
+              "n2",
+              "GoPay Is No Longer Connected",
+              "Your GoPay account is no longer connected to Lounge. Reconnect your GoPay account anytime through the Settings menu.",
+              "27 Apr",
+            )
+          }
+        />
 
-        {notificationsLuarBiasaTiga && (
-          <NotificationItem
-            id="n3"
-            isRead={readIds.includes("n3")}
-            isSelectionMode={isSelectionMode}
-            isSelected={selectedIds.includes("n3")}
-            onToggleSelect={onToggleSelect}
-            icon={
-              <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
-                <Smartphone size={16} className="text-slate-500" />
-              </div>
-            }
-            title="Mobile Number Change Success..."
-            desc="The number connected to the Lounge application has been changed to 6281318056437. Henceforth, all..."
-            date="27 Apr"
-            onClick={() =>
-              handleClick(
-                "n3",
-                "Mobile Number Change Successful",
-                "The number connected to the Lounge application has been changed to 6281318056437. Henceforth, all notifications will be sent to this number.",
-                "27 Apr",
-              )
-            }
-          />
-        )}
+        <NotificationItem
+          id="n3"
+          isRead={readIds.includes("n3")}
+          icon={
+            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+              <Smartphone size={16} className="text-slate-500" />
+            </div>
+          }
+          title="Mobile Number Change Success..."
+          desc="The number connected to the Lounge application has been changed to 6281318056437. Henceforth, all..."
+          date="27 Apr"
+          onClick={() =>
+            handleClick(
+              "n3",
+              "Mobile Number Change Successful",
+              "The number connected to the Lounge application has been changed to 6281318056437. Henceforth, all notifications will be sent to this number.",
+              "27 Apr",
+            )
+          }
+        />
 
-        {notificationsLuarBiasaEmpat && (
-          <NotificationItem
-            id="n4"
-            isRead={readIds.includes("n4")}
-            isSelectionMode={isSelectionMode}
-            isSelected={selectedIds.includes("n4")}
-            onToggleSelect={onToggleSelect}
-            icon={
-              <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
-                <Circle
-                  size={16}
-                  className="text-amber-500 fill-amber-500"
-                  strokeWidth={0}
-                />
-              </div>
-            }
-            title="SiAap Cash Withdrawal Token Used"
-            desc="Here is your Cash Withdrawal Token. Fast use it at the nearest ATM before its validity expires..."
-            date="10 Mar"
-            onClick={() =>
-              handleClick(
-                "n4",
-                "SiAap Cash Withdrawal Token Used",
-                "Here is your Cash Withdrawal Token. Immediately use it at the nearest ATM before its validity expires at 15:00 WIB.",
-                "10 Mar",
-              )
-            }
-          />
-        )}
-
-        {notificationsLuarBiasaLima && (
-          <NotificationItem
-            id="n5"
-            isRead={readIds.includes("n5")}
-            isSelectionMode={isSelectionMode}
-            isSelected={selectedIds.includes("n5")}
-            onToggleSelect={onToggleSelect}
-            icon={
-              <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
-                <Circle
-                  size={16}
-                  className="text-amber-500 fill-amber-500"
-                  strokeWidth={0}
-                />
-              </div>
-            }
-            title="Cash Withdrawal Transaction Succes..."
-            desc="Here are the details of your cash withdrawal transaction at Mandiri ATM. Withdrawal Token - 602765 Amount ..."
-            date="10 Mar"
-            onClick={() =>
-              handleClick(
-                "n5",
-                "Cash Withdrawal Transaction Successful!",
-                "Here are the details of your cash withdrawal transaction at Mandiri ATM. Withdrawal Token - 602765 Amount Rp 500.000.",
-                "10 Mar",
-              )
-            }
-          />
-        )}
+        <NotificationItem
+          id="n4"
+          isRead={readIds.includes("n4")}
+          icon={
+            <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+              <Circle
+                size={16}
+                className="text-amber-500 fill-amber-500"
+                strokeWidth={0}
+              />
+            </div>
+          }
+          title="SiAap Cash Withdrawal Token Used"
+          desc="Here is your Cash Withdrawal Token. Fast use it at the nearest ATM before its validity expires..."
+          date="10 Mar"
+          onClick={() =>
+            handleClick(
+              "n4",
+              "SiAap Cash Withdrawal Token Used",
+              "Here is your Cash Withdrawal Token. Immediately use it at the nearest ATM before its validity expires at 15:00 UTC.",
+              "10 Mar",
+            )
+          }
+        />
+ 
+        <NotificationItem
+          id="n5"
+          isRead={readIds.includes("n5")}
+          icon={
+            <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+              <Circle
+                size={16}
+                className="text-amber-500 fill-amber-500"
+                strokeWidth={0}
+              />
+            </div>
+          }
+          title="Cash Withdrawal Transaction Succes..."
+          desc="Here are the details of your cash withdrawal transaction at Mandiri ATM. Withdrawal Token - 602765 Amount ..."
+          date="10 Mar"
+          onClick={() =>
+            handleClick(
+              "n5",
+              "Cash Withdrawal Transaction Successful!",
+              "Here are the details of your cash withdrawal transaction at Mandiri ATM. Withdrawal Token - 602765 Amount 50.00 USDC.",
+              "10 Mar",
+            )
+          }
+        />
       </div>
     </div>
   );
@@ -716,49 +449,25 @@ interface NotificationItemProps {
   desc: string;
   date: string;
   isRead?: boolean;
-  isSelectionMode?: boolean;
-  isSelected?: boolean;
-  onToggleSelect?: (id: string) => void;
   onClick?: () => void;
 }
 
 function NotificationItem({
-  id,
   icon,
   title,
   desc,
   date,
   isRead,
-  isSelectionMode,
-  isSelected,
-  onToggleSelect,
   onClick,
 }: NotificationItemProps) {
-  const handleClick = () => {
-    if (isSelectionMode) {
-      onToggleSelect?.(id);
-    } else {
-      onClick?.();
-    }
-  };
-
   return (
     <div
       className={
         "flex items-start gap-4 mb-2 cursor-pointer group transition-opacity " +
-        (isRead && !isSelectionMode ? "opacity-60" : "opacity-100")
+        (isRead ? "opacity-60" : "opacity-100")
       }
-      onClick={handleClick}
+      onClick={onClick}
     >
-      {isSelectionMode && (
-        <div className="mt-1.5 shrink-0 flex items-center justify-center -mr-1">
-          {isSelected ? (
-            <CheckSquare size={20} className="text-slate-600" />
-          ) : (
-            <Square size={20} className="text-slate-300" />
-          )}
-        </div>
-      )}
       <div className="mt-1 shrink-0 relative">
         {icon}
         {!isRead && (
@@ -784,39 +493,7 @@ function NotificationItem({
   );
 }
 
-function PromoContent({
-  isSelectionMode,
-  selectedIds = [],
-  onToggleSelect,
-  deletedIds = {},
-}: {
-  isSelectionMode?: boolean;
-  selectedIds?: string[];
-  onToggleSelect?: (id: string) => void;
-  deletedIds?: Record<string, boolean>;
-}) {
-  if (deletedIds["allPromo"] || deletedIds["p1"]) {
-    return (
-      <div className="flex flex-col items-center justify-center p-8 mt-12 animate-in fade-in">
-        <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-4">
-          <Info size={32} />
-        </div>
-        <h3 className="font-bold text-[16px] text-slate-800 mb-1">
-          No promos yet
-        </h3>
-        <p className="text-[13px] text-slate-500 text-center">
-          Look forward to exciting promos just for you.
-        </p>
-      </div>
-    );
-  }
-
-  const handleClick = () => {
-    if (isSelectionMode) {
-      onToggleSelect?.("p1");
-    }
-  };
-
+function PromoContent() {
   return (
     <div className="flex flex-col gap-6 pb-8 animate-in fade-in duration-300">
       <div className="flex justify-between items-center px-4 mt-6">
@@ -826,25 +503,7 @@ function PromoContent({
       </div>
 
       <div className="px-4 flex items-start gap-3">
-        {isSelectionMode && (
-          <div
-            className="mt-20 shrink-0 w-6 flex items-center justify-center -mr-1"
-            onClick={handleClick}
-          >
-            {selectedIds.includes("p1") ? (
-              <CheckSquare
-                size={20}
-                className="text-slate-600 cursor-pointer"
-              />
-            ) : (
-              <Square size={20} className="text-slate-300 cursor-pointer" />
-            )}
-          </div>
-        )}
-        <div
-          className="flex-1 rounded-[16px] overflow-hidden border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.06)] relative bg-white group cursor-pointer"
-          onClick={handleClick}
-        >
+        <div className="flex-1 rounded-[16px] overflow-hidden border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.06)] relative bg-white group cursor-pointer">
           <div className="bg-gradient-to-tr from-blue-100 to-indigo-50 h-[170px] relative overflow-hidden group-hover:opacity-90 transition-opacity">
             {/* Banner Abstract Image block */}
             <div className="absolute inset-0 flex items-center justify-center">

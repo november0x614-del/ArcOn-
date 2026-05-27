@@ -36,6 +36,7 @@ interface AppState {
 
   // Financials
   balance: number;
+  allBalances: any[];
   setBalance: (balance: number | ((prev: number) => number)) => void;
   fetchBalance: () => Promise<void>;
   pnlValue: number;
@@ -105,6 +106,7 @@ export const useStore = create<AppState>()((set) => ({
 
   // Financials
   balance: 0,
+  allBalances: [],
   setBalance: (balance) =>
     set((state) => ({
       balance: typeof balance === "function" ? balance(state.balance) : balance,
@@ -147,7 +149,7 @@ export const useStore = create<AppState>()((set) => ({
         const pnlPercentage =
           totalDeposit > 0 ? (pnlValue / totalDeposit) * 100 : 0;
 
-        set({ balance: newBalance, pnlValue, pnlPercentage });
+        set({ balance: newBalance, allBalances: data.allBalances || [], pnlValue, pnlPercentage });
       } else {
         console.error(`Received non-JSON response for ${url}`);
       }

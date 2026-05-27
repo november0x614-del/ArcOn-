@@ -22,7 +22,7 @@ export function AmountInputScreen({
   onBack,
   onNext,
 }: AmountInputScreenProps) {
-  const { registeredUser, balance, transferAmount, transferMemo } = useStore();
+  const { registeredUser, balance, allBalances, transferAmount, transferMemo } = useStore();
   const { getFeeEstimate } = useArc();
   const [amount, setAmount] = useState(
     transferAmount && transferAmount !== "0" ? transferAmount : "",
@@ -57,6 +57,14 @@ export function AmountInputScreen({
   const sources = [currentSource];
 
   const numericAmount = amount ? parseFloat(amount) : 0;
+  
+  // Accurate USDC Balance check for Arc Testnet
+  const usdcData = allBalances.find((b) => b.token?.symbol === "USDC");
+  const actualUSDC = usdcData ? parseFloat(usdcData.amount) : 0;
+  
+  // Total needed (including platform fee)
+  const totalRequired = numericAmount + 0.10;
+  const hasEnough = actualUSDC >= totalRequired;
 
   return (
     <div className="w-full h-full bg-white relative flex flex-col z-50">
@@ -127,10 +135,10 @@ export function AmountInputScreen({
           
           <div className="flex items-center justify-between mt-2 pt-3 border-t border-slate-100">
             <span className="text-[12px] text-slate-500 font-medium">
-              Balance: {balance.toFixed(2)} USDC
+              USDC Balance: {actualUSDC.toFixed(2)} USDC
             </span>
             <button
-                onClick={() => setAmount(balance.toString())}
+                onClick={() => setAmount(actualUSDC >= 0.1 ? (actualUSDC - 0.1).toFixed(2) : "0")}
                 className="text-[11px] font-bold bg-slate-200 text-slate-700 px-2.5 py-1 rounded-md hover:bg-slate-300 transition-colors cursor-pointer border-none"
               >
                 MAX
@@ -179,10 +187,10 @@ export function AmountInputScreen({
         <div className="mt-8">
           <button
             onClick={() => setShowConfirm(true)}
-            disabled={!amount || parseFloat(amount) < 1 || parseFloat(amount) > balance}
+            disabled={!amount || numericAmount < 1 || !hasEnough}
             className={`w-full py-4 rounded-full font-bold text-[15px] transition-all flex items-center justify-center gap-2
               ${
-                amount && parseFloat(amount) >= 1 && parseFloat(amount) <= balance
+                amount && numericAmount >= 1 && hasEnough
                   ? "bg-slate-900 text-white shadow-lg hover:bg-slate-800 active:scale-[0.98]"
                   : "bg-slate-100 text-slate-400 shadow-none cursor-not-allowed"
               }
@@ -239,7 +247,7 @@ export function AmountInputScreen({
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-slate-600 text-[14.5px]">
-                    Metode Transfer
+                    Transfer Method
                   </span>
                   <span className="text-slate-800 font-bold text-[14.5px]">
                     {selectedSource.isArc ? "Arc Testnet" : "Arc Network"}
@@ -250,7 +258,7 @@ export function AmountInputScreen({
                     <div className="flex justify-between items-center">
                       <span className="text-slate-800 text-[14px] flex items-center gap-1.5">
                         <div className="w-2 h-2 bg-slate-900 rounded-full"></div>{" "}
-                        Biaya Layanan (Platform Fee)
+                        Platform Fee
                       </span>
                       <span className="text-slate-900 font-bold text-[14px]">
                         0.10 USDC
@@ -262,11 +270,11 @@ export function AmountInputScreen({
                         Network Gas (Sponsored)
                       </span>
                       <span className="text-emerald-600 font-bold text-[12px]">
-                        Gratis
+                        Free
                       </span>
                     </div>
                     <p className="text-[10px] text-slate-500 leading-tight mt-2 border-t border-slate-200/50 pt-2">
-                       Biaya platform digunakan untuk pengoperasian aplikasi. Network gas fee Anda (dibiayai oleh Arc Gas Station).
+                       Platform fees are used for application operation. Your network gas fee is sponsored by Arc Gas Station.
                     </p>
                   </div>
                 ) : (

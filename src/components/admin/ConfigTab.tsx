@@ -109,13 +109,13 @@ export function ConfigTab({
 
   return (
     <div className="p-4 space-y-6 animate-in fade-in duration-300">
-      {/* Category 1: Biaya & Batasan Transaksi */}
+      {/* Category 1: Fees & Transaction Limits */}
       <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 overflow-hidden">
         <div className="bg-[#f8fafc] px-5 py-4 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-2.5 text-slate-800">
             <Settings2 size={16} className="text-slate-500" />
             <h3 className="font-black text-[13px] uppercase tracking-wider text-slate-800">
-              BIAYA & BATASAN TRANSAKSI
+              FEES & TRANSACTION LIMITS
             </h3>
           </div>
           <span className="text-[10px] bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full font-black uppercase tracking-tight">
@@ -159,7 +159,7 @@ export function ConfigTab({
             </div>
             <div className="space-y-2">
               <label className="text-[12px] font-bold text-slate-600 ml-1">
-                Limit Transfer Harian
+                Daily Transfer Limit
               </label>
               <input
                 type="text"
@@ -173,10 +173,10 @@ export function ConfigTab({
           <div className="flex justify-between items-center py-4 px-5 bg-slate-50/80 rounded-[20px] border border-slate-100/80">
             <div className="flex flex-col">
               <span className="text-[13px] font-black text-slate-800">
-                Subsidi Gas Platform
+                Platform Gas Subsidy
               </span>
               <span className="text-[11px] text-slate-500 font-medium mt-0.5">
-                Bebaskan potongan USDC gas fee native untuk transaksi pengguna
+                Remove native USDC gas fee deductions for user transactions
               </span>
             </div>
             <button
@@ -204,60 +204,60 @@ export function ConfigTab({
             disabled={saving || loading}
             className="w-full mt-2 bg-[#101827] hover:bg-slate-800 text-white font-black text-[14px] py-4 rounded-[18px] disabled:opacity-50 active:scale-[0.98] transition-all flex items-center justify-center cursor-pointer shadow-lg shadow-slate-200"
           >
-            {saving ? "Menyimpan Batas & Biaya..." : "Simpan Batas & Biaya"}
+            {saving ? "Saving Limits & Fees..." : "Save Limits & Fees"}
           </button>
         </div>
       </div>
 
-      {/* Category 2: Akses Layanan Utama */}
+      {/* Category 2: Core Service Access */}
       <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 overflow-hidden">
         <div className="bg-[#f8fafc] px-5 py-4 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-2.5 text-slate-800">
             <CircleDollarSign size={16} className="text-slate-500" />
             <h3 className="font-black text-[13px] uppercase tracking-wider text-slate-800">
-              Akses Layanan Finansial Utama
+              Core Financial Service Access
             </h3>
           </div>
           <span className="text-[10px] bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full font-black uppercase tracking-tight">
-            LAYANAN
+            SERVICES
           </span>
         </div>
         <div className="p-2 space-y-0 divide-y divide-slate-100/50 px-6">
           {[
             {
               field: "transferEnabled",
-              label: "Fitur Kirim Saldo (Transfer)",
-              desc: "Tombol kirim & transfer instan USDC antarpengguna",
+              label: "Send Funds Feature (Transfer)",
+              desc: "Instant USDC cross-user send & transfer button",
             },
             {
               field: "withdrawEnabled",
-              label: "Fitur Tarik Saldo (Withdraw)",
-              desc: "Ekspor USDC keluar dari wallet ke bursa atau alamat lain",
+              label: "Withdraw Funds Feature",
+              desc: "Export USDC from wallet to exchange or other addresses",
             },
             {
               field: "swapEnabled",
-              label: "Fitur Swap Token USDC",
-              desc: "Konversi dan penukaran pool token multi-aset di Arc",
+              label: "USDC Token Swap Feature",
+              desc: "Conversion and pool swap for multi-asset tokens on Arc",
             },
             {
               field: "stableStakeEnabled",
-              label: "Fitur StableStake Deposit",
-              desc: "Akses instrumen staking penghasil yield USDC di testnet",
+              label: "StableStake Deposit Feature",
+              desc: "Access USDC yield-generating staking instruments on testnet",
             },
             {
               field: "bridgeEnabled",
-              label: "Fitur CCTP Bridge Lintas Rantai",
-              desc: "Membakar & mencetak USDC di Arbitrum/Ethereum ke Arc",
+              label: "Cross-Chain CCTP Bridge Feature",
+              desc: "Burn & Mint USDC between Arbitrum/Ethereum and Arc",
             },
             {
               field: "faucetEnabled",
-              label: "Fitur Keran Saldo (Faucet)",
-              desc: "Klaim token gas mingguan gratis untuk kebutuhan uji coba",
+              label: "Balance Faucet Feature",
+              desc: "Claim free weekly gas tokens for testing purposes",
             },
             {
               field: "batchTransferEnabled",
-              label: "Fitur Transfer Massal (Batch)",
-              desc: "Kirim USDC multi-tujuan dalam satu transaksi tunggal",
+              label: "Mass Transfer Feature (Batch)",
+              desc: "Send USDC to multi-destinations in a single transaction",
             },
           ].map((item) => (
             <ToggleItem
@@ -272,45 +272,45 @@ export function ConfigTab({
         </div>
       </div>
 
-      {/* Category 3: E-commerce & Pembayaran QR */}
+      {/* Category 3: E-commerce & QR Payment */}
       <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 overflow-hidden">
         <div className="bg-[#f8fafc] px-5 py-4 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-2.5 text-slate-800">
             <Activity size={16} className="text-slate-500" />
             <h3 className="font-black text-[13px] uppercase tracking-wider text-slate-800">
-              Modul E-Commerce & Merchant
+              E-Commerce & Merchant Modules
             </h3>
           </div>
           <span className="text-[10px] bg-amber-50 text-amber-600 px-3 py-1 rounded-full font-black uppercase tracking-tight">
-            PEMBAYARAN
+            PAYMENTS
           </span>
         </div>
         <div className="p-2 space-y-0 divide-y divide-slate-100/50 px-6">
           {[
             {
               field: "ecommerceEnabled",
-              label: "Modul Marketplace E-Commerce",
-              desc: "Platform belanja produk fisik/kredit di dalam aplikasi",
+              label: "Marketplace E-Commerce Module",
+              desc: "Shopping platform for physical/digital products within the app",
             },
             {
               field: "merchantEnabled",
-              label: "Modul Kasir F&B Merchant",
-              desc: "Sistem merchant point of sales untuk gerai merchant terdaftar",
+              label: "Merchant PoS Module",
+              desc: "Point of sales system for registered merchant outlets",
             },
             {
               field: "vaEnabled",
-              label: "Pembayaran Virtual Account",
-              desc: "Kombinasi VA dinamis terverifikasi instan",
+              label: "Virtual Account Payment",
+              desc: "Combination of instantly verified dynamic VA",
             },
             {
               field: "qrisEnabled",
-              label: "Generator Kode QRIS",
-              desc: "Pembuatan kode QR standard nasional untuk deposit saldo",
+              label: "QRIS Code Generator",
+              desc: "National standard QR code creation for balance deposits",
             },
             {
               field: "scanQrEnabled",
-              label: "Pemindai Kode QR (Scan)",
-              desc: "Tombol kamera scanner untuk scan qr invoice & wallet",
+              label: "QR Code Scanner (Scan)",
+              desc: "Camera scanner button to scan QR invoices & wallets",
             },
           ].map((item) => (
             <ToggleItem
@@ -325,45 +325,45 @@ export function ConfigTab({
         </div>
       </div>
 
-      {/* Category 4: Integrasi & Keamanan */}
+      {/* Category 4: Integration & Security */}
       <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 overflow-hidden">
         <div className="bg-[#f8fafc] px-5 py-4 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-2.5 text-slate-800">
             <ShieldCheck size={16} className="text-slate-500" />
             <h3 className="font-black text-[13px] uppercase tracking-wider text-slate-800">
-              Koneksi Eksternal & Keamanan
+              External Connection & Security
             </h3>
           </div>
           <span className="text-[10px] bg-rose-50 text-rose-600 px-3 py-1 rounded-full font-black uppercase tracking-tight">
-            KEAMANAN
+            SECURITY
           </span>
         </div>
         <div className="p-2 space-y-0 divide-y divide-slate-100/50 px-6">
           {[
             {
               field: "registrationEnabled",
-              label: "Registrasi Pengguna Baru",
-              desc: "Mengizinkan pembuatan akun & alamat dompet baru di platform ini",
+              label: "New User Registration",
+              desc: "Allow creation of new accounts & wallet addresses on this platform",
             },
             {
               field: "aiAgentEnabled",
-              label: "AI Agent Co-Pilot (Asisten)",
-              desc: "Layanan konsultasi keuangan saku berbasis AI kognitif",
+              label: "AI Agent Co-Pilot (Assistant)",
+              desc: "AI-based cognitive pocket financial consulting service",
             },
             {
               field: "eWalletConnectionEnabled",
-              label: "Integrasi e-Wallet GrabPay / GoPay",
-              desc: "Klaim jembatan transfer saldo virtual dengan akun dompet digital lokal",
+              label: "e-Wallet Integration (GrabPay / GoPay)",
+              desc: "Claim virtual balance transfer bridge with local digital wallet accounts",
             },
             {
               field: "arcBirdEnabled",
-              label: "Permainan Arc Bird Mini-Game",
-              desc: "Fitur hobi game flappy bird terintegrasi turnamen leaderboard",
+              label: "Arc Bird Mini-Game",
+              desc: "Flappy Bird hobby feature with integrated tournament leaderboard",
             },
             {
               field: "backupPhraseEnabled",
-              label: "Ekspor Kunci / Cadangkan Kunci",
-              desc: "Izinkan ekspor phrase pengaman dompet circle langsung oleh user",
+              label: "Export Keys / Backup Keys",
+              desc: "Allow export of Circle wallet security phrases directly by the user",
             },
           ].map((item) => (
             <ToggleItem

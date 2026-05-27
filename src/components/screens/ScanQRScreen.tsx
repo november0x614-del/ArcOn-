@@ -49,7 +49,7 @@ export function ScanQRScreen({ onBack, onScanResult }: ScanQRScreenProps) {
         setErrorVisible(true);
         setErrorMessage(
           err?.message ||
-            "Gagal mengakses kamera. Mohon berikan izin di pengaturan browser.",
+            "Failed to access camera. Please grant permission in browser settings.",
         );
       }
     };

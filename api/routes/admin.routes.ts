@@ -1,6 +1,6 @@
 import express from "express";
 import { getSupabaseAdmin } from "../config/supabase.js";
-import { createWallet } from "../services/circle.js";
+import { createWallet, batchCreateWallets } from "../services/circle.js";
 import { fetchUnifiedBalance } from "../services/balance.js";
 
 const router = express.Router();
@@ -259,6 +259,63 @@ router.get("/stats", async (_req, res) => {
     });
   } catch (error: any) {
     console.error("Failed to fetch admin stats:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post("/users/batch-wallets", async (req, res) => {
+  try {
+    const { userIds } = req.body; // Opsional: Berikan array ID user, atau biarkan kosong untuk proses semua yang belum punya wallet
+    const supabase = getSupabaseAdmin();
+
+    let targetUsers = [];
+
+    if (userIds && userIds.length > 0) {
+      // Ambil user spesifik yang diminta
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", userIds);
+      targetUsers = profiles || [];
+    } else {
+      // Ambil SEMUA user yang belum memiliki entri di user_wallets
+      const { data: allProfiles } = await supabase
+        .from("profiles")
+        .select("id, full_name");
+
+      const { data: existingWallets } = await supabase
+        .from("user_wallets")
+        .select("id");
+
+      const existingIds = new Set((existingWallets || []).map((w) => w.id));
+      targetUsers = (allProfiles || []).filter((p) => !existingIds.has(p.id));
+    }
+
+    if (targetUsers.length === 0) {
+      return res.json({
+        message: "Tidak ada user yang memerlukan pembuatan wallet baru.",
+        count: 0,
+      });
+    }
+
+    // Batasan Circle: Maksimal 200 per batch
+    const batchList = targetUsers.slice(0, 200).map((u) => ({
+      id: u.id,
+      name: u.full_name,
+    }));
+
+    console.log(
+      `[AdminBatch] Memulai pembuatan dompet massal untuk ${batchList.length} pengguna...`,
+    );
+    const result = await batchCreateWallets(supabase, batchList);
+
+    res.json({
+      message: `Berhasil memicu pendaftaran massal untuk ${result.length} pengguna.`,
+      count: result.length,
+      wallets: result,
+    });
+  } catch (error: any) {
+    console.error("Batch Creation Error:", error);
     res.status(500).json({ error: error.message });
   }
 });

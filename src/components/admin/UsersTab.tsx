@@ -94,15 +94,15 @@ export function UsersTab({
                   className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${u.status === "Blocked" ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"}`}
                 >
                   {u.status === "Archived"
-                    ? "Terarsipkan"
+                    ? "Archived"
                     : u.status === "Blocked"
-                      ? "Tidak Aktif"
-                      : "Aktif"}
+                      ? "Inactive"
+                      : "Active"}
                 </span>
                 {u.id !== "00000000-0000-0000-0000-000000000000" ? (
                   <div className="flex items-center gap-1 text-slate-400 ml-1.5 bg-slate-50 border border-slate-100 px-2 py-1 rounded-xl group-hover:text-slate-800 transition-colors">
                     <span className="text-[11px] font-bold text-slate-500">
-                      Kelola
+                      Manage
                     </span>
                     <ChevronRight size={13} />
                   </div>

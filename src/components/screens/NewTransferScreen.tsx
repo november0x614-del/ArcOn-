@@ -118,13 +118,13 @@ export function NewTransferScreen({
     : "?";
 
   return (
-    <div className="w-full h-full bg-white relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
+    <div className="absolute inset-0 w-full h-full bg-slate-50 relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
       {/* Header */}
-      <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between shrink-0">
+      <div className="flex items-center justify-between px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 shrink-0">
         <div className="flex items-center">
           <button
             onClick={onBack}
-            className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
+            className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
           >
             <ArrowLeft size={20} className="text-white" />
           </button>
@@ -134,118 +134,121 @@ export function NewTransferScreen({
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex w-full px-8 mt-6 mb-6">
-        <div className="flex-1 flex justify-center items-center gap-2 border-r border-slate-200 cursor-pointer">
-          <Landmark size={18} className="text-slate-800" />
-          <span className="text-slate-800 font-bold text-[14px]">Account</span>
-        </div>
-        <div className="flex-1 flex justify-center items-center gap-2 cursor-pointer group">
-          <AtSign
-            size={18}
-            className="text-slate-400 group-hover:text-slate-500 transition-colors"
-          />
-          <span className="text-slate-400 font-bold text-[14px] group-hover:text-slate-500 transition-colors">
-            Proxy
-          </span>
-        </div>
-      </div>
-
-      {/* Form Fields */}
       <div className="px-5 w-full flex-1 overflow-y-auto scrollbar-hide pb-32">
-        {/* Bank Select */}
-        <div
-          onClick={() => setShowNetworkSelect(true)}
-          className="bg-[#f6f8fb] rounded-[16px] px-4 py-3 pb-3.5 mb-4 flex justify-between items-center cursor-pointer border border-transparent hover:border-slate-200 transition-colors"
-        >
-          <div className="flex flex-col text-left">
-            <span className="text-slate-400 text-[11px] mb-0.5 font-medium">
-              Choose Network
-            </span>
-            <span className="text-slate-800 font-extrabold text-[15px]">
-              {selectedNetwork}
+        {/* Tabs */}
+        <div className="flex w-full mt-6 mb-6">
+          <div className="flex-1 flex justify-center items-center gap-2 border-r border-slate-200 cursor-pointer">
+            <Landmark size={18} className="text-slate-800" />
+            <span className="text-slate-800 font-bold text-[14px]">Account</span>
+          </div>
+          <div className="flex-1 flex justify-center items-center gap-2 cursor-pointer group">
+            <AtSign
+              size={18}
+              className="text-slate-400 group-hover:text-slate-500 transition-colors"
+            />
+            <span className="text-slate-400 font-bold text-[14px] group-hover:text-slate-500 transition-colors">
+              Proxy
             </span>
           </div>
-          <ChevronDown className="text-slate-500" size={20} />
         </div>
 
-        {/* Account Number Input */}
-        <div
-          className={`bg-[#f6f8fb] rounded-[16px] px-4 py-4 mb-4 flex flex-col border transition-colors relative ${addressError && accountNumber.length > 10 ? "border-red-400" : "border-transparent focus-within:border-slate-900"}`}
-        >
-          <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 text-left">
-            Wallet Address
-          </label>
-          <div className="flex items-center justify-between">
-            <input
-              type="text"
-              placeholder="Paste or type 0x address"
-              value={accountNumber}
-              onChange={(e) => setAccountNumber(e.target.value.trim())}
-              onPaste={handlePaste}
-              className="w-full bg-transparent outline-none text-slate-800 font-bold placeholder:text-slate-400 text-[15px] pr-8"
-            />
-            <div className="absolute right-4 flex items-center gap-2">
-              {isVerifyingAddress && (
-                <Loader2 size={16} className="text-slate-400 animate-spin" />
-              )}
-              {addressVerified && (
-                <CheckCircle2 size={16} className="text-emerald-500" />
-              )}
-              {accountNumber && (
+        {/* Transfer Form Container */}
+        <div className="bg-white rounded-[24px] p-5 shadow-sm border border-slate-100 mb-6 flex flex-col gap-6 relative">
+          
+          {/* Network Selection */}
+          <div className="flex flex-col gap-2">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider text-left">
+              Network
+            </label>
+            <div
+              onClick={() => setShowNetworkSelect(true)}
+              className="w-full flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl transition-colors hover:border-slate-300 cursor-pointer"
+            >
+              <div className="flex items-center gap-3 text-left">
+                <span className="text-slate-800 font-bold text-[15px]">
+                  {selectedNetwork}
+                </span>
+              </div>
+              <ChevronDown className="text-slate-500" size={20} />
+            </div>
+          </div>
+
+          {/* Wallet Address Input */}
+          <div className="flex flex-col gap-2 border-t border-slate-100 pt-5 mt-2">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider text-left">
+              Wallet Address
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="0x..."
+                value={accountNumber}
+                onChange={(e) => setAccountNumber(e.target.value.trim())}
+                onPaste={handlePaste}
+                className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-[13px] font-mono font-medium text-slate-800 outline-none focus:border-slate-300 focus:bg-white transition-colors placeholder:text-slate-300 pr-12"
+              />
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                {isVerifyingAddress && (
+                  <Loader2 size={16} className="text-slate-400 animate-spin" />
+                )}
+                {addressVerified && (
+                  <CheckCircle2 size={16} className="text-emerald-500" />
+                )}
+                {accountNumber && (
+                  <button
+                    onClick={() => {
+                      setAccountNumber("");
+                      setReceiverName("");
+                      setAddressVerified(false);
+                      setAddressError(null);
+                    }}
+                    className="w-[20px] h-[20px] bg-slate-300 rounded-full flex items-center justify-center text-white hover:bg-slate-400 transition-colors border-0"
+                  >
+                    <X size={12} strokeWidth={3} />
+                  </button>
+                )}
+              </div>
+            </div>
+            {addressError && accountNumber.length > 20 && (
+              <span className="text-[10px] font-bold text-red-500 mt-1 uppercase tracking-widest text-left">
+                {addressError}
+              </span>
+            )}
+          </div>
+
+          {/* Receiver Name Input */}
+          <div className="flex flex-col gap-2 border-t border-slate-100 pt-5 mt-2">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider text-left">
+              Receiver Name
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Enter full name"
+                value={receiverName}
+                onChange={(e) => setReceiverName(e.target.value)}
+                className={`w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-[14px] font-bold outline-none focus:border-slate-300 focus:bg-white transition-colors placeholder:text-slate-300 pr-12 ${addressVerified ? "text-emerald-600" : "text-slate-800"}`}
+              />
+              {!addressVerified && receiverName && (
                 <button
-                  onClick={() => {
-                    setAccountNumber("");
-                    setReceiverName("");
-                    setAddressVerified(false);
-                    setAddressError(null);
-                  }}
-                  className="w-[20px] h-[20px] bg-[#d1d5db] rounded-full flex items-center justify-center text-white hover:bg-[#9ca3af] transition-colors border-0"
+                  onClick={() => setReceiverName("")}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 w-[20px] h-[20px] bg-slate-300 rounded-full flex items-center justify-center text-white hover:bg-slate-400 transition-colors border-0"
                 >
                   <X size={12} strokeWidth={3} />
                 </button>
               )}
             </div>
-          </div>
-          {addressError && accountNumber.length > 20 && (
-            <span className="text-[10px] font-bold text-red-500 mt-1 uppercase tracking-widest text-left">
-              {addressError}
-            </span>
-          )}
-        </div>
-
-        {/* Receiver Name Input */}
-        <div className="bg-[#f6f8fb] rounded-[16px] px-4 py-4 mb-4 flex flex-col border border-transparent focus-within:border-slate-900 transition-colors relative">
-          <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 text-left">
-            Receiver Name
-          </label>
-          <div className="flex items-center justify-between">
-            <input
-              type="text"
-              placeholder="Enter full name"
-              value={receiverName}
-              onChange={(e) => setReceiverName(e.target.value)}
-              className={`w-full bg-transparent outline-none font-bold placeholder:text-slate-400 text-[15px] pr-8 ${addressVerified ? "text-emerald-600" : "text-slate-800"}`}
-            />
-            {!addressVerified && receiverName && (
-              <button
-                onClick={() => setReceiverName("")}
-                className="absolute right-4 w-[20px] h-[20px] bg-[#d1d5db] rounded-full flex items-center justify-center text-white hover:bg-[#9ca3af] transition-colors border-0"
-              >
-                <X size={12} strokeWidth={3} />
-              </button>
+            {addressVerified && (
+              <span className="text-[10px] font-bold text-emerald-500 mt-1 uppercase tracking-widest text-left">
+                Verified Arc User
+              </span>
             )}
           </div>
-          {addressVerified && (
-            <span className="text-[10px] font-bold text-emerald-500 mt-1 uppercase tracking-widest text-left">
-              Verified Arc User
-            </span>
-          )}
         </div>
       </div>
 
       {/* Bottom Button */}
-      <div className="px-5 pb-8 shrink-0 relative z-10 bg-white">
+      <div className="absolute bottom-0 left-0 right-0 p-5 w-full z-20">
         <button
           onClick={handleContinue}
           disabled={
@@ -254,13 +257,13 @@ export function NewTransferScreen({
             accountNumber.length < 42 ||
             !receiverName.trim()
           }
-          className={`w-full py-[14px] rounded-full font-bold text-[15px] transition-all flex items-center justify-center gap-2
+          className={`w-full py-4 rounded-2xl font-bold text-[15px] transition-all flex items-center justify-center gap-2
               ${
                 !addressError &&
                 accountNumber.length === 42 &&
                 receiverName.trim().length > 0
-                  ? "bg-slate-900 text-white shadow-lg hover:bg-slate-800 active:scale-[0.98]"
-                  : "bg-[#e5e7eb] text-[#9ca3af] shadow-none"
+                  ? "bg-slate-900 text-white shadow-[0_8px_20px_-8px_rgba(15,23,42,0.4)] hover:bg-slate-800 active:scale-[0.98]"
+                  : "bg-slate-200 text-slate-400 shadow-none opacity-80"
               }`}
         >
           Continue

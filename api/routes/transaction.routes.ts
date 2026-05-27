@@ -1,6 +1,6 @@
 import express from "express";
 import { getSupabaseAdmin, isUserBlocked } from "../config/supabase.js";
-import { executeTransaction } from "../services/circle.js";
+import { executeTransaction, executeAtomicBatchTransfer } from "../services/circle.js";
 import { initiateOutboundBridge, finalizeInboundBridge } from "../services/bridge.js";
 import { getCircleClientInstance } from "../services/circleClient.js";
 import { logAuditEvent } from "../services/audit.js";
@@ -28,7 +28,7 @@ router.post("/swap/execute", async (req, res) => {
     const { userId, amount, fromToken, toToken, tokenAddress } = req.body;
     if (await isUserBlocked(userId)) {
       return res.status(403).json({
-        error: "Akun Anda telah dinonaktifkan oleh administrator sistem. Semua operasi transaksi ditangguhkan.",
+        error: "Your account has been disabled by the system administrator. All transaction operations are suspended.",
       });
     }
     const dexAddress = "0x3333333333333333333333333333333333333333";
@@ -53,7 +53,7 @@ router.post("/bridge/execute", async (req, res) => {
     const { userId, amount, fromNetwork, toNetwork } = req.body;
     if (await isUserBlocked(userId)) {
       return res.status(403).json({
-        error: "Akun Anda telah dinonaktifkan oleh administrator sistem. Semua operasi transaksi ditangguhkan.",
+        error: "Your account has been disabled by the system administrator. All transaction operations are suspended.",
       });
     }
     const bridgeAddress = "0x0000000000000000000000000000000000000000";
@@ -78,7 +78,7 @@ router.post("/transfer/execute", async (req, res) => {
     const { userId, amount, destinationAddress, memo } = req.body;
     if (await isUserBlocked(userId)) {
       return res.status(403).json({
-        error: "Akun Anda telah dinonaktifkan oleh administrator sistem. Semua operasi transaksi ditangguhkan.",
+        error: "Your account has been disabled by the system administrator. All transaction operations are suspended.",
       });
     }
     const supabase = getSupabaseAdmin();
@@ -113,7 +113,7 @@ router.post("/withdraw/execute", async (req, res) => {
     const { userId, amount, bank, memo } = req.body;
     if (await isUserBlocked(userId)) {
       return res.status(403).json({
-        error: "Akun Anda telah dinonaktifkan oleh administrator sistem. Semua operasi transaksi ditangguhkan.",
+        error: "Your account has been disabled by the system administrator. All transaction operations are suspended.",
       });
     }
     const treasuryAddress = "0x1111111111111111111111111111111111111111";
@@ -146,12 +146,17 @@ router.post("/payments/create", async (req, res) => {
     }
 
     const response = await client.createTransaction({
+      idempotencyKey: crypto.randomUUID(),
       walletId: walletId,
       destinationAddress: destinationAddress,
       amount: [amount.toString()],
-      fee: { type: "SPONSORED" },
+      fee: { 
+        type: "level", 
+        config: { 
+          feeLevel: "MEDIUM" 
+        } 
+      },
       tokenAddress: "",
-      blockchain: "ARC-TESTNET",
     } as any);
 
     await getSupabaseAdmin()
@@ -178,10 +183,19 @@ router.post("/payments/create", async (req, res) => {
 
 router.post("/payments/batch", async (req, res) => {
   try {
-    const { walletId, recipients, userId } = req.body;
-    const client = getCircleClientInstance();
+    const { userId, recipients } = req.body;
+    
+    if (await isUserBlocked(userId)) {
+      return res.status(403).json({
+        error: "Your account has been disabled. Transaction suspended.",
+      });
+    }
 
-    const totalAmount = recipients.reduce((sum: number, r: any) => sum + parseFloat(r.amount || "0"), 0);
+    const totalAmount = recipients.reduce(
+      (sum: number, r: any) => sum + parseFloat(r.amount || "0"),
+      0,
+    );
+
     if (totalAmount > 500) {
       await logAuditEvent(getSupabaseAdmin(), userId, "BATCH_TRANSFER_HIGH_VALUE", {
         totalAmount,
@@ -189,75 +203,25 @@ router.post("/payments/batch", async (req, res) => {
       });
     }
 
-    const responses = [] as any[];
-    let successCount = 0;
-    let failureCount = 0;
-
-    for (const rec of recipients) {
-      try {
-        const response = await client.createTransaction({
-          walletId: walletId,
-          destinationAddress: rec.address,
-          amount: [rec.amount.toString()],
-          fee: { type: "SPONSORED" },
-          tokenAddress: "",
-          blockchain: "ARC-TESTNET",
-        } as any);
-
-        await getSupabaseAdmin()
-          .from("transactions")
-          .insert({
-            user_id: userId,
-            amount: `-${rec.amount}`,
-            type: "transfer",
-            status: "pending",
-            internal_ref: response.data?.id || `req_${crypto.randomBytes(8).toString("hex")}`,
-            metadata: {
-              recipientName: rec.name || "EVM Account",
-              destinationAddress: rec.address,
-              real: true,
-            },
-          });
-
-        responses.push({
-          address: rec.address,
-          amount: rec.amount,
-          status: "success",
-          txId: response.data?.id,
-        });
-        successCount++;
-      } catch (txError: any) {
-        console.error(`Failed to process batch recipient: ${rec.address}`, txError);
-        await getSupabaseAdmin()
-          .from("transactions")
-          .insert({
-            user_id: userId,
-            amount: `-${rec.amount}`,
-            type: "transfer",
-            status: "failed",
-            internal_ref: `failed_${crypto.randomBytes(8).toString("hex")}`,
-            metadata: {
-              recipientName: rec.name || "EVM Account",
-              destinationAddress: rec.address,
-              real: true,
-            },
-          });
-
-        responses.push({
-          address: rec.address,
-          amount: rec.amount,
-          status: "failed",
-          error: txError.message || "Unknown transaction error",
-        });
-        failureCount++;
-      }
-    }
+    console.log(`[BatchRoute] Initiating Atomic Batch for User ${userId} with ${recipients.length} recipients`);
+    
+    // Using atomic service instead of manual loop
+    const result = await executeAtomicBatchTransfer(
+      getSupabaseAdmin(),
+      userId,
+      recipients.map((r: any) => ({
+        address: r.address,
+        amount: parseFloat(r.amount),
+        name: r.name,
+      })),
+    );
 
     res.json({
-      success: successCount > 0,
-      successCount,
-      failureCount,
-      transfers: responses,
+      success: true,
+      message: "Atomic batch transaction initiated",
+      txId: result.txId,
+      recipientCount: recipients.length,
+      totalAmount,
     });
   } catch (error: any) {
     console.error("Batch Payment Execution Error:", error);
@@ -270,7 +234,7 @@ router.post("/purchase/execute", async (req, res) => {
     const { userId, amount, product } = req.body;
     if (await isUserBlocked(userId)) {
       return res.status(403).json({
-        error: "Akun Anda telah dinonaktifkan oleh administrator sistem. Semua operasi transaksi ditangguhkan.",
+        error: "Your account has been disabled by the system administrator. All transaction operations are suspended.",
       });
     }
     const merchantAddress = "0x2222222222222222222222222222222222222222";

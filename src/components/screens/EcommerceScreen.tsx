@@ -18,6 +18,7 @@ interface EcommerceScreenProps {
 export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
   const {
     balance,
+    allBalances,
     fetchBalance,
     fetchTransactions,
     displayToast,
@@ -42,7 +43,7 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
       image:
         "https://images.unsplash.com/photo-1614680376593-902f74cf0d41?q=80&w=300&auto=format&fit=crop",
       category: "Subscription",
-      desc: "Nikmati musik tanpa iklan di semua perangkat. Aktivasi instan setelah pembayaran dikonfirmasi di jaringan Arc.",
+      desc: "Enjoy ad-free music on all devices. Instant activation after payment confirmation on the Arc network.",
     },
     {
       id: 2,
@@ -51,7 +52,7 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
       image:
         "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=300&auto=format&fit=crop",
       category: "Game Voucher",
-      desc: "Top up diamond Mobile Legends instan. Masukkan ID user saat checkout untuk pengiriman otomatis via smart contract.",
+      desc: "Instant Mobile Legends diamond top-up. Enter user ID at checkout for automatic delivery via smart contract.",
     },
     {
       id: 3,
@@ -60,7 +61,7 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
       image:
         "https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?q=80&w=300&auto=format&fit=crop",
       category: "Entertainment",
-      desc: "Voucher saldo Netflix global. Kode voucher akan muncul di struk transaksi Anda segera setelah transaksi final.",
+      desc: "Global Netflix balance voucher. The voucher code will appear on your transaction receipt immediately after the transaction is final.",
     },
     {
       id: 4,
@@ -69,7 +70,7 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
       image:
         "https://images.unsplash.com/photo-1585644131013-176865239a2d?q=80&w=300&auto=format&fit=crop",
       category: "Game Voucher",
-      desc: "Isi saldo Steam Wallet Anda untuk membeli game terbaru. Mendukung transaksi lintas negara menggunakan USDC.",
+      desc: "Top up your Steam Wallet to buy the latest games. Supports cross-border transactions using USDC.",
     },
   ];
 
@@ -83,9 +84,15 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
   };
 
   const handleConfirmPurchase = () => {
+    // Find specific USDC balance for accurate validation
+    const usdcData = allBalances.find((b: any) => b.token?.symbol === "USDC");
+    const actualUSDC = usdcData ? parseFloat(usdcData.amount) : 0;
+    
     const totalWithFee = Number(selectedProduct.price) * 1.015;
-    if (totalWithFee > balance) {
-      displayToast(`Saldo tidak cukup. Dibutuhkan ${totalWithFee.toFixed(2)} USDC (termasuk 1.5% Platform Fee).`);
+    if (totalWithFee > actualUSDC) {
+      displayToast(
+        `Insufficient USDC balance. Required ${totalWithFee.toFixed(2)} USDC (including 1.5% Platform Fee).`,
+      );
       return;
     }
     executePurchase();
@@ -222,8 +229,8 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
                       Status: Activated
                     </div>
                     <p className="text-[11px] text-slate-600 text-center font-medium leading-relaxed">
-                      Akses {selectedProduct?.name} telah diaktifkan di email
-                      akun Anda.
+                      Access to {selectedProduct?.name} has been activated for
+                      your account email.
                     </p>
                   </div>
                 ) : (
@@ -247,7 +254,7 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
                       </button>
                     </div>
                     <p className="text-[10px] text-slate-400 text-center italic">
-                      Cek Inbox (Struk) untuk melihat kode ini kapan saja.
+                      Check Inbox (Receipt) to view this code anytime.
                     </p>
                   </div>
                 )}
@@ -509,7 +516,7 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
                     Platform Admin Fee (1.5%)
                   </span>
                   <span className="text-[10px] text-slate-400">
-                    Menutupi biaya infrastruktur & Gas Station
+                    Covers infrastructure & Gas Station costs
                   </span>
                 </div>
                 <span className="font-bold text-slate-800">
@@ -542,10 +549,10 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
                   Pay with Web3 Wallet
                 </h5>
                 <p className="text-[12px] text-slate-800/70 leading-relaxed">
-                  Transactions are secured by Arc Testnet. Your current balance
+                  Transactions are secured by Arc Testnet. Your current USDC balance
                   is{" "}
                   <span className="font-bold text-slate-800">
-                    {balance.toFixed(2)} USDC
+                    {(allBalances.find((b: any) => b.token?.symbol === "USDC") ? parseFloat(allBalances.find((b: any) => b.token?.symbol === "USDC").amount) : 0).toFixed(2)} USDC
                   </span>
                   .
                 </p>
@@ -561,8 +568,8 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
                   Protected by Arc Protocol
                 </h4>
                 <p className="text-[10px] text-slate-500 leading-tight mt-0.5">
-                  Transaksi dienkripsi secara end-to-end. Dana hanya diteruskan
-                  ke merchant setelah verifikasi smart contract.
+                  Transactions are encrypted end-to-end. Funds are only
+                  forwarded to the merchant after smart contract verification.
                 </p>
               </div>
             </div>

@@ -160,7 +160,14 @@ export function TransferScreen({
   const [isAddingFavorite, setIsAddingFavorite] = useState(false);
   const [isEditFavorites, setIsEditFavorites] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<any | null>(null);
-  const [favorites, setFavorites] = useState<any[]>([]);
+  const [favorites, setFavorites] = useState<any[]>(() => {
+    try {
+      const savedFavs = localStorage.getItem("favorites");
+      return savedFavs ? JSON.parse(savedFavs) : [];
+    } catch {
+      return [];
+    }
+  });
   const [isLoadingFavorite, setIsLoadingFavorite] = useState(false);
   const [deletedContactIds, setDeletedContactIds] = useState<string[]>(() => {
     try {
@@ -196,11 +203,15 @@ export function TransferScreen({
     setTimeout(() => {
       setFavorites((prev) => {
         const isFav = prev.some((f) => f.id === contact.id);
-        if (isFav) {
-          return prev.filter((f) => f.id !== contact.id);
-        } else {
-          return [...prev, contact];
+        const newFavs = isFav
+          ? prev.filter((f) => f.id !== contact.id)
+          : [...prev, contact];
+        try {
+          localStorage.setItem("favorites", JSON.stringify(newFavs));
+        } catch (e) {
+          console.error(e);
         }
+        return newFavs;
       });
       setIsLoadingFavorite(false);
     }, 1000);
@@ -457,9 +468,15 @@ export function TransferScreen({
                     ...selectedContacts,
                   ];
                   saveDeletedContactIds(newlyDeleted);
-                  setFavorites((prev) =>
-                    prev.filter((f) => !selectedContacts.includes(f.id)),
-                  );
+                  setFavorites((prev) => {
+                    const newFavs = prev.filter((f) => !selectedContacts.includes(f.id));
+                    try {
+                      localStorage.setItem("favorites", JSON.stringify(newFavs));
+                    } catch (e) {
+                      console.error(e);
+                    }
+                    return newFavs;
+                  });
                   setSelectedContacts([]);
                   setShowDeleteModal(false);
                   setIsManageContacts(false);

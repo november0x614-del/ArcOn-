@@ -79,8 +79,8 @@ export function ReceiveQRISScreen({ onBack }: ReceiveQRISScreenProps) {
 
           <div className="w-full h-[1px] border-b border-dashed border-slate-200 my-2"></div>
           <p className="text-[12px] text-slate-400 text-center font-medium mt-3 mb-6 leading-relaxed">
-            Tunjukkan kode QR ini untuk menerima pembayaran dari m-Banking atau
-            e-Wallet manapun.
+            Show this QR code to receive payments from any m-Banking or
+            e-Wallet.
           </p>
 
           <button
@@ -88,7 +88,7 @@ export function ReceiveQRISScreen({ onBack }: ReceiveQRISScreenProps) {
             onClick={handleSimulatePayment}
             disabled={isSimulating}
           >
-            {isSimulating ? "Processing..." : "Simulasikan QRIS"}
+            {isSimulating ? "Processing..." : "Simulate QRIS"}
           </button>
         </div>
       </div>

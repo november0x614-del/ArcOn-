@@ -36,18 +36,37 @@ router.get("/rates", async (req, res) => {
 
 router.post("/faucet/claim", async (req, res) => {
   try {
-    const { address } = req.body;
+    const { address, userId } = req.body;
     if (!address) return res.status(400).json({ error: "Address required" });
 
-    await publicClient.getBalance({ address: address as `0x${string}` });
+    // 1. Simulate ARC (Gas) sending
+    const arcHash = `0x${crypto.randomBytes(32).toString("hex")}`;
 
-    const fakeHash = `0x${crypto.randomBytes(32).toString("hex")}`;
+    // 2. Simulate USDC (Commerce) sending if userId is known
+    // In a real app we'd use Circle API to transfer from merchant/treasury back to user
+    // Here we just insert a 'receive' record in Supabase to 'top-up' the user logically
+    if (userId) {
+      await getSupabaseAdmin()
+        .from("transactions")
+        .insert({
+          user_id: userId,
+          amount: "100.00",
+          type: "receive",
+          status: "success",
+          internal_ref: `faucet_${crypto.randomBytes(8).toString("hex")}`,
+          metadata: {
+            from: "Arc Treasury",
+            token: "USDC",
+            note: "Faucet Distribution",
+          },
+        });
+    }
 
     res.json({
       success: true,
-      message: "10 ARC sent to your wallet",
-      txHash: fakeHash,
-      amount: "10",
+      message: "10 ARC & 100 USDC sent to your wallet",
+      txHash: arcHash,
+      amount: "110",
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

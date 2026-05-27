@@ -79,7 +79,7 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
     }
     const totalWithFee = numAmount + 0.10;
     if (mode === "outbound" && totalWithFee > balance) {
-      displayToast(`Saldo USDC tidak cukup. Dibutuhkan ${totalWithFee.toFixed(2)} USDC (termasuk 0.10 Platform Fee).`);
+      displayToast(`Insufficient USDC balance. Need ${totalWithFee.toFixed(2)} USDC (includes 0.10 Platform Fee).`);
       return;
     }
     if (!destinationAddress.trim()) {
@@ -268,7 +268,7 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
   }
 
   return (
-    <div className="absolute inset-0 z-[70] bg-[#f8fafc] flex flex-col animate-in slide-in-from-right duration-300 overflow-hidden">
+    <div className="absolute inset-0 z-[70] bg-slate-50 flex flex-col animate-in slide-in-from-right duration-300">
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 shrink-0">
         <div className="flex items-center">
@@ -278,7 +278,7 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
           >
             <ArrowLeft size={20} className="text-white" />
           </button>
-          <h3 className="font-bold text-[16px] text-white ml-2">CCTP BRIDGE</h3>
+          <h3 className="font-bold text-[16px] tracking-tight text-white ml-2">CCTP BRIDGE</h3>
         </div>
         <button
           onClick={() => setShowPending(true)}
@@ -289,11 +289,11 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-5 pb-32 scrollbar-hide">
+      <div className="flex-1 overflow-y-auto px-5 pt-6 pb-6 flex flex-col scrollbar-hide relative z-0">
         {/* Network Selection Dashboard */}
-        <div className="bg-white rounded-[24px] p-5 shadow-sm border border-slate-200 mb-2 flex flex-col gap-6 relative">
+        <div className="bg-white rounded-[24px] p-5 shadow-sm border border-slate-100 mb-4 flex flex-col gap-6 relative">
           <div className="flex flex-col gap-2">
-            <label className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
               Source Network
             </label>
             <button
@@ -302,7 +302,7 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
             >
               <div className="flex items-center gap-3">
                 <div
-                  className={`w-8 h-8 ${fromNetwork.color} rounded-lg flex items-center justify-center text-white`}
+                  className={`w-8 h-8 ${fromNetwork.color} rounded-lg flex items-center justify-center text-white shadow-sm`}
                 >
                   {fromNetwork.icon}
                 </div>
@@ -314,18 +314,16 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
               Destination Network
             </label>
             <button
-              onClick={() => {
-                setShowNetworkSelect("to");
-              }}
-              className={`w-full flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl transition-colors hover:border-slate-400 cursor-pointer`}
+              onClick={() => setShowNetworkSelect("to")}
+              className={`w-full flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl transition-colors hover:border-slate-300 cursor-pointer`}
             >
               <div className="flex items-center gap-3">
                 <div
-                  className={`w-8 h-8 ${toNetwork.color} rounded-lg flex items-center justify-center text-white`}
+                  className={`w-8 h-8 ${toNetwork.color} rounded-lg flex items-center justify-center text-white shadow-sm`}
                 >
                   {toNetwork.icon}
                 </div>
@@ -340,7 +338,7 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
           {/* External Wallet Connect */}
           <div className="flex flex-col gap-2 border-t border-slate-100 pt-5 mt-2">
             <div className="flex justify-between items-center mb-1">
-              <label className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 Destination Wallet
               </label>
               <button
@@ -361,15 +359,15 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
               value={destinationAddress}
               onChange={(e) => setDestinationAddress(e.target.value)}
               placeholder="0x..."
-              className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-[13px] font-mono font-medium text-slate-800 outline-none focus:border-slate-400 placeholder:text-slate-300"
+              className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-[13px] font-mono font-medium text-slate-800 outline-none focus:border-slate-300 focus:bg-white transition-colors placeholder:text-slate-300"
             />
           </div>
         </div>
 
         {/* Input Section */}
-        <div className="bg-white rounded-[24px] p-5 shadow-sm border border-slate-200 mb-6 text-left relative mt-4">
+        <div className="bg-white rounded-[24px] p-5 shadow-sm border border-slate-100 mb-6 text-left relative">
           <div className="flex justify-between items-center mb-4">
-            <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
               Amount to Bridge
             </span>
           </div>
@@ -379,20 +377,20 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0"
-              className="bg-transparent text-[32px] font-black w-2/3 outline-none text-slate-800 focus:text-slate-900 placeholder-slate-200"
+              className="bg-transparent text-[36px] font-black w-2/3 outline-none text-slate-800 focus:text-slate-900 placeholder-slate-200"
             />
-            <div className="flex items-center gap-2 bg-slate-100 rounded-full py-1.5 px-3 border border-slate-200 h-9">
+            <div className="flex items-center gap-2 bg-[#f8fafc] rounded-xl py-2 px-3 border border-slate-100">
               <span className="font-bold text-slate-800 text-[14px]">USDC</span>
             </div>
           </div>
           {mode === "outbound" && (
-            <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-100">
+            <div className="flex justify-between items-center mt-4 pt-4 border-t border-slate-100">
               <span className="text-[12px] text-slate-500 font-medium">
                 Balance: {balance.toFixed(2)} USDC
               </span>
               <button
                 onClick={() => setAmount(balance.toString())}
-                className="text-[11px] font-bold bg-slate-200 text-slate-700 px-2.5 py-1 rounded-md hover:bg-slate-300 transition-colors cursor-pointer border-none"
+                className="text-[11px] font-bold bg-slate-100 text-slate-700 px-3 py-1.5 rounded-md hover:bg-slate-200 transition-colors cursor-pointer border-none"
               >
                 MAX
               </button>
@@ -402,14 +400,14 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
 
         {/* Fee Summary / Info */}
         {mode === "outbound" ? (
-          <div className="bg-white rounded-[20px] p-5 shadow-sm border border-slate-200 mb-10 text-left">
+          <div className="bg-white rounded-[20px] p-5 shadow-sm border border-slate-100 mb-10 text-left">
             <div className="flex justify-between items-center mb-4">
-              <span className="text-[13px] text-slate-500 font-medium">
+              <span className="text-[13px] text-slate-500 font-bold">
                 Bridge Details
               </span>
               <AlertCircle size={14} className="text-slate-400" />
             </div>
-            <div className="space-y-3">
+            <div className="space-y-3.5">
               <div className="flex justify-between items-center">
                 <span className="text-[13px] text-slate-500">Target Chain</span>
                 <span className="text-[13px] font-bold text-slate-800">
@@ -424,27 +422,27 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-[13px] text-slate-500">Network Gas (Sponsored)</span>
-                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded w-fit">
-                  Gratis
+                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md w-fit">
+                  Free
                 </span>
               </div>
-              <div className="pt-3 border-t border-slate-100 flex justify-between items-center mt-2">
+              <div className="pt-3.5 border-t border-slate-100 flex justify-between items-center mt-2.5">
                 <span className="text-[13px] font-bold text-slate-500">Arc Settlement</span>
-                <span className="text-[13px] font-bold text-slate-800 bg-slate-50 px-2 py-1 rounded-md">
+                <span className="text-[12px] font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded-md">
                   Instant Finality
                 </span>
               </div>
             </div>
           </div>
         ) : (
-          <div className="bg-white rounded-[20px] p-5 shadow-sm border border-slate-200 mb-10 text-left">
+          <div className="bg-white rounded-[20px] p-5 shadow-sm border border-slate-100 mb-10 text-left">
             <div className="flex justify-between items-center mb-4">
-              <span className="text-[13px] text-slate-500 font-medium tracking-wide">
+              <span className="text-[13px] text-slate-500 font-bold tracking-wide">
                 Inbound Status
               </span>
               <Info size={14} className="text-slate-400" />
             </div>
-            <p className="text-[12px] text-slate-500 leading-relaxed">
+            <p className="text-[13px] text-slate-500 leading-relaxed">
               Arc Network's 1-confirmation finality allows rapid claims. Once
               Circle attests the burn on {fromNetwork.name}, we will
               automatically mint the USDC to your Arc wallet.
@@ -452,32 +450,32 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
           </div>
         )}
 
-        <div className="flex gap-3 px-2">
-          <div className="text-slate-400 shrink-0">
-            <Globe size={18} />
+        <div className="flex gap-3 px-1 mb-2">
+          <div className="text-slate-400 shrink-0 mt-0.5">
+            <Globe size={16} />
           </div>
-          <p className="text-[12px] text-slate-500 leading-relaxed">
+          <p className="text-[12.5px] text-slate-400 leading-relaxed text-left">
             Circle CCTP transfers are native and secure. No liquidity pools or
             wrapped assets involved. Attestation takes approx. 60-90 seconds.
           </p>
         </div>
-      </div>
 
-      {/* Action Footer */}
-      <div className="absolute bottom-0 left-0 right-0 p-6 bg-white border-t border-slate-100 z-20 shadow-2xl">
-        <button
-          onClick={handleBridge}
-          className={`w-full bg-slate-900 text-white py-4.5 rounded-full font-black text-[16px] shadow-lg hover:bg-slate-800 transition-all active:scale-[0.98] border-0 cursor-pointer flex items-center justify-center gap-2 ${
-            !amount ||
-            parseFloat(amount) <= 0 ||
-            parseFloat(amount) > balance ||
-            !destinationAddress
-              ? "opacity-50 cursor-not-allowed"
-              : ""
-          }`}
-        >
-          Initiate Bridge
-        </button>
+        {/* Action Footer */}
+        <div className="mt-auto pt-4 pb-4 w-full">
+          <button
+            onClick={handleBridge}
+            className={`w-full bg-slate-900 text-white py-4 rounded-2xl font-bold text-[15px] shadow-[0_8px_20px_-8px_rgba(15,23,42,0.4)] hover:bg-slate-800 transition-all active:scale-[0.98] border-0 cursor-pointer flex items-center justify-center gap-2 ${
+              !amount ||
+              parseFloat(amount) <= 0 ||
+              parseFloat(amount) > balance ||
+              !destinationAddress
+                ? "opacity-50 cursor-not-allowed"
+                : ""
+            }`}
+          >
+            Initiate Bridge
+          </button>
+        </div>
       </div>
 
       {/* Network Select Modal */}

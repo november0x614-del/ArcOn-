@@ -1,18 +1,16 @@
 import React from "react";
 import {
   ArrowLeft,
-  Search,
-  Headphones as HeadphonesIcon,
   UserCircle,
   Mail,
   Settings,
-  FileText,
-  Key,
-  RefreshCw,
-  ArrowUpRight,
-  Smartphone,
-  Lock,
   Shield,
+  Fingerprint,
+  FileText,
+  BadgeDollarSign,
+  Activity,
+  ArrowUpRight,
+  HeadphonesIcon,
 } from "lucide-react";
 import { useStore } from "../../store/useStore";
 
@@ -31,8 +29,6 @@ export function SettingsScreen({
 }: SettingsScreenProps) {
   const {
     network,
-    walletConnectSessions,
-    contractAllowances,
     registeredUser,
     language,
   } = useStore();
@@ -44,49 +40,44 @@ export function SettingsScreen({
   };
 
   return (
-    <div className="w-full h-full bg-[#f8fafc] relative flex flex-col z-50 animate-in slide-in-from-bottom duration-300">
+    <div className="w-full h-full bg-slate-50 relative flex flex-col z-50 animate-in slide-in-from-bottom duration-300">
       {/* Header */}
-      <div className="bg-white border-b border-slate-100 flex items-center gap-3 px-4 py-4 z-10 shrink-0">
-        <button
-          onClick={onBack}
-          className="p-1 -ml-1 hover:bg-slate-50 rounded-full transition-colors"
-        >
-          <ArrowLeft size={20} className="text-white" />
-        </button>
-        <div className="flex-1 bg-slate-100/80 rounded-[12px] flex items-center px-3 py-2.5">
-          <Search size={18} className="text-slate-500 mr-2 shrink-0" />
-          <input
-            type="text"
-            placeholder="Search settings..."
-            className="bg-transparent border-none outline-none text-[13px] w-full text-slate-700"
-          />
+      <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 shrink-0">
+        <div className="flex items-center">
+          <button
+            onClick={onBack}
+            className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
+          >
+            <ArrowLeft size={20} className="text-white" />
+          </button>
+          <h3 className="font-bold text-[16px] tracking-tight text-white ml-2">SETTINGS</h3>
         </div>
       </div>
 
       {/* Settings Content */}
-      <div className="flex-1 overflow-y-auto pb-8">
-        {/* Akun & Profil */}
+      <div className="flex-1 overflow-y-auto pb-[120px] scrollbar-hide pt-2">
+        {/* Profile & Account */}
         <div className="mt-4">
-          <div className="px-4 mb-2">
-            <span className="text-[12px] font-bold text-slate-500 tracking-wide uppercase">
+          <div className="px-6 mb-2">
+            <span className="text-[11px] font-bold text-slate-400 tracking-wider uppercase">
               Profile & Account
             </span>
           </div>
-          <div className="bg-white border-y border-slate-100 flex flex-col">
+          <div className="mx-4 bg-white rounded-2xl border border-slate-100 flex flex-col overflow-hidden shadow-sm">
             <SettingItem
-              icon={<UserCircle size={20} className="text-slate-800" />}
+              icon={<UserCircle size={20} className="text-slate-700" />}
               label="Nickname"
               badge={registeredUser?.username || "Not Set"}
               onClick={onNamaPanggilan}
             />
             <SettingItem
-              icon={<Mail size={20} className="text-slate-800" />}
+              icon={<Mail size={20} className="text-slate-700" />}
               label="Registered Email"
               badge={registeredUser?.email || "Not Set"}
               onClick={onEmail}
             />
             <SettingItem
-              icon={<Settings size={20} className="text-slate-800" />}
+              icon={<Settings size={20} className="text-slate-700" />}
               label="Language Preferences"
               badge={language}
               isLast
@@ -95,84 +86,88 @@ export function SettingsScreen({
           </div>
         </div>
 
-        {/* Keamanan & Dompet */}
+        {/* Security & Limits */}
         <div className="mt-6">
-          <div className="px-4 mb-2">
-            <span className="text-[12px] font-bold text-slate-500 tracking-wide uppercase">
-              Wallet & Custody
+          <div className="px-6 mb-2">
+            <span className="text-[11px] font-bold text-slate-400 tracking-wider uppercase">
+              Security & Limits
             </span>
           </div>
-          <div className="bg-white border-y border-slate-100 flex flex-col">
+          <div className="mx-4 bg-white rounded-2xl border border-slate-100 flex flex-col overflow-hidden shadow-sm">
             <SettingItem
-              icon={<Shield size={20} className="text-slate-800" />}
-              label="Signing Policy"
-              badge="2/3 MPC"
-              onClick={() => handleNotImplemented("Signing Policy")}
+              icon={<Fingerprint size={20} className="text-slate-700" />}
+              label="Biometric Login"
+              badge="ENABLED"
+              badgeColor="emerald"
+              onClick={() => handleNotImplemented("Biometrics")}
             />
             <SettingItem
-              icon={<Lock size={20} className="text-slate-800" />}
-              label="Compliance Blocklist"
-              badge="ACTIVE"
-              onClick={() => handleNotImplemented("Compliance Blocklist")}
+              icon={<Shield size={20} className="text-slate-700" />}
+              label="Transaction PIN"
+              badge="SETUP"
+              badgeColor="neutral"
+              onClick={() => handleNotImplemented("Transaction PIN")}
             />
             <SettingItem
-              icon={<Key size={20} className="text-slate-800" />}
-              label="Dev-Controlled Seeds"
-              badge="CIRCLE WEB3"
+              icon={<Activity size={20} className="text-slate-700" />}
+              label="Daily Transfer Limit"
+              badge="5,000 USDC"
+              badgeColor="neutral"
               isLast
-              onClick={() => handleNotImplemented("Wallet Seed Management")}
+              onClick={() => handleNotImplemented("Transfer Limit")}
             />
           </div>
         </div>
 
-        {/* Jaringan & Web3 */}
+        {/* Network & Platform */}
         <div className="mt-6">
-          <div className="px-4 mb-2">
-            <span className="text-[12px] font-bold text-slate-500 tracking-wide uppercase">
-              Network & Connections
+          <div className="px-6 mb-2">
+            <span className="text-[11px] font-bold text-slate-400 tracking-wider uppercase">
+              Network & Platform
             </span>
           </div>
-          <div className="bg-white border-y border-slate-100 flex flex-col">
+          <div className="mx-4 bg-white rounded-2xl border border-slate-100 flex flex-col overflow-hidden shadow-sm">
             <SettingItem
-              icon={<RefreshCw size={20} className="text-slate-800" />}
-              label="Network Settings"
+              icon={<BadgeDollarSign size={20} className="text-slate-700" />}
+              label="Gas Fee Sponsorship"
+              badge="ACTIVE"
+              badgeColor="emerald"
+              onClick={() => handleNotImplemented("Paymaster Sponsorship")}
+            />
+            <SettingItem
+              icon={<Activity size={20} className="text-slate-700" />}
+              label="Active Network"
               badge={network}
+              badgeColor="emerald"
+              isLast
               onClick={() => handleNotImplemented("Network Settings")}
             />
-            <SettingItem
-              icon={<Smartphone size={20} className="text-slate-800" />}
-              label="WalletConnect Sessions"
-              badge={walletConnectSessions.toString()}
-              onClick={() => handleNotImplemented("WalletConnect")}
-            />
-            <SettingItem
-              icon={<FileText size={20} className="text-slate-800" />}
-              label="Contract Allowances"
-              badge={contractAllowances.toString()}
-              isLast
-              onClick={() => handleNotImplemented("Contract Allowances")}
-            />
           </div>
         </div>
 
-        {/* Pusat Bantuan */}
+        {/* Help & Support */}
         <div className="mt-6 mb-8">
-          <div className="px-4 mb-2">
-            <span className="text-[12px] font-bold text-slate-500 tracking-wide uppercase">
-              Help & Community
+          <div className="px-6 mb-2">
+            <span className="text-[11px] font-bold text-slate-400 tracking-wider uppercase">
+              Help & Support
             </span>
           </div>
-          <div className="bg-white border-y border-slate-100">
+          <div className="mx-4 bg-white rounded-2xl border border-slate-100 flex flex-col overflow-hidden shadow-sm">
             <SettingItem
-              icon={<HeadphonesIcon size={20} className="text-slate-800" />}
-              label="Arc Help Center"
-              onClick={() => handleNotImplemented("Help Center")}
+              icon={<HeadphonesIcon size={20} className="text-slate-700" />}
+              label="Contact Support"
+              onClick={() => handleNotImplemented("Support")}
             />
             <SettingItem
-              icon={<ArrowUpRight size={20} className="text-slate-800" />}
-              label="Developer Docs"
+              icon={<FileText size={20} className="text-slate-700" />}
+              label="Terms of Service"
+              onClick={() => handleNotImplemented("Terms")}
+            />
+            <SettingItem
+              icon={<ArrowUpRight size={20} className="text-slate-700" />}
+              label="Developer API"
               isLast
-              onClick={() => handleNotImplemented("Docs")}
+              onClick={() => handleNotImplemented("Developer API")}
             />
           </div>
         </div>
@@ -185,7 +180,7 @@ interface SettingItemProps {
   icon: React.ReactNode;
   label: string;
   badge?: string;
-  badgeColor?: "emerald" | "red";
+  badgeColor?: "emerald" | "red" | "neutral";
   isLast?: boolean;
   onClick?: () => void;
 }
@@ -201,7 +196,7 @@ function SettingItem({
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center justify-between px-4 py-3.5 hover:bg-slate-50 transition-colors ${!isLast ? "border-b border-slate-100" : ""}`}
+      className={`w-full flex items-center justify-between px-5 py-4 bg-white hover:bg-slate-50 transition-colors active:bg-slate-100 ${!isLast ? "border-b border-slate-100" : ""}`}
     >
       <div className="flex items-center gap-4">
         {icon}
@@ -210,10 +205,12 @@ function SettingItem({
       <div className="flex items-center gap-3">
         {badge && (
           <span
-            className={`px-2 py-0.5 text-[10px] font-bold rounded shadow-[inset_0_0_0_1px_rgba(0,0,0,0.1)] ${
+            className={`px-2.5 py-1 text-[10px] font-bold rounded-md tracking-wide ${
               badgeColor === "emerald"
-                ? "bg-emerald-50 text-emerald-600 shadow-[inset_0_0_0_1px_rgba(52,211,153,0.3)]"
-                : "bg-red-50 text-red-600 shadow-[inset_0_0_0_1px_rgba(248,113,113,0.3)]"
+                ? "bg-emerald-50 text-emerald-600"
+                : badgeColor === "red"
+                ? "bg-red-50 text-red-600"
+                : "bg-slate-100 text-slate-600"
             }`}
           >
             {badge}

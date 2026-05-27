@@ -58,13 +58,13 @@ export function ReceiveVAScreen({ onBack }: ReceiveVAScreenProps) {
             Bank Mandiri (Virtual Account)
           </h3>
           <p className="text-[13px] text-slate-500 mb-6">
-            Transfer dari bank manapun ke nomor VA di bawah. Saldo akan otomatis
-            dikonversi ke USDC.
+            Transfer from any bank to the VA number below. Balance will be automatically
+            converted to USDC.
           </p>
           <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 flex items-center justify-between mb-8">
             <div>
               <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">
-                Nomor VA
+                VA Number
               </p>
               <p className="font-mono font-bold text-[18px] text-slate-800 tracking-wider">
                 8932 1820 0147
@@ -75,13 +75,13 @@ export function ReceiveVAScreen({ onBack }: ReceiveVAScreenProps) {
               onClick={(e) => {
                 const btn = e.currentTarget;
                 const originalText = btn.innerText;
-                btn.innerText = "Tersalin!";
+                btn.innerText = "Copied!";
                 setTimeout(() => {
                   btn.innerText = originalText;
                 }, 2000);
               }}
             >
-              Salin
+              Copy
             </button>
           </div>
 
@@ -90,7 +90,7 @@ export function ReceiveVAScreen({ onBack }: ReceiveVAScreenProps) {
             onClick={handleSimulatePayment}
             disabled={isSimulating}
           >
-            {isSimulating ? "Processing..." : "Simulasikan Pembayaran"}
+            {isSimulating ? "Processing..." : "Simulate Payment"}
           </button>
         </div>
 

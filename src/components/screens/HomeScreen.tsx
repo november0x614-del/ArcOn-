@@ -556,10 +556,10 @@ export const HomeScreen = React.memo(
                       </div>
                       <div className="flex flex-col text-left">
                         <span className="text-[13px] font-bold text-slate-800">
-                          Tanya AI Assistant
+                          Ask AI Assistant
                         </span>
                         <span className="text-[11.5px] text-slate-500">
-                          Bantu kamu kelola wallet
+                          Help you manage your wallet
                         </span>
                       </div>
                     </div>
@@ -597,7 +597,7 @@ export const HomeScreen = React.memo(
                   <div className="w-full shrink-0 snap-center px-5">
                     <div className="w-full h-[140px] bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl p-5 relative overflow-hidden text-white flex flex-col justify-center shadow-inner text-left">
                       <h3 className="font-bold text-[16px] leading-tight w-2/3 relative z-10">
-                        Disburse Loan Up To Rp 50 Million
+                        Disburse Loan Up To 5,000 USDC
                       </h3>
                       <button className="mt-3 bg-white text-emerald-600 text-[13px] font-bold px-4 py-2 rounded-lg w-max relative z-10 border-0 active:scale-95 transition-transform">
                         Check Limit
@@ -664,7 +664,7 @@ export const HomeScreen = React.memo(
                         onClick={() => {
                           // Show a toast message to simulate opening an external browser
                           displayToast(
-                            "Membuka external web browser ke ArcSwap...",
+                            "Opening external web browser to ArcSwap...",
                           );
                         }}
                         className="flex items-center gap-3.5 p-3 rounded-2xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-all active:scale-[0.98]"
@@ -927,8 +927,7 @@ export const HomeScreen = React.memo(
               </div>
 
               <p className="text-xs text-slate-500 mb-6 leading-relaxed">
-                Pilih token yang ingin ditampilkan di halaman utama live market
-                feed.
+                Select the tokens you want to display on the live market feed home page.
               </p>
 
               <div className="flex flex-col gap-3 max-h-[300px] overflow-y-auto pr-1 scrollbar-hide">
@@ -964,7 +963,7 @@ export const HomeScreen = React.memo(
                 onClick={() => setShowManageMarketModal(false)}
                 className="w-full bg-slate-900 text-white font-black py-4 rounded-2xl text-[14px] transition-all hover:bg-[#328fdc] active:scale-[0.95] mt-8 shadow-xl shadow-blue-500/20"
               >
-                Simpan Konfigurasi
+                Save Configuration
               </button>
             </div>
           </div>

@@ -22,9 +22,9 @@ export function OtherAccountsScreen({ onBack }: OtherAccountsScreenProps) {
       isWeb3: true,
     },
     {
-      name: "Mandiri Planned Savings",
+      name: "Global Savings Account",
       number: "123-00-4455667",
-      balance: "Rp 25.000.000",
+      balance: "1,500.00",
       type: "Legacy",
       isWeb3: false,
     },

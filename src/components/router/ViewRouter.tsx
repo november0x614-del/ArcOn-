@@ -165,7 +165,7 @@ export const ViewRouter = React.memo(
             onClick={() => setViewState("home")}
             className="mt-6 px-6 py-2.5 bg-slate-900 border border-slate-800 hover:bg-slate-800 text-white font-bold text-[12px] rounded-xl active:scale-95 transition-all shadow-sm cursor-pointer"
           >
-            Kembali ke Beranda
+            Back to Home
           </button>
         </div>
       );
@@ -270,8 +270,8 @@ export const ViewRouter = React.memo(
           {viewState === "ecommerce" &&
             (platformConfig && platformConfig.ecommerceEnabled === false ? (
               renderLockedScreen(
-                "Modul Marketplace E-Commerce",
-                "Fitur Marketplace dan pembelian produk dinonaktifkan sementara oleh Administrator Sistem.",
+                "E-Commerce Marketplace Module",
+                "Marketplace and product purchase features are temporarily disabled by the System Administrator.",
               )
             ) : (
               <EcommerceScreen onBack={() => setViewState("home")} />
@@ -280,8 +280,8 @@ export const ViewRouter = React.memo(
           {viewState === "merchant" &&
             (platformConfig && platformConfig.merchantEnabled === false ? (
               renderLockedScreen(
-                "Modul Kasir F&B Merchant",
-                "Fitur kasir digital merchant partner sedang dinonaktifkan sementara untuk pembatasan wilayah.",
+                "F&B Merchant POS Module",
+                "Digital cashier features for merchant partners are temporarily disabled for regional restrictions.",
               )
             ) : (
               <MerchantScreen onBack={() => setViewState("home")} />
@@ -290,8 +290,8 @@ export const ViewRouter = React.memo(
           {viewState === "faucet" &&
             (platformConfig && platformConfig.faucetEnabled === false ? (
               renderLockedScreen(
-                "Klaim Faucet Arc Testnet",
-                "Sinyal pembagian token gas gratis sedang ditutup sementara oleh Penjaga Devnet.",
+                "Arc Testnet Faucet Claim",
+                "Free gas token distribution is temporarily closed by the Devnet Warden.",
               )
             ) : (
               <FaucetScreen onBack={() => setViewState("home")} />
@@ -300,8 +300,8 @@ export const ViewRouter = React.memo(
           {viewState === "bayarVA" &&
             (platformConfig && platformConfig.vaEnabled === false ? (
               renderLockedScreen(
-                "Kode Bayar Virtual Account (VA)",
-                "Layanan pembayaran tagihan VA dihentikan sementara oleh Admin.",
+                "Virtual Account (VA) Payment Code",
+                "VA bill payment service is temporarily suspended by Admin.",
               )
             ) : (
               <BayarVAScreen onBack={() => setViewState("home")} />
@@ -318,8 +318,8 @@ export const ViewRouter = React.memo(
           {viewState === "swap" &&
             (platformConfig && platformConfig.swapEnabled === false ? (
               renderLockedScreen(
-                "Fitur Swap Pool USDC",
-                "Layanan pertukaran aset dibekukan sementara oleh Admin untuk penyeimbangan likuiditas.",
+                "USDC Swap Pool Feature",
+                "Asset exchange service is temporarily frozen by Admin for liquidity balancing.",
               )
             ) : (
               <SwapScreen onBack={() => setViewState("home")} />
@@ -333,7 +333,7 @@ export const ViewRouter = React.memo(
             (platformConfig && platformConfig.stableStakeEnabled === false ? (
               renderLockedScreen(
                 "Stablestake Deposit Yield",
-                "Staking pool saat ini dikunci untuk konsolidasi bunga native-USDC.",
+                "Staking pool is currently locked for native-USDC interest consolidation.",
               )
             ) : (
               <StablestakeScreen onBack={() => setViewState("home")} />
@@ -354,7 +354,7 @@ export const ViewRouter = React.memo(
             (platformConfig && platformConfig.vaEnabled === false ? (
               renderLockedScreen(
                 "Virtual Account (VA)",
-                "Setoran deposit via Virtual Account Bank saat ini sedang tidak beroperasi.",
+                "Bank Virtual Account deposits are currently out of service.",
               )
             ) : (
               <ReceiveVAScreen onBack={() => setViewState("depositOptions")} />
@@ -362,9 +362,9 @@ export const ViewRouter = React.memo(
 
           {viewState === "receiveQRIS" &&
             (platformConfig && platformConfig.qrisEnabled === false ? (
-              renderLockedScreen(
-                "Deposit QRIS Standar",
-                "Gerbang pembuatan kode bayar QRIS dinonaktifkan sementara oleh pemroses pembayaran.",
+               renderLockedScreen(
+                "Standard QRIS Deposit",
+                "QRIS payment code generation gateway is temporarily disabled by the payment processor.",
               )
             ) : (
               <ReceiveQRISScreen
@@ -384,8 +384,8 @@ export const ViewRouter = React.memo(
           {viewState === "arcswap" &&
             (platformConfig && platformConfig.swapEnabled === false ? (
               renderLockedScreen(
-                "Fitur Swap Pool USDC",
-                "Layanan pertukaran aset dibekukan sementara oleh Admin untuk penyeimbangan likuiditas.",
+                "USDC Swap Pool Feature",
+                "Asset exchange service is temporarily frozen by Admin for liquidity balancing.",
               )
             ) : (
               <SwapScreen onBack={() => setViewState("home")} />
@@ -394,8 +394,8 @@ export const ViewRouter = React.memo(
           {viewState === "arcbird" &&
             (platformConfig && platformConfig.arcBirdEnabled === false ? (
               renderLockedScreen(
-                "Permainan Arc Bird",
-                "Game Mini-App Arc Bird saat ini ditangguhkan untuk pembaharuan leaderboard musiman.",
+                "Arc Bird Game",
+                "Arc Bird Mini-App game is currently suspended for seasonal leaderboard updates.",
               )
             ) : (
               <ArcBirdScreen onBack={() => setViewState("home")} />
@@ -439,7 +439,7 @@ export const ViewRouter = React.memo(
                 setSelectedShortcuts(selected);
                 setAvailableShortcuts(available);
                 setViewState("home");
-                displayToast("Pengaturan berhasil disimpan.");
+                displayToast("Settings saved successfully.");
               }}
             />
           )}
@@ -448,8 +448,8 @@ export const ViewRouter = React.memo(
             (platformConfig &&
             platformConfig.eWalletConnectionEnabled === false ? (
               renderLockedScreen(
-                "Integrasi e-Wallet",
-                "Pintu gerbang penarikan saldo e-Wallet lokal dialihkan sementara oleh Admin.",
+                "e-Wallet Integration",
+                "Local e-Wallet balance withdrawal gateway is temporarily redirected by Admin.",
               )
             ) : (
               <ConnectEWalletScreen onBack={() => setViewState("home")} />
@@ -458,8 +458,8 @@ export const ViewRouter = React.memo(
           {viewState === "scanQR" &&
             (platformConfig && platformConfig.scanQrEnabled === false ? (
               renderLockedScreen(
-                "Pemindai Code QR",
-                "Sensor pemindaian kamera backend dinonaktifkan sementara untuk peningkatan lisensi.",
+                "QR Code Scanner",
+                "Backend camera scanning sensor is temporarily disabled for license upgrades.",
               )
             ) : (
               <ScanQRScreen
@@ -475,7 +475,7 @@ export const ViewRouter = React.memo(
             (platformConfig && platformConfig.aiAgentEnabled === false ? (
               renderLockedScreen(
                 "AI Agent Co-Pilot",
-                "AI Asisten Keuangan dinonaktifkan sementara oleh admin demi penyesuaian regulasi kognitif.",
+                "Financial AI Assistant is temporarily disabled by admin for cognitive regulation adjustments.",
               )
             ) : (
               <AIAgentScreen onBack={() => setViewState("home")} />
@@ -484,8 +484,8 @@ export const ViewRouter = React.memo(
           {viewState === "transfer" &&
             (platformConfig && platformConfig.transferEnabled === false ? (
               renderLockedScreen(
-                "Kirim Saldo & Transfer",
-                "Transfer Peer-to-Peer ditutup sementara karena adanya pemeliharaan jaringan.",
+                "Send Balance & Transfer",
+                "Peer-to-Peer transfers are temporarily closed due to network maintenance.",
               )
             ) : (
               <TransferScreen
@@ -502,8 +502,8 @@ export const ViewRouter = React.memo(
           {viewState === "newTransfer" &&
             (platformConfig && platformConfig.transferEnabled === false ? (
               renderLockedScreen(
-                "Kirim Saldo & Transfer",
-                "Transfer Peer-to-Peer ditutup sementara karena adanya pemeliharaan jaringan.",
+                "Send Balance & Transfer",
+                "Peer-to-Peer transfers are temporarily closed due to network maintenance.",
               )
             ) : (
               <NewTransferScreen
@@ -527,7 +527,7 @@ export const ViewRouter = React.memo(
                 }
                 const totalWithFee = numAmount + 0.10;
                 if (totalWithFee > balance) {
-                  displayToast(`Saldo USDC tidak cukup. Dibutuhkan ${totalWithFee.toFixed(2)} USDC (termasuk 0.10 Platform Fee).`);
+                  displayToast(`Insufficient USDC balance. Need ${totalWithFee.toFixed(2)} USDC (includes 0.10 Platform Fee).`);
                   return;
                 }
 
@@ -599,8 +599,8 @@ export const ViewRouter = React.memo(
           {viewState === "batchTransfer" &&
             (platformConfig && platformConfig.batchTransferEnabled === false ? (
               renderLockedScreen(
-                "Transfer Massal (Batch)",
-                "Multi-transfer instan dinonaktifkan sementara untuk pencegahan penimbunan gas.",
+                "Mass Transfer (Batch)",
+                "Instant multi-transfer is temporarily disabled for gas hoarding prevention.",
               )
             ) : (
               <BatchTransferScreen
@@ -612,8 +612,8 @@ export const ViewRouter = React.memo(
           {viewState === "withdraw" &&
             (platformConfig && platformConfig.withdrawEnabled === false ? (
               renderLockedScreen(
-                "Tarik Saldo (Withdraw)",
-                "Penarikan USDC keluar ekosistem ditangguhkan sementara demi keamanan audit kas.",
+                "Withdraw Balance",
+                "USDC withdrawals outside the ecosystem are temporarily suspended for cash audit security.",
               )
             ) : (
               <WithdrawScreen
@@ -625,8 +625,8 @@ export const ViewRouter = React.memo(
           {viewState === "bridge" &&
             (platformConfig && platformConfig.bridgeEnabled === false ? (
               renderLockedScreen(
-                "CCTP Bridge Lintas Rantai",
-                "Jembatan pembakaran & pencetakan USDC Circle sedang dinonaktifkan sementara.",
+                "Cross-Chain CCTP Bridge",
+                "Circle USDC burn & mint bridge is temporarily disabled.",
               )
             ) : (
               <BridgeScreen

@@ -122,7 +122,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
     const requiredMinUsdc = 0.10; // Basic check for platform fee context
 
     if (usdcBalance < requiredMinUsdc) {
-      useStore.getState().displayToast(`Saldo USDC tidak cukup untuk membayar Platform Fee (~${PLATFORM_FEE_PERCENT}% dari nominal).`);
+      useStore.getState().displayToast(`Insufficient USDC balance for Platform Fee (~${PLATFORM_FEE_PERCENT}% of nominal).`);
       return;
     }
 
@@ -464,7 +464,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
               <div className="flex justify-between items-center mt-1">
                 <span className="text-[12px] text-slate-500">Network Gas (Sponsored)</span>
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded w-fit ${platformConfig?.gasSubsidyEnabled ? "text-emerald-600 bg-emerald-50" : "text-slate-600 bg-slate-50"}`}>
-                  {platformConfig?.gasSubsidyEnabled ? "Gratis" : "Native"}
+                  {platformConfig?.gasSubsidyEnabled ? "Free" : "Native"}
                 </span>
               </div>
             </div>

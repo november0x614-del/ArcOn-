@@ -67,11 +67,11 @@ export function RegisterWeb3Screen({
 
     // Validasi Dasar Frontend
     if (!email.includes("@")) {
-      setError("Format email tidak valid.");
+      setError("Invalid email format.");
       return;
     }
     if (password.length < 6) {
-      setError("Password minimal 6 karakter.");
+      setError("Password must be at least 6 characters.");
       return;
     }
 
@@ -96,12 +96,12 @@ export function RegisterWeb3Screen({
         authData.user.identities.length === 0
       ) {
         throw new Error(
-          "Email sudah terdaftar. Silakan kembali untuk login dengan password Anda.",
+          "Email already registered. Please go back to login with your password.",
         );
       }
 
       if (!authData.user || !authData.user.id) {
-        throw new Error("Pendaftaran gagal. Silakan coba kembali.");
+        throw new Error("Registration failed. Please try again.");
       }
 
       const userId = authData.user.id;
@@ -121,14 +121,14 @@ export function RegisterWeb3Screen({
         try {
           data = responseText ? JSON.parse(responseText) : null;
         } catch (e) {
-          throw new Error("Gagal memproses respon server.");
+          throw new Error("Failed to process server response.");
         }
       } else {
         throw new Error(responseText || `Server error: ${response.status}`);
       }
 
       if (!response.ok) {
-        throw new Error(data?.error || "Pembuatan wallet gagal.");
+        throw new Error(data?.error || "Wallet creation failed.");
       }
 
       // Check if email confirmation is required by looking at session
@@ -152,7 +152,7 @@ export function RegisterWeb3Screen({
         walletId: data.walletId,
         walletAddress: data.address,
         supabaseUid: userId,
-        registrationDate: new Date().toLocaleDateString("id-ID"),
+        registrationDate: new Date().toLocaleDateString("en-US"),
       };
 
       if (needsEmailConfirmation) {
@@ -165,9 +165,9 @@ export function RegisterWeb3Screen({
     } catch (err: any) {
       console.error("Wallet/Auth Creation Error:", err);
       let msg =
-        err.message || "Maaf, terjadi kesalahan sistem. Silakan coba kembali.";
+        err.message || "Sorry, a system error occurred. Please try again.";
       if (err.message?.includes("rate limit"))
-        msg = "Terlalu banyak percobaan. Silakan coba lagi nanti.";
+        msg = "Too many attempts. Please try again later.";
       setError(msg);
       setIsCreating(false);
     }
