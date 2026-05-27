@@ -94,21 +94,10 @@ export default function App() {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
-          // If it's an auth error specifically about session validity, reset
-          if (
-            error.message.toLowerCase().includes("refresh token") || 
-            error.message.toLowerCase().includes("not found") || 
-            error.status === 400 || 
-            error.status === 401
-          ) {
+          // If it's an auth error specifically about session validity, just reset
+          if (error.message.toLowerCase().includes("refresh token") || error.status === 400) {
             await supabase.auth.signOut().catch(() => {});
             resetState();
-            // Clear all likely supabase localStorage keys
-            Object.keys(localStorage).forEach(key => {
-              if (key.startsWith('sb-')) localStorage.removeItem(key);
-            });
-            localStorage.removeItem('arc_wallet_address');
-            localStorage.removeItem('arc_user_id');
           } else {
             console.warn("Auth initialization warning:", error.message);
           }

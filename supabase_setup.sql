@@ -43,7 +43,6 @@ CREATE TABLE public.transactions (
     status TEXT CHECK (status IN ('pending', 'success', 'failed')) NOT NULL,
     tx_hash TEXT,
     internal_ref TEXT UNIQUE,
-    description TEXT,
     metadata JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -55,7 +54,6 @@ CREATE TABLE public.transactions (
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_wallets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS description TEXT;
 
 -- Profiles: Semua orang bisa baca profile (untuk transfer antar user), tapi update & insert hanya milik sendiri
 CREATE POLICY "Public profiles are viewable by everyone." ON public.profiles FOR SELECT USING (true);
@@ -87,8 +85,8 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
--- 5. CREATE APP AUDIT LOGS TABLE
-CREATE TABLE public.app_audit_logs (
+-- 5. CREATE AUDIT LOGS TABLE
+CREATE TABLE public.audit_logs (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     action TEXT NOT NULL,
@@ -96,8 +94,8 @@ CREATE TABLE public.app_audit_logs (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- RLS for App Audit Logs
-ALTER TABLE public.app_audit_logs ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can view their own app audit logs." ON public.app_audit_logs FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Service role manages app audit logs." ON public.app_audit_logs FOR ALL USING (auth.role() = 'service_role');
+-- RLS for Audit Logs
+ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can view their own audit logs." ON public.audit_logs FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Service role manages audit logs." ON public.audit_logs FOR ALL USING (auth.role() = 'service_role');
 

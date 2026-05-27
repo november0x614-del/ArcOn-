@@ -849,15 +849,15 @@ app.delete("/api/admin/users/:userId", async (req, res) => {
       throw updateError;
     }
 
-    // Insert into app_audit_logs table so we have a record of the audit trail
+    // Insert into audit logs table so we have a record of the audit trail
     try {
-      await supabase.schema('public').from('app_audit_logs').insert({
+      await supabase.from('audit_logs').insert({
         user_id: userId,
         action: "SOFT_DELETE_USER",
         metadata: { deleted_by: "admin", timestamp: new Date().toISOString() }
       });
     } catch (auditErr) {
-      console.warn("Could not insert into app_audit_logs table (safe to ignore for this environment):", auditErr);
+      console.warn("Could not insert into audit_logs table (safe to ignore for this environment):", auditErr);
     }
 
     res.json({ message: "Pengguna berhasil diarsipkan (soft-delete). Semua database logs, info dompet, dan histori transaksi tetap disimpan untuk audit." });

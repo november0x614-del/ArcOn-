@@ -163,8 +163,8 @@ async function processTransactionGroup(txHash: string, txLogs: any[], supabase: 
         type: 'deposit',
         status: 'success',
         internal_ref: uniqueRef,
+        description: memoText || `Deposit via Arc Network`,
         metadata: {
-            description: memoText || `Deposit via Arc Network`,
             source: 'arc_native',
             finality: 'deterministic',
             txHash: txHash,
