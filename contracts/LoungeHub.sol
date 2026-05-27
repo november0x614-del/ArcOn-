@@ -6,11 +6,11 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
- * @title ArcCommerceHub
+ * @title LoungeHub
  * @dev Mengelola pembayaran e-commerce native USDC di Arc Network
  * User-rules: Logic ini dioperasikan di server-side via Circle SDK
  */
-contract ArcCommerceHub is Ownable, ReentrancyGuard {
+contract LoungeHub is Ownable, ReentrancyGuard {
     IERC20 public immutable usdc;
     uint256 public platformFeeBps = 150; // 1.5% Fee
     address public treasury;

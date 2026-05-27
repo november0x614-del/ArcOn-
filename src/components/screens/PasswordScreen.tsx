@@ -46,7 +46,7 @@ export function PasswordScreen({
           Welcome Back
         </h1>
         <p className="text-blue-100 text-center text-[13px] font-medium px-6 leading-relaxed">
-          Enter your password to access your Arc Commerce account.
+          Enter your password to access your Lounge account.
         </p>
 
         {/* Security Badge */}

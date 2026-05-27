@@ -25,7 +25,7 @@ export function LogoutScreen({ onBack, onLogout }: LogoutScreenProps) {
         </div>
 
         <h3 className="font-bold text-[22px] text-white mb-3">
-          Sign Out of Arc Commerce?
+          Sign Out of Lounge?
         </h3>
         <p className="text-slate-600 text-[15px] leading-relaxed mb-10 max-w-xs">
           Make sure all your on-chain activities are finished. Thank you for

@@ -51,7 +51,7 @@ export function MenuIcon({
           {badge}
         </span>
       )}
-      <span className="text-[11px] font-medium text-slate-600 text-center leading-[1.1] max-w-[64px]">
+      <span className="text-[12px] font-semibold text-slate-700 text-center leading-[1.1] max-w-[64px] tracking-tight">
         {label}
       </span>
     </div>

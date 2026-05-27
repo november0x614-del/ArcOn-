@@ -16,10 +16,10 @@ export function ProductCard({ title, desc, icon, onClick }: ProductCardProps) {
       <div className="bg-white w-10 h-10 rounded-xl flex items-center justify-center shadow-sm mb-3">
         {icon}
       </div>
-      <h3 className="font-bold text-slate-800 text-[13px] mb-1 text-left">
+      <h3 className="font-bold text-slate-800 text-[14px] mb-1 text-left">
         {title}
       </h3>
-      <p className="text-[11px] text-slate-500 leading-snug text-left">
+      <p className="text-[12.5px] text-slate-500 leading-snug text-left">
         {desc}
       </p>
 

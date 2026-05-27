@@ -86,8 +86,6 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
     fetchInitData();
   }, []);
 
-  const [estimateLoading, setEstimateLoading] = useState(false);
-
   useEffect(() => {
     // Update rate when tokens change
     if (fromToken && toToken) {
@@ -98,38 +96,15 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
   }, [fromToken, toToken]);
 
   useEffect(() => {
-    let active = true;
-    if (fromAmount && parseFloat(fromAmount) > 0) {
+    if (fromAmount) {
       if (fromToken?.symbol === toToken?.symbol) {
         setToAmount(fromAmount);
       } else {
-        setEstimateLoading(true);
-        ArcAppKitAdapter.estimateSwapAppKit(
-          parseFloat(fromAmount),
-          fromToken?.symbol || "USDC",
-          toToken?.symbol || "ARC"
-        )
-          .then((res) => {
-            if (active) {
-              setToAmount(res.estimate?.amountOut || (parseFloat(fromAmount) * exchangeRate).toFixed(4));
-            }
-          })
-          .catch((err) => {
-            console.error(err);
-            if (active) {
-              setToAmount((parseFloat(fromAmount) * exchangeRate).toFixed(4)); // Fallback
-            }
-          })
-          .finally(() => {
-            if (active) setEstimateLoading(false);
-          });
+        setToAmount((parseFloat(fromAmount) * exchangeRate).toFixed(4));
       }
     } else {
       setToAmount("0");
     }
-    return () => {
-      active = false;
-    };
   }, [fromAmount, exchangeRate, fromToken, toToken]);
 
   const handleSwap = async () => {

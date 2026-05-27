@@ -92,7 +92,7 @@ router.post("/chat", async (req, res) => {
     });
 
     const contents = `
-You are Arc AI Agent, a helpful virtual assistant for Arc Commerce and Arc Testnet Wallet.
+You are Lounge AI Agent, a helpful virtual assistant for Lounge and Arc Testnet Wallet.
 You help users with USDC transactions on Arc Testnet, wallet management, checking transaction history (simulated context), and troubleshooting web3 payments.
 
 System State / Local Context (Latest data):

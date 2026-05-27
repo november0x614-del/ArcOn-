@@ -14,19 +14,19 @@ export const defaultSelectedShortcuts: ShortcutItem[] = [
   },
   {
     id: "3",
-    icon: "ArrowDownToLine",
+    icon: "QrCode",
     label: "Receive USDC",
     color: "text-slate-800",
   },
   {
     id: "13",
-    icon: "ArrowDownToLine",
+    icon: "Landmark",
     label: "Withdraw",
     color: "text-red-500",
   },
   {
     id: "14",
-    icon: "ArrowLeftRight",
+    icon: "Layers",
     label: "Bridge USDC",
     color: "text-indigo-600",
     badge: "NEW",

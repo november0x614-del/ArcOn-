@@ -1,6 +1,6 @@
 {
-  "name": "Arc Commerce: Gas-Native USDC Web3 App",
-  "description": "Enterprise-grade Arc Network e-commerce utilizing native-stablecoin Circle SDK integration for high-performance USDC transactions.",
+  "name": "Lounge",
+  "description": "Lounge - A Web3 e-commerce SPA integrated with Circle Programmable Wallets via Arc App Kit, delivering a seamless Web2-like UX with server-side custodial custody.",
   "requestFramePermissions": ["camera", "microphone"],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

@@ -35,12 +35,11 @@ export function LoginScreen({
           </div>
         </div>
 
-        <h1 className="text-3xl font-bold text-slate-800 tracking-tight mb-2 text-center drop-shadow-sm">
-          Arc Commerce
+        <h1 className="text-3xl font-bold text-white tracking-tight mb-2 text-center drop-shadow-sm">
+          Lounge
         </h1>
         <p className="text-blue-100 text-center text-[13px] font-medium px-6 leading-relaxed">
-          Manage digital assets and enjoy secure & instant Web3 transaction
-          experiences.
+          Shop seamlessly with ultra-fast, secure digital payments.
         </p>
 
         {/* Security Badge */}

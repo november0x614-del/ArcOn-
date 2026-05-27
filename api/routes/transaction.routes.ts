@@ -1,6 +1,6 @@
 import express from "express";
 import { getSupabaseAdmin, isUserBlocked } from "../config/supabase.js";
-import { executeTransaction, executeAppKitSwap, estimateSwap, executeAppKitEarnDeposit, executeAppKitEarnClaimRewards, executeAppKitBatchTransfer } from "../services/circle.js";
+import { executeTransaction } from "../services/circle.js";
 import { initiateOutboundBridge, finalizeInboundBridge } from "../services/bridge.js";
 import { getCircleClientInstance } from "../services/circleClient.js";
 import { logAuditEvent } from "../services/audit.js";
@@ -23,91 +23,27 @@ router.get("/transactions/:userId", async (req, res) => {
   }
 });
 
-router.post("/swap/estimate", async (req, res) => {
-  try {
-    const { userId, amount, fromToken, toToken } = req.body;
-    if (await isUserBlocked(userId)) {
-      return res.status(403).json({
-        error: "Akun Anda telah dinonaktifkan oleh administrator sistem. Semua operasi transaksi ditangguhkan.",
-      });
-    }
-
-    const estimate = await estimateSwap(
-      getSupabaseAdmin(),
-      userId,
-      amount,
-      fromToken,
-      toToken
-    );
-    res.status(200).json({ estimate });
-  } catch (error: any) {
-    console.error("Swap Estimate Error", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
 router.post("/swap/execute", async (req, res) => {
   try {
-    const { userId, amount, fromToken, toToken } = req.body;
+    const { userId, amount, fromToken, toToken, tokenAddress } = req.body;
     if (await isUserBlocked(userId)) {
       return res.status(403).json({
         error: "Akun Anda telah dinonaktifkan oleh administrator sistem. Semua operasi transaksi ditangguhkan.",
       });
     }
+    const dexAddress = "0x3333333333333333333333333333333333333333";
 
-    const result = await executeAppKitSwap(
+    const result = await executeTransaction(
       getSupabaseAdmin(),
       userId,
       amount,
-      fromToken,
-      toToken
+      dexAddress,
+      "swap",
+      { fromToken, toToken, tokenAddress },
     );
-    res.status(200).json({ message: "Swap queued via AppKit", txId: result.txId });
+    res.status(200).json({ message: "Swap queued", txId: result.txId });
   } catch (error: any) {
     console.error("Swap Error", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-router.post("/earn/deposit", async (req, res) => {
-  try {
-    const { userId, amount, vaultAddress } = req.body;
-    if (await isUserBlocked(userId)) {
-      return res.status(403).json({
-        error: "Akun Anda telah dinonaktifkan oleh administrator sistem. Semua operasi transaksi ditangguhkan.",
-      });
-    }
-
-    const result = await executeAppKitEarnDeposit(
-      getSupabaseAdmin(),
-      userId,
-      amount,
-      vaultAddress
-    );
-    res.status(200).json({ message: "Earn deposit queued via AppKit", txId: result.txId });
-  } catch (error: any) {
-    console.error("Earn Deposit Error", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-router.post("/earn/claim", async (req, res) => {
-  try {
-    const { userId, vaultAddress } = req.body;
-    if (await isUserBlocked(userId)) {
-      return res.status(403).json({
-        error: "Akun Anda telah dinonaktifkan oleh administrator sistem. Semua operasi transaksi ditangguhkan.",
-      });
-    }
-
-    const result = await executeAppKitEarnClaimRewards(
-      getSupabaseAdmin(),
-      userId,
-      vaultAddress
-    );
-    res.status(200).json({ message: "Earn claim rewards queued via AppKit", txId: result.txId });
-  } catch (error: any) {
-    console.error("Earn Claim Error", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -213,7 +149,7 @@ router.post("/payments/create", async (req, res) => {
       walletId: walletId,
       destinationAddress: destinationAddress,
       amount: [amount.toString()],
-      fee: { type: "sponsor" },
+      fee: { type: "SPONSORED" },
       tokenAddress: "",
       blockchain: "ARC-TESTNET",
     } as any);
@@ -242,13 +178,8 @@ router.post("/payments/create", async (req, res) => {
 
 router.post("/payments/batch", async (req, res) => {
   try {
-    const { recipients, userId } = req.body;
-    
-    if (await isUserBlocked(userId)) {
-      return res.status(403).json({
-        error: "Akun Anda telah dinonaktifkan oleh administrator sistem. Semua operasi transaksi ditangguhkan.",
-      });
-    }
+    const { walletId, recipients, userId } = req.body;
+    const client = getCircleClientInstance();
 
     const totalAmount = recipients.reduce((sum: number, r: any) => sum + parseFloat(r.amount || "0"), 0);
     if (totalAmount > 500) {
@@ -258,10 +189,69 @@ router.post("/payments/batch", async (req, res) => {
       });
     }
 
-    const responses = await executeAppKitBatchTransfer(getSupabaseAdmin(), userId, recipients);
+    const responses = [] as any[];
+    let successCount = 0;
+    let failureCount = 0;
 
-    const successCount = responses.filter(r => r.status === "success").length;
-    const failureCount = responses.filter(r => r.status === "failed").length;
+    for (const rec of recipients) {
+      try {
+        const response = await client.createTransaction({
+          walletId: walletId,
+          destinationAddress: rec.address,
+          amount: [rec.amount.toString()],
+          fee: { type: "SPONSORED" },
+          tokenAddress: "",
+          blockchain: "ARC-TESTNET",
+        } as any);
+
+        await getSupabaseAdmin()
+          .from("transactions")
+          .insert({
+            user_id: userId,
+            amount: `-${rec.amount}`,
+            type: "transfer",
+            status: "pending",
+            internal_ref: response.data?.id || `req_${crypto.randomBytes(8).toString("hex")}`,
+            metadata: {
+              recipientName: rec.name || "EVM Account",
+              destinationAddress: rec.address,
+              real: true,
+            },
+          });
+
+        responses.push({
+          address: rec.address,
+          amount: rec.amount,
+          status: "success",
+          txId: response.data?.id,
+        });
+        successCount++;
+      } catch (txError: any) {
+        console.error(`Failed to process batch recipient: ${rec.address}`, txError);
+        await getSupabaseAdmin()
+          .from("transactions")
+          .insert({
+            user_id: userId,
+            amount: `-${rec.amount}`,
+            type: "transfer",
+            status: "failed",
+            internal_ref: `failed_${crypto.randomBytes(8).toString("hex")}`,
+            metadata: {
+              recipientName: rec.name || "EVM Account",
+              destinationAddress: rec.address,
+              real: true,
+            },
+          });
+
+        responses.push({
+          address: rec.address,
+          amount: rec.amount,
+          status: "failed",
+          error: txError.message || "Unknown transaction error",
+        });
+        failureCount++;
+      }
+    }
 
     res.json({
       success: successCount > 0,

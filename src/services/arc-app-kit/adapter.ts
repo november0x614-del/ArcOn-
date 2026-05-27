@@ -61,67 +61,6 @@ export const ArcAppKitAdapter = {
   },
 
   /**
-   * Estimates a swap on Arc Testnet via AppKit.
-   */
-  async estimateSwapAppKit(
-    amount: number,
-    fromToken: string,
-    toToken: string,
-  ) {
-    const { registeredUser } = useStore.getState();
-    if (!registeredUser?.supabaseUid) throw new Error("User not registered");
-
-    return apiRequest(
-      "/api/swap/estimate",
-      "POST",
-      {
-        userId: registeredUser.supabaseUid,
-        amount,
-        fromToken,
-        toToken,
-      },
-      "Failed to estimate swap",
-    );
-  },
-
-  /**
-   * Executes an earn deposit via AppKit.
-   */
-  async executeEarnDeposit(amount: number, vaultAddress: string) {
-    const { registeredUser } = useStore.getState();
-    if (!registeredUser?.supabaseUid) throw new Error("User not registered");
-
-    return apiRequest(
-      "/api/earn/deposit",
-      "POST",
-      {
-        userId: registeredUser.supabaseUid,
-        amount,
-        vaultAddress,
-      },
-      "Earn deposit failed"
-    );
-  },
-
-  /**
-   * Executes an earn claim rewards via AppKit.
-   */
-  async executeEarnClaimRewards(vaultAddress: string) {
-    const { registeredUser } = useStore.getState();
-    if (!registeredUser?.supabaseUid) throw new Error("User not registered");
-
-    return apiRequest(
-      "/api/earn/claim",
-      "POST",
-      {
-        userId: registeredUser.supabaseUid,
-        vaultAddress,
-      },
-      "Earn claim failed"
-    );
-  },
-
-  /**
    * Sends funds using the Unified Balance intent.
    */
   async sendUnifiedBalance(

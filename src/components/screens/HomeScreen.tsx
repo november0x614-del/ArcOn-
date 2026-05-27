@@ -310,7 +310,7 @@ export const HomeScreen = React.memo(
         </header>
 
         {/* Scrollable Main Content */}
-        <div className="flex-1 overflow-y-auto pb-32 pt-0 scrollbar-hide z-20 md:px-4 lg:px-6 relative">
+        <div className="flex-1 overflow-y-auto pb-[140px] pt-0 scrollbar-hide z-20 md:px-4 lg:px-6 relative">
           <div className="flex flex-col lg:grid lg:grid-cols-12 lg:gap-6">
             {/* Left Column for Desktop */}
             <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-3">
@@ -330,8 +330,8 @@ export const HomeScreen = React.memo(
                       onClick={() => setActiveRekeningTab(i)}
                       className={`px-4 pb-2 flex items-center justify-center gap-2 whitespace-nowrap min-w-max cursor-pointer transition-colors relative ${
                         activeRekeningTab === i
-                          ? "text-slate-800 font-bold"
-                          : "text-slate-500 hover:text-slate-800"
+                          ? "text-slate-900 font-bold"
+                          : "text-slate-400 font-medium hover:text-slate-600"
                       }`}
                     >
                       {tab.icon}
@@ -580,42 +580,50 @@ export const HomeScreen = React.memo(
                 <div
                   ref={promoScrollRef}
                   onScroll={handlePromoScroll}
-                  className="flex overflow-x-auto gap-4 px-5 scrollbar-hide snap-x snap-mandatory touch-pan-x"
+                  className="flex overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-pan-x"
                   style={{ scrollBehavior: "smooth" }}
                 >
-                  <div className="w-[85vw] max-w-[280px] h-[140px] bg-gradient-to-r from-blue-700 to-blue-800 rounded-2xl p-4 snap-center relative overflow-hidden text-white flex flex-col justify-center shadow-inner text-left shrink-0">
-                    <div className="absolute right-0 top-0 h-full w-1/2 bg-[url('https://images.unsplash.com/photo-1556740714-a82f3a479426?q=80&w=150&auto=format&fit=crop')] bg-cover mix-blend-overlay opacity-30"></div>
-                    <h3 className="font-bold text-[15px] leading-tight w-2/3 relative z-10">
-                      Opening a Checking Account is Easier...
-                    </h3>
-                    <button className="mt-3 bg-white text-slate-800 text-xs font-bold px-3 py-1.5 rounded-lg w-max relative z-10 border-0">
-                      Open Now
-                    </button>
+                  <div className="w-full shrink-0 snap-center px-5">
+                    <div className="w-full h-[140px] bg-gradient-to-r from-blue-700 to-blue-800 rounded-2xl p-5 relative overflow-hidden text-white flex flex-col justify-center shadow-inner text-left">
+                      <div className="absolute right-0 top-0 h-full w-1/2 bg-[url('https://images.unsplash.com/photo-1556740714-a82f3a479426?q=80&w=150&auto=format&fit=crop')] bg-cover mix-blend-overlay opacity-30"></div>
+                      <h3 className="font-bold text-[16px] leading-tight w-2/3 relative z-10">
+                        Opening a Checking Account is Easier...
+                      </h3>
+                      <button className="mt-3 bg-white text-slate-800 text-[13px] font-bold px-4 py-2 rounded-lg w-max relative z-10 border-0 active:scale-95 transition-transform">
+                        Open Now
+                      </button>
+                    </div>
                   </div>
-                  <div className="w-[85vw] max-w-[280px] h-[140px] bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl p-4 snap-center relative overflow-hidden text-white flex flex-col justify-center shadow-inner text-left shrink-0">
-                    <h3 className="font-bold text-[15px] leading-tight w-2/3 relative z-10">
-                      Disburse Loan Up To Rp 50 Million
-                    </h3>
-                    <button className="mt-3 bg-white text-emerald-600 text-xs font-bold px-3 py-1.5 rounded-lg w-max relative z-10 border-0">
-                      Check Limit
-                    </button>
+                  <div className="w-full shrink-0 snap-center px-5">
+                    <div className="w-full h-[140px] bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl p-5 relative overflow-hidden text-white flex flex-col justify-center shadow-inner text-left">
+                      <h3 className="font-bold text-[16px] leading-tight w-2/3 relative z-10">
+                        Disburse Loan Up To Rp 50 Million
+                      </h3>
+                      <button className="mt-3 bg-white text-emerald-600 text-[13px] font-bold px-4 py-2 rounded-lg w-max relative z-10 border-0 active:scale-95 transition-transform">
+                        Check Limit
+                      </button>
+                    </div>
                   </div>
-                  <div className="w-[85vw] max-w-[280px] h-[140px] bg-gradient-to-r from-orange-400 to-red-500 rounded-2xl p-4 snap-center relative overflow-hidden text-white flex flex-col justify-center shadow-inner text-left shrink-0">
-                    <div className="absolute right-0 top-0 h-full w-1/2 bg-[url('https://images.unsplash.com/photo-1556740714-a82f3a479426?q=80&w=150&auto=format&fit=crop')] bg-cover mix-blend-overlay opacity-30"></div>
-                    <h3 className="font-bold text-[15px] leading-tight w-2/3 relative z-10">
-                      Limited Time: 5% USDC Cash Back
-                    </h3>
-                    <button className="mt-3 bg-white text-red-500 text-xs font-bold px-3 py-1.5 rounded-lg w-max relative z-10 border-0">
-                      Claim Now
-                    </button>
+                  <div className="w-full shrink-0 snap-center px-5">
+                    <div className="w-full h-[140px] bg-gradient-to-r from-orange-400 to-red-500 rounded-2xl p-5 relative overflow-hidden text-white flex flex-col justify-center shadow-inner text-left">
+                      <div className="absolute right-0 top-0 h-full w-1/2 bg-[url('https://images.unsplash.com/photo-1556740714-a82f3a479426?q=80&w=150&auto=format&fit=crop')] bg-cover mix-blend-overlay opacity-30"></div>
+                      <h3 className="font-bold text-[16px] leading-tight w-2/3 relative z-10">
+                        Limited Time: 5% USDC Cash Back
+                      </h3>
+                      <button className="mt-3 bg-white text-red-500 text-[13px] font-bold px-4 py-2 rounded-lg w-max relative z-10 border-0 active:scale-95 transition-transform">
+                        Claim Now
+                      </button>
+                    </div>
                   </div>
-                  <div className="w-[85vw] max-w-[280px] h-[140px] bg-gradient-to-r from-purple-500 to-indigo-600 rounded-2xl p-4 snap-center relative overflow-hidden text-white flex flex-col justify-center shadow-inner text-left shrink-0">
-                    <h3 className="font-bold text-[15px] leading-tight w-2/3 relative z-10">
-                      Access DApps Securely with Arc
-                    </h3>
-                    <button className="mt-3 bg-white text-indigo-600 text-xs font-bold px-3 py-1.5 rounded-lg w-max relative z-10 border-0">
-                      Explore Layer-1
-                    </button>
+                  <div className="w-full shrink-0 snap-center px-5">
+                    <div className="w-full h-[140px] bg-gradient-to-r from-purple-500 to-indigo-600 rounded-2xl p-5 relative overflow-hidden text-white flex flex-col justify-center shadow-inner text-left">
+                      <h3 className="font-bold text-[16px] leading-tight w-2/3 relative z-10">
+                        Access DApps Securely with Arc
+                      </h3>
+                      <button className="mt-3 bg-white text-indigo-600 text-[13px] font-bold px-4 py-2 rounded-lg w-max relative z-10 border-0 active:scale-95 transition-transform">
+                        Explore Layer-1
+                      </button>
+                    </div>
                   </div>
                 </div>
                 {/* Pagination dots */}
@@ -673,7 +681,7 @@ export const HomeScreen = React.memo(
                               DEX
                             </span>
                           </div>
-                          <p className="text-[11.5px] text-slate-400 truncate mt-0.5 font-sans">
+                          <p className="text-[13px] text-slate-400 truncate mt-0.5 font-sans">
                             Swap USDC with Arc Native Tokens
                           </p>
                         </div>
@@ -702,7 +710,7 @@ export const HomeScreen = React.memo(
                               Gaming
                             </span>
                           </div>
-                          <p className="text-[11.5px] text-slate-400 truncate mt-0.5 font-sans">
+                          <p className="text-[13px] text-slate-400 truncate mt-0.5 font-sans">
                             Tap to Jump & earn USDC rewards
                           </p>
                         </div>
@@ -731,7 +739,7 @@ export const HomeScreen = React.memo(
                               Yield & DeFi
                             </span>
                           </div>
-                          <p className="text-[11.5px] text-slate-400 truncate mt-0.5 font-sans">
+                          <p className="text-[13px] text-slate-400 truncate mt-0.5 font-sans">
                             Stake stablecoins & earn USDC yield
                           </p>
                         </div>
@@ -882,11 +890,10 @@ export const HomeScreen = React.memo(
           {(!platformConfig || platformConfig.scanQrEnabled !== false) && (
             <div className="absolute left-1/2 -translate-x-1/2 top-[-28px] pointer-events-auto">
               <div
-                className="relative group cursor-pointer flex flex-col items-center justify-center"
+                className="relative group cursor-pointer flex flex-col items-center justify-center active:scale-[0.98] transition-all duration-300"
                 onClick={() => onNavigate("scanQR")}
               >
-                <div className="absolute inset-0 bg-slate-900 rounded-[22px] blur-md opacity-40 group-hover:opacity-60 transition-opacity"></div>
-                <div className="relative w-[56px] h-[56px] bg-slate-900 rounded-[22px] flex flex-col items-center justify-center text-white shadow-lg transform transition-all duration-300 group-hover:-translate-y-1 active:translate-y-0 border-2 border-white/20 hover:bg-[#328fdc]">
+                <div className="relative w-[56px] h-[56px] bg-slate-900 rounded-full flex flex-col items-center justify-center text-white shadow-[0_8px_24px_rgba(15,23,42,0.25)] transform transition-transform duration-300 group-hover:-translate-y-1 border-2 border-white/10">
                   <Scan size={26} strokeWidth={2.2} />
                   <span className="text-[9px] font-bold mt-0.5 tracking-tight uppercase">
                     Pay

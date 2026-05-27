@@ -208,8 +208,16 @@ export const ViewRouter = React.memo(
             <RegisterSuccessScreen
               username={registeredUser?.username}
               email={registeredUser?.email}
+              isVerified={registeredUser?.isVerified}
               walletAddress={registeredUser?.walletAddress}
-              onContinue={() => setViewState("home")}
+              onContinue={() => {
+                if (registeredUser?.isVerified === false) {
+                  // Direct to splash/login if not verified
+                  setViewState("splash");
+                } else {
+                  setViewState("home");
+                }
+              }}
             />
           )}
 
@@ -240,7 +248,10 @@ export const ViewRouter = React.memo(
           )}
 
           {viewState === "forgotPassword" && (
-            <ForgotPasswordScreen onBack={() => setViewState("password")} />
+            <ForgotPasswordScreen 
+              onBack={() => setViewState("password")} 
+              initialEmail={loginEmail}
+            />
           )}
 
           {viewState === "settings" && (

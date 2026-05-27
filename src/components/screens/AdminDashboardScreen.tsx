@@ -269,7 +269,7 @@ export function AdminDashboardScreen({
               Admin Portal
             </h1>
             <span className="text-[11px] font-medium text-slate-400">
-              Arc Commerce Synchronized Real-Time Backend
+              Lounge Synchronized Real-Time Backend
             </span>
           </div>
         </div>

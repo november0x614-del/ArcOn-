@@ -570,7 +570,7 @@ function NotifikasiContent({
               handleClick(
                 "n1",
                 "Let's Complete Your TIN Data Now!",
-                "Complete the registration process by entering your Tax Identification Number (TIN) data first to meet regulatory requirements and unlock all features of Arc Commerce.",
+                "Complete the registration process by entering your Tax Identification Number (TIN) data first to meet regulatory requirements and unlock all features of Lounge.",
                 "10/03/2025",
               )
             }
@@ -606,13 +606,13 @@ function NotifikasiContent({
               </div>
             }
             title="GoPay Is No Longer Connected"
-            desc="Your GoPay account is no longer connected to Livin'. Reconnect your GoPay account anytime th..."
+            desc="Your GoPay account is no longer connected to Lounge. Reconnect your GoPay account anytime th..."
             date="27 Apr"
             onClick={() =>
               handleClick(
                 "n2",
                 "GoPay Is No Longer Connected",
-                "Your GoPay account is no longer connected to Livin'. Reconnect your GoPay account anytime through the Settings menu.",
+                "Your GoPay account is no longer connected to Lounge. Reconnect your GoPay account anytime through the Settings menu.",
                 "27 Apr",
               )
             }
@@ -632,13 +632,13 @@ function NotifikasiContent({
               </div>
             }
             title="Mobile Number Change Success..."
-            desc="The number connected to the Livin' application has been changed to 6281318056437. Henceforth, all..."
+            desc="The number connected to the Lounge application has been changed to 6281318056437. Henceforth, all..."
             date="27 Apr"
             onClick={() =>
               handleClick(
                 "n3",
                 "Mobile Number Change Successful",
-                "The number connected to the Livin' application has been changed to 6281318056437. Henceforth, all notifications will be sent to this number.",
+                "The number connected to the Lounge application has been changed to 6281318056437. Henceforth, all notifications will be sent to this number.",
                 "27 Apr",
               )
             }
@@ -895,7 +895,7 @@ function PromoContent({
 
       <div className="flex justify-between items-center px-4 mt-2">
         <h3 className="font-bold text-[18px] text-slate-800 tracking-tight">
-          Only on Arc Commerce
+          Only on Lounge
         </h3>
       </div>
     </div>
