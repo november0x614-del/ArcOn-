@@ -40,7 +40,7 @@ export async function initiateOutboundBridge(
     supabaseAdmin: any,
     userId: string,
     destinationDomain: number,
-    destinationAddress: string,
+    _destinationAddress: string,
     amount: number
 ) {
     const { data: walletData } = await supabaseAdmin
@@ -51,15 +51,15 @@ export async function initiateOutboundBridge(
 
     // Lazy load heavy dependencies
     const bridgeKitMod = await import("@circle-fin/bridge-kit");
-    const BridgeKit = bridgeKitMod.default || bridgeKitMod.BridgeKit;
+    const BridgeKit = bridgeKitMod.BridgeKit || bridgeKitMod.default;
     
     const circleWalletsAdapterMod = await import("@circle-fin/adapter-circle-wallets");
-    console.log('[BridgeService] circleWalletsAdapterMod:', circleWalletsAdapterMod);
-    const CircleWalletsAdapter = circleWalletsAdapterMod.CircleWalletsAdapter || circleWalletsAdapterMod.default || circleWalletsAdapterMod;
-
+    // Use factory function if available, otherwise fallback
+    const createAdapter = circleWalletsAdapterMod.createCircleWalletsAdapter || circleWalletsAdapterMod.default;
+    
     // Initialize BridgeKit
     const kit = new BridgeKit({ environment: "sandbox" });
-    const adapter = new CircleWalletsAdapter({
+    const adapter = createAdapter({
         client: client,
         walletId: walletData.wallet_id
     });
