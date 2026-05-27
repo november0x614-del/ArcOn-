@@ -759,21 +759,36 @@ export function BatchTransferScreen({
                 onClick={() => {
                   if (selectedQuickAddIds.length === 0) return;
                   
-                  const selectedAddresses = contacts
-                    .filter((c) => selectedQuickAddIds.includes(c.id))
-                    .map((c) => c.number)
-                    .join(", ");
+                  const selectedContacts = contacts.filter((c) => 
+                    selectedQuickAddIds.includes(c.id)
+                  );
 
-                  setNewAddress((prev) => prev ? `${prev}, ${selectedAddresses}` : selectedAddresses);
+                  const newItems = selectedContacts.map((c) => {
+                    const fullAddr = c.number;
+                    const formattedAddress = 
+                      fullAddr.length > 12 
+                        ? `${fullAddr.substring(0, 6)}...${fullAddr.substring(fullAddr.length - 4)}` 
+                        : fullAddr;
+                    
+                    return {
+                      id: `${fullAddr}-${Date.now()}-${Math.random()}`,
+                      address: fullAddr,
+                      displayAddress: formattedAddress,
+                      name: c.name,
+                      amount: "0",
+                    };
+                  });
+
+                  setRecipients((prev) => [...prev, ...newItems]);
                   setShowQuickAddModal(false);
                   displayToast(
-                    `Selected ${selectedQuickAddIds.length} contacts populated!`,
+                    `Added ${selectedQuickAddIds.length} recipients to batch list!`,
                   );
                 }}
                 disabled={selectedQuickAddIds.length === 0}
                 className="w-full bg-slate-900 border-0 hover:bg-slate-800 disabled:opacity-45 text-white py-4 rounded-full font-bold text-[15px] shadow-lg hover:shadow-xl transition-all active:scale-[0.98] cursor-pointer"
               >
-                Add Selected to Input ({selectedQuickAddIds.length})
+                Add Selected to Batch ({selectedQuickAddIds.length})
               </button>
             </div>
           </div>
