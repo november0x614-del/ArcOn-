@@ -142,7 +142,7 @@ export function BayarVAScreen({ onBack }: BayarVAScreenProps) {
                 <div className="flex justify-between">
                   <span className="text-sm text-slate-500">Customer Name</span>
                   <span className="text-sm font-bold text-slate-800">
-                    RAKYAN INUK
+                    Payment Target
                   </span>
                 </div>
                 <div className="flex justify-between">

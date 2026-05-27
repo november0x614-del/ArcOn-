@@ -10,7 +10,7 @@ export function EmailScreen({ onBack }: EmailScreenProps) {
   const { registeredUser, setRegisteredUser } = useApp();
   const [isEditing, setIsEditing] = useState(false);
   const [email, setEmail] = useState(
-    registeredUser?.email || "rakyaninuk@gmail.com",
+    registeredUser?.email || "user@example.com",
   );
   const [tempEmail, setTempEmail] = useState("");
   const [error, setError] = useState("");

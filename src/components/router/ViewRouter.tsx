@@ -112,7 +112,7 @@ export const ViewRouter = React.memo(
       [setViewState],
     );
 
-    const userName = registeredUser?.username || "RAKYAN INUKERTAPATI";
+    const userName = registeredUser?.username || "Account Holder";
 
     const [platformConfig, setPlatformConfig] = React.useState<any>(null);
 

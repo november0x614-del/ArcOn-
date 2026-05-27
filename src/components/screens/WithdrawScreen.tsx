@@ -21,7 +21,16 @@ export function WithdrawScreen({ onBack, onSuccess }: WithdrawScreenProps) {
     fetchTransactions,
     displayToast,
     registeredUser,
+    platformConfig,
+    fetchPlatformConfig,
   } = useApp();
+
+  useEffect(() => {
+    if (!platformConfig) {
+      fetchPlatformConfig();
+    }
+  }, [platformConfig, fetchPlatformConfig]);
+
   const { getFeeEstimate } = useArc();
   const [step, setStep] = useState<"form" | "processing" | "success">("form");
   const [amount, setAmount] = useState("");
@@ -30,6 +39,8 @@ export function WithdrawScreen({ onBack, onSuccess }: WithdrawScreenProps) {
   const [accountNumber] = useState("8830192831");
 
   // Sponsored fee - no client estimation needed
+  const PLATFORM_FEE = platformConfig ? parseFloat(platformConfig.withdrawFee || "0.10") : 0.10;
+  const IS_GAS_FREE = platformConfig?.gasSubsidyEnabled;
 
   const handleWithdraw = async () => {
     const numAmount = parseFloat(amount);
@@ -37,9 +48,9 @@ export function WithdrawScreen({ onBack, onSuccess }: WithdrawScreenProps) {
       displayToast("Please enter a valid amount.");
       return;
     }
-    const totalRequired = numAmount + 0.10; // amount + platform fee
+    const totalRequired = numAmount + PLATFORM_FEE; // amount + platform fee
     if (totalRequired > balance) {
-      displayToast(`Insufficient balance. Requires ${totalRequired.toFixed(2)} USDC (inc. 0.10 Platform Fee)`);
+      displayToast(`Insufficient balance. Requires ${totalRequired.toFixed(2)} USDC (inc. ${PLATFORM_FEE.toFixed(2)} Platform Fee)`);
       return;
     }
 
@@ -141,7 +152,7 @@ export function WithdrawScreen({ onBack, onSuccess }: WithdrawScreenProps) {
                 {selectedBank}
               </p>
               <p className="text-[12px] text-slate-500">
-                {accountNumber} • RAKYAN I.
+                {accountNumber} • Account Holder
               </p>
             </div>
             <ChevronRight size={18} className="text-slate-300" />
@@ -207,13 +218,13 @@ export function WithdrawScreen({ onBack, onSuccess }: WithdrawScreenProps) {
             <div className="flex justify-between items-center">
               <span className="text-[13px] text-slate-500">Platform Fee</span>
               <span className="text-[13px] font-bold text-slate-800">
-                0.10 USDC
+                {PLATFORM_FEE.toFixed(2)} USDC
               </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-[13px] text-slate-500">Network Gas (Sponsored)</span>
-              <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded w-fit">
-                Gratis
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded w-fit ${IS_GAS_FREE ? "text-emerald-600 bg-emerald-50" : "text-slate-600 bg-slate-50"}`}>
+                {IS_GAS_FREE ? "Gratis" : "Native"}
               </span>
             </div>
             <div className="pt-3 border-t border-slate-100 flex justify-between items-center mt-2">

@@ -74,6 +74,9 @@ interface AppState {
   setLanguage: (lang: string) => void;
   network: string;
   setNetwork: (network: string) => void;
+  platformConfig: any;
+  setPlatformConfig: (config: any) => void;
+  fetchPlatformConfig: () => Promise<void>;
   walletConnectSessions: number;
   setWalletConnectSessions: (count: number) => void;
   contractAllowances: number;
@@ -307,15 +310,25 @@ export const useStore = create<AppState>()((set) => ({
   setLanguage: (lang) => set({ language: lang }),
   network: "ARC TESTNET",
   setNetwork: (net) => set({ network: net }),
+  platformConfig: null,
+  setPlatformConfig: (config) => set({ platformConfig: config }),
+  fetchPlatformConfig: async () => {
+    try {
+      const res = await fetch("/api/admin/config");
+      if (res.ok) set({ platformConfig: await res.json() });
+    } catch (e) {
+      console.error("Failed to fetch platform config", e);
+    }
+  },
   walletConnectSessions: 0,
   setWalletConnectSessions: (count) => set({ walletConnectSessions: count }),
   contractAllowances: 0,
   setContractAllowances: (count) => set({ contractAllowances: count }),
   sourceAccount: {
-    name: "Savings NOW IDR",
-    accountNumber: "1820014780589",
-    balance: 18261185,
-    currency: "IDR",
+    name: "Primary USDC Wallet",
+    accountNumber: "0x...",
+    balance: 0,
+    currency: "USDC",
   },
   setSourceAccount: (account) => set({ sourceAccount: account }),
   logs: [],

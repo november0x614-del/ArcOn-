@@ -10,15 +10,7 @@ import {
 } from "lucide-react";
 import { motion } from "motion/react";
 import { useApp } from "../../contexts/AppContext";
-
-interface Contact {
-  id: string;
-  letter: string;
-  name: string;
-  network: string;
-  account: string;
-  initials: string;
-}
+import { Contact } from "../../types";
 
 interface BatchTransferScreenProps {
   onBack: () => void;
@@ -35,9 +27,18 @@ export function BatchTransferScreen({
     fetchTransactions,
     displayToast,
     registeredUser,
+    platformConfig,
+    fetchPlatformConfig,
   } = useApp();
+
+  React.useEffect(() => {
+    if (!platformConfig) {
+      fetchPlatformConfig();
+    }
+  }, [platformConfig, fetchPlatformConfig]);
+
   const [multiSendStep, setMultiSendStep] = useState<
-    "info" | "form" | "processing" | "success"
+    "info" | "form" | "confirm" | "processing" | "success"
   >("form");
   const [recipients, setRecipients] = useState<
     {
@@ -55,6 +56,13 @@ export function BatchTransferScreen({
 
   const [showQuickAddModal, setShowQuickAddModal] = useState(false);
   const [selectedQuickAddIds, setSelectedQuickAddIds] = useState<string[]>([]);
+  const [modalSearchQuery, setModalSearchQuery] = useState("");
+
+  const filteredModalContacts = (contacts || []).filter(
+    (c) =>
+      c.name.toLowerCase().includes(modalSearchQuery.toLowerCase()) ||
+      c.number.toLowerCase().includes(modalSearchQuery.toLowerCase()),
+  );
 
   const addRecipientItem = () => {
     if (!newAddress || !newAmount) return;
@@ -64,10 +72,10 @@ export function BatchTransferScreen({
     const newItems = addressList.map((addr, idx) => {
       const match = contacts.find(
         (c) =>
-          (c.account?.toLowerCase() || "") === (addr?.toLowerCase() || "") ||
-          (c.account || "").includes(addr),
+          (c.number?.toLowerCase() || "") === (addr?.toLowerCase() || "") ||
+          (c.number || "").includes(addr),
       );
-      const fullAddr = match ? match.account : addr;
+      const fullAddr = match ? match.number : addr;
       const name = match
         ? match.name
         : `Recipient #${recipients.length + idx + 1}`;
@@ -98,17 +106,25 @@ export function BatchTransferScreen({
     setRecipients((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const startProcessing = async () => {
-    const totalAmount = recipients.reduce(
-      (acc, curr) => acc + parseFloat(curr.amount || "0"),
-      0,
-    );
+  const PLATFORM_FEE = platformConfig ? parseFloat(platformConfig.withdrawFee || "0.25") : 0.25;
+  const NETWORK_GAS = platformConfig?.gasSubsidyEnabled ? 0.00 : 0.05;
 
-    if (totalAmount > balance) {
-      displayToast("Insufficient balance for this batch transfer.");
+  const totalPayout = recipients.reduce(
+    (acc, curr) => acc + parseFloat(curr.amount || "0"),
+    0,
+  );
+  
+  const totalRequired = totalPayout + PLATFORM_FEE + NETWORK_GAS;
+
+  const startProcessing = () => {
+    if (totalRequired > balance) {
+      displayToast("Insufficient balance for this batch transfer including fees.");
       return;
     }
+    setMultiSendStep("confirm");
+  };
 
+  const executeBatch = async () => {
     setMultiSendStep("processing");
     setProcessingStatus("Packaging transaction inputs...");
 
@@ -123,6 +139,7 @@ export function BatchTransferScreen({
           userId: registeredUser?.supabaseUid,
           walletId: registeredUser?.walletId,
           recipients: recipients,
+          platformFee: PLATFORM_FEE,
         }),
       });
 
@@ -163,6 +180,9 @@ export function BatchTransferScreen({
       <div className="w-full bg-white border-b border-slate-100 px-5 py-3 flex gap-2">
         <div
           className={`h-1.5 flex-1 rounded-full ${multiSendStep === "form" ? "bg-slate-900" : "bg-slate-900"}`}
+        ></div>
+        <div
+          className={`h-1.5 flex-1 rounded-full ${multiSendStep === "confirm" || multiSendStep === "processing" || multiSendStep === "success" ? "bg-slate-900" : "bg-slate-100"}`}
         ></div>
         <div
           className={`h-1.5 flex-1 rounded-full ${multiSendStep === "processing" || multiSendStep === "success" ? "bg-slate-900" : "bg-slate-100"}`}
@@ -305,6 +325,18 @@ export function BatchTransferScreen({
 
               {/* Input Tooling */}
               <div className="bg-slate-100/50 border border-slate-200/50 rounded-[24px] p-5 mb-8 flex flex-col gap-4">
+                <div className="flex justify-end items-center w-full mb-1">
+                  <button
+                    onClick={() => {
+                      setSelectedQuickAddIds([]);
+                      setShowQuickAddModal(true);
+                    }}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-slate-900 border-0 rounded-full text-white text-[13px] font-bold shadow-sm hover:bg-slate-800 transition-all active:scale-[0.97] cursor-pointer"
+                  >
+                    <Plus size={14} strokeWidth={3} />
+                    Add from Contacts
+                  </button>
+                </div>
                 <div className="flex flex-col gap-3">
                   <div className="relative">
                     <input
@@ -383,10 +415,89 @@ export function BatchTransferScreen({
               <button
                 onClick={startProcessing}
                 disabled={recipients.length === 0}
-                className="w-full bg-slate-900 text-white py-4.5 rounded-full font-black text-[16px] shadow-xl shadow-blue-500/20 hover:bg-slate-800 active:scale-[0.98] transition-all disabled:opacity-30 disabled:shadow-none mb-10"
+                className="w-full bg-slate-900 text-white py-4.5 rounded-full font-black text-[16px] shadow-xl shadow-blue-500/20 hover:bg-slate-800 active:scale-[0.98] transition-all disabled:opacity-30 disabled:shadow-none mb-10 border-0 cursor-pointer"
               >
-                EXECUTE BATCH SEND
+                REVIEW BATCH SEND
               </button>
+            </motion.div>
+          )}
+
+          {/* Step 2.5: Confirmation Screen */}
+          {multiSendStep === "confirm" && (
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="flex flex-col text-left"
+            >
+              <div className="mb-6">
+                <h3 className="font-extrabold text-[22px] text-slate-900 tracking-tight">
+                  Transfer Confirmation
+                </h3>
+                <p className="text-sm text-slate-500 mt-1">
+                  Please review the batch details and fees.
+                </p>
+              </div>
+
+              <div className="bg-white border border-slate-100 rounded-[28px] p-6 shadow-sm mb-6">
+                <div className="space-y-4 mb-6">
+                  {recipients.slice(0, 3).map((rec) => (
+                    <div key={rec.id} className="flex justify-between items-center">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-slate-800 text-[14px]">{rec.name}</span>
+                        <span className="font-mono text-[11px] text-slate-400">{rec.displayAddress}</span>
+                      </div>
+                      <span className="font-mono font-bold text-slate-900">{parseFloat(rec.amount).toFixed(2)} USDC</span>
+                    </div>
+                  ))}
+                  {recipients.length > 3 && (
+                    <div className="text-center py-2 border-t border-slate-50 mt-2">
+                      <span className="text-[12px] font-bold text-slate-400">
+                        + {recipients.length - 3} more recipients
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-5 border-t border-slate-100 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[13px] text-slate-500 font-bold">Total Payout</span>
+                    <span className="font-mono font-bold text-slate-800">{totalPayout.toFixed(2)} USDC</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[13px] text-slate-500 font-bold flex items-center gap-1.5">
+                      Platform Fee
+                      <div className="w-3.5 h-3.5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-[8px] font-black cursor-help" title="Application distribution fee">i</div>
+                    </span>
+                    <span className="font-mono font-bold text-slate-800">{PLATFORM_FEE.toFixed(2)} USDC</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[13px] text-slate-500 font-bold">Network Gas</span>
+                    <span className="font-mono font-bold text-slate-800">{NETWORK_GAS.toFixed(2)} USDC</span>
+                  </div>
+                  
+                  <div className="pt-4 mt-2 border-t-2 border-dashed border-slate-100 flex justify-between items-center">
+                    <span className="text-[15px] text-slate-900 font-black">Total Amount</span>
+                    <span className="text-[20px] font-mono font-black text-slate-900">
+                      {totalRequired.toFixed(2)} USDC
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={executeBatch}
+                  className="w-full bg-slate-900 text-white py-4.5 rounded-full font-black text-[16px] shadow-xl hover:bg-slate-800 active:scale-[0.98] transition-all border-0 cursor-pointer"
+                >
+                  CONFIRM & EXECUTE
+                </button>
+                <button
+                  onClick={() => setMultiSendStep("form")}
+                  className="w-full bg-slate-100 text-slate-600 py-3.5 rounded-full font-bold text-[14px] hover:bg-slate-200 active:scale-[0.98] transition-all border-0 cursor-pointer"
+                >
+                  Edit Recipients
+                </button>
+              </div>
             </motion.div>
           )}
 
@@ -530,31 +641,53 @@ export function BatchTransferScreen({
               </button>
             </div>
 
+            {/* Search Input Area */}
+            <div className="px-5 pt-5 pb-2 shrink-0">
+              <div className="bg-slate-100 border border-slate-200 rounded-2xl px-4 py-3 flex items-center gap-3 focus-within:bg-white focus-within:border-slate-800 focus-within:ring-2 focus-within:ring-slate-900/5 transition-all">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  className="w-4 h-4 text-slate-400"
+                >
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Search name or 0x address..."
+                  value={modalSearchQuery}
+                  onChange={(e) => setModalSearchQuery(e.target.value)}
+                  className="flex-1 bg-transparent border-0 outline-none text-[14px] font-medium text-slate-800 placeholder:text-slate-400"
+                />
+              </div>
+            </div>
+
             {/* Select All Controller */}
-            <div className="px-5 py-3 border-b border-slate-50 flex justify-between items-center shrink-0 bg-slate-100/50">
-              <span className="text-[13px] font-bold text-blue-700">
-                {selectedQuickAddIds.length} of {contacts.length} Contacts
-                Selected
+            <div className="px-5 py-3 border-b border-slate-50 flex justify-between items-center shrink-0 bg-slate-50/50">
+              <span className="text-[13px] font-bold text-slate-500">
+                {selectedQuickAddIds.length} of {filteredModalContacts.length} Contacts Selected
               </span>
               <button
                 onClick={() => {
-                  if (selectedQuickAddIds.length === contacts.length) {
+                  if (selectedQuickAddIds.length === filteredModalContacts.length) {
                     setSelectedQuickAddIds([]);
                   } else {
-                    setSelectedQuickAddIds(contacts.map((c) => c.id));
+                    setSelectedQuickAddIds(filteredModalContacts.map((c) => c.id));
                   }
                 }}
-                className="bg-white border border-blue-200 text-slate-800 hover:bg-slate-100 px-3.5 py-1.5 rounded-full text-[12px] font-bold transition-all active:scale-[0.97] cursor-pointer"
+                className="bg-white border border-slate-200 text-slate-800 hover:bg-slate-100 px-3.5 py-1.5 rounded-full text-[12px] font-bold transition-all active:scale-[0.97] cursor-pointer"
               >
-                {selectedQuickAddIds.length === contacts.length
+                {selectedQuickAddIds.length === filteredModalContacts.length
                   ? "Deselect All"
                   : "Select All"}
               </button>
             </div>
 
             {/* Contacts List */}
-            <div className="flex-1 overflow-y-auto px-5 py-4 divide-y divide-slate-100">
-              {contacts.map((contact) => {
+            <div className="flex-1 overflow-y-auto px-5 py-2 divide-y divide-slate-100 scrollbar-hide">
+              {filteredModalContacts.map((contact) => {
                 const isSelected = selectedQuickAddIds.includes(contact.id);
                 return (
                   <div
@@ -566,30 +699,28 @@ export function BatchTransferScreen({
                           : [...prev, contact.id],
                       );
                     }}
-                    className="flex items-center justify-between py-3.5 cursor-pointer hover:bg-slate-50 -mx-5 px-5 transition-colors"
+                    className={`flex items-center justify-between py-4 cursor-pointer hover:bg-slate-50 -mx-5 px-5 transition-colors ${isSelected ? "bg-slate-50/50" : ""}`}
                   >
                     <div className="flex items-center gap-4">
-                      <div className="w-[42px] h-[42px] rounded-full bg-slate-50 border border-slate-150 flex items-center justify-center font-bold text-slate-700 text-[13px]">
+                      <div className={`w-[44px] h-[44px] rounded-full flex items-center justify-center font-bold text-[13px] border ${isSelected ? "bg-slate-900 text-white border-slate-900" : "bg-slate-100 text-slate-700 border-slate-200"}`}>
                         {contact.initials}
                       </div>
                       <div className="text-left">
-                        <p className="font-extrabold text-slate-800 text-[14px] leading-tight">
+                        <p className="font-extrabold text-slate-900 text-[15px] leading-tight">
                           {contact.name}
                         </p>
-                        <p
-                          className="font-mono text-slate-400 text-[11px] mt-1 pr-1 truncate max-w-[210px]"
-                          title={contact.account}
-                        >
-                          {contact.account}
+                        <p className="font-mono text-slate-400 text-[11px] mt-1 pr-1 truncate max-w-[220px]">
+                          {contact.number.substring(0, 14)}...{contact.number.substring(contact.number.length - 4)}
+                          <span className="font-sans italic ml-1 text-slate-300">({contact.network || "Arc Network"})</span>
                         </p>
                       </div>
                     </div>
 
                     {/* Checkbox indicator */}
                     <div
-                      className={`w-6 h-6 rounded-full border-[2px] flex items-center justify-center transition-colors ${
+                      className={`w-6 h-6 rounded-full border-[2px] flex items-center justify-center transition-all ${
                         isSelected
-                          ? "bg-slate-900 border-slate-900"
+                          ? "bg-slate-900 border-slate-900 scale-110"
                           : "border-slate-300 bg-white"
                       }`}
                     >
@@ -610,47 +741,39 @@ export function BatchTransferScreen({
                   </div>
                 );
               })}
-              {contacts.length === 0 && (
-                <div className="py-12 text-center text-slate-400 text-[13px] font-medium">
-                  No contacts found in transfer list.
+              {filteredModalContacts.length === 0 && (
+                <div className="py-20 text-center flex flex-col items-center gap-3">
+                  <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-200">
+                    <Users size={32} />
+                  </div>
+                  <p className="text-slate-400 text-[14px] font-medium">
+                    No contacts matching "{modalSearchQuery}"
+                  </p>
                 </div>
               )}
             </div>
 
             {/* Sticky Action Footer */}
-            <div className="p-5 border-t border-slate-100 shrink-0 bg-white shadow-[0_-4px_12px_rgba(0,0,0,0.03)] border-0">
+            <div className="p-5 border-t border-slate-100 shrink-0 bg-white shadow-[0_-8px_20px_rgba(0,0,0,0.04)] z-10">
               <button
                 onClick={() => {
                   if (selectedQuickAddIds.length === 0) return;
-                  const defaultAmount = newAmount || "10";
-                  const newItems = contacts
+                  
+                  const selectedAddresses = contacts
                     .filter((c) => selectedQuickAddIds.includes(c.id))
-                    .map((contact, idx) => {
-                      const fullAddr = contact.account;
-                      const formattedAddress =
-                        fullAddr.length > 12
-                          ? `${fullAddr.substring(0, 6)}...${fullAddr.substring(fullAddr.length - 4)}`
-                          : fullAddr;
+                    .map((c) => c.number)
+                    .join(", ");
 
-                      return {
-                        id: `${fullAddr}-${Date.now()}-${Math.random()}-${idx}`,
-                        address: fullAddr,
-                        displayAddress: formattedAddress,
-                        name: contact.name,
-                        amount: defaultAmount,
-                      };
-                    });
-
-                  setRecipients((prev) => [...prev, ...newItems]);
+                  setNewAddress((prev) => prev ? `${prev}, ${selectedAddresses}` : selectedAddresses);
                   setShowQuickAddModal(false);
                   displayToast(
-                    `Added ${newItems.length} selected contacts to batch list!`,
+                    `Selected ${selectedQuickAddIds.length} contacts populated!`,
                   );
                 }}
                 disabled={selectedQuickAddIds.length === 0}
-                className="w-full bg-slate-900 hover:bg-slate-800 disabled:opacity-45 text-white py-4 rounded-full font-bold text-[15px] shadow-lg hover:shadow-lg transition-all active:scale-[0.98] border-0 cursor-pointer"
+                className="w-full bg-slate-900 border-0 hover:bg-slate-800 disabled:opacity-45 text-white py-4 rounded-full font-bold text-[15px] shadow-lg hover:shadow-xl transition-all active:scale-[0.98] cursor-pointer"
               >
-                Add Selected Contacts ({selectedQuickAddIds.length})
+                Add Selected to Input ({selectedQuickAddIds.length})
               </button>
             </div>
           </div>

@@ -11,6 +11,8 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { ViewState } from "../../types";
+import { useApp } from "../../contexts/AppContext";
+import { useStore } from "../../store/useStore";
 import { OverviewTab } from "../admin/OverviewTab";
 import { UsersTab } from "../admin/UsersTab";
 import { TreasuryTab } from "../admin/TreasuryTab";
@@ -66,10 +68,15 @@ export function AdminDashboardScreen({
   onBack: () => void;
   onNavigate?: (view: ViewState) => void;
 }) {
+  const {
+    registeredUser,
+    platformConfig,
+    setPlatformConfig,
+    fetchPlatformConfig,
+  } = useApp();
   const [activeTab, setActiveTab] = useState<TabType>("overview");
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
-  const [config, setConfig] = useState<AdminConfig | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -104,12 +111,12 @@ export function AdminDashboardScreen({
     }
   }, []);
 
-  const fetchConfig = useCallback(async () => {
+  const fetchConfigData = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/config");
-      if (res.ok) {
-        const data = await res.json();
-        setConfig(data);
+      await fetchPlatformConfig();
+      // After sync, use the store value
+      const data = useStore.getState().platformConfig;
+      if (data) {
         setSwapFeeInput(data.swapFee);
         setWithdrawFeeInput(data.withdrawFee);
         setBridgeFeeInput(data.bridgeFee);
@@ -118,7 +125,7 @@ export function AdminDashboardScreen({
     } catch (err) {
       console.error(err);
     }
-  }, []);
+  }, [fetchPlatformConfig]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -128,10 +135,10 @@ export function AdminDashboardScreen({
       if (activeTab === "users") await fetchUsers();
       if (activeTab === "treasury") {
         await fetchStats();
-        await fetchConfig();
+        await fetchConfigData();
       }
       if (activeTab === "config") {
-        await fetchConfig();
+        await fetchConfigData();
       }
     } catch (err: any) {
       setError("Failed to fetch administration stats.");
@@ -200,18 +207,18 @@ export function AdminDashboardScreen({
   };
 
   const handleSaveConfig = async (updatedFields: Partial<AdminConfig>) => {
-    if (!config) return;
+    if (!platformConfig) return;
     setSaving(true);
     setError(null);
     try {
       const response = await fetch("/api/admin/config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...config, ...updatedFields }),
+        body: JSON.stringify({ ...platformConfig, ...updatedFields }),
       });
       if (response.ok) {
         const resData = await response.json();
-        setConfig(resData.config);
+        setPlatformConfig(resData.config);
         setSuccessMsg("Config applied.");
         setTimeout(() => setSuccessMsg(null), 3500);
       }
@@ -329,20 +336,12 @@ export function AdminDashboardScreen({
         {activeTab === "treasury" && (
           <TreasuryTab
             loading={loading}
-            saving={saving}
             treasuryBalance={stats?.treasuryBalance || "0.00 USDC"}
-            swapFeeInput={swapFeeInput}
-            setSwapFeeInput={setSwapFeeInput}
-            withdrawFeeInput={withdrawFeeInput}
-            setWithdrawFeeInput={setWithdrawFeeInput}
-            bridgeFeeInput={bridgeFeeInput}
-            setBridgeFeeInput={setBridgeFeeInput}
-            onSave={handleSaveConfig}
           />
         )}
         {activeTab === "config" && (
           <ConfigTab
-            config={config}
+            config={platformConfig}
             loading={loading}
             saving={saving}
             swapFeeInput={swapFeeInput}

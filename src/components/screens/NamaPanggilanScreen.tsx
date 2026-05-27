@@ -10,7 +10,7 @@ export function NamaPanggilanScreen({ onBack }: NamaPanggilanScreenProps) {
   const { registeredUser, setRegisteredUser } = useApp();
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(
-    registeredUser?.username || "RAKYAN INUKERTAPATI",
+    registeredUser?.username || "Account Holder",
   );
   const [showToast, setShowToast] = useState(false);
 
@@ -100,12 +100,6 @@ export function NamaPanggilanScreen({ onBack }: NamaPanggilanScreenProps) {
               <span className="text-[12px] text-slate-500 font-medium">
                 {name.length}/16
               </span>
-              <button
-                onClick={() => setName("RAKYAN INUKERTAPATI")}
-                className="w-max mt-3 border border-slate-900 text-slate-800 px-3 py-1.5 rounded-full text-[12px] font-bold hover:bg-slate-100 transition-colors"
-              >
-                Use Full Name
-              </button>
             </div>
 
             <div className="mt-auto pt-6 pb-2 w-full">

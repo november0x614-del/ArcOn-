@@ -22,9 +22,19 @@ interface SwapScreenProps {
 }
 
 export function SwapScreen({ onBack }: SwapScreenProps) {
-  const { registeredUser } = useStore();
+  const {
+    registeredUser,
+    platformConfig,
+    fetchPlatformConfig,
+  } = useStore();
   const queryClient = useQueryClient();
   const { data: balanceData } = useBalances();
+
+  useEffect(() => {
+    if (!platformConfig) {
+      fetchPlatformConfig();
+    }
+  }, [platformConfig, fetchPlatformConfig]);
 
   const [fromAmount, setFromAmount] = useState("");
   const [toAmount, setToAmount] = useState("0");
@@ -107,9 +117,12 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
       return;
     }
 
+    const PLATFORM_FEE_PERCENT = platformConfig ? parseFloat(platformConfig.swapFee || "0.1") : 0.1;
     const usdcBalance = getTokenBalance("USDC");
-    if (usdcBalance < 0.10) {
-      useStore.getState().displayToast("Saldo USDC tidak cukup untuk membayar Platform Fee (0.10 USDC).");
+    const requiredMinUsdc = 0.10; // Basic check for platform fee context
+
+    if (usdcBalance < requiredMinUsdc) {
+      useStore.getState().displayToast(`Saldo USDC tidak cukup untuk membayar Platform Fee (~${PLATFORM_FEE_PERCENT}% dari nominal).`);
       return;
     }
 
@@ -445,13 +458,13 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
               <div className="flex justify-between items-center mt-1">
                 <span className="text-[12px] text-slate-500">Platform Fee</span>
                 <span className="text-[12px] font-mono text-slate-700 font-bold">
-                  0.10 USDC
+                  {platformConfig ? platformConfig.swapFee : "0.1"}%
                 </span>
               </div>
               <div className="flex justify-between items-center mt-1">
                 <span className="text-[12px] text-slate-500">Network Gas (Sponsored)</span>
-                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded w-fit">
-                  Gratis
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded w-fit ${platformConfig?.gasSubsidyEnabled ? "text-emerald-600 bg-emerald-50" : "text-slate-600 bg-slate-50"}`}>
+                  {platformConfig?.gasSubsidyEnabled ? "Gratis" : "Native"}
                 </span>
               </div>
             </div>
