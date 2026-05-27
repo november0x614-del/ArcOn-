@@ -8,7 +8,7 @@ import { ArcProvider } from "./contexts/ArcContext";
 
 export default function App() {
   const [isLoggingIn, setIsLoggingIn] = React.useState(false);
-  const [loginEmail, setLoginEmail] = React.useState('');
+  const [loginEmail, setLoginEmail] = React.useState("");
   const {
     viewState,
     setViewState,
@@ -16,86 +16,99 @@ export default function App() {
     fetchTransactions,
     registeredUser,
     setRegisteredUser,
-    resetState
+    resetState,
   } = useApp();
 
-  const handleUserSession = React.useCallback(async (user: any) => {
-    try {
-      let walletInfo: any = null;
-      
+  const handleUserSession = React.useCallback(
+    async (user: any) => {
       try {
-        const response = await fetch(`/api/debug-wallet/${user.id}`);
-        if (response.ok) {
-          walletInfo = await response.json();
+        let walletInfo: any = null;
+
+        try {
+          const response = await fetch(`/api/debug-wallet/${user.id}`);
+          if (response.ok) {
+            walletInfo = await response.json();
+          }
+        } catch (err) {
+          console.warn(
+            "Failed fetching wallet mapping, trying to provision...",
+            err,
+          );
         }
-      } catch (err) {
-        console.warn("Failed fetching wallet mapping, trying to provision...", err);
-      }
-      
-      // Auto-Create Wallet on Login if missing (Recovery Mode)
-      if (!walletInfo || !walletInfo.wallet_id) {
-         console.log("No wallet found, provisioning new deterministic wallet via Circle...");
-         try {
-           const createRes = await fetch('/api/wallets/create', {
-             method: 'POST',
-             headers: { 'Content-Type': 'application/json' },
-             body: JSON.stringify({ userId: user.id })
-           });
-           
-           console.log("Wallet creation response status:", createRes.status);
-           if (createRes.ok) {
-             const newData = await createRes.json();
-             console.log("Wallet created:", newData);
-             walletInfo = { 
-               wallet_id: newData.walletId, 
-               wallet_address: newData.address 
-             };
-           } else {
-             const errorData = await createRes.json();
-             console.error("Wallet creation failed:", errorData);
-           }
-         } catch (createErr) {
-           console.error("Failed to auto-create wallet:", createErr);
-         }
-      }
 
-      // Save to localStorage for ArcProvider to pick up
-      if (walletInfo?.wallet_address) {
-        localStorage.setItem('arc_wallet_address', walletInfo.wallet_address);
-      }
-      localStorage.setItem('arc_user_id', user.id);
+        const currentView = useStore.getState().viewState;
 
-      setRegisteredUser({
-        username: user.user_metadata?.full_name || 'Arc User',
-        email: user.email || '',
-        isVerified: true,
-        walletId: walletInfo?.wallet_id || '',
-        walletAddress: walletInfo?.wallet_address || '',
-        supabaseUid: user.id,
-        registrationDate: new Date(user.created_at).toLocaleDateString('id-ID')
-      });
-      
-      // Navigate to home only if not already in a logged in screen or processing a login/signup
-      const currentView = useStore.getState().viewState;
-      if (currentView === 'splash' || currentView === 'password') {
-        setViewState("home");
+        // Auto-Create Wallet on Login if missing (Recovery Mode)
+        // Only if we're not currently in the register flow where it's explicitly handled
+        if ((!walletInfo || !walletInfo.wallet_id) && currentView !== "register" && currentView !== "registerSuccess") {
+          try {
+            const createRes = await fetch("/api/wallets/create", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ userId: user.id }),
+            });
+
+            if (createRes.ok) {
+              const newData = await createRes.json();
+              walletInfo = {
+                wallet_id: newData.walletId,
+                wallet_address: newData.address,
+              };
+            } else {
+              const errorData = await createRes.json();
+              console.error("Wallet creation failed:", errorData);
+            }
+          } catch (createErr) {
+            console.error("Failed to auto-create wallet:", createErr);
+          }
+        }
+
+        // Save to localStorage for ArcProvider to pick up
+        if (walletInfo?.wallet_address) {
+          localStorage.setItem("arc_wallet_address", walletInfo.wallet_address);
+        }
+        localStorage.setItem("arc_user_id", user.id);
+
+        setRegisteredUser({
+          username: user.user_metadata?.full_name || "Arc User",
+          email: user.email || "",
+          isVerified: true,
+          walletId: walletInfo?.wallet_id || "",
+          walletAddress: walletInfo?.wallet_address || "",
+          supabaseUid: user.id,
+          registrationDate: new Date(user.created_at).toLocaleDateString(
+            "id-ID",
+          ),
+        });
+
+        // Navigate to home only if not already in a logged in screen or processing a login/signup
+        if (currentView === "splash" || currentView === "password") {
+          setViewState("home");
+        }
+      } catch (e) {
+        console.error(e);
+        const currentView = useStore.getState().viewState;
+        if (currentView === "splash" || currentView === "password") {
+          setViewState("home");
+        }
       }
-    } catch (e) {
-      console.error(e);
-      const currentView = useStore.getState().viewState;
-      if (currentView === 'splash' || currentView === 'password') {
-        setViewState("home");
-      }
-    }
-  }, [setRegisteredUser, setViewState]);
+    },
+    [setRegisteredUser, setViewState],
+  );
 
   React.useEffect(() => {
     const checkSession = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession();
         if (error) {
           // If it's an auth error specifically about session validity, just reset
-          if (error.message.toLowerCase().includes("refresh token") || error.status === 400) {
+          if (
+            (error.message?.toLowerCase() || "").includes("refresh token") ||
+            error.status === 400
+          ) {
             await supabase.auth.signOut().catch(() => {});
             resetState();
           } else {
@@ -115,19 +128,19 @@ export default function App() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (_event === 'TOKEN_REFRESHED' && !session) {
-         supabase.auth.signOut().catch(() => {});
-         resetState();
-      } else if (_event === 'SIGNED_OUT') {
-         resetState();
-         localStorage.removeItem('arc_wallet_address');
-         localStorage.removeItem('arc_user_id');
+      if (_event === "TOKEN_REFRESHED" && !session) {
+        supabase.auth.signOut().catch(() => {});
+        resetState();
+      } else if (_event === "SIGNED_OUT") {
+        resetState();
+        localStorage.removeItem("arc_wallet_address");
+        localStorage.removeItem("arc_user_id");
       } else if (session) {
         handleUserSession(session.user);
       } else {
-         resetState();
-         localStorage.removeItem('arc_wallet_address');
-         localStorage.removeItem('arc_user_id');
+        resetState();
+        localStorage.removeItem("arc_wallet_address");
+        localStorage.removeItem("arc_user_id");
       }
     });
 
@@ -140,47 +153,55 @@ export default function App() {
       fetchTransactions();
 
       const txSubscription = supabase
-        .channel('user-transactions')
+        .channel("user-transactions")
         .on(
-          'postgres_changes',
+          "postgres_changes",
           {
-            event: '*',
-            schema: 'public',
-            table: 'transactions',
+            event: "*",
+            schema: "public",
+            table: "transactions",
             filter: `user_id=eq.${registeredUser.supabaseUid}`,
           },
           (payload) => {
-            useStore.getState().addLog(`Real-time update received for transaction: ${payload.eventType}`);
+            useStore
+              .getState()
+              .addLog(
+                `Real-time update received for transaction: ${payload.eventType}`,
+              );
             fetchBalance();
             fetchTransactions();
-          }
+          },
         )
         .subscribe((status) => {
-           if(status === 'SUBSCRIBED') {
-             useStore.getState().addLog('Real-time sync ready for transactions');
-           }
+          if (status === "SUBSCRIBED") {
+            useStore.getState().addLog("Real-time sync ready for transactions");
+          }
         });
 
       const balanceSubscription = supabase
-        .channel('user-balances')
+        .channel("user-balances")
         .on(
-          'postgres_changes',
+          "postgres_changes",
           {
-            event: '*',
-            schema: 'public',
-            table: 'balances',
+            event: "*",
+            schema: "public",
+            table: "balances",
             filter: `user_id=eq.${registeredUser.supabaseUid}`,
           },
           (payload) => {
-            useStore.getState().addLog(`Real-time update received for balance: ${payload.eventType}`);
+            useStore
+              .getState()
+              .addLog(
+                `Real-time update received for balance: ${payload.eventType}`,
+              );
             fetchBalance();
             fetchTransactions();
-          }
+          },
         )
         .subscribe((status) => {
-           if(status === 'SUBSCRIBED') {
-             useStore.getState().addLog('Real-time sync ready for balances');
-           }
+          if (status === "SUBSCRIBED") {
+            useStore.getState().addLog("Real-time sync ready for balances");
+          }
         });
 
       return () => {
@@ -204,7 +225,7 @@ export default function App() {
               transition={{ duration: 0.3, ease: "easeInOut" }}
               className="w-full h-full relative"
             >
-              <ViewRouter 
+              <ViewRouter
                 isLoggingIn={isLoggingIn}
                 loginEmail={loginEmail}
                 setLoginEmail={setLoginEmail}

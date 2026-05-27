@@ -1,5 +1,15 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, RefreshCw, Check, AlertCircle, X, ShieldCheck, Ban, Trash2, ShieldAlert } from "lucide-react";
+import {
+  ArrowLeft,
+  RefreshCw,
+  Check,
+  AlertCircle,
+  X,
+  ShieldCheck,
+  Ban,
+  Trash2,
+  ShieldAlert,
+} from "lucide-react";
 import { ViewState } from "../../types";
 import { OverviewTab } from "../admin/OverviewTab";
 import { UsersTab } from "../admin/UsersTab";
@@ -48,7 +58,7 @@ interface AdminConfig {
   backupPhraseEnabled: boolean;
 }
 
-type TabType = 'overview' | 'users' | 'treasury' | 'config' | 'design';
+type TabType = "overview" | "users" | "treasury" | "config" | "design";
 
 export function AdminDashboardScreen({
   onBack,
@@ -56,11 +66,11 @@ export function AdminDashboardScreen({
   onBack: () => void;
   onNavigate?: (view: ViewState) => void;
 }) {
-  const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const [activeTab, setActiveTab] = useState<TabType>("overview");
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [config, setConfig] = useState<AdminConfig | null>(null);
-  
+
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -80,14 +90,18 @@ export function AdminDashboardScreen({
     try {
       const res = await fetch("/api/admin/stats");
       if (res.ok) setStats(await res.json());
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+    }
   }, []);
 
   const fetchUsers = useCallback(async () => {
     try {
       const res = await fetch("/api/admin/users");
       if (res.ok) setUsers(await res.json());
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+    }
   }, []);
 
   const fetchConfig = useCallback(async () => {
@@ -101,20 +115,22 @@ export function AdminDashboardScreen({
         setBridgeFeeInput(data.bridgeFee);
         setDailyTransferLimitInput(data.dailyTransferLimit || "5000.00 USDC");
       }
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+    }
   }, []);
 
   const fetchData = async () => {
     setLoading(true);
     setError(null);
     try {
-      if (activeTab === 'overview') await fetchStats();
-      if (activeTab === 'users') await fetchUsers();
-      if (activeTab === 'treasury') {
-        await fetchStats(); 
+      if (activeTab === "overview") await fetchStats();
+      if (activeTab === "users") await fetchUsers();
+      if (activeTab === "treasury") {
+        await fetchStats();
         await fetchConfig();
       }
-      if (activeTab === 'config') {
+      if (activeTab === "config") {
         await fetchConfig();
       }
     } catch (err: any) {
@@ -128,18 +144,23 @@ export function AdminDashboardScreen({
     fetchData();
   }, [activeTab]);
 
-  const handleToggleBlock = async (userId: string, isBlockedNow: boolean): Promise<boolean> => {
+  const handleToggleBlock = async (
+    userId: string,
+    isBlockedNow: boolean,
+  ): Promise<boolean> => {
     setActionLoading(userId);
     setError(null);
     try {
       const response = await fetch("/api/admin/users/block", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, block: !isBlockedNow })
+        body: JSON.stringify({ userId, block: !isBlockedNow }),
       });
 
       if (response.ok) {
-        setSuccessMsg(`User successfully ${!isBlockedNow ? "blocked" : "unblocked"}.`);
+        setSuccessMsg(
+          `User successfully ${!isBlockedNow ? "blocked" : "unblocked"}.`,
+        );
         setTimeout(() => setSuccessMsg(null), 4000);
         await fetchUsers();
         return true;
@@ -153,11 +174,16 @@ export function AdminDashboardScreen({
     }
   };
 
-  const handleDeleteUser = async (userId: string, userEmail: string): Promise<boolean> => {
+  const handleDeleteUser = async (
+    userId: string,
+    userEmail: string,
+  ): Promise<boolean> => {
     setActionLoading(userId);
     setError(null);
     try {
-      const response = await fetch(`/api/admin/users/${userId}`, { method: "DELETE" });
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: "DELETE",
+      });
       if (response.ok) {
         setSuccessMsg(`User ${userEmail} archived.`);
         setTimeout(() => setSuccessMsg(null), 4000);
@@ -181,7 +207,7 @@ export function AdminDashboardScreen({
       const response = await fetch("/api/admin/config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...config, ...updatedFields })
+        body: JSON.stringify({ ...config, ...updatedFields }),
       });
       if (response.ok) {
         const resData = await response.json();
@@ -196,12 +222,15 @@ export function AdminDashboardScreen({
     }
   };
 
-  const handleRetheme = async (type: 'colors' | 'headers') => {
+  const handleRetheme = async (type: "colors" | "headers") => {
     setSaving(true);
     setError(null);
     try {
-      const endpoint = type === 'colors' ? '/api/admin/design/retheme-colors' : '/api/admin/design/retheme-headers';
-      const response = await fetch(endpoint, { method: 'POST' });
+      const endpoint =
+        type === "colors"
+          ? "/api/admin/design/retheme-colors"
+          : "/api/admin/design/retheme-headers";
+      const response = await fetch(endpoint, { method: "POST" });
       const data = await response.json();
       if (response.ok) {
         setSuccessMsg(data.message);
@@ -218,19 +247,27 @@ export function AdminDashboardScreen({
     <div className="w-full h-full bg-[#f8f9fa] relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
       <header className="bg-slate-900 text-white pt-6 pb-4 px-4 flex justify-between items-center z-10 shrink-0">
         <div className="flex items-center gap-3">
-          <button onClick={onBack} className="p-2 -ml-2 rounded-full hover:bg-slate-800 transition-colors">
+          <button
+            onClick={onBack}
+            className="p-2 -ml-2 rounded-full hover:bg-slate-800 transition-colors"
+          >
             <ArrowLeft size={20} />
           </button>
           <div className="flex flex-col">
             <h1 className="text-[17px] font-bold flex items-center gap-2">
-              <ShieldCheck size={18} className="text-emerald-400 animate-pulse" />
+              <ShieldCheck
+                size={18}
+                className="text-emerald-400 animate-pulse"
+              />
               Admin Portal
             </h1>
-            <span className="text-[11px] font-medium text-slate-400">Arc Commerce Synchronized Real-Time Backend</span>
+            <span className="text-[11px] font-medium text-slate-400">
+              Arc Commerce Synchronized Real-Time Backend
+            </span>
           </div>
         </div>
-        <button 
-          onClick={fetchData} 
+        <button
+          onClick={fetchData}
           disabled={loading}
           className="p-2 bg-slate-800 rounded-xl text-slate-300 hover:text-white disabled:opacity-50 transition-colors"
         >
@@ -240,21 +277,25 @@ export function AdminDashboardScreen({
 
       <div className="bg-white border-b border-slate-200 px-4 py-2 shrink-0 flex gap-4 overflow-x-auto scrollbar-hide text-[13px] font-semibold">
         {[
-          { id: 'overview', label: 'Overview' },
-          { id: 'users', label: 'Users' },
-          { id: 'treasury', label: 'Treasury' },
-          { id: 'config', label: 'Platform Config' },
-          { id: 'design', label: 'Design & Theme' }
+          { id: "overview", label: "Overview" },
+          { id: "users", label: "Users" },
+          { id: "treasury", label: "Treasury" },
+          { id: "config", label: "Platform Config" },
+          { id: "design", label: "Design & Theme" },
         ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as TabType)}
             className={`pb-2 relative whitespace-nowrap transition-colors ${
-              activeTab === tab.id ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'
+              activeTab === tab.id
+                ? "text-slate-900"
+                : "text-slate-500 hover:text-slate-700"
             }`}
           >
             {tab.label}
-            {activeTab === tab.id && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-slate-900 rounded-t-full"></div>}
+            {activeTab === tab.id && (
+              <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-slate-900 rounded-t-full"></div>
+            )}
           </button>
         ))}
       </div>
@@ -273,10 +314,20 @@ export function AdminDashboardScreen({
       )}
 
       <div className="flex-1 overflow-y-auto w-full max-w-7xl mx-auto pb-8">
-        {activeTab === 'overview' && <OverviewTab stats={stats} loading={loading} />}
-        {activeTab === 'users' && <UsersTab users={users} loading={loading} searchQuery={searchQuery} setSearchQuery={setSearchQuery} onSelectUser={setSelectedUser} />}
-        {activeTab === 'treasury' && (
-          <TreasuryTab 
+        {activeTab === "overview" && (
+          <OverviewTab stats={stats} loading={loading} />
+        )}
+        {activeTab === "users" && (
+          <UsersTab
+            users={users}
+            loading={loading}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            onSelectUser={setSelectedUser}
+          />
+        )}
+        {activeTab === "treasury" && (
+          <TreasuryTab
             loading={loading}
             saving={saving}
             treasuryBalance={stats?.treasuryBalance || "0.00 USDC"}
@@ -289,8 +340,8 @@ export function AdminDashboardScreen({
             onSave={handleSaveConfig}
           />
         )}
-        {activeTab === 'config' && (
-          <ConfigTab 
+        {activeTab === "config" && (
+          <ConfigTab
             config={config}
             loading={loading}
             saving={saving}
@@ -305,57 +356,93 @@ export function AdminDashboardScreen({
             onSave={handleSaveConfig}
           />
         )}
-        {activeTab === 'design' && <DesignTab saving={saving} onRetheme={handleRetheme} />}
+        {activeTab === "design" && (
+          <DesignTab saving={saving} onRetheme={handleRetheme} />
+        )}
       </div>
 
       {selectedUser && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-           <div className="bg-white rounded-3xl w-full max-w-md shadow-xl overflow-hidden animate-in zoom-in-95 flex flex-col max-h-[90vh]">
-              <div className="bg-slate-900 text-white p-5 flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <ShieldAlert size={18} className="text-amber-400" />
-                  <h2 className="font-bold text-[15px]">Account Terminal</h2>
-                </div>
-                <button onClick={() => setSelectedUser(null)} className="p-1 text-slate-400 hover:text-white"><X size={18} /></button>
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-xl overflow-hidden animate-in zoom-in-95 flex flex-col max-h-[90vh]">
+            <div className="bg-slate-900 text-white p-5 flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <ShieldAlert size={18} className="text-amber-400" />
+                <h2 className="font-bold text-[15px]">Account Terminal</h2>
               </div>
-              <div className="p-5 space-y-4 overflow-y-auto">
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                  <div className="text-[14px] font-bold text-slate-800">{selectedUser.name}</div>
-                  <div className="text-[11px] font-mono text-slate-500">{selectedUser.email}</div>
-                  <div className="text-[10px] text-slate-400 font-mono mt-2 break-all bg-white p-2 rounded-lg border border-slate-100">{selectedUser.wallet}</div>
+              <button
+                onClick={() => setSelectedUser(null)}
+                className="p-1 text-slate-400 hover:text-white"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-5 space-y-4 overflow-y-auto">
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <div className="text-[14px] font-bold text-slate-800">
+                  {selectedUser.name}
                 </div>
-                <div className="flex flex-col gap-2">
-                  <button 
-                    onClick={() => handleToggleBlock(selectedUser.id, selectedUser.status === 'Blocked')}
-                    disabled={!!actionLoading}
-                    className={`py-3.5 rounded-2xl font-bold text-[13px] transition-all flex items-center justify-center gap-2 ${
-                      selectedUser.status === 'Blocked' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700'
-                    }`}
+                <div className="text-[11px] font-mono text-slate-500">
+                  {selectedUser.email}
+                </div>
+                <div className="text-[10px] text-slate-400 font-mono mt-2 break-all bg-white p-2 rounded-lg border border-slate-100">
+                  {selectedUser.wallet}
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() =>
+                    handleToggleBlock(
+                      selectedUser.id,
+                      selectedUser.status === "Blocked",
+                    )
+                  }
+                  disabled={!!actionLoading}
+                  className={`py-3.5 rounded-2xl font-bold text-[13px] transition-all flex items-center justify-center gap-2 ${
+                    selectedUser.status === "Blocked"
+                      ? "bg-emerald-600 text-white"
+                      : "bg-slate-100 text-slate-700"
+                  }`}
+                >
+                  {actionLoading === selectedUser.id ? (
+                    <RefreshCw size={14} className="animate-spin" />
+                  ) : selectedUser.status === "Blocked" ? (
+                    <ShieldCheck size={14} />
+                  ) : (
+                    <Ban size={14} />
+                  )}
+                  {selectedUser.status === "Blocked"
+                    ? "Aktifkan User"
+                    : "Blokir User"}
+                </button>
+                <div className="p-4 bg-red-50 border border-red-100 rounded-2xl">
+                  <p className="text-[11px] text-red-600 font-bold mb-2 uppercase tracking-tight">
+                    Ketik DELETE untuk menghapus:
+                  </p>
+                  <input
+                    type="text"
+                    value={deleteValidation}
+                    onChange={(e) => setDeleteValidation(e.target.value)}
+                    className="w-full bg-white border border-red-200 rounded-xl px-3 py-2.5 text-[12px] font-bold outline-none mb-3"
+                    placeholder="DELETE"
+                  />
+                  <button
+                    disabled={deleteValidation !== "DELETE" || !!actionLoading}
+                    onClick={() =>
+                      handleDeleteUser(selectedUser.id, selectedUser.email)
+                    }
+                    className="w-full py-3 bg-red-600 text-white rounded-xl text-[13px] font-bold disabled:opacity-30 flex items-center justify-center gap-2"
                   >
-                    {actionLoading === selectedUser.id ? <RefreshCw size={14} className="animate-spin" /> : (selectedUser.status === 'Blocked' ? <ShieldCheck size={14} /> : <Ban size={14} />)}
-                    {selectedUser.status === 'Blocked' ? "Aktifkan User" : "Blokir User"}
+                    {actionLoading === selectedUser.id ? (
+                      <RefreshCw size={14} className="animate-spin" />
+                    ) : (
+                      <Trash2 size={14} />
+                    )}
+                    Arsipkan Akun
                   </button>
-                  <div className="p-4 bg-red-50 border border-red-100 rounded-2xl">
-                    <p className="text-[11px] text-red-600 font-bold mb-2 uppercase tracking-tight">Ketik DELETE untuk menghapus:</p>
-                    <input 
-                      type="text" 
-                      value={deleteValidation} 
-                      onChange={(e) => setDeleteValidation(e.target.value)}
-                      className="w-full bg-white border border-red-200 rounded-xl px-3 py-2.5 text-[12px] font-bold outline-none mb-3"
-                      placeholder="DELETE"
-                    />
-                    <button 
-                      disabled={deleteValidation !== "DELETE" || !!actionLoading}
-                      onClick={() => handleDeleteUser(selectedUser.id, selectedUser.email)}
-                      className="w-full py-3 bg-red-600 text-white rounded-xl text-[13px] font-bold disabled:opacity-30 flex items-center justify-center gap-2"
-                    >
-                      {actionLoading === selectedUser.id ? <RefreshCw size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                      Arsipkan Akun
-                    </button>
-                  </div>
                 </div>
               </div>
-           </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

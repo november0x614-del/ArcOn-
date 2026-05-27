@@ -1,5 +1,5 @@
-import React from 'react';
-import { X, LogOut } from 'lucide-react';
+import React from "react";
+import { X, LogOut } from "lucide-react";
 
 interface LogoutScreenProps {
   onBack: () => void;
@@ -23,12 +23,13 @@ export function LogoutScreen({ onBack, onLogout }: LogoutScreenProps) {
         <div className="w-20 h-20 rounded-full bg-red-50 flex items-center justify-center text-red-500 mb-6">
           <LogOut size={40} />
         </div>
-        
+
         <h3 className="font-bold text-[22px] text-white mb-3">
           Sign Out of Arc Commerce?
         </h3>
         <p className="text-slate-600 text-[15px] leading-relaxed mb-10 max-w-xs">
-          Make sure all your on-chain activities are finished. Thank you for building with us today!
+          Make sure all your on-chain activities are finished. Thank you for
+          building with us today!
         </p>
 
         <div className="flex flex-col gap-3 w-full max-w-sm">

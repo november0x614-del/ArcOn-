@@ -1,4 +1,16 @@
-import { createPublicClient, http, parseAbi, getAddress, isAddress, defineChain, encodeFunctionData, toHex, pad, keccak256, type Address } from "viem";
+import {
+  createPublicClient,
+  http,
+  parseAbi,
+  getAddress,
+  isAddress,
+  defineChain,
+  encodeFunctionData,
+  toHex,
+  pad,
+  keccak256,
+  type Address,
+} from "viem";
 
 /**
  * Arc Testnet Chain Definition
@@ -8,7 +20,9 @@ export const arcTestnet = defineChain({
   name: "Arc Testnet",
   nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
   rpcUrls: {
-    default: { http: [process.env.ARC_RPC_URL || "https://rpc.testnet.arc.network"] },
+    default: {
+      http: [process.env.ARC_RPC_URL || "https://rpc.testnet.arc.network"],
+    },
   },
   blockExplorers: {
     default: { name: "ArcScan", url: "https://testnet.arcscan.app" },
@@ -28,9 +42,12 @@ export const publicClient = createPublicClient({
 
 // CCTP Constants for Arc Testnet
 export const ARC_DOMAIN = 26;
-export const USDC_ADDRESS = (process.env.ARC_USDC_CONTRACT || "0x3600000000000000000000000000000000000000") as `0x${string}`;
-export const TOKEN_MESSENGER = "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA" as `0x${string}`;
-export const MESSAGE_TRANSMITTER = "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275" as `0x${string}`;
+export const USDC_ADDRESS = (process.env.ARC_USDC_CONTRACT ||
+  "0x3600000000000000000000000000000000000000") as `0x${string}`;
+export const TOKEN_MESSENGER =
+  "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA" as `0x${string}`;
+export const MESSAGE_TRANSMITTER =
+  "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275" as `0x${string}`;
 
 /**
  * Helper to format recipient address for CCTP (left-padded bytes32)
@@ -54,7 +71,7 @@ export async function getCCTPAttestation(messageHash: string): Promise<string> {
       if (data.status === "complete") {
         return data.attestation;
       }
-      
+
       // Wait 10 seconds before next poll
       await new Promise((resolve) => setTimeout(resolve, 10000));
     } catch (error) {
@@ -68,26 +85,31 @@ export async function getCCTPAttestation(messageHash: string): Promise<string> {
  * Extracts message bytes and calculates hash from a CCTP-enabled transaction receipt.
  */
 export function extractCCTPMessage(logs: any[]) {
-  const MESSAGE_SENT_TOPIC = "0x2fa9ca894982930190727e75500a97d8dc500233a5065e0f3126c48fbe0343c0";
+  const MESSAGE_SENT_TOPIC =
+    "0x2fa9ca894982930190727e75500a97d8dc500233a5065e0f3126c48fbe0343c0";
   const log = logs.find((l) => l.topics[0] === MESSAGE_SENT_TOPIC);
-  
+
   if (!log) throw new Error("CCTP MessageSent event not found in logs");
-  
+
   const messageBytes = log.data;
   const messageHash = keccak256(messageBytes);
-  
+
   return { messageBytes, messageHash };
 }
 
 /**
  * Encodes 'depositForBurn' call for outbound bridging from Arc.
  */
-export function encodeDepositForBurn(amount: bigint, destinationDomain: number, mintRecipient: string) {
+export function encodeDepositForBurn(
+  amount: bigint,
+  destinationDomain: number,
+  mintRecipient: string,
+) {
   const recipientBytes32 = formatRecipientForCCTP(mintRecipient);
-  
+
   return encodeFunctionData({
     abi: parseAbi([
-      "function depositForBurn(uint256 amount, uint32 destinationDomain, bytes32 mintRecipient, address burnToken) returns (uint64)"
+      "function depositForBurn(uint256 amount, uint32 destinationDomain, bytes32 mintRecipient, address burnToken) returns (uint64)",
     ]),
     functionName: "depositForBurn",
     args: [amount, destinationDomain, recipientBytes32, USDC_ADDRESS],
@@ -100,7 +122,7 @@ export function encodeDepositForBurn(amount: bigint, destinationDomain: number, 
 export function encodeReceiveMessage(message: string, attestation: string) {
   return encodeFunctionData({
     abi: parseAbi([
-      "function receiveMessage(bytes message, bytes attestation) returns (bool)"
+      "function receiveMessage(bytes message, bytes attestation) returns (bool)",
     ]),
     functionName: "receiveMessage",
     args: [message as `0x${string}`, attestation as `0x${string}`],
@@ -140,28 +162,35 @@ export async function isBlocklisted(address: string): Promise<boolean> {
  * Handles both 6-decimal and 18-decimal contracts for simulation safety.
  */
 export async function estimateTransferGas(
-  from: `0x${string}`, 
-  to: `0x${string}`, 
-  amount: bigint, 
-  tokenAddress: `0x${string}` = USDC_ADDRESS
+  from: `0x${string}`,
+  to: `0x${string}`,
+  amount: bigint,
+  tokenAddress: `0x${string}` = USDC_ADDRESS,
 ) {
   try {
     const data = encodeFunctionData({
-      abi: parseAbi(["function transfer(address to, uint256 amount) returns (bool)"]),
+      abi: parseAbi([
+        "function transfer(address to, uint256 amount) returns (bool)",
+      ]),
       functionName: "transfer",
       args: [to, amount],
     });
 
     const [gasPrice, gasUnits] = await Promise.all([
       publicClient.getGasPrice(),
-      publicClient.estimateGas({
-        account: from,
-        to: tokenAddress,
-        data,
-      } as any).catch((err) => {
-        console.warn("[ArcViem] Simulation failed, using fallback:", err.message);
-        return 65000n; // Safe standard ERC20 transfer gas
-      }),
+      publicClient
+        .estimateGas({
+          account: from,
+          to: tokenAddress,
+          data,
+        } as any)
+        .catch((err) => {
+          console.warn(
+            "[ArcViem] Simulation failed, using fallback:",
+            err.message,
+          );
+          return 65000n; // Safe standard ERC20 transfer gas
+        }),
     ]);
 
     const totalCostWei = gasUnits * gasPrice;
@@ -172,7 +201,7 @@ export async function estimateTransferGas(
       gasPrice,
       totalCostWei,
       costHuman,
-      data
+      data,
     };
   } catch (error) {
     console.error("[ArcViem] Gas estimation failed:", error);
@@ -181,7 +210,7 @@ export async function estimateTransferGas(
       gasPrice: 1000000000n,
       totalCostWei: 65000n * 1000000000n,
       costHuman: 0.000065,
-      data: "0x"
+      data: "0x",
     };
   }
 }
@@ -198,7 +227,10 @@ export async function getTokenDecimals(tokenAddress: string): Promise<number> {
     } as any);
     return Number(decimals);
   } catch (error) {
-    console.warn(`[ArcViem] Could not fetch decimals for ${tokenAddress}, defaulting to 18`, error);
+    console.warn(
+      `[ArcViem] Could not fetch decimals for ${tokenAddress}, defaulting to 18`,
+      error,
+    );
     return 18;
   }
 }
@@ -206,7 +238,7 @@ export async function getTokenDecimals(tokenAddress: string): Promise<number> {
 /**
  * Helper to generate ArcScan URLs.
  */
-export function getArcScanUrl(type: 'tx' | 'address', value: string): string {
+export function getArcScanUrl(type: "tx" | "address", value: string): string {
   const baseUrl = "https://testnet.arcscan.app";
   return `${baseUrl}/${type}/${value}`;
 }
@@ -215,14 +247,19 @@ export function getArcScanUrl(type: 'tx' | 'address', value: string): string {
  * Fetches the raw balance for any ERC-20 token or native asset.
  * Defaults to USDC (6-decimal).
  */
-export async function getTokenBalance(walletAddress: string, tokenAddress: string = USDC_ADDRESS): Promise<bigint> {
+export async function getTokenBalance(
+  walletAddress: string,
+  tokenAddress: string = USDC_ADDRESS,
+): Promise<bigint> {
   if (tokenAddress === "native") {
     return publicClient.getBalance({ address: walletAddress as `0x${string}` });
   }
-  
+
   return publicClient.readContract({
     address: tokenAddress as `0x${string}`,
-    abi: parseAbi(["function balanceOf(address account) view returns (uint256)"]),
+    abi: parseAbi([
+      "function balanceOf(address account) view returns (uint256)",
+    ]),
     functionName: "balanceOf",
     args: [walletAddress as `0x${string}`],
   } as any) as Promise<bigint>;
@@ -246,11 +283,17 @@ export async function getUSDCBalance(address: string): Promise<bigint> {
 /**
  * Encodes data for compliance memo transfers.
  */
-export function encodeMemoTransfer(to: `0x${string}`, amount: bigint, memoText: string) {
-  const memoHex = typeof memoText === 'string' ? toHex(memoText) : memoText;
-  
+export function encodeMemoTransfer(
+  to: `0x${string}`,
+  amount: bigint,
+  memoText: string,
+) {
+  const memoHex = typeof memoText === "string" ? toHex(memoText) : memoText;
+
   return encodeFunctionData({
-    abi: parseAbi(["function sendWithMemo(address to, uint256 amount, bytes memo)"]),
+    abi: parseAbi([
+      "function sendWithMemo(address to, uint256 amount, bytes memo)",
+    ]),
     functionName: "sendWithMemo",
     args: [to, amount, memoHex as `0x${string}`],
   });
@@ -262,9 +305,9 @@ export function encodeMemoTransfer(to: `0x${string}`, amount: bigint, memoText: 
  */
 export async function waitForConfirmation(hash: string) {
   console.log(`[ArcViem] Waiting for finality: ${hash}`);
-  const receipt = await publicClient.waitForTransactionReceipt({ 
+  const receipt = await publicClient.waitForTransactionReceipt({
     hash: hash as `0x${string}`,
-    confirmations: 1
+    confirmations: 1,
   });
 
   if (receipt.status !== "success") {

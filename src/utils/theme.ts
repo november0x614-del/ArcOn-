@@ -10,7 +10,7 @@ export const THEME_STYLES = {
     pnlBorder: "border-slate-600",
     uidText: "text-white",
     uidSubText: "text-slate-400",
-    borderClass: "border-white/10"
+    borderClass: "border-white/10",
   },
   premium: {
     walletBg: "bg-gradient-to-br from-[#f8f5ed] to-[#e8ddbe]",
@@ -23,7 +23,7 @@ export const THEME_STYLES = {
     pnlBorder: "border-slate-300",
     uidText: "text-slate-900",
     uidSubText: "text-slate-500",
-    borderClass: "border-slate-200"
+    borderClass: "border-slate-200",
   },
   emerald: {
     walletBg: "bg-gradient-to-br from-[#f0f9f4] to-[#cce8d9]",
@@ -36,6 +36,6 @@ export const THEME_STYLES = {
     pnlBorder: "border-emerald-300/50",
     uidText: "text-slate-900",
     uidSubText: "text-emerald-700/80",
-    borderClass: "border-emerald-200"
-  }
+    borderClass: "border-emerald-200",
+  },
 };

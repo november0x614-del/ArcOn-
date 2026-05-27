@@ -1,26 +1,44 @@
-export type ViewState = 
-  | 'splash' 
-  | 'register' 
-  | 'registerSuccess' 
-  | 'swap' 
-  | 'password' 
-  | 'home' 
-  | 'transfer' 
-  | 'newTransfer' 
-  | 'amountInput' 
-  | 'processing' 
-  | 'success' 
-  | 'settings' 
-  | 'inbox' 
-  | 'accountDetail' 
-  | 'receipt'
-  | 'transactionHistory'
-  | 'receive'
-  | 'depositOptions'
-  | 'logout'
-  | 'withdraw'
-  | 'bridge'
-  | 'adminDashboard';
+export type ViewState =
+  | "splash"
+  | "register"
+  | "registerSuccess"
+  | "swap"
+  | "ecommerce"
+  | "bayarVA"
+  | "otherAccounts"
+  | "password"
+  | "home"
+  | "transfer"
+  | "newTransfer"
+  | "amountInput"
+  | "processing"
+  | "success"
+  | "settings"
+  | "inbox"
+  | "accountDetail"
+  | "namaPanggilan"
+  | "email"
+  | "manageFavorites"
+  | "connectEWallet"
+  | "receipt"
+  | "scanQR"
+  | "aiAgent"
+  | "forgotPassword"
+  | "transactionHistory"
+  | "merchant"
+  | "faucet"
+  | "receive"
+  | "stablestake"
+  | "depositOptions"
+  | "receiveVA"
+  | "receiveQRIS"
+  | "logout"
+  | "arcswap"
+  | "arcbird"
+  | "withdraw"
+  | "bridge"
+  | "batchTransfer"
+  | "adminDashboard";
 
 export interface ShortcutItem {
   id: string;
@@ -35,7 +53,7 @@ export interface ShortcutItem {
   textIcon?: string;
 }
 
-export type UIDCardTheme = 'default' | 'premium' | 'emerald';
+export type UIDCardTheme = "default" | "premium" | "emerald";
 
 export interface UserIdentity {
   username: string;
@@ -50,12 +68,20 @@ export interface UserIdentity {
 
 export interface Transaction {
   id: string;
-  type: 'deposit' | 'withdraw' | 'transfer' | 'purchase' | 'swap' | 'payment' | 'receive' | 'bridge';
+  type:
+    | "deposit"
+    | "withdraw"
+    | "transfer"
+    | "purchase"
+    | "swap"
+    | "payment"
+    | "receive"
+    | "bridge";
   title: string;
   amount: string;
   currency: string;
   timestamp: string;
-  status: 'pending' | 'success' | 'failed';
+  status: "pending" | "success" | "failed";
   txHash?: string;
   explorerUrl?: string;
   internal_ref?: string;
@@ -68,7 +94,7 @@ export interface Transaction {
     toToken?: string;
     destinationAddress?: string;
     recipientName?: string;
-    direction?: 'inbound' | 'outbound';
+    direction?: "inbound" | "outbound";
     blockNumber?: number;
     explorerUrl?: string;
   };

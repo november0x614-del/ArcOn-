@@ -1,16 +1,18 @@
-import { create } from 'zustand';
-import { ViewState, ShortcutItem, UserIdentity, Transaction, SourceAccount, ImportedToken } from '../types';
+import { create } from "zustand";
+import {
+  ViewState,
+  ShortcutItem,
+  UserIdentity,
+  Transaction,
+  SourceAccount,
+  ImportedToken,
+} from "../types";
+import {
+  defaultSelectedShortcuts,
+  defaultAvailableShortcuts,
+} from "../components/screens/ManageFavoritesScreen";
 
-export const defaultSelectedShortcuts: ShortcutItem[] = [
-  { id: '1', icon: 'send', label: 'Transfer USDC', color: 'bg-emerald-50 text-emerald-600', badgeColor: 'bg-emerald-500' },
-  { id: '2', icon: 'receive', label: 'Receive USDC', color: 'bg-amber-50 text-amber-600', badgeColor: 'bg-amber-500' },
-  { id: '3', icon: 'bridge', label: 'Bridge USDC', color: 'bg-blue-50 text-blue-600', badgeColor: 'bg-blue-500' },
-  { id: '4', icon: 'swap', label: 'Swap USDC', color: 'bg-purple-50 text-purple-600', badgeColor: 'bg-purple-500' },
-];
-
-export const defaultAvailableShortcuts: ShortcutItem[] = [];
-
-export type TransactionFilter = 'All' | 'Received' | 'Sent' | 'Swaps';
+export type TransactionFilter = "All" | "Received" | "Sent" | "Swaps";
 
 interface AppState {
   // Navigation & UI
@@ -22,16 +24,16 @@ interface AppState {
   setShowBalance: (show: boolean) => void;
   activeFilter: TransactionFilter;
   setActiveFilter: (filter: TransactionFilter) => void;
-  
+
   // Imported Tokens state
   importedTokens: ImportedToken[];
   importToken: (token: ImportedToken) => void;
   removeToken: (symbol: string) => void;
-  
+
   // User & Auth
   registeredUser: UserIdentity | null;
   setRegisteredUser: (user: UserIdentity | null) => void;
-  
+
   // Financials
   balance: number;
   setBalance: (balance: number | ((prev: number) => number)) => void;
@@ -44,13 +46,13 @@ interface AppState {
   fetchTransactions: () => Promise<void>;
   selectedTransaction: Transaction | null;
   setSelectedTransaction: (tx: Transaction | null) => void;
-  
+
   // Market & Inbox logic
   visibleTokenCodes: string[];
   setVisibleTokenCodes: (codes: string[]) => void;
   readReceiptIds: string[];
   markAsRead: (id: string) => void;
-  
+
   // Shortcuts & Contacts
   selectedShortcuts: ShortcutItem[];
   setSelectedShortcuts: (shortcuts: ShortcutItem[]) => void;
@@ -83,214 +85,256 @@ interface AppState {
   resetState: () => void;
 }
 
+export const useStore = create<AppState>()((set) => ({
+  // UI States
+  viewState: "splash",
+  setViewState: (state) => set({ viewState: state }),
+  receiptSource: "home",
+  setReceiptSource: (source) => set({ receiptSource: source }),
+  showBalance: false,
+  setShowBalance: (show) => set({ showBalance: show }),
+  activeFilter: "All",
+  setActiveFilter: (filter) => set({ activeFilter: filter }),
 
-export const useStore = create<AppState>()(
-  (set) => ({
-      // UI States
-      viewState: 'splash',
-      setViewState: (state) => set({ viewState: state }),
-      receiptSource: 'home',
-      setReceiptSource: (source) => set({ receiptSource: source }),
-      showBalance: false,
-      setShowBalance: (show) => set({ showBalance: show }),
-      activeFilter: 'All',
-      setActiveFilter: (filter) => set({ activeFilter: filter }),
-      
-      // User States
-      registeredUser: null,
-      setRegisteredUser: (user) => set({ registeredUser: user }),
-      
-      // Financials
-      balance: 0,
-      setBalance: (balance) => set((state) => ({ 
-        balance: typeof balance === 'function' ? balance(state.balance) : balance 
-      })),
-      fetchBalance: async () => {
-        const user = useStore.getState().registeredUser;
-        if (!user?.supabaseUid) return;
-        
-        try {
-          const url = `/api/balance/${user.supabaseUid}`;
-          useStore.getState().addLog(`Fetching balance: GET ${url}`);
-          const response = await fetch(url);
-          if (!response.ok) {
-            useStore.getState().addLog(`Balance fetch failed: ${url} Status: ${response.status}`);
-            console.error(`Balance fetch failed with status: ${response.status}`);
-            return;
-          }
-          const contentType = response.headers.get("content-type");
-          if (contentType && contentType.indexOf("application/json") !== -1) {
-            const text = await response.text();
-            const data = JSON.parse(text);
-            const newBalance = data.balance || 0;
-            useStore.getState().addLog(`Balance value: ${newBalance} (from ${url})`);
-            
-            const state = useStore.getState();
-            let totalDeposit = 0;
-            state.transactions.forEach((tx) => {
-              if (tx.type === 'deposit' || tx.type === 'receive') {
-                const amt = Math.abs(parseFloat(tx.amount.replace(/[+-]/g, ''))) || 0;
-                totalDeposit += amt;
-              }
-            });
-            
-            const pnlValue = totalDeposit > 0 ? newBalance - totalDeposit : 0;
-            const pnlPercentage = totalDeposit > 0 ? (pnlValue / totalDeposit) * 100 : 0;
+  // User States
+  registeredUser: null,
+  setRegisteredUser: (user) => set({ registeredUser: user }),
 
-            set({ balance: newBalance, pnlValue, pnlPercentage });
-          } else {
-             console.error(`Received non-JSON response for ${url}`);
+  // Financials
+  balance: 0,
+  setBalance: (balance) =>
+    set((state) => ({
+      balance: typeof balance === "function" ? balance(state.balance) : balance,
+    })),
+  fetchBalance: async () => {
+    const user = useStore.getState().registeredUser;
+    if (!user?.supabaseUid) return;
+
+    try {
+      const url = `/api/balance/${user.supabaseUid}`;
+      useStore.getState().addLog(`Fetching balance: GET ${url}`);
+      const response = await fetch(url);
+      if (!response.ok) {
+        useStore
+          .getState()
+          .addLog(`Balance fetch failed: ${url} Status: ${response.status}`);
+        console.error(`Balance fetch failed with status: ${response.status}`);
+        return;
+      }
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.indexOf("application/json") !== -1) {
+        const text = await response.text();
+        const data = JSON.parse(text);
+        const newBalance = data.balance || 0;
+        useStore
+          .getState()
+          .addLog(`Balance value: ${newBalance} (from ${url})`);
+
+        const state = useStore.getState();
+        let totalDeposit = 0;
+        state.transactions.forEach((tx) => {
+          if (tx.type === "deposit" || tx.type === "receive") {
+            const amt =
+              Math.abs(parseFloat(tx.amount.replace(/[+-]/g, ""))) || 0;
+            totalDeposit += amt;
           }
-        } catch (error: any) {
-          useStore.getState().addLog(`Balance fetch error: ${error}`);
-          if (error.name !== 'TypeError' || error.message !== 'Failed to fetch') {
-            console.error('Failed to fetch balance', error);
-          }
+        });
+
+        const pnlValue = totalDeposit > 0 ? newBalance - totalDeposit : 0;
+        const pnlPercentage =
+          totalDeposit > 0 ? (pnlValue / totalDeposit) * 100 : 0;
+
+        set({ balance: newBalance, pnlValue, pnlPercentage });
+      } else {
+        console.error(`Received non-JSON response for ${url}`);
+      }
+    } catch (error: any) {
+      useStore.getState().addLog(`Balance fetch error: ${error}`);
+      if (error.name !== "TypeError" || error.message !== "Failed to fetch") {
+        console.error("Failed to fetch balance", error);
+      }
+    }
+  },
+  pnlValue: 0,
+  setPnlValue: (value) => set({ pnlValue: value }),
+  pnlPercentage: 0,
+  setPnlPercentage: (percentage) => set({ pnlPercentage: percentage }),
+  transactions: [], // Start empty
+  fetchTransactions: async () => {
+    const user = useStore.getState().registeredUser;
+    if (!user?.supabaseUid) return;
+
+    try {
+      const url = `/api/transactions/${user.supabaseUid}`;
+      useStore.getState().addLog(`Fetching transactions: GET ${url}`);
+      const response = await fetch(url);
+      if (!response.ok) {
+        useStore
+          .getState()
+          .addLog(
+            `Transactions fetch failed: ${url} Status: ${response.status}`,
+          );
+        console.error(
+          `Transactions fetch failed with status: ${response.status}`,
+        );
+        return;
+      }
+      const text = await response.text();
+      useStore.getState().addLog(`Transactions response received from ${url}`);
+      if (!text) {
+        useStore.getState().addLog("Transactions response empty");
+        return;
+      }
+      const dbTransactions = JSON.parse(text);
+
+      if (!Array.isArray(dbTransactions)) return;
+
+      const transactions: Transaction[] = dbTransactions.map((tx: any) => {
+        const rawAmount = parseFloat(tx.amount) || 0;
+        const direction =
+          tx.metadata?.direction ||
+          (tx.type === "receive" || tx.type === "deposit"
+            ? "inbound"
+            : "outbound");
+        const sign = direction === "inbound" ? "+" : "-";
+
+        let title = tx.type.charAt(0).toUpperCase() + tx.type.slice(1);
+        if (tx.type === "receive") title = "Inbound Transfer";
+        if (tx.type === "bridge") {
+          title =
+            direction === "inbound"
+              ? "CCTP Inbound Bridge"
+              : "CCTP Outbound Bridge";
         }
-      },
-      pnlValue: 0,
-      setPnlValue: (value) => set({ pnlValue: value }),
-      pnlPercentage: 0,
-      setPnlPercentage: (percentage) => set({ pnlPercentage: percentage }),
-      transactions: [], // Start empty
-      fetchTransactions: async () => {
-        const user = useStore.getState().registeredUser;
-        if (!user?.supabaseUid) return;
-        
-        try {
-          const url = `/api/transactions/${user.supabaseUid}`;
-          useStore.getState().addLog(`Fetching transactions: GET ${url}`);
-          const response = await fetch(url);
-          if (!response.ok) {
-            useStore.getState().addLog(`Transactions fetch failed: ${url} Status: ${response.status}`);
-            console.error(`Transactions fetch failed with status: ${response.status}`);
-            return;
-          }
-          const text = await response.text();
-          useStore.getState().addLog(`Transactions response received from ${url}`);
-          if (!text) {
-             useStore.getState().addLog("Transactions response empty");
-             return;
-          }
-          const dbTransactions = JSON.parse(text);
-          
-          if (!Array.isArray(dbTransactions)) return;
 
-          const transactions: Transaction[] = dbTransactions.map((tx: any) => {
-            const rawAmount = parseFloat(tx.amount) || 0;
-            const direction = tx.metadata?.direction || (tx.type === 'receive' || tx.type === 'deposit' ? 'inbound' : 'outbound');
-            const sign = direction === 'inbound' ? '+' : '-';
-            
-            let title = tx.type.charAt(0).toUpperCase() + tx.type.slice(1);
-            if (tx.type === 'receive') title = 'Inbound Transfer';
-            if (tx.type === 'bridge') {
-               title = direction === 'inbound' ? 'CCTP Inbound Bridge' : 'CCTP Outbound Bridge';
-            }
+        return {
+          id: tx.id || tx.internal_ref,
+          type: tx.type,
+          title,
+          amount: sign + Math.abs(rawAmount).toString(),
+          currency: "USDC",
+          timestamp: new Date(tx.created_at).toLocaleString(),
+          status: tx.status,
+          txHash: tx.tx_hash || tx.metadata?.txHash || tx.internal_ref,
+          explorerUrl:
+            tx.metadata?.explorerUrl ||
+            (tx.tx_hash || tx.internal_ref
+              ? `https://testnet.arcscan.app/tx/${tx.tx_hash || tx.internal_ref}`
+              : undefined),
+          metadata: tx.metadata,
+        };
+      });
 
-            return {
-              id: tx.id || tx.internal_ref,
-              type: tx.type,
-              title,
-              amount: sign + Math.abs(rawAmount).toString(),
-              currency: 'USDC',
-              timestamp: new Date(tx.created_at).toLocaleString(),
-              status: tx.status,
-              txHash: tx.tx_hash || tx.metadata?.txHash || tx.internal_ref,
-              explorerUrl: tx.metadata?.explorerUrl || (tx.tx_hash || tx.internal_ref ? `https://testnet.arcscan.app/tx/${tx.tx_hash || tx.internal_ref}` : undefined),
-              metadata: tx.metadata
-            };
-          });
-          
-          const state = useStore.getState();
-          let totalDeposit = 0;
-          transactions.forEach((tx) => {
-            if (tx.type === 'deposit' || tx.type === 'receive') {
-              const amt = Math.abs(parseFloat(tx.amount.replace(/[+-]/g, ''))) || 0;
-              totalDeposit += amt;
-            }
-          });
-          
-          const pnlValue = totalDeposit > 0 ? state.balance - totalDeposit : 0;
-          const pnlPercentage = totalDeposit > 0 ? (pnlValue / totalDeposit) * 100 : 0;
-
-          set({ transactions, pnlValue, pnlPercentage });
-          useStore.getState().addLog(`Transactions updated: ${transactions.length} total`);
-        } catch (error: any) {
-          useStore.getState().addLog(`Transactions fetch error: ${error}`);
-          if (error.name !== 'TypeError' || error.message !== 'Failed to fetch') {
-            console.error('Failed to fetch transactions', error);
-          }
+      const state = useStore.getState();
+      let totalDeposit = 0;
+      transactions.forEach((tx) => {
+        if (tx.type === "deposit" || tx.type === "receive") {
+          const amt = Math.abs(parseFloat(tx.amount.replace(/[+-]/g, ""))) || 0;
+          totalDeposit += amt;
         }
-      },
-      selectedTransaction: null,
-      setSelectedTransaction: (tx) => set({ selectedTransaction: tx }),
-      
-      // Feature Persistence
-      visibleTokenCodes: ["USDC", "EURC", "USDT", "USDe", "DAI", "PYUSD", "cirBTC"],
-      setVisibleTokenCodes: (codes) => set({ visibleTokenCodes: codes }),
-      readReceiptIds: [],
-      markAsRead: (id) => set((state) => ({
-        readReceiptIds: state.readReceiptIds.includes(id) ? state.readReceiptIds : [...state.readReceiptIds, id]
-      })),
-      
-      // Imported Tokens
-      importedTokens: [],
-      importToken: (token) => set((state) => {
-        const uppercaseSymbol = token.symbol.toUpperCase();
-        if (state.importedTokens.some(t => t.symbol.toUpperCase() === uppercaseSymbol)) {
-          return state;
-        }
-        return { importedTokens: [...state.importedTokens, token] };
-      }),
-      removeToken: (symbol) => set((state) => ({
-        importedTokens: state.importedTokens.filter(t => t.symbol.toUpperCase() !== symbol.toUpperCase())
-      })),
-      
-      // Integration
-      selectedShortcuts: defaultSelectedShortcuts,
-      setSelectedShortcuts: (shortcuts) => set({ selectedShortcuts: shortcuts }),
-      availableShortcuts: defaultAvailableShortcuts,
-      setAvailableShortcuts: (shortcuts) => set({ availableShortcuts: shortcuts }),
-      selectedContact: null,
-      setSelectedContact: (contact) => set({ selectedContact: contact }),
-      transferAmount: '0',
-      setTransferAmount: (amount) => set({ transferAmount: amount }),
-      transferMemo: '',
-      setTransferMemo: (memo) => set({ transferMemo: memo }),
+      });
 
-      // Toast
-      toast: { message: '', visible: false },
-      displayToast: (message) => {
-        set({ toast: { message, visible: true } });
-        setTimeout(() => set({ toast: { message: '', visible: false } }), 3000);
-      },
-      // Settings
-      language: 'English',
-      setLanguage: (lang) => set({ language: lang }),
-      network: 'ARC TESTNET',
-      setNetwork: (net) => set({ network: net }),
-      walletConnectSessions: 0,
-      setWalletConnectSessions: (count) => set({ walletConnectSessions: count }),
-      contractAllowances: 0,
-      setContractAllowances: (count) => set({ contractAllowances: count }),
-      sourceAccount: {
-        name: 'Savings NOW IDR',
-        accountNumber: '1820014780589',
-        balance: 18261185,
-        currency: 'IDR'
-      },
-      setSourceAccount: (account) => set({ sourceAccount: account }),
-      logs: [],
-      addLog: (log) => set((state) => ({ logs: [...state.logs.slice(-49), `[${new Date().toLocaleTimeString()}] ${log}`] })),
-      resetState: () => set({
-        viewState: 'splash',
-        registeredUser: null,
-        balance: 0,
-        transactions: [],
-        pnlValue: 0,
-        pnlPercentage: 0,
-        readReceiptIds: [],
-        logs: [],
-      }),
+      const pnlValue = totalDeposit > 0 ? state.balance - totalDeposit : 0;
+      const pnlPercentage =
+        totalDeposit > 0 ? (pnlValue / totalDeposit) * 100 : 0;
+
+      set({ transactions, pnlValue, pnlPercentage });
+      useStore
+        .getState()
+        .addLog(`Transactions updated: ${transactions.length} total`);
+    } catch (error: any) {
+      useStore.getState().addLog(`Transactions fetch error: ${error}`);
+      if (error.name !== "TypeError" || error.message !== "Failed to fetch") {
+        console.error("Failed to fetch transactions", error);
+      }
+    }
+  },
+  selectedTransaction: null,
+  setSelectedTransaction: (tx) => set({ selectedTransaction: tx }),
+
+  // Feature Persistence
+  visibleTokenCodes: ["USDC", "EURC", "USDT", "USDe", "DAI", "PYUSD", "cirBTC"],
+  setVisibleTokenCodes: (codes) => set({ visibleTokenCodes: codes }),
+  readReceiptIds: [],
+  markAsRead: (id) =>
+    set((state) => ({
+      readReceiptIds: state.readReceiptIds.includes(id)
+        ? state.readReceiptIds
+        : [...state.readReceiptIds, id],
+    })),
+
+  // Imported Tokens
+  importedTokens: [],
+  importToken: (token) =>
+    set((state) => {
+      const uppercaseSymbol = token.symbol.toUpperCase();
+      if (
+        state.importedTokens.some(
+          (t) => t.symbol.toUpperCase() === uppercaseSymbol,
+        )
+      ) {
+        return state;
+      }
+      return { importedTokens: [...state.importedTokens, token] };
     }),
-);
+  removeToken: (symbol) =>
+    set((state) => ({
+      importedTokens: state.importedTokens.filter(
+        (t) => t.symbol.toUpperCase() !== symbol.toUpperCase(),
+      ),
+    })),
+
+  // Integration
+  selectedShortcuts: defaultSelectedShortcuts,
+  setSelectedShortcuts: (shortcuts) => set({ selectedShortcuts: shortcuts }),
+  availableShortcuts: defaultAvailableShortcuts,
+  setAvailableShortcuts: (shortcuts) => set({ availableShortcuts: shortcuts }),
+  selectedContact: null,
+  setSelectedContact: (contact) => set({ selectedContact: contact }),
+  transferAmount: "0",
+  setTransferAmount: (amount) => set({ transferAmount: amount }),
+  transferMemo: "",
+  setTransferMemo: (memo) => set({ transferMemo: memo }),
+
+  // Toast
+  toast: { message: "", visible: false },
+  displayToast: (message) => {
+    set({ toast: { message, visible: true } });
+    setTimeout(() => set({ toast: { message: "", visible: false } }), 3000);
+  },
+  // Settings
+  language: "English",
+  setLanguage: (lang) => set({ language: lang }),
+  network: "ARC TESTNET",
+  setNetwork: (net) => set({ network: net }),
+  walletConnectSessions: 0,
+  setWalletConnectSessions: (count) => set({ walletConnectSessions: count }),
+  contractAllowances: 0,
+  setContractAllowances: (count) => set({ contractAllowances: count }),
+  sourceAccount: {
+    name: "Savings NOW IDR",
+    accountNumber: "1820014780589",
+    balance: 18261185,
+    currency: "IDR",
+  },
+  setSourceAccount: (account) => set({ sourceAccount: account }),
+  logs: [],
+  addLog: (log) =>
+    set((state) => ({
+      logs: [
+        ...state.logs.slice(-49),
+        `[${new Date().toLocaleTimeString()}] ${log}`,
+      ],
+    })),
+  resetState: () =>
+    set({
+      viewState: "splash",
+      registeredUser: null,
+      balance: 0,
+      transactions: [],
+      pnlValue: 0,
+      pnlPercentage: 0,
+      readReceiptIds: [],
+      logs: [],
+    }),
+}));

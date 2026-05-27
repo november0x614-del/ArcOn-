@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { ARC_CHAIN_ID } from './arcConfig';
+import { useState, useEffect } from "react";
+import { ARC_CHAIN_ID } from "./arcConfig";
 
 /**
  * useArcWallet Hook
@@ -7,51 +7,53 @@ import { ARC_CHAIN_ID } from './arcConfig';
  * Handles window.__arcWallet events and state.
  */
 export function useArcWallet() {
-  const [status, setStatus] = useState<'checking' | 'connected' | 'disconnected' | 'not-installed'>('checking');
+  const [status, setStatus] = useState<
+    "checking" | "connected" | "disconnected" | "not-installed"
+  >("checking");
   const [address, setAddress] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const bus = (window as any).__arcWallet;
-    
+
     const syncFromBus = () => {
       const b = (window as any).__arcWallet;
       if (!b) return;
 
       if (b.state && b.state.address) {
         setAddress(b.state.address);
-        setStatus('connected');
+        setStatus("connected");
       } else if (b.isReady) {
-        setStatus('disconnected');
+        setStatus("disconnected");
       }
     };
 
     const handleChanged = () => syncFromBus();
     const handleReady = () => syncFromBus();
 
-    window.addEventListener('arc:wallet:changed', handleChanged);
-    window.addEventListener('arc:wallet:ready', handleReady);
+    window.addEventListener("arc:wallet:changed", handleChanged);
+    window.addEventListener("arc:wallet:ready", handleReady);
 
     if (bus) syncFromBus();
-    else setStatus('not-installed');
+    else setStatus("not-installed");
 
     return () => {
-      window.removeEventListener('arc:wallet:changed', handleChanged);
-      window.removeEventListener('arc:wallet:ready', handleReady);
+      window.removeEventListener("arc:wallet:changed", handleChanged);
+      window.removeEventListener("arc:wallet:ready", handleReady);
     };
   }, []);
 
   const connect = async () => {
     const bus = (window as any).__arcWallet;
     if (!bus) {
-        setError('No wallet detected');
-        return;
+      setError("No wallet detected");
+      return;
     }
 
     setIsBusy(true);
     setError(null);
-    
+
     try {
       await bus.connect();
       try {
@@ -62,9 +64,9 @@ export function useArcWallet() {
         }
       }
     } catch (err: any) {
-      console.error('[ArcWallet] Connection error:', err);
-      if (err.code === 4001) setError('Request rejected');
-      else setError(err.message || 'Connection failed');
+      console.error("[ArcWallet] Connection error:", err);
+      if (err.code === 4001) setError("Request rejected");
+      else setError(err.message || "Connection failed");
     } finally {
       setIsBusy(false);
     }
@@ -73,12 +75,12 @@ export function useArcWallet() {
   const disconnect = async () => {
     const bus = (window as any).__arcWallet;
     if (!bus) return;
-    
+
     setIsBusy(true);
     try {
       await bus.disconnect();
       setAddress(null);
-      setStatus('disconnected');
+      setStatus("disconnected");
     } finally {
       setIsBusy(false);
     }
@@ -90,6 +92,6 @@ export function useArcWallet() {
     isBusy,
     error,
     connect,
-    disconnect
+    disconnect,
   };
 }

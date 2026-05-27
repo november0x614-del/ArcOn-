@@ -8,9 +8,7 @@ interface DepositQRScreenProps {
 }
 
 export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
-  const { 
-    registeredUser
-  } = useApp();
+  const { registeredUser } = useApp();
   const [copied, setCopied] = useState(false);
   const [amount, setAmount] = useState<string>("");
   const [isEditingAmount, setIsEditingAmount] = useState(false);
@@ -34,9 +32,7 @@ export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
           >
             <ArrowLeft size={20} className="text-white" />
           </button>
-          <h2 className="font-bold text-[16px] text-white ml-2">
-            RECEIVE
-          </h2>
+          <h2 className="font-bold text-[16px] text-white ml-2">RECEIVE</h2>
         </div>
       </div>
 
@@ -146,4 +142,3 @@ export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
   );
 }
 export default DepositQRScreen;
-
