@@ -1,6 +1,4 @@
-import { formatUnits } from "viem";
-import { publicClient, USDC_ADDRESS, getTokenBalance } from "./arcViem.js";
-import { getCircleClientInstance } from "./circleClient.js";
+import { getAppKitInstance } from "./circleClient.js";
 
 export async function fetchUnifiedBalance(
   userId: string,
@@ -16,90 +14,62 @@ export async function fetchUnifiedBalance(
     };
   }
 
-  const walletId = walletData.wallet_id;
   const walletAddress = walletData.wallet_address;
-
-  // 1. Parallel Fetch: Circle Balance (Cloud) + Arc Native Balance (On-Chain) + Arc ERC20 USDC
-  const [circleResponse, nativeWei, nativeUSDCWei] = await Promise.all([
-    walletId
-      ? getCircleClientInstance()
-          .getWalletTokenBalance({ id: walletId })
-          .catch(() => null)
-      : null,
-    publicClient.getBalance({ address: walletAddress as `0x${string}` }).catch((e) => {
-      console.warn("RPC getBalance failed:", e.message);
-      return 0n;
-    }),
-    getTokenBalance(walletAddress, USDC_ADDRESS).catch((e) => {
-      console.warn("RPC getTokenBalance failed:", e.message);
-      return 0n;
-    }),
-  ]);
-
   const tokenBalances: any[] = [];
   let totalValueUsd = 0;
 
-  // Prices (Mock for testnet)
   const ARC_PRICE = 0.02;
   const USDC_PRICE = 1.0;
 
-  // 2. Process Circle Balances
-  if (circleResponse?.data?.tokenBalances) {
-    const circleTokens = circleResponse.data.tokenBalances;
-    for (const b of circleTokens) {
-      tokenBalances.push(b);
-      const amount = parseFloat(b.amount || "0");
-      const price = b.token?.symbol === "ARC" ? ARC_PRICE : USDC_PRICE;
-      totalValueUsd += amount * price;
+  try {
+    const { kit, adapter } = getAppKitInstance();
+    const balances = await kit.unifiedBalance.getBalances({
+      token: "USDC",
+      sources: { address: walletAddress },
+      includePending: true
+    });
+
+    // Process Unified Balances Breakdown
+    for (const breakdown of balances.breakdown) {
+      for (const chainBalance of breakdown.breakdown) {
+        const usdcAmount = parseFloat(chainBalance.confirmedBalance);
+        if (usdcAmount > 0) {
+          totalValueUsd += usdcAmount * USDC_PRICE;
+          tokenBalances.push({
+            token: {
+              symbol: "USDC",
+              name: "USD Coin",
+              decimals: 6,
+              blockchain: chainBalance.chain,
+              isNative: false,
+            },
+            amount: usdcAmount.toString(),
+            status: "confirmed"
+          });
+        }
+        
+        if (chainBalance.pendingBalance) {
+          const pendingAmount = parseFloat(chainBalance.pendingBalance);
+          if (pendingAmount > 0) {
+            totalValueUsd += pendingAmount * USDC_PRICE;
+            tokenBalances.push({
+              token: {
+                symbol: "USDC",
+                name: "USD Coin",
+                decimals: 6,
+                blockchain: chainBalance.chain,
+                isNative: false,
+              },
+              amount: pendingAmount.toString(),
+              status: "pending"
+            });
+          }
+        }
+      }
     }
-  }
 
-  // 3. Process Arc L1 Native Assets
-  const nativeBalanceFormatted = formatUnits(nativeWei, 18);
-
-  const existingArcIndex = tokenBalances.findIndex(
-    (b: any) => b.token?.symbol === "ARC",
-  );
-  if (existingArcIndex >= 0) {
-    tokenBalances[existingArcIndex].amount = nativeBalanceFormatted;
-    // We don't add to totalValueUsd again, as it was already added from Circle but wait, if we overwrite it, the total value calculated from Circle is inaccurate.
-    // Let's recalculate total later.
-  } else {
-    tokenBalances.push({
-      token: {
-        symbol: "ARC",
-        name: "Arc Network Native Gas Token",
-        decimals: 18,
-        blockchain: "ARC-TESTNET",
-        isNative: true,
-      },
-      amount: nativeBalanceFormatted,
-    });
-  }
-
-  // 4. Process on-chain USDC (Arc Native ERC20)
-  const nativeUSDCFormatted = parseFloat(formatUnits(nativeUSDCWei, 6));
-
-  if (nativeUSDCFormatted > 0) {
-    tokenBalances.push({
-      token: {
-        symbol: "USDC",
-        name: "USD Coin",
-        decimals: 6,
-        blockchain: "ARC-TESTNET",
-        isNative: false,
-        tokenAddress: USDC_ADDRESS,
-      },
-      amount: nativeUSDCFormatted.toString(),
-    });
-  }
-
-  // Recalculate actual total Value from the finalized array
-  totalValueUsd = 0;
-  for (const b of tokenBalances) {
-    const amount = parseFloat(b.amount || "0");
-    const price = b.token?.symbol === "ARC" ? ARC_PRICE : USDC_PRICE;
-    totalValueUsd += amount * price;
+  } catch (err: any) {
+    console.error("[BalanceService] Unified Balance fetch failed:", err);
   }
 
   // 5. Consideration of Pending Transactions (Local UI feel)

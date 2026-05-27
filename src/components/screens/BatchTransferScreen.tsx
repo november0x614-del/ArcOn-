@@ -779,16 +779,19 @@ export function BatchTransferScreen({
                     };
                   });
 
-                  setRecipients((prev) => [...prev, ...newItems]);
+                  // Add selected addresses to the "newAddress" textarea
+                  const addressesAppended = selectedContacts.map((c) => c.number).join(", ");
+                  setNewAddress((prev) => (prev ? `${prev}, ${addressesAppended}` : addressesAppended));
+
                   setShowQuickAddModal(false);
                   displayToast(
-                    `Added ${selectedQuickAddIds.length} recipients to batch list!`,
+                    `Added ${selectedQuickAddIds.length} addresses to the input field!`,
                   );
                 }}
                 disabled={selectedQuickAddIds.length === 0}
                 className="w-full bg-slate-900 border-0 hover:bg-slate-800 disabled:opacity-45 text-white py-4 rounded-full font-bold text-[15px] shadow-lg hover:shadow-xl transition-all active:scale-[0.98] cursor-pointer"
               >
-                Add Selected to Batch ({selectedQuickAddIds.length})
+                Insert Addresses ({selectedQuickAddIds.length})
               </button>
             </div>
           </div>
