@@ -1,6 +1,14 @@
 import { create } from 'zustand';
 import { ViewState, ShortcutItem, UserIdentity, Transaction, SourceAccount, ImportedToken } from '../types';
-import { defaultSelectedShortcuts, defaultAvailableShortcuts } from '../components/screens/ManageFavoritesScreen';
+
+export const defaultSelectedShortcuts: ShortcutItem[] = [
+  { id: '1', icon: 'send', label: 'Transfer USDC', color: 'bg-emerald-50 text-emerald-600', badgeColor: 'bg-emerald-500' },
+  { id: '2', icon: 'receive', label: 'Receive USDC', color: 'bg-amber-50 text-amber-600', badgeColor: 'bg-amber-500' },
+  { id: '3', icon: 'bridge', label: 'Bridge USDC', color: 'bg-blue-50 text-blue-600', badgeColor: 'bg-blue-500' },
+  { id: '4', icon: 'swap', label: 'Swap USDC', color: 'bg-purple-50 text-purple-600', badgeColor: 'bg-purple-500' },
+];
+
+export const defaultAvailableShortcuts: ShortcutItem[] = [];
 
 export type TransactionFilter = 'All' | 'Received' | 'Sent' | 'Swaps';
 

@@ -348,39 +348,7 @@ export const HomeScreen = React.memo(({
                   <WalletCard userName={userName} onNavigate={() => onNavigate("accountDetail")} />
                 )}
 
-                {activeTabs[activeRekeningTab]?.name === "E-commerce" && (
-                  /* E-commerce Card */
-                  <motion.div
-                    key="tab-1"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2 }}
-                    className="bg-gradient-to-br from-blue-50 to-white rounded-2xl p-5 text-slate-800 shadow-sm relative overflow-hidden mb-3 cursor-pointer hover:shadow-md transition-all active:scale-[0.98] border border-slate-200"
-                    onClick={() => onNavigate("ecommerce")}
-                  >
-                    <div className="flex justify-between items-center z-10 relative">
-                      <div className="text-left">
-                        <h3 className="font-bold text-[15px] text-slate-800">
-                          Arc Marketplace
-                        </h3>
-                        <p className="text-[12px] text-slate-500 mt-1">
-                          Shop premium products with USDC
-                        </p>
-                        <div className="flex items-center gap-2 mt-3">
-                          <span className="text-[11px] font-bold text-slate-800 bg-blue-100 px-2 py-0.5 rounded">
-                            E-commerce ready
-                          </span>
-                        </div>
-                      </div>
-                      <ShoppingBag
-                        size={48}
-                        className="text-slate-800 opacity-10 absolute -right-2 top-0"
-                      />
-                      <ChevronRight size={20} className="text-slate-800" />
-                    </div>
-                  </motion.div>
-                )}
+
 
                 {/* Real Recent Orders Section */}
                 {activeTabs[activeRekeningTab]?.name === "My Wallet" && transactions.filter(t => t.type === 'payment').length > 0 && (
@@ -414,7 +382,6 @@ export const HomeScreen = React.memo(({
               </AnimatePresence>
 
               <button
-                onClick={() => onNavigate("otherAccounts")}
                 className="w-full text-center text-slate-800 text-[12px] font-bold mt-1 py-1.5 hover:bg-slate-100 rounded-lg transition-colors flex justify-center items-center gap-1.5 opacity-90 border-0 bg-transparent"
               >
                 Other Personal Savings & Checking <PlusCircleIcon size={14} />
@@ -429,7 +396,6 @@ export const HomeScreen = React.memo(({
                 </h2>
                 <button
                   className="text-slate-800 text-[13px] font-semibold flex items-center gap-1.5 hover:bg-slate-100 px-2 py-1 rounded-full transition-colors border-0 bg-transparent"
-                  onClick={() => onNavigate("manageFavorites")}
                 >
                   Manage <Settings2 size={14} strokeWidth={1.5} />
                 </button>
@@ -456,15 +422,9 @@ export const HomeScreen = React.memo(({
                         if (item.label === "Receive USDC") onNavigate("receive");
                         if (item.label === "Request Payment")
                           onNavigate("receive");
-                        if (item.label === "Pay with USDC") onNavigate("scanQR");
                         if (item.label === "Native Wallet Swap" || item.label === "Swap USDC") onNavigate("swap");
                         if (item.label === "Deposit/Withdraw")
                           onNavigate("depositOptions");
-                        if (item.label === "Pay/VA") onNavigate("bayarVA");
-                        if (item.label === "DApp Browser")
-                          onNavigate("ecommerce");
-                        if (item.label === "Staking Pool")
-                          onNavigate("stablestake");
                         if (item.label === "Withdraw")
                           onNavigate("withdraw");
                         if (item.label === "Bridge USDC")
@@ -504,7 +464,7 @@ export const HomeScreen = React.memo(({
               {(!platformConfig || platformConfig.aiAgentEnabled !== false) && (
                 <div
                   className="mt-6 bg-gradient-to-r from-indigo-50 to-blue-50 py-3 px-4 rounded-xl flex items-center justify-between gap-3 border border-indigo-100 relative cursor-pointer hover:bg-indigo-100/50 transition-colors"
-                  onClick={() => onNavigate("aiAgent")}
+                  onClick={() => undefined}
                 >
                   {/* Tooltip triangle */}
                   <div className="absolute -top-2 right-10 w-4 h-4 bg-indigo-50 border-l border-t border-indigo-100 rotate-45"></div>
@@ -637,7 +597,7 @@ export const HomeScreen = React.memo(({
                   {(!platformConfig || platformConfig.arcBirdEnabled !== false) && (
                     <div
                       onClick={() => {
-                        onNavigate("arcbird");
+                        undefined;
                       }}
                       className="flex items-center gap-3.5 p-3 rounded-2xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-all active:scale-[0.98]"
                     >
@@ -665,7 +625,7 @@ export const HomeScreen = React.memo(({
                   {(!platformConfig || platformConfig.stableStakeEnabled !== false) && (
                     <div
                       onClick={() => {
-                        onNavigate("stablestake");
+                        undefined;
                       }}
                       className="flex items-center gap-3.5 p-3 rounded-2xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-all active:scale-[0.98]"
                     >
@@ -749,7 +709,7 @@ export const HomeScreen = React.memo(({
                       title="Merchant"
                       desc="On-chain USDC integration."
                       icon={<Box size={20} className="text-slate-600" />}
-                      onClick={() => onNavigate("merchant")}
+                      onClick={() => undefined}
                     />
                   )}
                   {(!platformConfig || platformConfig.faucetEnabled !== false) && (
@@ -757,7 +717,7 @@ export const HomeScreen = React.memo(({
                       title="Testnet Faucet"
                       desc="Claim USDC Gas Token."
                       icon={<Coins size={20} className="text-slate-600" />}
-                      onClick={() => onNavigate("faucet")}
+                      onClick={() => undefined}
                     />
                   )}
                 </div>
@@ -819,7 +779,7 @@ export const HomeScreen = React.memo(({
           <div className="absolute left-1/2 -translate-x-1/2 top-[-28px] pointer-events-auto">
             <div
               className="relative group cursor-pointer flex flex-col items-center justify-center"
-              onClick={() => onNavigate("scanQR")}
+              onClick={() => undefined}
             >
               <div className="absolute inset-0 bg-slate-900 rounded-[22px] blur-md opacity-40 group-hover:opacity-60 transition-opacity"></div>
               <div className="relative w-[56px] h-[56px] bg-slate-900 rounded-[22px] flex flex-col items-center justify-center text-white shadow-lg transform transition-all duration-300 group-hover:-translate-y-1 active:translate-y-0 border-2 border-white/20 hover:bg-[#328fdc]">
