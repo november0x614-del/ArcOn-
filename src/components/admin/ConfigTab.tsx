@@ -29,6 +29,7 @@ interface AdminConfig {
   eWalletConnectionEnabled: boolean;
   arcBirdEnabled: boolean;
   backupPhraseEnabled: boolean;
+  adminPin: string;
 }
 
 interface ConfigTabProps {
@@ -43,6 +44,8 @@ interface ConfigTabProps {
   setBridgeFeeInput: (v: string) => void;
   dailyTransferLimitInput: string;
   setDailyTransferLimitInput: (v: string) => void;
+  adminPinInput: string;
+  setAdminPinInput: (v: string) => void;
   onSave: (fields: Partial<AdminConfig>) => void;
 }
 
@@ -94,6 +97,8 @@ export function ConfigTab({
   setBridgeFeeInput,
   dailyTransferLimitInput,
   setDailyTransferLimitInput,
+  adminPinInput,
+  setAdminPinInput,
   onSave,
 }: ConfigTabProps) {
   if (!config)

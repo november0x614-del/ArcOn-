@@ -9,7 +9,16 @@ import {
   Ban,
   Trash2,
   ShieldAlert,
+  LayoutDashboard,
+  Users,
+  Wallet,
+  Settings,
+  Palette,
+  ChevronRight,
+  Menu,
+  Zap,
 } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
 import { ViewState } from "../../types";
 import { useApp } from "../../contexts/AppContext";
 import { useStore } from "../../store/useStore";
@@ -18,6 +27,8 @@ import { UsersTab } from "../admin/UsersTab";
 import { TreasuryTab } from "../admin/TreasuryTab";
 import { ConfigTab } from "../admin/ConfigTab";
 import { DesignTab } from "../admin/DesignTab";
+import { EcommerceTab } from "../admin/EcommerceTab";
+import { InfrastructureTab } from "../admin/InfrastructureTab";
 
 interface AdminStats {
   totalUsers: number;
@@ -60,7 +71,7 @@ interface AdminConfig {
   backupPhraseEnabled: boolean;
 }
 
-type TabType = "overview" | "users" | "treasury" | "config" | "design";
+type TabType = "overview" | "users" | "ledger" | "ops" | "infra" | "settings";
 
 export function AdminDashboardScreen({
   onBack,
@@ -77,21 +88,45 @@ export function AdminDashboardScreen({
   const [activeTab, setActiveTab] = useState<TabType>("overview");
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
+  const [systemTransactions, setSystemTransactions] = useState<any[]>([]);
 
   const [loading, setLoading] = useState(false);
+  const [loadingWallet, setLoadingWallet] = useState(false);
+  const [selectedUserWallet, setSelectedUserWallet] = useState<any>(null);
   const [saving, setSaving] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+  const [userModalTab, setUserModalTab] = useState<"identity" | "wallet" | "activity">("identity");
+  const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
   const [deleteValidation, setDeleteValidation] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [isAdminAuthorized, setIsAdminAuthorized] = useState(false);
+  const [pinInput, setPinInput] = useState("");
+  const [pinError, setPinError] = useState(false);
+
+  const handleVerifyPin = () => {
+    // Dynamically check against the fetched platform configuration
+    const correctPin = platformConfig?.adminPin || "123456";
+    if (pinInput === correctPin) {
+      setIsAdminAuthorized(true);
+      setPinError(false);
+      fetchData();
+    } else {
+      setPinError(true);
+      setPinInput("");
+      setTimeout(() => setPinError(false), 2000);
+    }
+  };
 
   // Config form state
   const [swapFeeInput, setSwapFeeInput] = useState("");
   const [withdrawFeeInput, setWithdrawFeeInput] = useState("");
   const [bridgeFeeInput, setBridgeFeeInput] = useState("");
   const [dailyTransferLimitInput, setDailyTransferLimitInput] = useState("");
+  const [adminPinInputConfig, setAdminPinInputConfig] = useState("");
 
   const fetchStats = useCallback(async () => {
     try {
@@ -111,6 +146,76 @@ export function AdminDashboardScreen({
     }
   }, []);
 
+  const fetchTransactions = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/transactions?limit=20");
+      if (res.ok) setSystemTransactions(await res.json());
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
+
+  const fetchApprovals = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/approvals");
+      if (res.ok) setPendingApprovals(await res.json());
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
+
+  const handleDecideApproval = async (txId: string, decision: "approve" | "reject") => {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/approvals/${txId}/decide`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ decision }),
+      });
+      if (res.ok) {
+        setSuccessMsg(`Transaction ${decision === "approve" ? "approved and executed" : "rejected"}.`);
+        await Promise.all([fetchApprovals(), fetchTransactions(), fetchStats()]);
+        setTimeout(() => setSuccessMsg(null), 4000);
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Failed to process approval decision.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const fetchWalletDetails = async (userId: string) => {
+    setLoadingWallet(true);
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/wallet`);
+      if (res.ok) setSelectedUserWallet(await res.json());
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingWallet(false);
+    }
+  };
+
+  const handleUpgradeWallet = async (userId: string) => {
+    setActionLoading(userId);
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/upgrade`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        setSuccessMsg("Wallet upgrade transaction initiated on Arc.");
+        setTimeout(() => setSuccessMsg(null), 4000);
+        await fetchWalletDetails(userId);
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Upgrade failed.");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const fetchConfigData = useCallback(async () => {
     try {
       await fetchPlatformConfig();
@@ -121,6 +226,7 @@ export function AdminDashboardScreen({
         setWithdrawFeeInput(data.withdrawFee);
         setBridgeFeeInput(data.bridgeFee);
         setDailyTransferLimitInput(data.dailyTransferLimit || "5000.00 USDC");
+        setAdminPinInputConfig(data.adminPin || "123456");
       }
     } catch (err) {
       console.error(err);
@@ -133,11 +239,10 @@ export function AdminDashboardScreen({
     try {
       if (activeTab === "overview") await fetchStats();
       if (activeTab === "users") await fetchUsers();
-      if (activeTab === "treasury") {
-        await fetchStats();
-        await fetchConfigData();
+      if (activeTab === "ledger") {
+        await Promise.all([fetchStats(), fetchTransactions(), fetchApprovals()]);
       }
-      if (activeTab === "config") {
+      if (activeTab === "settings") {
         await fetchConfigData();
       }
     } catch (err: any) {
@@ -250,200 +355,461 @@ export function AdminDashboardScreen({
     }
   };
 
+  const navItems = [
+    { id: "overview", label: "Command Center", icon: LayoutDashboard },
+    { id: "users", label: "User & Security", icon: Users },
+    { id: "ledger", label: "Financial Ledger", icon: Wallet },
+    { id: "ops", label: "Operational Ops", icon: Palette },
+    { id: "infra", label: "Infrastructure", icon: ShieldAlert },
+    { id: "settings", label: "Global Settings", icon: Settings },
+  ];
+
   return (
-    <div className="w-full h-full bg-[#f8f9fa] relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
-      <header className="bg-slate-900 text-white pt-6 pb-4 px-4 flex justify-between items-center z-10 shrink-0">
-        <div className="flex items-center gap-3">
-          <button
+    <div className="w-full h-full bg-[#f8fafc] flex z-50 animate-in fade-in duration-500">
+      {!isAdminAuthorized ? (
+        <div className="flex-1 flex items-center justify-center p-6 bg-slate-900">
+           <motion.div 
+             initial={{ opacity: 0, scale: 0.9 }}
+             animate={{ opacity: 1, scale: 1 }}
+             className="w-full max-w-sm bg-white rounded-[40px] p-10 shadow-2xl text-center"
+           >
+              <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center mx-auto mb-6 text-emerald-400">
+                 <ShieldCheck size={32} />
+              </div>
+              <h1 className="text-2xl font-black text-slate-900 tracking-tighter mb-2">Security Challenge</h1>
+              <p className="text-[13px] text-slate-400 font-medium mb-8">Enter the Master Administrative PIN to access the Command Center</p>
+              
+              <div className="flex justify-center gap-3 mb-8">
+                {[0, 1, 2, 3, 4, 5].map((i) => (
+                  <div 
+                    key={i} 
+                    className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                      pinInput.length > i ? "bg-slate-900 scale-125" : "bg-slate-100"
+                    } ${pinError ? "bg-red-500 animate-bounce" : ""}`}
+                  />
+                ))}
+              </div>
+
+              <div className="grid grid-cols-3 gap-3 mb-6">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                  <button
+                    key={num}
+                    onClick={() => pinInput.length < 6 && setPinInput(p => p + num)}
+                    className="h-14 bg-slate-50 hover:bg-slate-100 rounded-2xl font-black text-xl text-slate-700 transition-all active:scale-90"
+                  >
+                    {num}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setPinInput("")}
+                  className="h-14 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center hover:bg-red-100 transition-all active:scale-90"
+                >
+                  <X size={20} />
+                </button>
+                <button
+                  onClick={() => pinInput.length < 6 && setPinInput(p => p + "0")}
+                  className="h-14 bg-slate-50 hover:bg-slate-100 rounded-2xl font-black text-xl text-slate-700 transition-all active:scale-90"
+                >
+                  0
+                </button>
+                <button
+                  onClick={handleVerifyPin}
+                  disabled={pinInput.length !== 6}
+                  className="h-14 bg-emerald-500 text-white rounded-2xl flex items-center justify-center hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 transition-all active:scale-90 disabled:opacity-20"
+                >
+                  <Check size={24} />
+                </button>
+              </div>
+
+              <button 
+                onClick={onBack}
+                className="text-[12px] font-bold text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                Cancel and Return
+              </button>
+           </motion.div>
+        </div>
+      ) : (
+        <>
+          {/* SIDEBAR NAVIGATION */}
+      <aside 
+        className={`${sidebarOpen ? "w-[260px]" : "w-0 md:w-[80px]"} bg-slate-900 h-full flex flex-col transition-all duration-300 relative overflow-hidden group shadow-2xl z-20`}
+      >
+        <div className="p-6 flex items-center justify-between">
+          {sidebarOpen ? (
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                <ShieldCheck size={20} className="text-white" />
+              </div>
+              <span className="font-bold text-white text-[17px] tracking-tight">Admin Portal</span>
+            </div>
+          ) : (
+            <div className="w-full flex justify-center">
+              <ShieldCheck size={24} className="text-emerald-400" />
+            </div>
+          )}
+        </div>
+
+        <nav className="flex-1 px-3 space-y-1.5 mt-4">
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id as TabType)}
+              className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all duration-200 group/nav ${
+                activeTab === item.id 
+                  ? "bg-white/10 text-white shadow-sm ring-1 ring-white/20" 
+                  : "text-slate-400 hover:text-white hover:bg-white/5"
+              }`}
+            >
+              <item.icon size={20} className={activeTab === item.id ? "text-emerald-400" : "group-hover/nav:scale-110 transition-transform"} />
+              {sidebarOpen && (
+                <span className="text-[13.5px] font-semibold tracking-wide whitespace-nowrap">{item.label}</span>
+              )}
+            </button>
+          ))}
+        </nav>
+
+        <div className="p-4 border-t border-white/5">
+           <button
             onClick={onBack}
-            className="p-2 -ml-2 rounded-full hover:bg-slate-800 transition-colors"
+            className={`w-full flex items-center gap-3 px-3.5 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-all`}
           >
             <ArrowLeft size={20} />
+            {sidebarOpen && <span className="text-[13.5px] font-semibold">Exit Portal</span>}
           </button>
-          <div className="flex flex-col">
-            <h1 className="text-[17px] font-bold flex items-center gap-2">
-              <ShieldCheck
-                size={18}
-                className="text-emerald-400 animate-pulse"
-              />
-              Admin Portal
-            </h1>
-            <span className="text-[11px] font-medium text-slate-400">
-              Lounge Synchronized Real-Time Backend
-            </span>
-          </div>
         </div>
-        <button
-          onClick={fetchData}
-          disabled={loading}
-          className="p-2 bg-slate-800 rounded-xl text-slate-300 hover:text-white disabled:opacity-50 transition-colors"
-        >
-          <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-        </button>
-      </header>
+      </aside>
 
-      <div className="bg-white border-b border-slate-200 px-4 py-2 shrink-0 flex gap-4 overflow-x-auto scrollbar-hide text-[13px] font-semibold">
-        {[
-          { id: "overview", label: "Overview" },
-          { id: "users", label: "Users" },
-          { id: "treasury", label: "Treasury" },
-          { id: "config", label: "Platform Config" },
-          { id: "design", label: "Design & Theme" },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as TabType)}
-            className={`pb-2 relative whitespace-nowrap transition-colors ${
-              activeTab === tab.id
-                ? "text-slate-900"
-                : "text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            {tab.label}
-            {activeTab === tab.id && (
-              <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-slate-900 rounded-t-full"></div>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {error && (
-        <div className="mx-4 mt-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2 text-red-600 text-[12px] font-medium">
-          <AlertCircle size={16} className="shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
-      {successMsg && (
-        <div className="mx-4 mt-4 p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2 text-emerald-600 text-[12px] font-medium">
-          <Check size={16} className="shrink-0" />
-          <span>{successMsg}</span>
-        </div>
-      )}
-
-      <div className="flex-1 overflow-y-auto w-full max-w-7xl mx-auto pb-8">
-        {activeTab === "overview" && (
-          <OverviewTab stats={stats} loading={loading} />
-        )}
-        {activeTab === "users" && (
-          <UsersTab
-            users={users}
-            loading={loading}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            onSelectUser={setSelectedUser}
-          />
-        )}
-        {activeTab === "treasury" && (
-          <TreasuryTab
-            loading={loading}
-            treasuryBalance={stats?.treasuryBalance || "0.00 USDC"}
-          />
-        )}
-        {activeTab === "config" && (
-          <ConfigTab
-            config={platformConfig}
-            loading={loading}
-            saving={saving}
-            swapFeeInput={swapFeeInput}
-            setSwapFeeInput={setSwapFeeInput}
-            withdrawFeeInput={withdrawFeeInput}
-            setWithdrawFeeInput={setWithdrawFeeInput}
-            bridgeFeeInput={bridgeFeeInput}
-            setBridgeFeeInput={setBridgeFeeInput}
-            dailyTransferLimitInput={dailyTransferLimitInput}
-            setDailyTransferLimitInput={setDailyTransferLimitInput}
-            onSave={handleSaveConfig}
-          />
-        )}
-        {activeTab === "design" && (
-          <DesignTab saving={saving} onRetheme={handleRetheme} />
-        )}
-      </div>
-
-      {selectedUser && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl w-full max-w-md shadow-xl overflow-hidden animate-in zoom-in-95 flex flex-col max-h-[90vh]">
-            <div className="bg-slate-900 text-white p-5 flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <ShieldAlert size={18} className="text-amber-400" />
-                <h2 className="font-bold text-[15px]">Account Terminal</h2>
-              </div>
-              <button
-                onClick={() => setSelectedUser(null)}
-                className="p-1 text-slate-400 hover:text-white"
-              >
-                <X size={18} />
-              </button>
+      {/* MAIN WORKSPACE Area */}
+      <main className="flex-1 h-full flex flex-col min-w-0 bg-slate-50 relative">
+        <header className="h-16 border-b border-slate-200 bg-white/80 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-10">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 md:block"
+            >
+              <Menu size={20} />
+            </button>
+            <div>
+              <h2 className="text-[15px] font-bold text-slate-800 tracking-tight capitalize">
+                {navItems.find(n => n.id === activeTab)?.label}
+              </h2>
+              <p className="text-[11px] text-slate-400 font-medium">Lounge Engine • Local Testnet Node active</p>
             </div>
-            <div className="p-5 space-y-4 overflow-y-auto">
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                <div className="text-[14px] font-bold text-slate-800">
-                  {selectedUser.name}
+          </div>
+
+          <div className="flex items-center gap-3">
+             {loading && (
+               <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-full animate-pulse">
+                 <RefreshCw size={12} className="animate-spin text-slate-500" />
+                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Syncing</span>
+               </div>
+             )}
+             <button
+              onClick={fetchData}
+              className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-600 hover:text-slate-900 hover:border-slate-300 shadow-sm transition-all"
+            >
+              <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+            </button>
+          </div>
+        </header>
+
+        {/* Dynamic Activity Area */}
+        <div className="flex-1 overflow-y-auto px-6 py-6 w-full max-w-7xl mx-auto">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+            >
+              {error && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-3 text-red-600 text-[13px] font-semibold animate-in zoom-in-95">
+                  <AlertCircle size={18} className="shrink-0" />
+                  <span>{error}</span>
                 </div>
-                <div className="text-[11px] font-mono text-slate-500">
-                  {selectedUser.email}
+              )}
+              {successMsg && (
+                <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-3 text-emerald-600 text-[13px] font-semibold animate-in zoom-in-95">
+                  <Check size={18} className="shrink-0" />
+                  <span>{successMsg}</span>
                 </div>
-                <div className="text-[10px] text-slate-400 font-mono mt-2 break-all bg-white p-2 rounded-lg border border-slate-100">
-                  {selectedUser.wallet}
-                </div>
-              </div>
-              <div className="flex flex-col gap-2">
-                <button
-                  onClick={() =>
-                    handleToggleBlock(
-                      selectedUser.id,
-                      selectedUser.status === "Blocked",
-                    )
-                  }
-                  disabled={!!actionLoading}
-                  className={`py-3.5 rounded-2xl font-bold text-[13px] transition-all flex items-center justify-center gap-2 ${
-                    selectedUser.status === "Blocked"
-                      ? "bg-emerald-600 text-white"
-                      : "bg-slate-100 text-slate-700"
-                  }`}
-                >
-                  {actionLoading === selectedUser.id ? (
-                    <RefreshCw size={14} className="animate-spin" />
-                  ) : selectedUser.status === "Blocked" ? (
-                    <ShieldCheck size={14} />
-                  ) : (
-                    <Ban size={14} />
-                  )}
-                  {selectedUser.status === "Blocked"
-                    ? "Activate User"
-                    : "Block User"}
-                </button>
-                <div className="p-4 bg-red-50 border border-red-100 rounded-2xl">
-                  <p className="text-[11px] text-red-600 font-bold mb-2 uppercase tracking-tight">
-                    Type DELETE to remove:
-                  </p>
-                  <input
-                    type="text"
-                    value={deleteValidation}
-                    onChange={(e) => setDeleteValidation(e.target.value)}
-                    className="w-full bg-white border border-red-200 rounded-xl px-3 py-2.5 text-[12px] font-bold outline-none mb-3"
-                    placeholder="DELETE"
+              )}
+
+              {activeTab === "overview" && (
+                <OverviewTab stats={stats} loading={loading} />
+              )}
+              {activeTab === "users" && (
+                <UsersTab
+                  users={users}
+                  loading={loading}
+                  searchQuery={searchQuery}
+                  setSearchQuery={setSearchQuery}
+                  onSelectUser={setSelectedUser}
+                />
+              )}
+              {activeTab === "ledger" && (
+                <TreasuryTab
+                  loading={loading}
+                  treasuryBalance={stats?.treasuryBalance || "0.00 USDC"}
+                  transactions={systemTransactions}
+                  pendingApprovals={pendingApprovals}
+                  onDecide={handleDecideApproval}
+                  saving={saving}
+                />
+              )}
+              {activeTab === "ops" && <EcommerceTab />}
+              {activeTab === "infra" && <InfrastructureTab />}
+              {activeTab === "settings" && (
+                <div className="space-y-8 animate-in fade-in duration-500">
+                  <ConfigTab
+                    config={platformConfig}
+                    loading={loading}
+                    saving={saving}
+                    swapFeeInput={swapFeeInput}
+                    setSwapFeeInput={setSwapFeeInput}
+                    withdrawFeeInput={withdrawFeeInput}
+                    setWithdrawFeeInput={setWithdrawFeeInput}
+                    bridgeFeeInput={bridgeFeeInput}
+                    setBridgeFeeInput={setBridgeFeeInput}
+                    dailyTransferLimitInput={dailyTransferLimitInput}
+                    setDailyTransferLimitInput={setDailyTransferLimitInput}
+                    adminPinInput={adminPinInputConfig}
+                    setAdminPinInput={setAdminPinInputConfig}
+                    onSave={handleSaveConfig}
                   />
+                  <DesignTab saving={saving} onRetheme={handleRetheme} />
+                </div>
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </main>
+
+      {/* USER DETAIL MODAL */}
+      <AnimatePresence>
+        {selectedUser && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white rounded-[32px] w-full max-w-xl shadow-2xl overflow-hidden flex flex-col h-[650px] max-h-[90vh]"
+            >
+              <div className="bg-slate-900 text-white p-6 flex flex-col gap-4 bg-gradient-to-br from-slate-900 to-slate-800">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white font-bold text-[14px]">
+                      {selectedUser.name.charAt(0)}
+                    </div>
+                    <div>
+                      <h2 className="font-bold text-[16px] tracking-tight">{selectedUser.name}</h2>
+                      <p className="text-[11px] text-slate-400 font-medium">{selectedUser.email}</p>
+                    </div>
+                  </div>
                   <button
-                    disabled={deleteValidation !== "DELETE" || !!actionLoading}
-                    onClick={() =>
-                      handleDeleteUser(selectedUser.id, selectedUser.email)
-                    }
-                    className="w-full py-3 bg-red-600 text-white rounded-xl text-[13px] font-bold disabled:opacity-30 flex items-center justify-center gap-2"
+                    onClick={() => {
+                      setSelectedUser(null);
+                      setUserModalTab("identity");
+                    }}
+                    className="p-2 text-slate-400 hover:text-white transition-colors bg-white/5 rounded-full"
                   >
-                    {actionLoading === selectedUser.id ? (
-                      <RefreshCw size={14} className="animate-spin" />
-                    ) : (
-                      <Trash2 size={14} />
-                    )}
-                    Archive Account
+                    <X size={20} />
                   </button>
                 </div>
+
+                <div className="flex gap-1 bg-white/5 p-1 rounded-2xl border border-white/5 mx-[-8px]">
+                  {[
+                    { id: "identity", label: "Identity" },
+                    { id: "wallet", label: "Wallet" },
+                    { id: "activity", label: "Activity" }
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setUserModalTab(tab.id as any)}
+                      className={`flex-1 py-2 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all ${
+                        userModalTab === tab.id 
+                          ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" 
+                          : "text-slate-400 hover:text-slate-200"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+
+              <div className="flex-1 overflow-y-auto p-6">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={userModalTab}
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="space-y-6"
+                  >
+                    {userModalTab === "identity" && (
+                      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                        <section className="space-y-4">
+                          <h3 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest px-1">Security & Status</h3>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                               <div className="text-[10px] font-bold text-slate-400 mb-1 uppercase">Account Status</div>
+                               <div className={`text-[13px] font-bold tracking-tight ${selectedUser.status === "Blocked" ? "text-red-600" : "text-emerald-600"}`}>
+                                 {selectedUser.status === "Blocked" ? "Suspended" : "Authorized"}
+                               </div>
+                            </div>
+                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                               <div className="text-[10px] font-bold text-slate-400 mb-1 uppercase">Verified</div>
+                               <div className="text-[13px] font-bold text-slate-900 flex items-center gap-1.5">
+                                 <ShieldCheck size={14} className="text-blue-500" /> System Level
+                               </div>
+                            </div>
+                          </div>
+                        </section>
+
+                        <section className="space-y-4">
+                          <h3 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest px-1">Danger Zone</h3>
+                          <div className="p-4 bg-red-50 border border-red-100 rounded-3xl space-y-4">
+                            <button
+                              onClick={() => handleToggleBlock(selectedUser.id, selectedUser.status === "Blocked")}
+                              disabled={!!actionLoading}
+                              className={`w-full py-3 rounded-2xl font-bold text-[13px] transition-all flex items-center justify-center gap-2 active:scale-95 ${
+                                selectedUser.status === "Blocked" ? "bg-emerald-600 text-white" : "bg-white text-red-600 border border-red-100 shadow-sm"
+                              }`}
+                            >
+                              {actionLoading === selectedUser.id ? <RefreshCw size={16} className="animate-spin" /> : (selectedUser.status === "Blocked" ? <ShieldCheck size={16} /> : <Ban size={16} />)}
+                              {selectedUser.status === "Blocked" ? "Revoke Suspension" : "Initiate Block"}
+                            </button>
+                            
+                            <div className="pt-4 border-t border-red-100/50">
+                              <p className="text-[10px] text-red-400 font-bold text-center mb-3">Type DELETE to confirm permanent archival</p>
+                              <div className="flex gap-2">
+                                <input
+                                  type="text"
+                                  value={deleteValidation}
+                                  onChange={(e) => setDeleteValidation(e.target.value)}
+                                  className="flex-1 bg-white border border-red-100 rounded-xl px-3 py-2 text-[13px] font-mono font-bold outline-none focus:ring-2 focus:ring-red-200 transition-all text-center"
+                                  placeholder="Confirm"
+                                />
+                                <button
+                                  disabled={deleteValidation !== "DELETE" || !!actionLoading}
+                                  onClick={() => handleDeleteUser(selectedUser.id, selectedUser.email)}
+                                  className="px-4 bg-red-600 text-white rounded-xl text-[12px] font-bold disabled:opacity-30 active:scale-95"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </section>
+                      </div>
+                    )}
+
+                    {userModalTab === "wallet" && (
+                      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                        <div className="bg-slate-900 rounded-[28px] p-6 text-white relative overflow-hidden group">
+                           <div className="relative z-10">
+                             <div className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-4">On-Chain Asset Controller</div>
+                             <div className="space-y-4">
+                               <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                                 <div className="text-[9px] uppercase font-extrabold text-slate-500 mb-1">Public Hex Address</div>
+                                 <div className="text-[12px] font-mono break-all leading-relaxed text-slate-300">{selectedUser.wallet}</div>
+                               </div>
+                               
+                               {!selectedUserWallet ? (
+                                 <button 
+                                   onClick={() => fetchWalletDetails(selectedUser.id)}
+                                   disabled={loadingWallet}
+                                   className="w-full py-4 bg-emerald-500 text-slate-900 rounded-2xl font-black text-[13px] uppercase tracking-widest hover:bg-emerald-400 active:scale-95 transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] flex items-center justify-center gap-2"
+                                 >
+                                   {loadingWallet ? <RefreshCw size={18} className="animate-spin" /> : <ShieldCheck size={18} />}
+                                   Sync Circle Metadata
+                                 </button>
+                               ) : (
+                                 <div className="grid grid-cols-2 gap-3">
+                                   <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                                     <div className="text-[9px] font-bold text-slate-500 mb-1 uppercase">Architecture</div>
+                                     <div className="text-[14px] font-bold text-emerald-400">{selectedUserWallet.scaCore?.version || "Standard EOA"}</div>
+                                   </div>
+                                   <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                                     <div className="text-[9px] font-bold text-slate-500 mb-1 uppercase">Cloud Status</div>
+                                     <div className="text-[14px] font-bold text-blue-400">OPERATIONAL</div>
+                                   </div>
+                                 </div>
+                               )}
+                             </div>
+                           </div>
+                        </div>
+
+                        {selectedUserWallet && selectedUserWallet.scaCore?.version === "circle_4337_v1" && (
+                          <div className="p-5 bg-indigo-50 border border-indigo-100 rounded-3xl">
+                            <div className="flex items-center gap-4 mb-3">
+                               <div className="p-2.5 bg-indigo-600 rounded-xl text-white">
+                                  <Zap size={20} />
+                               </div>
+                               <div>
+                                  <div className="font-bold text-indigo-900 text-[14px]">Advanced Infrastructure Ready</div>
+                                  <div className="text-[11px] text-indigo-600 font-medium">Upgrade to Modular SCA for gas sponsorship.</div>
+                               </div>
+                            </div>
+                            <button
+                              onClick={() => handleUpgradeWallet(selectedUser.id)}
+                              disabled={!!actionLoading}
+                              className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold text-[13px] hover:bg-indigo-700 transition-all active:scale-95 shadow-md flex items-center justify-center gap-2"
+                            >
+                              {actionLoading === selectedUser.id ? <RefreshCw size={16} className="animate-spin" /> : <ChevronRight size={16} />}
+                              Execute Migration
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {userModalTab === "activity" && (
+                      <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                        <div className="flex justify-between items-center px-1">
+                           <h3 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest">Recent Blockchain Events</h3>
+                           <span className="text-[10px] font-bold text-slate-400">Live Sync</span>
+                        </div>
+                        <div className="space-y-2 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
+                           {systemTransactions.filter(tx => tx.userId === selectedUser.id).length === 0 ? (
+                             <div className="text-center py-12 text-slate-400 text-[13px] font-medium border border-dashed border-slate-200 rounded-3xl">
+                               No recent transaction data located.
+                             </div>
+                           ) : (
+                             systemTransactions.filter(tx => tx.userId === selectedUser.id).map((tx, i) => (
+                               <div key={i} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between hover:border-slate-300 transition-colors">
+                                 <div className="flex items-center gap-3">
+                                   <div className={`p-2 rounded-lg ${tx.type === "DEPOSIT" ? "bg-emerald-50 text-emerald-600" : "bg-indigo-50 text-indigo-600"}`}>
+                                      <Zap size={14} />
+                                   </div>
+                                   <div>
+                                      <div className="font-bold text-slate-800 text-[13px] tracking-tight">{tx.type}</div>
+                                      <div className="text-[10px] text-slate-400 font-medium">{tx.status} • {tx.createdAt}</div>
+                                   </div>
+                                 </div>
+                                 <div className="font-bold text-slate-900 text-[13px]">
+                                   {tx.amount} {tx.symbol}
+                                 </div>
+                               </div>
+                             ))
+                           )}
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+            </motion.div>
           </div>
-        </div>
+        )}
+      </AnimatePresence>
+        </>
       )}
     </div>
   );
 }
+

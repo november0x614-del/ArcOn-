@@ -2,6 +2,8 @@ import express from "express";
 import { getSupabaseAdmin } from "../config/supabase.js";
 import { createWallet, batchCreateWallets } from "../services/circle.js";
 import { fetchUnifiedBalance } from "../services/balance.js";
+import { getWalletDetails, upgradeWallet, fetchSystemTransactions, fetchPendingApprovals, decideApproval } from "../services/admin.js";
+import { logAdminAction } from "../services/audit.js";
 
 const router = express.Router();
 
@@ -31,6 +33,7 @@ let platformConfigs = {
   eWalletConnectionEnabled: true,
   arcBirdEnabled: true,
   backupPhraseEnabled: true,
+  adminPin: "123456",
 };
 
 router.post("/init", async (_req, res) => {
@@ -143,6 +146,44 @@ router.get("/users", async (_req, res) => {
     res.json(combined);
   } catch (error: any) {
     console.error("Failed to fetch admin users:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get("/users/:userId/wallet", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const supabase = getSupabaseAdmin();
+    const { data: walletData } = await supabase
+      .from("user_wallets")
+      .select("wallet_id")
+      .eq("id", userId)
+      .single();
+
+    if (!walletData?.wallet_id) return res.status(404).json({ error: "Wallet not found" });
+
+    const details = await getWalletDetails(walletData.wallet_id);
+    res.json(details);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post("/users/:userId/upgrade", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const supabase = getSupabaseAdmin();
+    const { data: walletData } = await supabase
+      .from("user_wallets")
+      .select("wallet_id")
+      .eq("id", userId)
+      .single();
+
+    if (!walletData?.wallet_id) return res.status(404).json({ error: "Wallet not found" });
+
+    const result = await upgradeWallet(walletData.wallet_id);
+    res.json({ message: "Upgrade initiated", result });
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
@@ -263,6 +304,16 @@ router.get("/stats", async (_req, res) => {
   }
 });
 
+router.get("/transactions", async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit as string) || 20;
+    const transactions = await fetchSystemTransactions(limit);
+    res.json(transactions);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.post("/users/batch-wallets", async (req, res) => {
   try {
     const { userIds } = req.body; // Opsional: Berikan array ID user, atau biarkan kosong untuk proses semua yang belum punya wallet
@@ -316,6 +367,32 @@ router.post("/users/batch-wallets", async (req, res) => {
     });
   } catch (error: any) {
     console.error("Batch Creation Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get("/approvals", async (_req, res) => {
+  try {
+    const approvals = await fetchPendingApprovals();
+    res.json(approvals);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post("/approvals/:txId/decide", async (req, res) => {
+  try {
+    const { txId } = req.params;
+    const { decision } = req.body; // 'approve' | 'reject'
+    const result = await decideApproval(txId, decision);
+    await logAdminAction(
+      "00000000-0000-0000-0000-000000000000", 
+      decision === "approve" ? "TREASURY_TX_APPROVED" : "TREASURY_TX_REJECTED", 
+      txId, 
+      { decision }
+    );
+    res.json(result);
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });

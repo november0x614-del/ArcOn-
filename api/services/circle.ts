@@ -118,6 +118,9 @@ export async function batchCreateWallets(
   return createdWallets;
 }
 
+const ARC_USDC_TOKEN_ID = "15dc2b5d-0994-58b0-bf8c-3a0501148ee8";
+export const HIGH_VALUE_THRESHOLD = 500; // USDC threshold for mandatory admin approval
+
 export async function executeTransaction(
   supabaseAdmin: any,
   userId: string,
@@ -143,6 +146,41 @@ export async function executeTransaction(
       `Destination address ${validDest} is blocklisted by Arc Protocol`,
     );
   }
+
+  // --- START ENFORCED APPROVAL QUEUE FOR HIGH VALUE ---
+  const isBypass = metadata?.bypassApproval === true;
+  if (!isBypass && amount >= HIGH_VALUE_THRESHOLD && userId !== "00000000-0000-0000-0000-000000000000") {
+    // Save to database as pending_approval
+    const { data: pendingTx, error: dbError } = await supabaseAdmin.from("transactions").insert({
+      user_id: userId,
+      amount: `-${amount.toFixed(2)}`,
+      type: type,
+      status: "pending_approval",
+      internal_ref: `pending_${crypto.randomBytes(8).toString("hex")}`,
+      description: `[Approval Required] ${metadata.memo || (type === "transfer" ? `Transfer to ${validDest}` : "Treasury Move")}`,
+      metadata: { 
+        ...metadata, 
+        real: true, 
+        destinationAddress: validDest,
+        isHighValue: true,
+        requestedAt: new Date().toISOString()
+      },
+    }).select().single();
+
+    if (dbError) throw dbError;
+
+    await logAuditEvent(supabaseAdmin, userId, "HIGH_VALUE_TX_APPROVAL_QUEUED", {
+      amount,
+      txId: pendingTx.id
+    });
+
+    return {
+      txId: pendingTx.id,
+      status: "pending_approval",
+      message: "This transaction exceeds the threshold and requires administrator approval."
+    };
+  }
+  // --- END ENFORCED APPROVAL QUEUE ---
 
   // Fase 2: Gas Estimation & Balance Checks
   const sourceAddress = walletData.wallet_address as `0x${string}`;
@@ -173,19 +211,27 @@ export async function executeTransaction(
   const idempotencyKey = crypto.randomUUID();
 
   // Fase 3 Preview: Memo support (if provided in metadata)
+  // Use tokenId for USDC on Arc, otherwise use tokenAddress
+  const useTokenId = !metadata.tokenAddress || metadata.tokenAddress === USDC_ADDRESS;
+
   const txParams: any = {
     idempotencyKey,
     walletId: walletData.wallet_id,
     destinationAddress: validDest,
-    amount: [amount.toFixed(decimals >= 6 ? 6 : decimals)], // SDK expects 'amount' singular as array of strings in Node.js
+    amount: [amount.toFixed(6)], // Standardize to 6 decimals for USDC transfer string
     fee: { 
       type: "level", 
       config: { 
         feeLevel: "MEDIUM" 
       } 
     },
-    tokenAddress: metadata.tokenAddress || "", // Use provided token address or empty for native
   };
+
+  if (useTokenId) {
+    txParams.tokenId = ARC_USDC_TOKEN_ID;
+  } else {
+    txParams.tokenAddress = tokenAddress;
+  }
 
   // Perform transaction using Developer SDK
   const response = await client.createTransaction(txParams);
@@ -213,8 +259,9 @@ export async function executeTransaction(
 }
 
 /**
- * Executes an Atomic Batch Transfer (Multiple recipients in ONE blockchain transaction)
- * Only supported for SCA wallets.
+ * Executes a Batch Transfer. 
+ * While atomic batching via 'calls' is only available on specific chains, 
+ * we use a reliable sequential loop with separate idempotency for each transfer.
  */
 export async function executeAtomicBatchTransfer(
   supabaseAdmin: any,
@@ -230,9 +277,9 @@ export async function executeAtomicBatchTransfer(
   if (!walletData?.wallet_id) throw new Error("No wallet found for batching");
 
   const client = getCircleClientInstance();
-  const idempotencyKey = crypto.randomUUID();
+  const txIds: string[] = [];
 
-  // Validate all destinations first
+  // Validate all destinations first to avoid partial failures midway
   for (const rec of recipients) {
     const valid = validateDestination(rec.address);
     if (await isBlocklisted(valid)) {
@@ -240,47 +287,56 @@ export async function executeAtomicBatchTransfer(
     }
   }
 
-  /**
-   * For Circle Developer-Controlled SCA:
-   * Atomic batching is performed via createContractExecutionTransaction with multiple calls.
-   */
-  const response = await client.createContractExecutionTransaction({
-    idempotencyKey,
-    walletId: walletData.wallet_id,
-    fee: {
-      type: "level",
-      config: {
-        feeLevel: "MEDIUM",
-      },
-    },
-    calls: recipients.map((r) => ({
-      contractAddress: USDC_ADDRESS,
-      abiFunctionSignature: "transfer(address,uint256)",
-      abiParameters: [
-        validateDestination(r.address),
-        Math.floor(r.amount * 1_000_000).toString(), // USDC has 6 decimals
-      ],
-    })),
-  } as any);
+  console.log(`[CircleService] Processing batch of ${recipients.length} transfers for user ${userId}`);
 
-  const circleTxId = response.data?.id;
+  for (let i = 0; i < recipients.length; i++) {
+    const rec = recipients[i];
+    const validDest = validateDestination(rec.address);
+    const idempotencyKey = crypto.randomUUID();
 
-  // Record each as a separate logical transaction but linked to the same Circle Tx ID
-  for (const rec of recipients) {
-    await supabaseAdmin.from("transactions").insert({
-      user_id: userId,
-      amount: `-${rec.amount.toFixed(2)}`,
-      type: "transfer",
-      status: "pending",
-      internal_ref: circleTxId,
-      metadata: {
-        recipientName: rec.name || "Batch Recipient",
-        destinationAddress: rec.address,
-        isAtomicBatch: true,
-        real: true,
-      },
-    });
+    try {
+      // Using createTransaction for standard transfers
+      const response = await client.createTransaction({
+        idempotencyKey,
+        walletId: walletData.wallet_id,
+        destinationAddress: validDest,
+        amount: [rec.amount.toFixed(6)], 
+        tokenId: ARC_USDC_TOKEN_ID, // Use explicit USDC Token ID for Arc Testnet
+        fee: {
+          type: "level",
+          config: {
+            feeLevel: "HIGH", // Higher priority for batch elements
+          },
+        },
+      });
+
+      const circleTxId = response.data?.id;
+      if (circleTxId) {
+        txIds.push(circleTxId);
+
+        // Record each transaction in the database
+        await supabaseAdmin.from("transactions").insert({
+          user_id: userId,
+          amount: `-${rec.amount.toFixed(2)}`,
+          type: "transfer",
+          status: "pending",
+          internal_ref: circleTxId,
+          metadata: {
+            recipientName: rec.name || "Batch Recipient",
+            destinationAddress: rec.address,
+            batchIndex: i,
+            totalInBatch: recipients.length,
+            real: true,
+          },
+        });
+      }
+    } catch (error: any) {
+      console.error(`[CircleService] Batch element ${i} failed:`, error.message);
+      // We log but continue if some succeed? No, user probably wants to know.
+      // However, since we already triggered preceding ones, we just record the failure.
+      throw new Error(`Batch interrupted at recipient ${i + 1}: ${error.message}`);
+    }
   }
 
-  return { txId: circleTxId };
+  return { txId: txIds[0], allTxIds: txIds };
 }

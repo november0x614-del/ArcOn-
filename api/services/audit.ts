@@ -1,31 +1,30 @@
+import { getSupabaseAdmin } from "../config/supabase.js";
+
 export async function logAuditEvent(
-  supabaseAdmin: any,
   userId: string,
   action: string,
-  metadata: any,
+  targetId: string | null = null,
+  metadata: any = {}
 ) {
-  try {
-    console.log(
-      `[AUDIT] User: ${userId} | Action: ${action} | Meta:`,
-      metadata,
-    );
-
-    const { error } = await supabaseAdmin.from("audit_logs").insert({
-      user_id: userId,
-      action: action,
-      metadata: metadata,
-    });
-
-    if (error) {
-      if (error.code === "PGRST205" || error.code === "42P01") {
-        console.warn(
-          "⚠️ Tabel `audit_logs` belum ada di Supabase. Silakan jalankan `supabase_setup.sql` di SQL Editor Supabase.",
-        );
-      } else {
-        console.error("Failed recording audit log in Supabase:", error);
-      }
+  const supabase = getSupabaseAdmin();
+  
+  const { error } = await supabase.from("transactions").insert({
+    user_id: userId,
+    amount: "0.00",
+    type: "AUDIT_LOG",
+    status: "success",
+    description: `[AUDIT] ${action}${targetId ? ` on ${targetId}` : ""}`,
+    metadata: {
+      ...metadata,
+      isAudit: true,
+      timestamp: new Date().toISOString()
     }
-  } catch (e) {
-    console.error("Audit logger exception:", e);
+  });
+
+  if (error) {
+    console.error("[AuditLog] Failed to log action:", error);
   }
 }
+
+// Alias for semantic clarity in admin routes
+export const logAdminAction = logAuditEvent;
