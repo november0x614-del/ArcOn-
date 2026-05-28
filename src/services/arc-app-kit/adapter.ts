@@ -192,7 +192,7 @@ export const ArcAppKitAdapter = {
     console.log(`[Adapter] [Stake] Initiating staking: ${amount} USDC`);
 
     return apiRequest(
-      "/api/transactions/stake/execute",
+      "/api/stake/execute",
       "POST",
       {
         userId: registeredUser.supabaseUid,

@@ -113,9 +113,14 @@ export async function initiateOutboundBridge(
 
   console.log(`[BridgeService] Approval sent: ${approveTx.data?.id}`);
 
+  // Step 1.5: Wait for Approve Transaction to Complete
+  if (approveTx.data?.id) {
+    console.log(`[BridgeService] Awaiting approval confirmation for transaction ID: ${approveTx.data.id}`);
+    await waitForCircleTxComplete(approveTx.data.id);
+    console.log(`[BridgeService] Approval transaction confirmed successfully.`);
+  }
+
   // Step 2: depositForBurn
-  // In a real automated flow, we'd wait for approval but for now we'll trigger it.
-  // Note: On Arc, blocks are instant, so sequential calls usually work well.
   const recipientBytes32 = formatRecipientForCCTP(destinationAddress);
 
   const burnTx = await client.createContractExecutionTransaction({
@@ -142,3 +147,41 @@ export async function initiateOutboundBridge(
     burnTxId: burnTx.data?.id,
   };
 }
+
+/**
+ * Polls Circle API until the transaction with the specified ID is complete.
+ */
+async function waitForCircleTxComplete(txId: string): Promise<string> {
+  const client = getCircleClientInstance();
+  
+  for (let i = 0; i < 30; i++) { // Max 30 attempts (~2 minutes)
+    try {
+      const response = await client.getTransaction({ id: txId });
+      const transaction = response.data?.transaction as any;
+      const status = transaction?.status;
+      const txHash = transaction?.txHash;
+      
+      console.log(`[BridgeService] Polling Transaction ${txId}: status = ${status}, txHash = ${txHash}`);
+      
+      if (status === "COMPLETE") {
+        return txHash || "";
+      }
+      
+      if (status === "FAILED") {
+        throw new Error(
+          `Circle Transaction ${txId} failed on-chain: ${
+            response.data?.transaction?.errorDetails || "Unknown execution revert"
+          }`
+        );
+      }
+    } catch (err: any) {
+      console.warn(`[BridgeService] Attempt ${i + 1} to get transaction ${txId} details failed:`, err.message);
+    }
+    
+    // Wait 4 seconds between polls
+    await new Promise((resolve) => setTimeout(resolve, 4000));
+  }
+  
+  throw new Error(`Circle Transaction ${txId} timeout waiting for completion.`);
+}
+

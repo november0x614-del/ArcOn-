@@ -19,15 +19,29 @@ process.on("unhandledRejection", (reason, promise) => {
 const app = express();
 
 // Middlewares
-// For Circle's raw webhook, we handle it in miscRoutes inline or via specific paths,
-// but for standard parsed JSON across the app, we use express.json()
-app.use(express.json());
+// For Circle's raw webhook, we use a custom verify callback in express.json() to capture the exact raw body Buffer on req.rawBody
+app.use(
+  express.json({
+    verify: (req: any, _res, buf) => {
+      req.rawBody = buf;
+    },
+  })
+);
 
 // API Group Routing - Refactored for industry standard MVC pattern
+// We mount all routers on both '/api' and '/' root paths to prevent 405/404 errors on Vercel
+// in case Vercel's Serverless Gateway strips the '/api' prefix before passing to Express.
 app.use("/api", walletRoutes);
+app.use("/", walletRoutes);
+
 app.use("/api", transactionRoutes);
+app.use("/", transactionRoutes);
+
 app.use("/api/admin", adminRoutes);
+app.use("/admin", adminRoutes);
+
 app.use("/api", miscRoutes);
+app.use("/", miscRoutes);
 
 // Export Express App
 export default app;

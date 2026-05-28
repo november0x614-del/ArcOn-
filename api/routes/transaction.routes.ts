@@ -4,20 +4,82 @@ import { executeTransaction, executeAtomicBatchTransfer, ARC_USDC_TOKEN_ID } fro
 import { initiateOutboundBridge, finalizeInboundBridge } from "../services/bridge.js";
 import { getCircleClientInstance } from "../services/circleClient.js";
 import { logAuditEvent } from "../services/audit.js";
+import { getPlatformConfigs } from "./admin.routes.js";
 import * as crypto from "crypto";
 
 const router = express.Router();
 
 router.get("/transactions/:userId", async (req, res) => {
   try {
-    const { data, error } = await getSupabaseAdmin()
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
       .from("transactions")
       .select("*")
       .eq("user_id", req.params.userId)
       .order("created_at", { ascending: false });
 
     if (error) throw error;
-    res.json(data || []);
+    const transactions = data || [];
+
+    // Real-time self-healing fallback check:
+    // Pull status directly from Circle for any client-side pending transactions 
+    // whose internal reference matches a valid Circle API UUID identifier, ensuring state consistency.
+    const pendingTxs = transactions.filter(
+      (tx: any) =>
+        tx.status === "pending" &&
+        tx.internal_ref &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tx.internal_ref)
+    );
+
+    if (pendingTxs.length > 0) {
+      const client = getCircleClientInstance();
+      const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+      
+      for (const tx of pendingTxs) {
+        try {
+          const circleTx = await client.getTransaction({ id: tx.internal_ref });
+          const transaction = circleTx.data?.transaction as any;
+          const circleStatus = transaction?.status;
+          let finalStatus = "pending";
+
+          if (circleStatus === "COMPLETE") {
+            finalStatus = "success";
+          } else if (circleStatus === "FAILED") {
+            finalStatus = "failed";
+          }
+
+          if (finalStatus !== "pending") {
+            const updatedMetadata = {
+              ...(tx.metadata || {}),
+              txHash: transaction?.txHash || tx.metadata?.txHash || transaction?.id,
+              errorReason: transaction?.errorReason || null,
+              errorDetails: transaction?.errorDetails || null,
+              selfHealed: true,
+            };
+
+            await supabase
+              .from("transactions")
+              .update({ 
+                status: finalStatus, 
+                tx_hash: circleTx.data?.transaction?.txHash || tx.tx_hash,
+                metadata: updatedMetadata 
+              })
+              .eq("id", tx.id);
+
+            // Update the local reference array so the frontend immediately receives the updated status in response to this fetch.
+            tx.status = finalStatus;
+            tx.tx_hash = circleTx.data?.transaction?.txHash || tx.tx_hash;
+            tx.metadata = updatedMetadata;
+            console.log(`[Self-Healing] Successfully resolved pending transaction ${tx.internal_ref} status to: ${finalStatus}`);
+          }
+        } catch (circleErr: any) {
+          console.error(`[Self-Healing] Failed to resolve transaction ${tx.internal_ref}:`, circleErr.message || circleErr);
+        }
+        await sleep(500); // 500ms delay to prevent rate limits
+      }
+    }
+
+    res.json(transactions);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -232,17 +294,36 @@ router.post("/purchase/execute", async (req, res) => {
         error: "Your account has been disabled by the system administrator. All transaction operations are suspended.",
       });
     }
-    const merchantAddress = "0x2222222222222222222222222222222222222222";
+
+    const config = getPlatformConfigs();
+    const useEscrow = config?.useLoungeHubEscrow === true;
+    const recipientAddress = useEscrow 
+      ? (config?.loungeHubContractAddress || "0x8F3Cf9D0eAcC841cA4E8D77fDeFfD15C9C0A74D4")
+      : "0x2222222222222222222222222222222222222222";
+
+    const memoText = useEscrow 
+      ? `[On-Chain Escrow Locked - LoungeHub] Purchase ${product}` 
+      : `Purchase ${product}`;
 
     const result = await executeTransaction(
       getSupabaseAdmin(),
       userId,
       amount,
-      merchantAddress,
+      recipientAddress,
       "purchase",
-      { product },
+      { 
+        product,
+        memo: memoText,
+        useEscrow,
+        escrowAddress: recipientAddress
+      },
     );
-    res.status(200).json({ message: "Purchase queued", txId: result.txId });
+    res.status(200).json({ 
+      message: useEscrow ? "Purchase locked in Escrow Contract" : "Purchase queued", 
+      txId: result.txId,
+      useEscrow,
+      escrowAddress: recipientAddress
+    });
   } catch (error: any) {
     console.error("Purchase error", error);
     res.status(500).json({ error: error.message });

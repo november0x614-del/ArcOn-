@@ -60,17 +60,20 @@ export async function verifyAndProcessWebhook(
     const keyBuffer = Buffer.from(publicKey, "base64");
     const signatureBuffer = Buffer.from(signature, "base64");
 
+    // Standardize body for signature verification to support both raw buffers and pre-parsed bodies
+    const rawBodyBuffer = (req as any).rawBody || (Buffer.isBuffer(req.body) ? req.body : Buffer.from(typeof req.body === "string" ? req.body : JSON.stringify(req.body)));
+
     if (algorithm === "ED25519") {
       isVerified = crypto.verify(
         "ed25519",
-        req.body,
+        rawBodyBuffer,
         keyBuffer,
         signatureBuffer,
       );
     } else if (algorithm === "ECDSA_SHA_256") {
       isVerified = crypto.verify(
         "sha256",
-        req.body,
+        rawBodyBuffer,
         {
           key: keyBuffer,
           dsaEncoding: "ieee-p1363",
@@ -95,7 +98,17 @@ export async function verifyAndProcessWebhook(
 
   // 2. Process Payload
   try {
-    const payload = JSON.parse(req.body.toString());
+    let payload;
+    if (typeof req.body === "string") {
+      payload = JSON.parse(req.body);
+    } else if (Buffer.isBuffer(req.body)) {
+      payload = JSON.parse(req.body.toString("utf-8"));
+    } else if (req.body && typeof req.body === "object") {
+      payload = req.body;
+    } else {
+      payload = JSON.parse(((req as any).rawBody || "").toString("utf-8"));
+    }
+
     const type = payload.notificationType;
     const data = payload.notification;
     console.log(`Webhook received: ${type}`);

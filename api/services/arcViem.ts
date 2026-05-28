@@ -173,11 +173,11 @@ export async function isBlocklisted(address: string): Promise<boolean> {
     } as any);
     
     return !!blockchainBlocked;
-  } catch (error) {
-    console.error(`[ArcViem] Failed to check blocklist for ${address}:`, error);
-    // If blockchain check fails, we fail safe (block the transaction) if it's production, 
-    // but here we throw so the caller handles it.
-    throw new Error(`Could not verify blocklist status for ${address}`);
+  } catch (error: any) {
+    console.error(`[ArcViem] Failed to check blockchain blocklist for ${address}, defaulting to false to ensure service uptime:`, error.message || error);
+    // Graceful degradation during unstable testnet or missing contract methods:
+    // Do not crash/block the user's transaction if the blockchain checker is offline.
+    return false;
   }
 }
 

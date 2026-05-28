@@ -93,6 +93,8 @@ interface AppState {
   resetState: () => void;
 }
 
+let activePollSessionId = 0;
+
 export const useStore = create<AppState>()((set) => ({
   // UI States
   viewState: "splash",
@@ -247,9 +249,14 @@ export const useStore = create<AppState>()((set) => ({
     set({ isSyncing: true });
     state.addLog("REAL-TIME SYNC: Active (Industrial Standard)");
 
+    activePollSessionId++;
+    const sessionId = activePollSessionId;
+
     const poll = async () => {
       const currentState = useStore.getState();
-      if (!currentState.isSyncing) return;
+      if (!currentState.isSyncing || activePollSessionId !== sessionId) {
+        return;
+      }
 
       try {
         await Promise.all([
@@ -266,7 +273,7 @@ export const useStore = create<AppState>()((set) => ({
       
       const nextDelay = hasPending ? 3000 : 8000;
       
-      if (useStore.getState().isSyncing) {
+      if (useStore.getState().isSyncing && activePollSessionId === sessionId) {
         setTimeout(poll, nextDelay);
       }
     };
@@ -275,6 +282,7 @@ export const useStore = create<AppState>()((set) => ({
   },
 
   stopSyncPolling: () => {
+    activePollSessionId++; // Invalidate running polls immediately
     set({ isSyncing: false });
     useStore.getState().addLog("REAL-TIME SYNC: Dormant");
   },

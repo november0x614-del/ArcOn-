@@ -2,6 +2,13 @@ import { formatUnits } from "viem";
 import { publicClient, USDC_ADDRESS, getTokenBalance } from "./arcViem.js";
 import { getCircleClientInstance } from "./circleClient.js";
 
+interface CacheEntry {
+  data: any;
+  timestamp: number;
+}
+const balanceCache = new Map<string, CacheEntry>();
+const CACHE_TTL_MS = 2500; // 2.5 seconds cache TTL
+
 export async function fetchUnifiedBalance(
   userId: string,
   walletData: any,
@@ -16,6 +23,12 @@ export async function fetchUnifiedBalance(
     };
   }
 
+  const now = Date.now();
+  const cached = balanceCache.get(userId);
+  if (cached && now - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data;
+  }
+
   const walletId = walletData.wallet_id;
   const walletAddress = walletData.wallet_address;
 
@@ -24,7 +37,10 @@ export async function fetchUnifiedBalance(
     walletId
       ? getCircleClientInstance()
           .getWalletTokenBalance({ id: walletId })
-          .catch(() => null)
+          .catch((err) => {
+            console.warn(`[CircleBalance API] getWalletTokenBalance failed for wallet ${walletId}:`, err.message);
+            return null;
+          })
       : null,
     publicClient.getBalance({ address: walletAddress as `0x${string}` }).catch((e) => {
       console.warn("RPC getBalance failed:", e.message);
@@ -121,10 +137,14 @@ export async function fetchUnifiedBalance(
     console.error("[BalanceService] Pending tx adjust error", e);
   }
 
-  return {
+  const finalResult = {
     balance: Math.max(0, totalValueUsd),
     realBalance: totalValueUsd,
     currency: "USDC",
     allBalances: tokenBalances,
   };
+
+  balanceCache.set(userId, { data: finalResult, timestamp: Date.now() });
+
+  return finalResult;
 }

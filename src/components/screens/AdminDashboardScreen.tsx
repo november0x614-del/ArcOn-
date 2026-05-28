@@ -71,6 +71,8 @@ interface AdminConfig {
   eWalletConnectionEnabled: boolean;
   arcBirdEnabled: boolean;
   backupPhraseEnabled: boolean;
+  useLoungeHubEscrow: boolean;
+  loungeHubContractAddress: string;
 }
 
 type TabType = "overview" | "users" | "ledger" | "ops" | "infra" | "compliance" | "settings";

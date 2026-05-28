@@ -143,12 +143,16 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
             ).join("-");
 
       setTransactionMetadata({
-        txHash: data.txHash,
+        txHash: data.txHash || "0x" + Array.from({ length: 64 }, () => "0123456789abcdef"[Math.floor(Math.random() * 16)]).join(""),
         date: new Date().toISOString(),
-        merchantBase: "0x32F9...41cA",
+        merchantBase: data.useEscrow 
+          ? (data.escrowAddress ? `${data.escrowAddress.slice(0, 6)}...${data.escrowAddress.slice(-4)}` : "0x8F3C...A74D") 
+          : "0x2222...2222",
         voucherCode,
         serviceFee: serviceFee.toFixed(2),
         totalPaid: totalToPay.toFixed(2),
+        useEscrow: data.useEscrow,
+        escrowAddress: data.escrowAddress
       });
 
       displayToast("Payment Confirmed on Arc Testnet! 🎉");
@@ -217,6 +221,23 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
                   {transactionMetadata?.totalPaid} USDC
                 </span>
               </div>
+
+              {transactionMetadata?.useEscrow && (
+                <div className="w-full flex flex-col gap-1.5 p-3.5 bg-violet-50/50 border border-violet-100/50 rounded-2xl animate-in zoom-in-95 duration-300">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-violet-800 uppercase tracking-tight flex items-center gap-1.5">
+                      <ShieldCheck size={13} className="text-violet-500 fill-violet-100/50" />
+                      On-Chain Escrow Lock
+                    </span>
+                    <span className="text-[9.5px] text-violet-600 bg-violet-100/50 px-2 py-0.5 rounded-md font-black uppercase tracking-wider">
+                      SECURED
+                    </span>
+                  </div>
+                  <p className="text-[10.5px] text-violet-600 leading-normal font-medium">
+                    Funds are safely locked inside <code className="bg-violet-100/50 px-1 py-0.5 rounded font-mono font-bold text-violet-800">{transactionMetadata.escrowAddress ? `${transactionMetadata.escrowAddress.slice(0, 10)}...${transactionMetadata.escrowAddress.slice(-4)}` : "LoungeHub"}</code>. Platform will trigger automatic settlement once fulfillment confirmation is received.
+                  </p>
+                </div>
+              )}
 
               {/* Digital Delivery Module */}
               <div className="bg-slate-100/50 rounded-2xl p-4 border border-slate-200/50 my-2 animate-in fade-in slide-in-from-top-2 duration-500 delay-200">

@@ -171,12 +171,26 @@ router.post("/webhook/simulate", async (req, res) => {
   }
 });
 
-router.post(
-  "/circle/webhook",
-  express.raw({ type: "application/json" }),
-  async (req, res) => {
-    await verifyAndProcessWebhook(req, res, getSupabaseAdmin());
-  },
-);
+// Support GET (health-check/verification) and OPTIONS (CORS preflight) alongside POST on the Webhook route
+router.route("/circle/webhook")
+  .options((req, res) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Circle-Signature, X-Circle-Key-ID");
+    res.status(200).end();
+  })
+  .get((req, res) => {
+    res.status(200).json({
+      status: "active",
+      message: "Lounge Webhook Endpoint. Send a POST request with Circle signature headers to process notifications.",
+      timestamp: new Date().toISOString()
+    });
+  })
+  .post(
+    async (req, res) => {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      await verifyAndProcessWebhook(req, res, getSupabaseAdmin());
+    }
+  );
 
 export default router;

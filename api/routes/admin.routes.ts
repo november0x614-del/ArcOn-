@@ -1,7 +1,8 @@
 import express from "express";
 import { getSupabaseAdmin } from "../config/supabase.js";
-import { createWallet, batchCreateWallets } from "../services/circle.js";
+import { createWallet, batchCreateWallets, interpretCircleError } from "../services/circle.js";
 import { fetchUnifiedBalance } from "../services/balance.js";
+import * as crypto from "crypto";
 import { getWalletDetails, upgradeWallet, fetchSystemTransactions, fetchPendingApprovals, decideApproval } from "../services/admin.js";
 import { logAdminAction } from "../services/audit.js";
 
@@ -34,6 +35,8 @@ let platformConfigs = {
   arcBirdEnabled: true,
   backupPhraseEnabled: true,
   adminPin: "123456",
+  useLoungeHubEscrow: false,
+  loungeHubContractAddress: "0x8F3Cf9D0eAcC841cA4E8D77fDeFfD15C9C0A74D4",
 };
 
 router.post("/init", async (_req, res) => {
@@ -74,6 +77,10 @@ router.post("/init", async (_req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+export function getPlatformConfigs() {
+  return platformConfigs;
+}
 
 router.get("/config", (_req, res) => {
   res.json(platformConfigs);
@@ -508,6 +515,106 @@ router.post("/config/fees", async (req, res) => {
 
     res.json({ message: `Gas strategy updated to ${strategy}` });
   } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- PENDING TRANSACTIONS & WEBHOOK SIMULATION FOR PREVIEW & VERCEL ---
+
+router.get("/config/pending-transactions", async (_req, res) => {
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+      .from("transactions")
+      .select("id, user_id, amount, type, status, internal_ref, created_at, metadata")
+      .eq("status", "pending")
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    res.json(data || []);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post("/config/simulate-circle-webhook", async (req, res) => {
+  try {
+    const { internalRef, status, errorReason, errorDetails } = req.body;
+    if (!internalRef || !status) {
+      return res.status(400).json({ error: "internalRef and status are required (and optionally errorReason, errorDetails)" });
+    }
+
+    const supabase = getSupabaseAdmin();
+
+    const isFailed = status === "FAILED";
+    const newStatus = status === "COMPLETE" ? "success" : isFailed ? "failed" : "pending";
+    const txHash = isFailed ? null : `0x${crypto.randomBytes(32).toString("hex")}`;
+
+    // 1. Fetch transaction metadata first
+    const { data: existingTx, error: fetchError } = await supabase
+      .from("transactions")
+      .select("user_id, metadata, type")
+      .eq("internal_ref", internalRef)
+      .maybeSingle();
+
+    if (fetchError) throw fetchError;
+    if (!existingTx) {
+      return res.status(404).json({ error: "Transaction not found with that internal reference" });
+    }
+
+    let errorMessage = null;
+    if (isFailed) {
+      errorMessage = interpretCircleError(
+        errorReason || "FAILED_ON_CHAIN", 
+        errorDetails || "Insufficient Balance"
+      );
+    }
+
+    const updatedMetadata = existingTx.metadata
+      ? {
+          ...existingTx.metadata,
+          txHash: txHash || existingTx.metadata.txHash,
+          errorReason: isFailed ? (errorReason || "FAILED_ON_CHAIN") : existingTx.metadata.errorReason,
+          errorDetails: isFailed ? (errorDetails || "Insufficient Balance") : existingTx.metadata.errorDetails,
+          errorMessage: errorMessage || existingTx.metadata.errorMessage,
+          simulated: true,
+          simulatedAt: new Date().toISOString(),
+        }
+      : {
+          txHash,
+          errorReason: isFailed ? (errorReason || "FAILED_ON_CHAIN") : null,
+          errorDetails: isFailed ? (errorDetails || "Insufficient Balance") : null,
+          errorMessage,
+          simulated: true,
+          simulatedAt: new Date().toISOString(),
+        };
+
+    const { error: updateError } = await supabase
+      .from("transactions")
+      .update({ 
+        status: newStatus, 
+        metadata: updatedMetadata 
+      })
+      .eq("internal_ref", internalRef);
+
+    if (updateError) throw updateError;
+
+    // Log admin action for auditing simulation
+    await logAdminAction(
+      "00000000-0000-0000-0000-000000000000",
+      "TRANSACTION_WEBHOOK_SIMULATED",
+      internalRef,
+      { status: newStatus, isFailed }
+    );
+
+    res.json({
+      success: true,
+      message: `Successfully simulated webhook event: Transaction ${internalRef} updated to ${newStatus}`,
+      txHash,
+      status: newStatus
+    });
+  } catch (error: any) {
+    console.error("[Simulate webhook route] error:", error);
     res.status(500).json({ error: error.message });
   }
 });

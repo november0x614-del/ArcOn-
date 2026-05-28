@@ -268,8 +268,15 @@ export async function executeTransaction(
   
   // Use USDC_ADDRESS as default if no valid tokenAddress provided
   let tokenAddress = USDC_ADDRESS;
-  if (metadata.tokenAddress && metadata.tokenAddress.startsWith("0x")) {
-    tokenAddress = metadata.tokenAddress;
+  if (type === "swap") {
+    // For swaps, the token being transferred out of user wallet is fromToken
+    if (metadata.fromToken && metadata.fromToken !== "USDC" && metadata.tokenAddress) {
+      tokenAddress = metadata.tokenAddress;
+    }
+  } else {
+    if (metadata.tokenAddress && metadata.tokenAddress.startsWith("0x")) {
+      tokenAddress = metadata.tokenAddress;
+    }
   }
   
   const tokenAddressTyped = tokenAddress as `0x${string}`;
@@ -313,24 +320,19 @@ export async function executeTransaction(
     walletId: walletData.wallet_id,
     destinationAddress: validDest,
     amount: [formattedAmount], 
-    feeLevel: "MEDIUM",
+    fee: {
+      type: "level",
+      config: {
+        feeLevel: "MEDIUM"
+      }
+    }
   };
-
-  // Determine Gas Strategy
-  const gasStrategy = await getGasFeeStrategy();
-  if (gasStrategy === "USER_PAID_USDC") {
-    // For Circle Paymaster (User pays in USDC), we set the paymaster for USDC
-    // Based on Circle Documentation for supported chains like Arc Testnet
-    txParams.feeConfig = {
-      type: "paymaster",
-      paymasterId: "usdc_paymaster", // Conventional ID for Circle's USDC Paymaster
-    };
-  }
 
   if (isUsdc) {
     txParams.tokenId = ARC_USDC_TOKEN_ID;
   } else {
     txParams.tokenAddress = tokenAddressTyped;
+    txParams.blockchain = "ARC-TESTNET";
   }
 
   // Perform transaction using Developer SDK
@@ -403,15 +405,13 @@ export async function executeAtomicBatchTransfer(
         destinationAddress: validDest,
         amount: [rec.amount.toFixed(6)], 
         tokenId: ARC_USDC_TOKEN_ID, // Use explicit USDC Token ID for Arc Testnet
-        feeLevel: "HIGH", // Higher priority for batch elements
+        fee: {
+          type: "level",
+          config: {
+            feeLevel: "HIGH"
+          }
+        }
       };
-
-      if (gasStrategy === "USER_PAID_USDC") {
-        txParams.feeConfig = {
-          type: "paymaster",
-          paymasterId: "usdc_paymaster",
-        };
-      }
 
       // Using createTransaction for standard transfers
       const response = await client.createTransaction(txParams);

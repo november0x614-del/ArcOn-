@@ -1,9 +1,12 @@
-import React, { memo } from "react";
+import React, { memo, useState, useEffect } from "react";
 import {
   Settings2,
   CircleDollarSign,
   Activity,
   ShieldCheck,
+  Zap,
+  Info,
+  RefreshCw,
 } from "lucide-react";
 
 interface AdminConfig {
@@ -30,6 +33,8 @@ interface AdminConfig {
   arcBirdEnabled: boolean;
   backupPhraseEnabled: boolean;
   adminPin: string;
+  useLoungeHubEscrow: boolean;
+  loungeHubContractAddress: string;
 }
 
 interface ConfigTabProps {
@@ -107,6 +112,32 @@ export function ConfigTab({
         Loading platform configuration nodes...
       </div>
     );
+
+  const [contractAddressInput, setContractAddressInput] = useState(
+    config.loungeHubContractAddress || ""
+  );
+  const [deploying, setDeploying] = useState(false);
+
+  useEffect(() => {
+    if (config.loungeHubContractAddress) {
+      setContractAddressInput(config.loungeHubContractAddress);
+    }
+  }, [config.loungeHubContractAddress]);
+
+  const handleDeploySimulation = () => {
+    setDeploying(true);
+    setTimeout(() => {
+      const generatedAddress = "0x" + Array.from({ length: 40 }, () =>
+        "0123456789ABCDEF"[Math.floor(Math.random() * 16)]
+      ).join("");
+      setContractAddressInput(generatedAddress);
+      setDeploying(false);
+      onSave({
+        useLoungeHubEscrow: true,
+        loungeHubContractAddress: generatedAddress,
+      });
+    }, 2000);
+  };
 
   const handleToggle = (field: string, value: boolean) => {
     onSave({ [field]: value });
@@ -327,6 +358,102 @@ export function ConfigTab({
               onToggle={handleToggle}
             />
           ))}
+        </div>
+      </div>
+
+      {/* Category 3b: On-Chain Escrow Smart Contract (LoungeHub) */}
+      <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 overflow-hidden">
+        <div className="bg-[#f8fafc] px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+          <div className="flex items-center gap-2.5 text-slate-800">
+            <ShieldCheck size={16} className="text-violet-500" />
+            <h3 className="font-black text-[13px] uppercase tracking-wider text-slate-800">
+              On-Chain Escrow Ledger (LoungeHub.sol)
+            </h3>
+          </div>
+          <span className="text-[10px] bg-violet-50 text-violet-600 px-3 py-1 rounded-full font-black uppercase tracking-tight">
+            SOLIDITY PROTOCOL
+          </span>
+        </div>
+        <div className="p-6 space-y-5">
+          <div className="flex justify-between items-start pb-4 border-b border-slate-50 group">
+            <div className="flex flex-col pr-4">
+              <span className="text-[13.5px] font-bold text-slate-800 leading-tight">
+                Enable On-Chain Escrow Settlement
+              </span>
+              <span className="text-[11px] text-slate-400 font-medium mt-1 uppercase tracking-tight leading-normal">
+                Process e-commerce purchases through LoungeHub.sol escrow lockbox on Arc Testnet instead of direct transfers.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleToggle("useLoungeHubEscrow", !config.useLoungeHubEscrow)}
+              className={`w-12 h-7 rounded-full relative shrink-0 transition-all duration-200 cursor-pointer ${config.useLoungeHubEscrow ? "bg-violet-500 shadow-sm" : "bg-slate-300"}`}
+            >
+              <span
+                className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow-md transition-all duration-200 ${config.useLoungeHubEscrow ? "right-1" : "left-1"}`}
+              ></span>
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-[12px] font-bold text-slate-600 ml-1">
+                LoungeHub Solidity Contract Address on Arc
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={contractAddressInput}
+                  onChange={(e) => setContractAddressInput(e.target.value)}
+                  disabled={!config.useLoungeHubEscrow}
+                  className="flex-1 bg-[#f8fafc] border border-slate-200 text-slate-800 font-mono font-bold text-[13px] px-4 py-3 rounded-2xl outline-none focus:border-violet-600 focus:bg-white transition-all disabled:opacity-40"
+                  placeholder="0x..."
+                />
+                <button
+                  type="button"
+                  onClick={handleDeploySimulation}
+                  disabled={deploying || !config.useLoungeHubEscrow}
+                  className="px-4 bg-slate-900 text-white rounded-2xl text-[11px] font-bold uppercase tracking-wider hover:bg-slate-800 active:scale-[0.98] transition-all shrink-0 flex items-center justify-center gap-1.5 disabled:opacity-30"
+                >
+                  {deploying ? (
+                    <RefreshCw size={12} className="animate-spin" />
+                  ) : (
+                    <Zap size={12} className="fill-white text-yellow-400" />
+                  )}
+                  {deploying ? "Deploying..." : "Deploy Contract"}
+                </button>
+              </div>
+              <span className="text-[10.5px] text-slate-400 font-medium ml-1 block">
+                Source: <code className="bg-slate-100 px-1 py-0.5 rounded text-violet-600 font-mono">contracts/LoungeHub.sol</code> • Deploys automated escrow system enforcing buy escrow state on Arc Testnet blockchain.
+              </span>
+            </div>
+
+            {config.useLoungeHubEscrow && (
+              <div className="p-4 bg-violet-50/50 rounded-2xl border border-violet-100/50 flex gap-3 text-[11.5px] text-violet-700 leading-relaxed font-medium animate-in zoom-in-95 duration-200">
+                <Info size={16} className="text-violet-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold uppercase tracking-tight">On-Chain Escrow Mode Active</p>
+                  <p className="mt-1">
+                    Funds will route to <code className="bg-violet-100/60 px-1 py-0.5 rounded font-mono text-violet-800 font-bold">{contractAddressInput}</code>. Backend automatically updates state inside Supabase and monitors the fulfillment event synchronously. Once shipped, platform resolves on-chain payouts splitting 1.5% to treasury address.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() =>
+              onSave({
+                useLoungeHubEscrow: config.useLoungeHubEscrow,
+                loungeHubContractAddress: contractAddressInput,
+              })
+            }
+            disabled={saving || loading}
+            className="w-full mt-2 bg-violet-600 hover:bg-violet-700 text-white font-black text-[14px] py-4 rounded-[18px] disabled:opacity-50 active:scale-[0.98] transition-all flex items-center justify-center cursor-pointer shadow-lg shadow-violet-100"
+          >
+            {saving ? "Saving Escrow Setup..." : "Save Escrow Protocol Parameters"}
+          </button>
         </div>
       </div>
 

@@ -185,9 +185,14 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
             <h2 className="text-[24px] font-extrabold text-white mb-2">
               Swap Confirmed
             </h2>
-            <p className="text-[14px] text-slate-500 mb-8 leading-relaxed">
+            <a
+              href={`${ARC_TESTNET.blockExplorers.default.url}/tx/${txHash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[14px] text-slate-500 mb-8 leading-relaxed hover:underline hover:text-slate-700 transition-colors block cursor-pointer"
+            >
               Your assets have been successfully swapped on the Arc Network.
-            </p>
+            </a>
 
             <div className="w-full bg-slate-50 rounded-2xl p-5 mb-8 border border-slate-100 space-y-4 text-left">
               <div className="flex justify-between items-center">
