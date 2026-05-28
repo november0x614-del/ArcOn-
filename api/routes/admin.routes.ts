@@ -271,14 +271,25 @@ router.get("/stats", async (_req, res) => {
 
     const { data: transactions, error: txError } = await supabase
       .from("transactions")
-      .select("amount")
+      .select("amount, type")
       .eq("status", "success");
 
     let totalVolume = 0;
+    let batchVolume = 0;
+    let singleVolume = 0;
+
     if (!txError && transactions) {
       transactions.forEach((tx) => {
         const amt = Math.abs(parseFloat(tx.amount || "0"));
         totalVolume += amt;
+        
+        // Logical check for Batch vs Single
+        if (tx.type === "batchTransfer") {
+          batchVolume += amt;
+        } else if (tx.type === "transfer" || tx.type === "payment") {
+          // In context of e-commerce, "payment" is often single, "transfer" is definitely single.
+          singleVolume += amt;
+        }
       });
     }
 
@@ -304,6 +315,10 @@ router.get("/stats", async (_req, res) => {
       totalUsers: userCount || 0,
       totalVolume: `${totalVolume.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC`,
       treasuryBalance: treasuryBalanceStr,
+      volumeData: {
+        batch: batchVolume,
+        single: singleVolume,
+      }
     });
   } catch (error: any) {
     console.error("Failed to fetch admin stats:", error);

@@ -16,7 +16,6 @@ import { useBalances } from "../../hooks/useBalances";
 import { ARC_TESTNET } from "../../lib/arcConfig";
 import { ARC_TOKEN_REGISTRY, syncTokenWithArcScan } from "../../lib/arcRegistry";
 import { TokenIcon } from "../ui/TokenIcon";
-import { SourceAccountCard } from "../common/SourceAccountCard";
 
 interface SwapScreenProps {
   onBack: () => void;
@@ -263,14 +262,6 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto pb-24 p-5 flex flex-col pt-6 w-full scrollbar-hide relative">
-        {/* Source Account Overview */}
-        <div className="mb-6 space-y-2">
-           <label className="text-[12px] font-bold text-slate-400 uppercase tracking-wider block ml-1">
-            Payment Source
-          </label>
-          <SourceAccountCard className="!p-4 !border-none !shadow-sm !rounded-2xl" />
-        </div>
-
         {/* Swap Box Container */}
         <div className="relative mb-6">
           {/* From */}

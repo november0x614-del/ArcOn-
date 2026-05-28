@@ -12,7 +12,6 @@ import {
 import { motion } from "motion/react";
 import { useApp } from "../../contexts/AppContext";
 import { BackendClient } from "../../services/api/index";
-import { SourceAccountCard } from "../common/SourceAccountCard";
 
 interface BridgeScreenProps {
   onBack: () => void;
@@ -289,14 +288,6 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto px-5 pt-6 pb-6 flex flex-col scrollbar-hide relative z-0">
-        {/* Source Account Overview */}
-        <div className="mb-6 space-y-2">
-           <label className="text-[12px] font-bold text-slate-400 uppercase tracking-wider block ml-1">
-            Bridge Source
-          </label>
-          <SourceAccountCard className="!p-4 !border-none !shadow-sm !rounded-2xl" />
-        </div>
-
         {/* Network Selection Dashboard */}
         <div className="bg-white rounded-[24px] p-5 shadow-sm border border-slate-100 mb-4 flex flex-col gap-6 relative">
           <div className="flex flex-col gap-2">

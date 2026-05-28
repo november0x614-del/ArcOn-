@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import { useStore } from "../../store/useStore";
 import { useArc } from "../../contexts/ArcContext";
-import { SourceAccountCard } from "../common/SourceAccountCard";
 import { WalletCard } from "../common/WalletCard";
 
 interface AmountInputScreenProps {
@@ -82,32 +81,24 @@ export function AmountInputScreen({
       </div>
 
       <div className="flex-1 overflow-y-auto w-full pb-32 p-5 bg-[#f8fafc]">
-        {/* Contact info box */}
-        <div className="bg-white rounded-[24px] p-5 shadow-sm border border-slate-200 mb-6 flex flex-col items-center justify-center">
-          <div className="w-[52px] h-[52px] shadow-sm rounded-full bg-slate-50 flex items-center justify-center font-bold text-slate-600 text-[18px] shrink-0 mb-3 border border-slate-100">
+        {/* Recipient Card - Updated Design */}
+        <div className="bg-white rounded-[32px] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 mb-8 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-500">
+          <div className="w-[64px] h-[64px] shadow-sm rounded-full bg-slate-900 flex items-center justify-center font-bold text-white text-[22px] shrink-0 mb-4 border-4 border-slate-50">
             {contact.initials}
           </div>
-          <h2 className="text-slate-800 font-bold text-[16px] uppercase tracking-tight leading-tight text-center">
+          <h2 className="text-slate-900 font-black text-[18px] uppercase tracking-tight leading-tight text-center">
             {contact.name}
           </h2>
-          <p className="text-slate-500 text-[13px] mt-[4px] text-center">
-            {contact.bank || contact.network} - {contact.account}
-          </p>
-        </div>
-
-        {/* Source Account */}
-        <div className="bg-white rounded-[24px] p-5 shadow-sm border border-slate-200 mb-6 relative space-y-3">
-          <label className="text-[12px] font-bold text-slate-400 uppercase tracking-wider block">
-            Payment Source
-          </label>
-          <SourceAccountCard
-            onClick={() => setShowSourceSelect(true)}
-            className="!mb-0 !border-slate-100 !p-4 !shadow-none"
-          />
+          <div className="mt-2 px-4 py-1.5 bg-slate-50 rounded-full border border-slate-100">
+             <p className="text-slate-500 text-[12px] font-bold tracking-tight text-center flex items-center gap-1.5">
+               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+               {contact.bank || contact.network} - {contact.account}
+             </p>
+          </div>
         </div>
 
         {/* Input box */}
-        <div className="bg-white rounded-[24px] p-5 shadow-sm border border-slate-200 mb-6 relative space-y-4">
+        <div className="bg-white rounded-[28px] p-6 shadow-sm border border-slate-100 mb-6 relative space-y-4">
           <label className="text-[12px] font-bold text-slate-400 uppercase tracking-wider block">
             Transfer Amount
           </label>
@@ -306,7 +297,17 @@ export function AmountInputScreen({
               <label className="text-slate-500 text-[14.5px] mb-2 block text-left">
                 Source Account
               </label>
-              <SourceAccountCard isSelected={false} className="!p-4 !rounded-xl !border-slate-100 bg-slate-50" />
+              <div className="bg-slate-50 border border-slate-100 rounded-[12px] p-4 flex flex-col gap-0.5 text-left">
+                <span className="font-bold text-slate-800 text-[14.5px]">
+                  {selectedSource.name} - {selectedSource.account}
+                </span>
+                <span className="text-slate-500 text-[13px]">
+                  {selectedSource.balance}
+                  <span className="text-[9px] align-top relative top-[1px]">
+                    {selectedSource.dec}
+                  </span>
+                </span>
+              </div>
             </div>
 
             {/* Bottom Confirm Action */}
@@ -365,9 +366,41 @@ export function AmountInputScreen({
             </div>
 
             <div className="p-5 flex flex-col gap-3 overflow-y-auto w-full pb-10">
-              <SourceAccountCard 
-                onClick={() => setShowSourceSelect(false)}
-              />
+              {sources.map((src) => (
+                <div
+                  key={src.id}
+                  onClick={() => {
+                    setSelectedSource(src);
+                    setShowSourceSelect(false);
+                  }}
+                  className={`flex flex-col p-4 rounded-2xl border-[1.5px] cursor-pointer hover:bg-slate-50 transition-colors w-full ${selectedSource.id === src.id ? "border-slate-900 bg-slate-100/10 shadow-[0_2px_10px_rgba(63,162,246,0.1)]" : "border-slate-200 bg-white shadow-sm"}`}
+                >
+                  <div className="flex justify-between items-start mb-2 w-full">
+                    <span
+                      className={`font-bold text-[15px] text-left ${selectedSource.id === src.id ? "text-slate-800" : "text-slate-800"}`}
+                    >
+                      {src.name}
+                    </span>
+                    {selectedSource.id === src.id && (
+                      <CheckCircle2
+                        size={20}
+                        className="text-slate-800 shrink-0"
+                      />
+                    )}
+                  </div>
+                  <span className="text-slate-500 text-[13px] tracking-wide font-medium text-left w-full block">
+                    {src.account}
+                  </span>
+                  <span
+                    className={`font-bold text-[14px] mt-2 text-left w-full block ${src.isArc ? "text-slate-800" : "text-[#008fcd]"}`}
+                  >
+                    {src.balance}
+                    <span className="text-[10px] align-top relative top-[1px]">
+                      {src.dec}
+                    </span>
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         </div>

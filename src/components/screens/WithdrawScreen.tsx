@@ -8,7 +8,6 @@ import {
 } from "lucide-react";
 import { useApp } from "../../contexts/AppContext";
 import { useArc } from "../../contexts/ArcContext";
-import { SourceAccountCard } from "../common/SourceAccountCard";
 
 interface WithdrawScreenProps {
   onBack: () => void;
@@ -140,13 +139,6 @@ export function WithdrawScreen({ onBack, onSuccess }: WithdrawScreenProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto p-5 pb-32">
-        <div className="mb-6 space-y-2">
-           <label className="text-[12px] font-bold text-slate-400 uppercase tracking-wider block ml-1">
-            Source Wallet
-          </label>
-          <SourceAccountCard className="!p-4 !border-none !shadow-sm !rounded-2xl" />
-        </div>
-
         <div className="bg-white rounded-[24px] p-5 shadow-sm border border-slate-200 mb-2 text-left">
           <label className="text-[12px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">
             Destination Bank

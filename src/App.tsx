@@ -23,25 +23,34 @@ export default function App() {
     async (user: any) => {
       try {
         let walletInfo: any = null;
+        let isProvisioning = false;
 
+        // 1. Initial check for existing wallet
         try {
           const response = await fetch(`/api/debug-wallet/${user.id}`);
           if (response.ok) {
             walletInfo = await response.json();
           }
         } catch (err) {
-          console.warn(
-            "Failed fetching wallet mapping, trying to provision...",
-            err,
-          );
+          console.warn("Wallet lookup failed, will attempt provisioning if needed.", err);
         }
 
         const currentView = useStore.getState().viewState;
 
-        // Auto-Create Wallet on Login if missing (Recovery Mode)
-        // Only if we're not currently in the register flow where it's explicitly handled
-        if ((!walletInfo || !walletInfo.wallet_id) && currentView !== "register" && currentView !== "registerSuccess") {
+        // 2. INTERRUPTED REGISTRATION RECOVERY (Auto-Provisioning)
+        // If we have a user but no wallet, and we're not explicitly in the middle of a registration screen
+        const needsWallet = !walletInfo || !walletInfo.wallet_id || !walletInfo.wallet_address;
+        const isNotRegistering = currentView !== "register" && currentView !== "registerSuccess";
+
+        if (needsWallet && isNotRegistering) {
+          isProvisioning = true;
+          // Set a temporary loading state if we're coming from splash/login
+          if (currentView === "splash" || currentView === "password") {
+             // We'll keep them on splash or a similar loading indicator
+          }
+
           try {
+            console.log("Starting auto-provisioning for interrupted registration...");
             const createRes = await fetch("/api/wallets/create", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -51,46 +60,54 @@ export default function App() {
             if (createRes.ok) {
               const newData = await createRes.json();
               walletInfo = {
-                wallet_id: newData.walletId,
-                wallet_address: newData.address,
+                wallet_id: newData.walletId || newData.wallet_id,
+                wallet_address: newData.address || newData.wallet_address,
               };
+              console.log("Auto-provisioning successful:", walletInfo.wallet_address);
             } else {
               const errorData = await createRes.json();
-              console.error("Wallet creation failed:", errorData);
+              console.error("Auto-provisioning failed:", errorData);
+              // If it fails, we keep state empty and potentially show error later
             }
           } catch (createErr) {
-            console.error("Failed to auto-create wallet:", createErr);
+            console.error("System error during auto-provisioning:", createErr);
           }
         }
 
-        // Save to localStorage for ArcProvider to pick up
-        if (walletInfo?.wallet_address) {
+        // 3. SECURE REDIRECT GUARD
+        // Only proceed if we have a wallet or if we're in the middle of registration flow
+        const hasValidWallet = walletInfo?.wallet_id && walletInfo?.wallet_address;
+
+        if (hasValidWallet) {
+          // Sync to localStorage
           localStorage.setItem("arc_wallet_address", walletInfo.wallet_address);
-        }
-        localStorage.setItem("arc_user_id", user.id);
+          localStorage.setItem("arc_user_id", user.id);
 
-        setRegisteredUser({
-          username: user.user_metadata?.full_name || "Arc User",
-          email: user.email || "",
-          isVerified: true,
-          walletId: walletInfo?.wallet_id || "",
-          walletAddress: walletInfo?.wallet_address || "",
-          supabaseUid: user.id,
-          registrationDate: new Date(user.created_at).toLocaleDateString(
-            "id-ID",
-          ),
-        });
+          setRegisteredUser({
+            username: user.user_metadata?.full_name || user.user_metadata?.username || "Arc User",
+            email: user.email || "",
+            isVerified: true,
+            walletId: walletInfo.wallet_id,
+            walletAddress: walletInfo.wallet_address,
+            supabaseUid: user.id,
+            registrationDate: new Date(user.created_at).toLocaleDateString("id-ID"),
+          });
 
-        // Navigate to home only if not already in a logged in screen or processing a login/signup
-        if (currentView === "splash" || currentView === "password") {
-          setViewState("home");
+          // Only navigate to home if we were stuck on entry points
+          if (currentView === "splash" || currentView === "password") {
+            setViewState("home");
+          }
+        } else if (isNotRegistering) {
+          // If no wallet and not registering, and auto-provisioning failed, we might need a logout or error screen
+          console.error("Critical: User Logged In but No Wallet Found and Provisioning Failed.");
+          // Stay on splash/loading for now
         }
+
+        // Always clear loading states at the end
+        setIsLoggingIn(false);
+
       } catch (e) {
-        console.error(e);
-        const currentView = useStore.getState().viewState;
-        if (currentView === "splash" || currentView === "password") {
-          setViewState("home");
-        }
+        console.error("Critical handleUserSession failure:", e);
       }
     },
     [setRegisteredUser, setViewState],

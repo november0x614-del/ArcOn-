@@ -86,6 +86,7 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
   const myUsernameDisplay = registeredUser?.username ? `@${registeredUser.username}` : "My Arc Wallet";
 
   const isDeposit = tx?.type === "receive" || tx?.type === "deposit" || tx?.metadata?.direction === "inbound";
+  const isBatch = tx?.type === "batchTransfer";
 
   const formatAddrShort = (addr: string) => addr ? `0x${addr.substring(2, 6)}...${addr.slice(-4)}` : "";
 
@@ -257,11 +258,40 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
               
               {/* Amount Row */}
               <div className="flex flex-col items-center justify-center pb-6 border-b border-slate-100 mb-6">
-                <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider mb-2">Total Amount</span>
+                <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                  {isBatch ? "Total Batch Amount" : "Total Amount"}
+                </span>
                 <span className={`text-[32px] font-black tracking-tight ${isSuccess ? "text-slate-900" : "text-slate-500 line-through decoration-slate-300"}`}>
                   {tx ? tx.amount : "0.00"} {tx?.currency || "USDC"}
                 </span>
+                {isBatch && (
+                  <div className="mt-2 text-[11px] font-black text-purple-600 bg-purple-50 px-3 py-1 rounded-full uppercase tracking-tighter italic border border-purple-100">
+                    SCA BATCH OPTIMIZED
+                  </div>
+                )}
               </div>
+
+              {/* Batch Recipients Breakdown */}
+              {isBatch && tx?.metadata?.recipients && (
+                <div className="w-full bg-slate-50 rounded-3xl p-4 mb-6 border border-slate-100 animate-in fade-in slide-in-from-top-4 duration-500">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 px-1">
+                    Distribution Summary
+                  </p>
+                  <div className="space-y-2">
+                    {(tx.metadata.recipients as any[]).map((recipient, i) => (
+                      <div key={i} className="flex justify-between items-center bg-white p-3 rounded-2xl border border-slate-50 shadow-sm">
+                        <div className="flex flex-col">
+                           <span className="text-[13px] font-bold text-slate-800">{recipient.name || recipient.username || "Unknown"}</span>
+                           <span className="text-[10px] font-mono text-slate-400">{recipient.address ? formatAddrShort(recipient.address) : ""}</span>
+                        </div>
+                        <span className="text-[13px] font-black text-slate-900">
+                          {recipient.amount} <span className="text-[10px] text-slate-400">USDC</span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Details List */}
               <div className="flex flex-col gap-5">
@@ -342,6 +372,34 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                   <span className="text-[14px] font-medium text-slate-800">
                     {displayDate}
                   </span>
+                </div>
+
+                {/* Account Type (New) */}
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
+                    Infrastructure
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[13px] font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100 flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></div>
+                      Smart Contract Account (SCA)
+                    </span>
+                  </div>
+                </div>
+
+                {/* Fee Breakdown */}
+                <div className="flex flex-col gap-1.5 pt-4 border-t border-slate-50">
+                   <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">Estimated Fees</span>
+                      <span className="text-[14px] font-bold text-slate-800">
+                        {isBatch ? "0.05" : "0.01"} USDC
+                      </span>
+                   </div>
+                   <p className="text-[10px] text-slate-400 font-medium italic">
+                     {isBatch 
+                       ? "*Includes batch processing gas optimization and platform convenience fee."
+                       : "*Network execution fee for single transfer."}
+                   </p>
                 </div>
               </div>
 

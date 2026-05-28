@@ -239,8 +239,11 @@ export const ViewRouter = React.memo(
                   return;
                 }
 
-                setIsLoggingIn(false);
-                setViewState("home");
+                // We NO LONGER call setViewState("home") here.
+                // The central handleUserSession in App.tsx will detect the new session,
+                // verify/provision the wallet, and then navigate to "home" securely.
+                // We keep setIsLoggingIn(true) so the loading spinner stays visible 
+                // until the transition happens from App.tsx.
               }}
               onForgotPassword={() => setViewState("forgotPassword")}
             />

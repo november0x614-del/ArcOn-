@@ -10,7 +10,6 @@ import {
 import { useApp } from "../../contexts/AppContext";
 import { useContacts } from "../../hooks/useContacts";
 import { BackendClient } from "../../services/api";
-import { SourceAccountCard } from "../common/SourceAccountCard";
 
 interface TransferScreenProps {
   onBack: () => void;
@@ -248,14 +247,6 @@ export function TransferScreen({
 
         {/* Scrollable List Area */}
         <div className="flex-1 overflow-y-auto w-full px-5 pb-24 scrollbar-hide">
-          {/* Source Account Overview */}
-          <div className="mb-6 space-y-2 mt-6">
-            <label className="text-[12px] font-bold text-slate-400 uppercase tracking-wider block ml-1">
-              Source Wallet
-            </label>
-            <SourceAccountCard className="!p-4 !border-none !shadow-sm !rounded-2xl" />
-          </div>
-
           {/* Favorites Section */}
             <div className="mb-4">
               {(favorites.length > 0 || isLoadingFavorite) && (
