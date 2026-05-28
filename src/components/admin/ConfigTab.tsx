@@ -374,7 +374,7 @@ export function ConfigTab({
             SOLIDITY PROTOCOL
           </span>
         </div>
-        <div className="p-6 space-y-5">
+         <div className="p-6 space-y-5">
           <div className="flex justify-between items-start pb-4 border-b border-slate-50 group">
             <div className="flex flex-col pr-4">
               <span className="text-[13.5px] font-bold text-slate-800 leading-tight">

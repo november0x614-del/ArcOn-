@@ -87,23 +87,51 @@ router.get("/transactions/:userId", async (req, res) => {
 
 router.post("/swap/execute", async (req, res) => {
   try {
-    const { userId, amount, fromToken, toToken, tokenAddress } = req.body;
+    const { userId, amount, fromToken, toToken, tokenAddress, targetTokenAddress } = req.body;
     if (await isUserBlocked(userId)) {
       return res.status(403).json({
         error: "Your account has been disabled by the system administrator. All transaction operations are suspended.",
       });
     }
-    const dexAddress = "0x3333333333333333333333333333333333333333";
+    const dexAddress = process.env.ARC_DEX_ROUTER || "0x98b8209823e20A5F90Bfa7d0F108253B82CAe807"; // default to placeholder DEX router
+    const supabaseAdmin = getSupabaseAdmin();
 
-    const result = await executeTransaction(
-      getSupabaseAdmin(),
+    const { data: userWallet } = await supabaseAdmin
+      .from("user_wallets")
+      .select("wallet_address")
+      .eq("id", userId)
+      .single();
+
+    if (!userWallet?.wallet_address) {
+      throw new Error("User wallet not found");
+    }
+
+    const { executeContractTransaction } = await import("../services/circle.js");
+
+    const amountWei = BigInt(Math.floor(parseFloat(amount) * 1_000_000)).toString(); // assuming 6 decimals for example
+
+    const path = [
+      tokenAddress || "0x0000000000000000000000000000000000000000",
+      targetTokenAddress || "0x0000000000000000000000000000000000000000"
+    ];
+
+    // Real Arc DEX interaction (Uniswap V2 style)
+    const result = await executeContractTransaction(
+      supabaseAdmin,
       userId,
-      amount,
       dexAddress,
-      "swap",
-      { fromToken, toToken, tokenAddress },
+      "swapExactTokensForTokens(uint256,uint256,address[],address,uint256)",
+      [
+        amountWei, 
+        "0", // min output
+        path, // path
+        userWallet.wallet_address, // recipient
+        Math.floor(Date.now() / 1000) + 60 * 20 // deadline (20 minutes)
+      ],
+      "MEDIUM"
     );
-    res.status(200).json({ message: "Swap queued", txId: result.txId });
+
+    res.status(200).json({ message: "DEX Swap queued", txId: result.txId });
   } catch (error: any) {
     console.error("Swap Error", error);
     res.status(500).json({ error: error.message });
@@ -178,7 +206,21 @@ router.post("/withdraw/execute", async (req, res) => {
         error: "Your account has been disabled by the system administrator. All transaction operations are suspended.",
       });
     }
-    const treasuryAddress = "0x1111111111111111111111111111111111111111";
+    const supabaseAdmin = getSupabaseAdmin();
+    let treasuryAddress = process.env.PLATFORM_TREASURY_ADDRESS;
+    
+    if (!treasuryAddress) {
+      const { data: treasuryWallet } = await supabaseAdmin
+        .from("user_wallets")
+        .select("wallet_address")
+        .eq("id", "00000000-0000-0000-0000-000000000000")
+        .single();
+      treasuryAddress = treasuryWallet?.wallet_address;
+    }
+    
+    if (!treasuryAddress) {
+      throw new Error("Treasury wallet not configured");
+    }
 
     const result = await executeTransaction(
       getSupabaseAdmin(),

@@ -126,10 +126,11 @@ export const useStore = create<AppState>()((set) => ({
       useStore.getState().addLog(`Fetching balance: GET ${url}`);
       const response = await fetch(url);
       if (!response.ok) {
+        const errText = await response.text();
         useStore
           .getState()
-          .addLog(`Balance fetch failed: ${url} Status: ${response.status}`);
-        console.error(`Balance fetch failed with status: ${response.status}`);
+          .addLog(`Balance fetch failed: ${url} Status: ${response.status} - ${errText}`);
+        console.error(`Balance fetch failed with status: ${response.status} ${errText}`);
         return;
       }
       const contentType = response.headers.get("content-type");
@@ -180,7 +181,12 @@ export const useStore = create<AppState>()((set) => ({
     try {
       const url = `/api/transactions/${user.supabaseUid}`;
       const response = await fetch(url);
-      if (!response.ok) return;
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error("Backend error for transactions:", errText);
+        useStore.getState().addLog(`Transactions Server Error: ${response.status} - ${errText}`);
+        return;
+      }
       const text = await response.text();
       if (!text) return;
       const dbTransactions = JSON.parse(text);

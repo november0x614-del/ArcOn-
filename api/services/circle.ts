@@ -446,3 +446,91 @@ export async function executeAtomicBatchTransfer(
 
   return { txId: txIds[0], allTxIds: txIds };
 }
+
+export async function executeContractTransaction(
+  supabaseAdmin: any,
+  userId: string,
+  contractAddress: string,
+  abiFunctionSignature: string,
+  abiParameters: any[],
+  feeLevel: "LOW" | "MEDIUM" | "HIGH" = "MEDIUM",
+) {
+  const { data: walletData } = await supabaseAdmin
+    .from("user_wallets")
+    .select("wallet_id, wallet_address")
+    .eq("id", userId)
+    .single();
+
+  if (!walletData?.wallet_id) throw new Error("No wallet found");
+
+  const idempotencyKey = crypto.randomUUID();
+
+  const payload = {
+    idempotencyKey,
+    walletId: walletData.wallet_id,
+    contractAddress,
+    abiFunctionSignature,
+    abiParameters,
+    fee: { type: "level", config: { feeLevel } },
+  };
+
+  const response = await circleApiFetch("/v1/w3s/developer/transactions/contractExecution", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+  const circleTxId = response.data?.id;
+
+  const { error } = await supabaseAdmin.from("transactions").insert({
+    user_id: userId,
+    amount: "0",
+    type: "swap_contract_call",
+    status: "pending",
+    internal_ref: circleTxId,
+    description: `DEX Contract Execution: ${abiFunctionSignature.split('(')[0]}`,
+    metadata: { real: true, contractAddress },
+  });
+
+  if (error) throw error;
+
+  return { txId: circleTxId };
+}
+
+export async function autoSweepWallets(supabaseAdmin: any, threshold: number, treasuryAddress: string) {
+  const { data: userWallets, error } = await supabaseAdmin.from("user_wallets").select("*");
+  if (error) throw error;
+
+  const client = getCircleClientInstance();
+  const results = [];
+
+  for (const wallet of userWallets) {
+    if (wallet.id === "00000000-0000-0000-0000-000000000000") continue; // Skip admin wallet
+
+    // Get balance of USDC
+    const balanceRaw = await getTokenBalance(wallet.wallet_address, USDC_ADDRESS);
+    const balance = Number(balanceRaw); // simplistic for now
+
+    if (balance > threshold) {
+      const amountToSweep = balance - threshold; // Leave threshold
+      if (amountToSweep <= 0) continue;
+
+      const idempotencyKey = crypto.randomUUID();
+      const txParams: any = {
+        idempotencyKey,
+        walletId: wallet.wallet_id,
+        destinationAddress: treasuryAddress,
+        amount: [amountToSweep.toFixed(6)],
+        tokenId: ARC_USDC_TOKEN_ID,
+        fee: { type: "level", config: { feeLevel: "MEDIUM" } }
+      };
+
+      try {
+        const response = await client.createTransaction(txParams);
+        results.push({ wallet: wallet.wallet_address, txId: response.data?.id, amount: amountToSweep });
+      } catch (err) {
+        console.error(`Failed sweep for ${wallet.wallet_address}:`, err);
+      }
+    }
+  }
+  return results;
+}

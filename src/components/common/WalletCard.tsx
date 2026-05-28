@@ -100,7 +100,7 @@ export const WalletCard = React.memo(function WalletCard({
               <span
                 className={`text-[11px] sm:text-[12px] font-black ${styles.currencyText}`}
               >
-                USDC
+                USD
               </span>
             </div>
           </div>

@@ -96,7 +96,15 @@ export async function fetchUnifiedBalance(
   // 4. Process on-chain USDC (Arc Native ERC20)
   const nativeUSDCFormatted = parseFloat(formatUnits(nativeUSDCWei, 6));
 
-  if (nativeUSDCFormatted > 0) {
+  const existingUSDCIndex = tokenBalances.findIndex(
+    (b: any) => b.token?.symbol === "USDC",
+  );
+
+  if (existingUSDCIndex >= 0) {
+    // If Circle or someone else already tracks USDC, respect it, but maybe prioritize on-chain if we want to ensure accuracy.
+    // We'll leave the Circle one unmodified to avoid duplicating amounts or we could overwrite it.
+    // For now we don't push a duplicate.
+  } else if (nativeUSDCFormatted > 0) {
     tokenBalances.push({
       token: {
         symbol: "USDC",

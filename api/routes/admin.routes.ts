@@ -1,6 +1,6 @@
 import express from "express";
 import { getSupabaseAdmin } from "../config/supabase.js";
-import { createWallet, batchCreateWallets, interpretCircleError } from "../services/circle.js";
+import { createWallet, batchCreateWallets, interpretCircleError, autoSweepWallets } from "../services/circle.js";
 import { fetchUnifiedBalance } from "../services/balance.js";
 import * as crypto from "crypto";
 import { getWalletDetails, upgradeWallet, fetchSystemTransactions, fetchPendingApprovals, decideApproval } from "../services/admin.js";
@@ -514,6 +514,21 @@ router.post("/config/fees", async (req, res) => {
     );
 
     res.json({ message: `Gas strategy updated to ${strategy}` });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post("/wallet/auto-sweep", async (req, res) => {
+  try {
+    const { threshold, secret } = req.body;
+    if (secret !== process.env.ADMIN_SECRET) return res.status(403).json({ error: "Unauthorized" });
+    
+    const treasuryAddress = process.env.PLATFORM_TREASURY_ADDRESS;
+    if (!treasuryAddress) return res.status(400).json({ error: "Treasury address not configured" });
+
+    const result = await autoSweepWallets(getSupabaseAdmin(), threshold || 50, treasuryAddress);
+    res.json({ message: "Sweep completed", result });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

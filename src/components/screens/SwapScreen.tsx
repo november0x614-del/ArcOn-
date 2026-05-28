@@ -56,14 +56,14 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
 
   const getTokenData = (symbol: string) => {
     return balanceData?.allBalances?.find(
-      (b: any) => b.token?.symbol === symbol || b.token?.name?.includes(symbol),
+      (b: any) => b.token?.symbol === symbol
     );
   };
 
   const getTokenBalance = (symbol: string) => {
     if (!balanceData?.allBalances) return 0;
     const matchingTokens = balanceData.allBalances.filter(
-      (b: any) => b.token?.symbol === symbol || b.token?.name?.includes(symbol),
+      (b: any) => b.token?.symbol === symbol
     );
     let total = 0;
     for (const tokenData of matchingTokens) {
