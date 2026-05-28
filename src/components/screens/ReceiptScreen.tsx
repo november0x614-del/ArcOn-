@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ArrowLeft,
   Share2,
@@ -7,13 +7,17 @@ import {
   Check,
   X,
   HelpCircle,
+  ExternalLink,
 } from "lucide-react";
 import { useApp } from "../../contexts/AppContext";
+import { BackendClient } from "../../services/api";
 
 export function ReceiptScreen({ onBack }: { onBack: () => void }) {
-  const { selectedTransaction: tx } = useApp();
+  const { selectedTransaction: tx, registeredUser } = useApp();
   const [copiedText, setCopiedText] = useState<string | null>(null);
   const [showReceiptHelp, setShowReceiptHelp] = useState(false);
+  const [resolvedSenderUsername, setResolvedSenderUsername] = useState<string | null>(null);
+  const [resolvedReceiverUsername, setResolvedReceiverUsername] = useState<string | null>(null);
 
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -21,67 +25,119 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
     setTimeout(() => setCopiedText(null), 2000);
   };
 
-  // Convert default ISO timestamp or simple date to Commonwealth-style "Sunday, 28 Jun 2015 at 10:33am"
-  const formatReceiptDate = (timeStr: string = "") => {
-    if (!timeStr) return "Monday, 25 May 2026 at 10:30pm UTC";
+  let rawHash =
+    (tx?.metadata as any)?.txHash ||
+    (tx as any)?.txHash ||
+    (tx as any)?.tx_hash ||
+    tx?.id ||
+    tx?.internal_ref ||
+    "0xdc78e12b7fa120021c99f018a14b9c1d";
+
+  if (typeof rawHash === "object" && rawHash !== null) {
+    rawHash = rawHash.hash || rawHash.txHash || rawHash.id || rawHash.name || "";
+  } 
+  
+  if (typeof rawHash === "string" && rawHash.startsWith("{")) {
     try {
+      const parsed = JSON.parse(rawHash);
+      rawHash = parsed.hash || parsed.txHash || parsed.id || parsed.name || rawHash;
+    } catch (e) {
+      // Ignore
+    }
+  }
+
+  rawHash = String(rawHash);
+
+  const txHash = rawHash.startsWith("0x")
+    ? rawHash
+    : "0x" +
+      rawHash.replace(/[^a-fA-F0-9]/g, "").padStart(64, "0").substring(0, 64);
+
+
+  const isSuccess = tx?.status === "success" || (tx?.status as any) === "confirmed";
+  const isPending = tx?.status === "pending" || tx?.status === "pending_approval";
+  
+  // Format standard JS Date string to native locale format
+  const formatReceiptDate = (timeStr: string = "") => {
+    if (!timeStr) return new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
+    try {
+      // If it's already a formatted string like "28/5/2026, 18.40.03" from toLocaleString in store, just return it.
+      // But we can ensure it looks consistent.
       const d = new Date(timeStr);
-      if (isNaN(d.getTime())) return timeStr;
-
-      const days = [
-        "Sunday",
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday",
-        "Saturday",
-      ];
-      const months = [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
-      ];
-
-      const dayName = days[d.getDay()];
-      const dateNum = d.getDate();
-      const monthName = months[d.getMonth()];
-      const year = d.getFullYear();
-
-      let hours = d.getHours();
-      const minutes = d.getMinutes();
-      const ampm = hours >= 12 ? "pm" : "am";
-      hours = hours % 12;
-      hours = hours ? hours : 12; // the hour '0' should be '12'
-      const minutesStr = minutes < 10 ? "0" + minutes : minutes;
-
-      return `${dayName}  ${dateNum}  ${monthName}  ${year}  at  ${hours}:${minutesStr}${ampm} UTC`;
+      if (isNaN(d.getTime())) return timeStr; 
+      
+      return d.toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true
+      });
     } catch {
       return timeStr;
     }
   };
 
-  const txHash =
-    (tx?.metadata as any)?.txHash ||
-    (tx as any)?.txHash ||
-    (tx?.id && tx.id.startsWith("0x")
-      ? tx.id
-      : "0x" +
-        (tx?.id
-          ? tx.id.substring(0, 16) + "abc" + tx.id.substring(tx.id.length - 8)
-          : "dc78e12b7fa120021c99f018a14b9c1d"));
-  const isSuccess = tx?.status === "success" || (tx?.status as any) === "confirmed";
-  const isPending = tx?.status === "pending";
-  const blockNumber = (tx?.metadata as any)?.blockNumber;
+  const displayDate = formatReceiptDate(tx?.timestamp);
+  
+  // Display names logic
+  const myWalletAddress = registeredUser?.walletAddress || "";
+  const myUsernameDisplay = registeredUser?.username ? `@${registeredUser.username}` : "My Arc Wallet";
+
+  const isDeposit = tx?.type === "receive" || tx?.type === "deposit" || tx?.metadata?.direction === "inbound";
+
+  const formatAddrShort = (addr: string) => addr ? `0x${addr.substring(2, 6)}...${addr.slice(-4)}` : "";
+
+  const senderAddress = isDeposit
+    ? (tx?.metadata?.senderAddress || "")
+    : myWalletAddress;
+
+  const destAddr = tx?.metadata?.destinationAddress || tx?.metadata?.escrowAddress || "";
+
+  const receiverAddress = isDeposit
+    ? myWalletAddress
+    : destAddr;
+
+  useEffect(() => {
+    async function resolveNames() {
+      if (senderAddress && senderAddress !== myWalletAddress) {
+        try {
+          const data = await BackendClient.resolveAddress(senderAddress);
+          if (data && (data.username || data.name)) {
+            setResolvedSenderUsername(data.username || data.name);
+          }
+        } catch(e) {}
+      }
+      
+      if (receiverAddress && receiverAddress !== myWalletAddress) {
+        try {
+          const data = await BackendClient.resolveAddress(receiverAddress);
+          if (data && (data.username || data.name)) {
+            setResolvedReceiverUsername(data.username || data.name);
+          }
+        } catch(e) {}
+      }
+    }
+    resolveNames();
+  }, [senderAddress, receiverAddress, myWalletAddress]);
+
+  const senderName = isDeposit 
+    ? (resolvedSenderUsername ? `@${resolvedSenderUsername}` : (tx?.metadata?.senderName ? `@${tx.metadata.senderName}` : "External Sender"))
+    : myUsernameDisplay;
+
+  let receiverName = "Arc Network";
+  if (isDeposit) {
+    receiverName = myUsernameDisplay;
+  } else if (resolvedReceiverUsername) {
+    receiverName = `@${resolvedReceiverUsername}`;
+  } else if (tx?.metadata?.recipientName && tx?.metadata?.recipientName !== "EVM Account") {
+    receiverName = tx.metadata.recipientName.startsWith('@') ? tx.metadata.recipientName : `@${tx.metadata.recipientName}`;
+  } else if (tx?.title && tx?.title !== "Transfer") {
+    receiverName = tx.title;
+  } else if (destAddr) {
+    receiverName = formatAddrShort(destAddr);
+  }
 
   return (
     <div className="w-full h-full bg-slate-100 relative flex flex-col z-50 animate-in fade-in slide-in-from-right duration-300">
@@ -215,12 +271,23 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                     Transaction ID
                   </span>
                   <div className="flex items-center gap-2">
-                    <span className="text-[14px] font-medium text-slate-800 font-mono tracking-tight select-all">
+                    <button
+                      onClick={() =>
+                        window.open(
+                          tx?.metadata?.explorerUrl ||
+                            `https://testnet.arcscan.app/tx/${txHash}`,
+                          "_blank",
+                        )
+                      }
+                      className="text-[14px] font-medium text-blue-600 hover:text-blue-700 font-mono tracking-tight cursor-pointer bg-transparent border-0 p-0 text-left flex items-center transition-colors break-all"
+                      title="View on Arcscan"
+                    >
                       {txHash.substring(0, 10)}...{txHash.substring(txHash.length - 8)}
-                    </span>
+                      <ExternalLink size={14} className="ml-1 opacity-70" />
+                    </button>
                     <button
                       onClick={() => handleCopy(txHash, "TxHash")}
-                      className="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-50 transition-colors bg-transparent border-0 cursor-pointer flex items-center justify-center"
+                      className="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-50 transition-colors bg-transparent border-0 cursor-pointer flex items-center justify-center ml-auto"
                       title="Copy transaction ID"
                     >
                       <Copy size={14} />
@@ -230,12 +297,26 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
 
                 {/* Sender */}
                 <div className="flex flex-col gap-1.5">
-                  <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
+                  <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
                     Sender
+                    {(tx?.metadata?.isAsync || tx?.metadata?.real) && (
+                      <div className="relative group flex items-center">
+                        <HelpCircle size={12} className="text-slate-300 cursor-pointer" />
+                        <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-[220px] bg-slate-800 text-[10px] text-white p-2 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity text-center z-50">
+                          Karena menggunakan Account Abstraction (ERC-4337), pengirim (From) di Explorer adalah Paymaster/Bundler, bukan personal address Anda.
+                          <div className="absolute left-1/2 -translate-x-1/2 top-full border-4 border-transparent border-t-slate-800"></div>
+                        </div>
+                      </div>
+                    )}
                   </span>
                   <span className="text-[14px] font-bold text-slate-800">
-                    Arc Developer Wallet
+                    {senderName}
                   </span>
+                  {senderAddress && (
+                    <span className="font-mono text-[12px] text-slate-500 truncate">
+                      {senderAddress.substring(0, 8)}...{senderAddress.slice(-8)}
+                    </span>
+                  )}
                 </div>
 
                 {/* Receiver */}
@@ -244,12 +325,13 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                     Receiver
                   </span>
                   <span className="text-[14px] font-bold text-slate-800 truncate">
-                    {tx?.title || "Arc Merchant"}
+                    {receiverName}
                   </span>
-                  <span className="font-mono text-[12px] text-slate-500 truncate">
-                    {tx?.metadata?.destinationAddress ||
-                      "0x981C8e25E12E11195906325010811179... "}
-                  </span>
+                  {receiverAddress && (
+                    <span className="font-mono text-[12px] text-slate-500 truncate">
+                      {receiverAddress.substring(0, 8)}...{receiverAddress.slice(-8)}
+                    </span>
+                  )}
                 </div>
 
                 {/* Date */}
@@ -258,7 +340,7 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                     Date & Time
                   </span>
                   <span className="text-[14px] font-medium text-slate-800">
-                    {formatReceiptDate(tx?.timestamp)}
+                    {displayDate}
                   </span>
                 </div>
               </div>

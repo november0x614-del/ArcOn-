@@ -7,6 +7,45 @@ import { formatUnits } from "viem";
 
 const router = express.Router();
 
+router.get("/wallets/resolve/:address", async (req, res) => {
+  try {
+    const { address } = req.params;
+    
+    // Find the wallet owner in user_wallets using Admin privileges
+    const { data: walletData, error: walletError } = await getSupabaseAdmin()
+      .from("user_wallets")
+      .select("id")
+      .ilike("wallet_address", address)
+      .maybeSingle();
+
+    if (walletError || !walletData?.id) {
+      return res.status(404).json({ error: "Address not found in internal network." });
+    }
+
+    // Now find the profile associated with that user ID
+    const { data: profileData, error: profileError } = await getSupabaseAdmin()
+      .from("profiles")
+      .select("full_name, username, avatar_url")
+      .eq("id", walletData.id)
+      .maybeSingle();
+      
+    if (profileError || !profileData) {
+       return res.status(404).json({ error: "Profile not found." });
+    }
+
+    res.json({
+      name: profileData.full_name || profileData.username,
+      username: profileData.username,
+      avatarUrl: profileData.avatar_url,
+      isArcUser: true
+    });
+
+  } catch (error: any) {
+    console.error("Resolve error:", error);
+    res.status(500).json({ error: "Failed to resolve address" });
+  }
+});
+
 router.post("/wallets/create", async (req, res) => {
   try {
     const { userId } = req.body;
@@ -168,6 +207,38 @@ router.get("/balance/:userId/tokens", async (req, res) => {
     res.json({ balances });
   } catch (error: any) {
     console.error("Custom token balances fetch error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get("/preferences/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { data: { user }, error } = await getSupabaseAdmin().auth.admin.getUserById(userId);
+    if (error || !user) return res.status(404).json({ error: "User not found" });
+    res.json(user.user_metadata?.preferences || { favorites: [], deletedContactIds: [] });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.put("/preferences/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { preferences } = req.body;
+    
+    const { data: { user } } = await getSupabaseAdmin().auth.admin.getUserById(userId);
+    const newMetadata = {
+       ...user?.user_metadata,
+       preferences: {
+          ...(user?.user_metadata?.preferences || {}),
+          ...preferences
+       }
+    };
+    
+    await getSupabaseAdmin().auth.admin.updateUserById(userId, { user_metadata: newMetadata });
+    res.json({ success: true, preferences: newMetadata.preferences });
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
 import { useStore } from "../../store/useStore";
 import { BackendClient } from "../../services/api/index";
+import { SourceAccountCard } from "../common/SourceAccountCard";
 
 interface StablestakeScreenProps {
   onBack: () => void;
@@ -66,6 +67,13 @@ export function StablestakeScreen({ onBack }: StablestakeScreenProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto pb-24 p-5 flex flex-col pt-6 w-full scrollbar-hide relative bg-white">
+        <div className="mb-6 space-y-2">
+           <label className="text-[12px] font-bold text-slate-400 uppercase tracking-wider block ml-1">
+            Staking Source
+          </label>
+          <SourceAccountCard className="!p-4 !border-none !shadow-sm !rounded-2xl" />
+        </div>
+
         <div className="flex items-center gap-4 mb-6">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-500 flex items-center justify-center text-white shrink-0 shadow-md">
             <ShieldCheck size={24} />

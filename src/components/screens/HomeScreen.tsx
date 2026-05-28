@@ -314,7 +314,7 @@ export const HomeScreen = React.memo(
               </span>
             </div>
             <span className="text-[7px] text-white/60 font-medium mt-0.5">
-              {lastSyncTime ? `Last update: ${lastSyncTime.toLocaleTimeString()}` : "Arc Testnet Unified Gas"}
+              {lastSyncTime ? `Last update: ${lastSyncTime.toLocaleTimeString()}` : "Arc Network Testnet"}
             </span>
           </a>
         </header>
@@ -471,10 +471,10 @@ export const HomeScreen = React.memo(
                     Favorite Transactions
                   </h2>
                   <button
-                    className="text-slate-800 text-[13px] font-semibold flex items-center gap-1.5 hover:bg-slate-100 px-2 py-1 rounded-full transition-colors border-0 bg-transparent"
+                    className="text-slate-800 p-2 hover:bg-slate-100 rounded-full transition-all active:scale-95 border-0 bg-transparent"
                     onClick={() => onNavigate("manageFavorites")}
                   >
-                    Manage <Settings2 size={14} strokeWidth={1.5} />
+                    <Settings2 size={18} strokeWidth={2} />
                   </button>
                 </div>
 
@@ -773,9 +773,9 @@ export const HomeScreen = React.memo(
                   </div>
                   <button
                     onClick={() => setShowManageMarketModal(true)}
-                    className="text-slate-800 text-[13px] font-semibold flex items-center gap-1.5 hover:bg-slate-100 px-2 py-1 rounded-full transition-colors border-0 bg-transparent"
+                    className="text-slate-800 p-2 hover:bg-slate-100 rounded-full transition-all active:scale-95 border-0 bg-transparent"
                   >
-                    Manage <Settings2 size={14} strokeWidth={1.5} />
+                    <Settings2 size={18} strokeWidth={2} />
                   </button>
                 </div>
 

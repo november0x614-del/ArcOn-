@@ -1,13 +1,14 @@
 import { AppKit, BridgeChain } from "@circle-fin/app-kit";
-import { createCircleWalletsAdapter } from "@circle-fin/adapter-circle-wallets";
+import { createCircleWalletsAdapter, CircleWalletsAdapter } from "@circle-fin/adapter-circle-wallets";
 
 let appKitInstance: AppKit | null = null;
+let appKitAdapter: CircleWalletsAdapter | null = null;
 
 /**
  * Initializes the Server-Side App Kit using Developer Controlled Wallets.
  */
 export const getAppKit = () => {
-  if (appKitInstance) return appKitInstance;
+  if (appKitInstance) return { appKit: appKitInstance, adapter: appKitAdapter! };
 
   const apiKey = process.env.CIRCLE_API_KEY;
   const entitySecret = process.env.CIRCLE_ENTITY_SECRET;
@@ -19,30 +20,38 @@ export const getAppKit = () => {
   const adapter = createCircleWalletsAdapter({
     apiKey,
     entitySecret,
+    // @ts-ignore
     walletSetId: process.env.CIRCLE_WALLET_SET_ID || "not-set"
-  });
-
+  } as any);
+  
+  appKitAdapter = adapter;
+ 
   appKitInstance = new AppKit({
+    // @ts-ignore
     adapter,
-  });
+  } as any);
 
-  return appKitInstance;
+  return { appKit: appKitInstance, adapter };
 };
 
 /**
  * Executes an AppKit transfer (Send).
  */
 export async function executeAppKitSend(
-  walletId: string,
+  walletAddress: string,
   amount: number,
   destinationAddress: string
 ) {
-  const appKit = getAppKit();
+  const { appKit, adapter } = getAppKit();
   const txHash = await appKit.send({
-    account: walletId, 
+    from: {
+      adapter,
+      chain: "Arc_Testnet",
+      address: walletAddress
+    },
+    to: destinationAddress,
     amount: amount.toString(),
-    destination: destinationAddress,
-    token: "USDC", // using alias
+    token: "USDC"
   });
   return txHash;
 }
@@ -51,17 +60,25 @@ export async function executeAppKitSend(
  * Executes an AppKit Bridge.
  */
 export async function executeAppKitBridge(
-  walletId: string,
+  walletAddress: string,
   amount: number,
   destinationAddress: string,
-  targetChain: BridgeChain 
+  targetChain: any 
 ) {
-  const appKit = getAppKit();
+  const { appKit, adapter } = getAppKit();
+  
   const txHash = await appKit.bridge({
-    account: walletId,
+    from: {
+      adapter,
+      chain: "Arc_Testnet",
+      address: walletAddress
+    },
+    to: {
+      chain: targetChain,
+      recipientAddress: destinationAddress,
+      useForwarder: true // Forwarder will mint implicitly if no destination adapter
+    },
     amount: amount.toString(),
-    destination: destinationAddress,
-    destinationChain: targetChain,
     token: "USDC",
   });
   return txHash;
@@ -71,20 +88,22 @@ export async function executeAppKitBridge(
  * Executes an AppKit Swap.
  */
 export async function executeAppKitSwap(
-  walletId: string,
+  walletAddress: string,
   amount: number,
-  fromToken: string,
-  toToken: string
+  fromToken: any,
+  toToken: any
 ) {
-  const appKit = getAppKit();
+  const { appKit, adapter } = getAppKit();
   
-  // Note: Swap via AppKit uses Dex routers implicitly based on supported chains.
-  // On Arc Testnet, Swap is supported for USDC, EURC, and cirBTC.
   const txHash = await appKit.swap({
-    account: walletId,
-    amount: amount.toString(),
+    from: {
+      adapter,
+      chain: "Arc_Testnet",
+      address: walletAddress
+    },
+    amountIn: amount.toString(),
     tokenIn: fromToken,
     tokenOut: toToken,
-  });
+  } as any);
   return txHash;
 }

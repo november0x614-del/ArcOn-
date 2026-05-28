@@ -1,15 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ArrowLeft,
-  Search,
   UserPlus,
-  Plus,
   Users,
   Star,
   X,
+  Settings2,
 } from "lucide-react";
 import { useApp } from "../../contexts/AppContext";
 import { useContacts } from "../../hooks/useContacts";
+import { BackendClient } from "../../services/api";
+import { SourceAccountCard } from "../common/SourceAccountCard";
 
 interface TransferScreenProps {
   onBack: () => void;
@@ -27,7 +28,6 @@ interface ContactItemProps {
   isExpanded: boolean;
   onToggle: () => void;
   onSelect: () => void;
-  isAddingFavorite?: boolean;
   onToggleFavorite?: () => void;
   isFavorite?: boolean;
   isManageContacts?: boolean;
@@ -43,7 +43,6 @@ function ContactItem({
   isExpanded,
   onToggle,
   onSelect,
-  isAddingFavorite,
   onToggleFavorite,
   isFavorite,
   isManageContacts,
@@ -56,12 +55,10 @@ function ContactItem({
         className="flex items-center gap-4 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded-xl transition-colors group"
         onClick={
           isManageContacts
-            ? undefined
-            : isAddingFavorite
-              ? onToggle
-              : isExpanded
-                ? onSelect
-                : onToggle
+            ? onSelectManage
+            : isExpanded
+              ? onSelect
+              : onToggle
         }
       >
         <div className="w-[46px] h-[46px] rounded-full bg-[#f8fafc] flex items-center justify-center font-bold text-slate-700 shadow-sm border border-slate-100 shrink-0 group-hover:border-slate-200 transition-colors text-[13px] relative z-20">
@@ -77,13 +74,11 @@ function ContactItem({
       {(isExpanded || isManageContacts) && (
         <div
           onClick={
-            isAddingFavorite
-              ? undefined
-              : isManageContacts
-                ? onSelectManage
-                : onSelect
-          }
-          className={`-mx-5 px-5 mt-[-10px] pt-5 pb-3 ${isManageContacts ? "pl-[24px] bg-white border-b border-slate-50 pb-[10px]" : "pl-[74px] bg-[#f1f5f9] hover:bg-[#e2e8f0] shadow-inner"} overflow-visible ${!isAddingFavorite && !isManageContacts ? "cursor-pointer" : ""} transition-colors relative z-0 flex justify-between items-center ${isManageContacts ? "cursor-pointer" : ""}`}
+          isManageContacts
+            ? onSelectManage
+            : onSelect
+        }
+        className={`-mx-5 px-5 mt-[-10px] pt-5 pb-3 ${isManageContacts ? "pl-[24px] bg-white border-b border-slate-50 pb-[10px]" : "pl-[74px] bg-[#f1f5f9] hover:bg-[#e2e8f0] shadow-inner"} overflow-visible ${!isManageContacts ? "cursor-pointer" : ""} transition-colors relative z-0 flex justify-between items-center ${isManageContacts ? "cursor-pointer" : ""}`}
         >
           <div
             className={`flex items-center ${isManageContacts ? "gap-3" : ""}`}
@@ -107,41 +102,37 @@ function ContactItem({
                 )}
               </div>
             )}
-            <div className="text-left">
+            <div className="text-left w-full overflow-hidden">
               <p
                 className={`font-bold text-[14px] ${isManageContacts ? "text-slate-600" : "text-slate-800"}`}
               >
                 {network}
               </p>
-              <p
-                className={`text-[13px] font-medium mt-0.5 tracking-wide ${isManageContacts ? "text-slate-400" : "text-slate-505"}`}
-              >
-                {address}
-              </p>
+              <div className="flex items-center gap-2 mt-0.5">
+                {isManageContacts && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleFavorite?.();
+                    }}
+                    className="p-1 -ml-1 z-10 shrink-0 hover:scale-110 transition-transform active:scale-95 border-0 bg-transparent flex items-center justify-center cursor-pointer"
+                  >
+                    {isFavorite ? (
+                      <Star className="text-yellow-400 fill-yellow-400" size={16} />
+                    ) : (
+                      <Star className="text-slate-400" size={16} />
+                    )}
+                  </button>
+                )}
+                
+                <p
+                  className={`text-[13px] font-medium tracking-wide truncate ${isManageContacts ? "text-slate-400" : "text-slate-500"}`}
+                >
+                  {address}
+                </p>
+              </div>
             </div>
           </div>
-
-          {isAddingFavorite && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleFavorite?.();
-              }}
-              className="p-2 mr-6 z-10 hover:scale-110 transition-transform active:scale-95 border-0 bg-transparent flex items-center justify-center cursor-pointer"
-            >
-              {isFavorite ? (
-                <Star className="text-yellow-400 fill-yellow-400" size={24} />
-              ) : (
-                <Star className="text-slate-400" size={24} />
-              )}
-            </button>
-          )}
-
-          {isManageContacts && isFavorite && (
-            <div className="mr-2">
-              <Star className="text-yellow-400 fill-yellow-400" size={18} />
-            </div>
-          )}
         </div>
       )}
     </div>
@@ -157,31 +148,40 @@ export function TransferScreen({
   const { startSyncPolling, stopSyncPolling } = useApp();
   const { realContacts: allContacts } = useContacts();
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [isAddingFavorite, setIsAddingFavorite] = useState(false);
-  const [isEditFavorites, setIsEditFavorites] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<any | null>(null);
-  const [favorites, setFavorites] = useState<any[]>(() => {
-    try {
-      const savedFavs = localStorage.getItem("favorites");
-      return savedFavs ? JSON.parse(savedFavs) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [favorites, setFavorites] = useState<any[]>([]);
   const [isLoadingFavorite, setIsLoadingFavorite] = useState(false);
-  const [deletedContactIds, setDeletedContactIds] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem("deleted_contact_ids");
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [deletedContactIds, setDeletedContactIds] = useState<string[]>([]);
+  const [isPreferencesLoaded, setIsPreferencesLoaded] = useState(false);
 
-  const saveDeletedContactIds = (ids: string[]) => {
+  useEffect(() => {
+    async function loadPreferences() {
+      try {
+        const prefs = await BackendClient.getPreferences();
+        if (prefs) {
+          if (prefs.favorites) setFavorites(prefs.favorites);
+          if (prefs.deletedContactIds) setDeletedContactIds(prefs.deletedContactIds);
+        }
+      } catch (e) {
+        // Fallback to local storage if API fails
+        try {
+          const savedFavs = localStorage.getItem("favorites");
+          if (savedFavs) setFavorites(JSON.parse(savedFavs));
+          const savedDeleted = localStorage.getItem("deleted_contact_ids");
+          if (savedDeleted) setDeletedContactIds(JSON.parse(savedDeleted));
+        } catch {}
+      } finally {
+        setIsPreferencesLoaded(true);
+      }
+    }
+    loadPreferences();
+  }, []);
+
+  const saveDeletedContactIds = async (ids: string[]) => {
     setDeletedContactIds(ids);
     try {
       localStorage.setItem("deleted_contact_ids", JSON.stringify(ids));
+      await BackendClient.updatePreferences({ deletedContactIds: ids });
     } catch (e) {
       console.error(e);
     }
@@ -197,8 +197,6 @@ export function TransferScreen({
   }, [allContacts, deletedContactIds]);
 
   const handleToggleFavorite = (contact: any) => {
-    setIsAddingFavorite(false);
-    setExpandedId(null);
     setIsLoadingFavorite(true);
 
     setTimeout(() => {
@@ -209,6 +207,7 @@ export function TransferScreen({
           : [...prev, contact];
         try {
           localStorage.setItem("favorites", JSON.stringify(newFavs));
+          BackendClient.updatePreferences({ favorites: newFavs });
         } catch (e) {
           console.error(e);
         }
@@ -228,62 +227,43 @@ export function TransferScreen({
       <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between shrink-0">
         <div className="flex items-center">
           <button
-            onClick={() =>
-              isAddingFavorite ? setIsAddingFavorite(false) : onBack()
-            }
+            onClick={onBack}
             className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
           >
             <ArrowLeft size={20} className="text-white" />
           </button>
           <h2 className="font-bold text-[16px] text-white ml-2">TRANSFER</h2>
         </div>
-        {!isAddingFavorite && (
           <button
             onClick={onBatchTransfer}
             className="bg-slate-100 text-slate-700 px-3 py-1.5 rounded-full flex items-center text-[12px] font-bold gap-1.5 hover:bg-slate-200 transition-colors active:scale-95 border border-slate-200"
           >
             <Users size={16} strokeWidth={2.5} /> Batch Transfer
           </button>
-        )}
+        
       </div>
 
       {/* Sub Content area */}
       <div className="flex-1 w-full flex flex-col overflow-hidden relative">
-        {/* Search Bar Container */}
-        <div className="px-5 pt-6 pb-4 shrink-0">
-          <div className="bg-white border border-slate-200 rounded-full px-4 py-3.5 flex items-center gap-3 shadow-[0_2px_10px_rgba(0,0,0,0.02)] focus-within:border-slate-400 transition-colors">
-            <Search className="text-slate-400" size={20} />
-            <input
-              type="text"
-              placeholder="Search account number or receiver name"
-              className="flex-1 outline-none text-slate-700 text-[13px] placeholder:text-slate-400 font-medium bg-transparent"
-            />
-          </div>
-        </div>
 
         {/* Scrollable List Area */}
         <div className="flex-1 overflow-y-auto w-full px-5 pb-24 scrollbar-hide">
+          {/* Source Account Overview */}
+          <div className="mb-6 space-y-2 mt-6">
+            <label className="text-[12px] font-bold text-slate-400 uppercase tracking-wider block ml-1">
+              Source Wallet
+            </label>
+            <SourceAccountCard className="!p-4 !border-none !shadow-sm !rounded-2xl" />
+          </div>
+
           {/* Favorites Section */}
-          {!isAddingFavorite && (
             <div className="mb-4">
               {(favorites.length > 0 || isLoadingFavorite) && (
                 <div className="flex justify-between items-end mb-4 pr-1 mt-6">
                   <h3 className="text-slate-400 font-semibold text-[15px]">
                     Favorites
                   </h3>
-                  <button
-                    onClick={() => setIsEditFavorites(!isEditFavorites)}
-                    className="text-slate-600 text-[13px] font-semibold hover:text-slate-800 transition-colors"
-                  >
-                    {isEditFavorites ? "Done" : "Manage"}
-                  </button>
                 </div>
-              )}
-
-              {isEditFavorites && favorites.length > 0 && (
-                <p className="text-slate-800 text-[12px] font-medium text-center -mx-5 py-2 mb-4">
-                  Tap and drag icons to reorder
-                </p>
               )}
 
               {isLoadingFavorite ? (
@@ -297,73 +277,44 @@ export function TransferScreen({
                       key={fav.id}
                       className="flex flex-col items-center w-max gap-2 cursor-pointer group relative"
                       onClick={() => {
-                        if (isEditFavorites) {
-                          setContactToDelete(fav);
-                        } else {
-                          onSelectContact({
-                            name: fav.name,
-                            bank: fav.network,
-                            account: fav.account,
-                            initials: fav.initials,
-                          });
-                        }
+                        onSelectContact({
+                          name: fav.name,
+                          bank: fav.network,
+                          account: fav.number,
+                          initials: fav.initials,
+                        });
                       }}
                     >
-                      {isEditFavorites && (
-                        <div className="absolute top-0 left-0 w-5 h-5 bg-slate-800 rounded-full text-white flex items-center justify-center -translate-x-1 border border-white shadow-sm z-10">
-                          <X size={12} strokeWidth={4} />
-                        </div>
-                      )}
                       <div
-                        className={`w-[52px] h-[52px] rounded-full flex items-center justify-center font-bold shadow-sm shrink-0 text-[14px] transition-colors
-                            ${isEditFavorites ? "bg-[#f1f5f9] text-slate-700" : "bg-slate-100 border border-slate-200 text-slate-700"}`}
+                        className="w-[52px] h-[52px] rounded-full flex items-center justify-center font-bold shadow-sm shrink-0 text-[14px] transition-colors bg-slate-100 border border-slate-200 text-slate-700"
                       >
                         {fav.initials}
                       </div>
                       <span
-                        className={`text-[11px] font-semibold text-center w-16 line-clamp-2 leading-tight ${isEditFavorites ? "text-slate-500" : "text-slate-800"}`}
+                        className="text-[11px] font-semibold text-center w-16 line-clamp-2 leading-tight text-slate-800"
                       >
                         {fav.name.split(" ")[0]}
                       </span>
                     </div>
                   ))}
-
-                  {!isEditFavorites && (
-                    <div
-                      className="flex flex-col items-center w-min gap-2 cursor-pointer group"
-                      onClick={() => setIsAddingFavorite(true)}
-                    >
-                      <div className="relative w-[52px] h-[52px] rounded-full border border-slate-200 flex items-center justify-center text-slate-600 group-hover:bg-slate-100 transition-colors bg-white shadow-sm">
-                        <Plus size={24} strokeWidth={2} />
-                      </div>
-                      <span className="text-slate-500 text-[11px] font-semibold text-center leading-tight whitespace-nowrap">
-                        Add
-                        <br />
-                        Favorite
-                      </span>
-                    </div>
-                  )}
                 </div>
               )}
             </div>
-          )}
 
           {/* Transfer List Header */}
           <div className="flex justify-between items-end mb-4 pr-1 mt-6">
             <h3 className="text-slate-400 font-semibold text-[15px]">
               Transfer List
             </h3>
-            {!isAddingFavorite && (
               <button
                 onClick={() => {
                   setIsManageContacts(!isManageContacts);
                   setSelectedContacts([]);
                 }}
-                className="text-slate-600 text-[13px] font-semibold hover:text-slate-800 transition-colors"
+                className={`p-2 rounded-full transition-all active:scale-95 ${isManageContacts ? "text-red-500 bg-red-50" : "text-slate-900 bg-slate-100"}`}
               >
-                {isManageContacts ? "Done" : "Manage"}
+                {isManageContacts ? <X size={20} /> : <Settings2 size={20} strokeWidth={2} />}
               </button>
-            )}
           </div>
 
           {/* Tab Pill */}
@@ -379,10 +330,10 @@ export function TransferScreen({
             {realContacts.map((contact) => (
               <ContactItem
                 key={contact.id}
-                initials={contact.initials}
+                initials={contact.initials || "??"}
                 name={contact.name}
                 network={contact.network}
-                address={contact.account}
+                address={contact.number}
                 isExpanded={expandedId === contact.id}
                 onToggle={() =>
                   setExpandedId(expandedId === contact.id ? null : contact.id)
@@ -391,11 +342,10 @@ export function TransferScreen({
                   onSelectContact({
                     name: contact.name,
                     bank: contact.network,
-                    account: contact.account,
+                    account: contact.number,
                     initials: contact.initials,
                   })
                 }
-                isAddingFavorite={isAddingFavorite}
                 onToggleFavorite={() => handleToggleFavorite(contact)}
                 isFavorite={favorites.some((f) => f.id === contact.id)}
                 isManageContacts={isManageContacts}
@@ -413,7 +363,7 @@ export function TransferScreen({
         </div>
 
         {/* Floating Action Button */}
-        {!isEditFavorites && !contactToDelete && (
+        {!contactToDelete && (
           <div className="absolute bottom-7 left-1/2 -translate-x-1/2 w-[calc(100%-40px)] z-20">
             {isManageContacts ? (
               selectedContacts.length > 0 && (
@@ -473,6 +423,7 @@ export function TransferScreen({
                     const newFavs = prev.filter((f) => !selectedContacts.includes(f.id));
                     try {
                       localStorage.setItem("favorites", JSON.stringify(newFavs));
+                      BackendClient.updatePreferences({ favorites: newFavs });
                     } catch (e) {
                       console.error(e);
                     }

@@ -13,6 +13,7 @@ DROP TABLE IF EXISTS public.profiles CASCADE;
 CREATE TABLE public.profiles (
     id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
     full_name TEXT,
+    username TEXT UNIQUE,
     avatar_url TEXT,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -68,14 +69,19 @@ CREATE POLICY "Users can view their own transactions." ON public.transactions FO
 CREATE POLICY "Service role manages transactions." ON public.transactions FOR ALL USING (auth.role() = 'service_role');
 
 -- ==========================================
--- AUTOMATION TRIGGER (Auth -> Profiles)
+-- Automation Trigger (Auth -> Profiles)
 -- ==========================================
 -- Trigger ini akan otomatis membuat profile kosong saat user mendaftar di Supabase Auth.
 CREATE OR REPLACE FUNCTION public.handle_new_user() 
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, full_name, avatar_url)
-  VALUES (new.id, new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'avatar_url');
+  INSERT INTO public.profiles (id, full_name, username, avatar_url)
+  VALUES (
+    new.id, 
+    COALESCE(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'username', 'Arc User'),
+    COALESCE(new.raw_user_meta_data->>'username', new.raw_user_meta_data->>'full_name', 'arc_user'),
+    new.raw_user_meta_data->>'avatar_url'
+  );
   RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -127,4 +133,21 @@ INSERT INTO public.app_settings (key, value) VALUES ('GAS_FEE_STRATEGY', 'SPONSO
 ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public can view settings." ON public.app_settings FOR SELECT USING (true);
 CREATE POLICY "Service role manages settings." ON public.app_settings FOR ALL USING (auth.role() = 'service_role');
+
+-- 8. CREATE USER TOKENS TABLE (Custom/Imported Tokens)
+CREATE TABLE public.user_tokens (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    symbol TEXT NOT NULL,
+    name TEXT NOT NULL,
+    contract_address TEXT NOT NULL,
+    decimals INTEGER DEFAULT 18,
+    last_synced_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    UNIQUE(user_id, contract_address)
+);
+
+-- RLS for User Tokens
+ALTER TABLE public.user_tokens ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage their own imported tokens." ON public.user_tokens FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "Service role manages user tokens." ON public.user_tokens FOR ALL USING (auth.role() = 'service_role');
 

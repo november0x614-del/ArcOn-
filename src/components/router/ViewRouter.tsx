@@ -33,7 +33,6 @@ import { AIAgentScreen } from "../screens/AIAgentScreen";
 import { TransferScreen } from "../screens/TransferScreen";
 import { NewTransferScreen } from "../screens/NewTransferScreen";
 import { AmountInputScreen } from "../screens/AmountInputScreen";
-import { SuccessScreen } from "../screens/SuccessScreen";
 import { BatchTransferScreen } from "../screens/BatchTransferScreen";
 import { WithdrawScreen } from "../screens/WithdrawScreen";
 import { BridgeScreen } from "../screens/BridgeScreen";
@@ -533,66 +532,24 @@ export const ViewRouter = React.memo(
 
                 setTransferAmount(amount);
                 setTransferMemo(memo);
-                setViewState("processing");
-
+                
                 try {
                   await BackendClient.sendUnifiedBalance(
                     numAmount,
                     selectedContact.account,
                     memo,
+                    selectedContact.name
                   );
 
                   await fetchBalance();
                   await fetchTransactions();
-                  setViewState("success");
+                  displayToast(`Transfer to ${selectedContact.name} initiated!`);
+                  setViewState("transfer");
                 } catch (error) {
                   console.error(error);
                   displayToast("Transfer failed. Please try again.");
-                  setViewState("transfer");
                 }
               }}
-            />
-          )}
-
-          {viewState === "processing" && (
-            <div className="w-full h-full bg-slate-900 flex flex-col items-center justify-center relative z-50">
-              <div className="flex flex-col items-center animate-in fade-in zoom-in duration-500">
-                <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-6 relative">
-                  <div className="absolute inset-0 border-2 border-[#008fcd] border-t-transparent rounded-full animate-spin"></div>
-                  <span className="text-[10px] font-bold text-[#008fcd] italic">
-                    arc
-                  </span>
-                </div>
-
-                <h3 className="text-white font-bold text-[18px] tracking-tight mb-2">
-                  Broadcasting to Arc
-                </h3>
-                <div className="flex flex-col items-center gap-1 opacity-60">
-                  <span className="text-blue-400 text-[10px] font-mono tracking-widest uppercase">
-                    Under 1s Finality Expected
-                  </span>
-                  <div className="flex gap-1 mt-2">
-                    <div className="w-1 h-1 bg-blue-400 rounded-full animate-pulse"></div>
-                    <div className="w-1 h-1 bg-blue-400 rounded-full animate-pulse delay-75"></div>
-                    <div className="w-1 h-1 bg-blue-400 rounded-full animate-pulse delay-150"></div>
-                  </div>
-                </div>
-
-                <div className="mt-12 max-w-[200px] text-center">
-                  <p className="text-[9px] text-slate-500 font-medium leading-relaxed italic">
-                    Arc uses deterministic finality, meaning your transaction is
-                    immutable after a single confirmation.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {viewState === "success" && selectedContact && (
-            <SuccessScreen
-              contact={selectedContact}
-              amount={transferAmount}
-              onClose={() => setViewState("home")}
             />
           )}
 

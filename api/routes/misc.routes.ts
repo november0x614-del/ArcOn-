@@ -1,6 +1,6 @@
 import express from "express";
 import { GoogleGenAI } from "@google/genai";
-import { publicClient } from "../services/arcViem.js";
+import { publicClient, getTokenMetadata } from "../services/arcViem.js";
 import { verifyAndProcessWebhook } from "../services/webhook.js";
 import { getSupabaseAdmin } from "../config/supabase.js";
 import { getTokenDetails } from "../services/circle.js";
@@ -65,7 +65,7 @@ router.post("/faucet/claim", async (req, res) => {
 
     res.json({
       success: true,
-      message: "10 ARC & 100 USDC sent to your wallet",
+      message: "100 USDC (Gas & Assets) sent to your wallet",
       txHash: arcHash,
       amount: "110",
     });
@@ -75,6 +75,7 @@ router.post("/faucet/claim", async (req, res) => {
 });
 
 router.get("/tokens", async (_req, res) => {
+  // These represent ArcScan Verified "Popular" Tokens
   res.json([
     {
       symbol: "USDC",
@@ -82,6 +83,7 @@ router.get("/tokens", async (_req, res) => {
       color: "bg-[#2775ca]",
       type: "Stablecoin",
       contractAddress: "0x3600000000000000000000000000000000000000",
+      decimals: 6,
     },
     {
       symbol: "EURC",
@@ -89,6 +91,7 @@ router.get("/tokens", async (_req, res) => {
       color: "bg-[#0055ff]",
       type: "Stablecoin",
       contractAddress: "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+      decimals: 6,
     },
     {
       symbol: "cirBTC",
@@ -96,8 +99,100 @@ router.get("/tokens", async (_req, res) => {
       color: "bg-[#f7931a]",
       type: "Wrapped Token",
       contractAddress: "0x07f1ea50e30d47376c0dfb3eb853fd40e3a8907a",
+      decimals: 8,
     },
+    {
+      symbol: "MINT",
+      name: "Arc Mintable Assets",
+      color: "bg-emerald-600",
+      type: "Utility Token",
+      contractAddress: "0x4fbc689076bc19ad080bfebd8833fd4038a8faec",
+      decimals: 18,
+    }
   ]);
+});
+
+router.get("/tokens/popular", async (req, res) => {
+  // Alias for /tokens - using a simple redirect or just defining the route separately
+  res.redirect("/api/tokens");
+});
+
+router.get("/tokens/resolve/:address", async (req, res) => {
+  try {
+    const { address } = req.params;
+    if (!address.startsWith("0x")) {
+      return res.status(400).json({ error: "Invalid address format" });
+    }
+    const metadata = await getTokenMetadata(address);
+    if (!metadata) {
+      return res.status(404).json({ error: "Contract not found or not a valid token" });
+    }
+    res.json(metadata);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post("/tokens/import", async (req, res) => {
+  try {
+    const { userId, symbol, name, contractAddress, decimals } = req.body;
+    if (!userId || !contractAddress) return res.status(400).json({ error: "Missing data" });
+
+    const supabase = getSupabaseAdmin();
+    const { error } = await supabase
+      .from("user_tokens")
+      .upsert({
+        user_id: userId,
+        symbol,
+        name,
+        contract_address: contractAddress.toLowerCase(),
+        decimals,
+        last_synced_at: new Date().toISOString()
+      }, { onConflict: "user_id, contract_address" });
+
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get("/tokens/imported/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+      .from("user_tokens")
+      .select("*")
+      .eq("user_id", userId);
+
+    if (error) throw error;
+    res.json(data.map((t: any) => ({
+      symbol: t.symbol,
+      name: t.name,
+      contractAddress: t.contract_address,
+      decimals: t.decimals
+    })));
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.delete("/tokens/imported/:userId/:address", async (req, res) => {
+  try {
+    const { userId, address } = req.params;
+    const supabase = getSupabaseAdmin();
+    const { error } = await supabase
+      .from("user_tokens")
+      .delete()
+      .eq("user_id", userId)
+      .eq("contract_address", address.toLowerCase());
+
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 router.get("/tokens/:id", async (req, res) => {

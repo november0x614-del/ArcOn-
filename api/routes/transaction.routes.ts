@@ -38,7 +38,9 @@ router.get("/transactions/:userId", async (req, res) => {
       const client = getCircleClientInstance();
       const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
       
-      for (const tx of pendingTxs) {
+      const batchToProcess = pendingTxs.slice(0, 5); // Limit self-healing to 5 max per request to prevent timeouts
+      
+      for (const tx of batchToProcess) {
         try {
           const circleTx = await client.getTransaction({ id: tx.internal_ref });
           const transaction = circleTx.data?.transaction as any;
@@ -104,12 +106,12 @@ router.post("/swap/execute", async (req, res) => {
       .eq("id", userId)
       .single();
 
-    if (!userWallet?.wallet_id) {
+    if (!userWallet?.wallet_address) {
       throw new Error("User wallet not found");
     }
 
     const txHash = await executeAppKitSwap(
-      userWallet.wallet_id,
+      userWallet.wallet_address,
       parseFloat(amount),
       fromToken,
       toToken
@@ -149,7 +151,7 @@ router.post("/bridge/execute", async (req, res) => {
 
 router.post("/transfer/execute", async (req, res) => {
   try {
-    const { userId, amount, destinationAddress, memo } = req.body;
+    const { userId, amount, destinationAddress, memo, recipientName } = req.body;
     if (await isUserBlocked(userId)) {
       return res.status(403).json({
         error: "Your account has been disabled by the system administrator. All transaction operations are suspended.",
@@ -159,21 +161,63 @@ router.post("/transfer/execute", async (req, res) => {
 
     const { data: userWallet } = await supabaseAdmin
       .from("user_wallets")
-      .select("wallet_id")
+      .select("wallet_id, wallet_address")
       .eq("id", userId)
       .single();
 
-    if (!userWallet?.wallet_id) throw new Error("Wallet not found");
+    if (!userWallet?.wallet_address) throw new Error("Wallet not found");
 
-    const txHash = await executeAppKitSend(
-      userWallet.wallet_id,
-      parseFloat(amount),
-      destinationAddress
-    );
+    const internalRef = `send_${crypto.randomBytes(8).toString("hex")}`;
 
-    res.status(200).json({
-      message: "App Kit Send initiated",
-      txId: txHash,
+    // Add to pending queue in DB immediately
+    await supabaseAdmin
+      .from("transactions")
+      .insert({
+        user_id: userId,
+        amount: `-${amount}`,
+        type: "transfer",
+        status: "pending",
+        internal_ref: internalRef,
+        metadata: {
+          recipientName: recipientName || "EVM Account",
+          destinationAddress,
+          memo,
+          real: true,
+          isAsync: true
+        },
+      });
+
+    // Run execution in background (Non-blocking as required by user prompt)
+    (async () => {
+      try {
+        const txHash = await executeAppKitSend(
+          userWallet.wallet_address,
+          parseFloat(amount),
+          destinationAddress
+        );
+        
+        await supabaseAdmin
+          .from("transactions")
+          .update({
+            tx_hash: txHash,
+            status: "success"
+          })
+          .eq("internal_ref", internalRef);
+      } catch (err: any) {
+        console.error("Async send failed:", err);
+        await supabaseAdmin
+          .from("transactions")
+          .update({
+            status: "failed",
+            description: err.message || "Failed to execute transaction"
+          })
+          .eq("internal_ref", internalRef);
+      }
+    })();
+
+    res.status(202).json({
+      message: "App Kit Send queued",
+      txId: internalRef,
       status: "pending",
       memo: memo,
     });
@@ -400,14 +444,14 @@ router.post("/bridge/cctp", async (req, res) => {
     const supabaseAdmin = getSupabaseAdmin();
     const { data: userWallet } = await supabaseAdmin
       .from("user_wallets")
-      .select("wallet_id")
+      .select("wallet_id, wallet_address")
       .eq("id", userId)
       .single();
 
-    if (!userWallet?.wallet_id) throw new Error("Wallet not found");
+    if (!userWallet?.wallet_address) throw new Error("Wallet not found");
 
     const txHash = await executeAppKitBridge(
-      userWallet.wallet_id,
+      userWallet.wallet_address,
       parseFloat(amount),
       destinationAddress,
       targetChain

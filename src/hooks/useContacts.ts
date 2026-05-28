@@ -1,9 +1,50 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useStore } from "../store/useStore";
 import { Contact } from "../types";
+import { BackendClient } from "../services/api";
 
 export function useContacts() {
   const { transactions } = useStore();
+  const [resolvedNames, setResolvedNames] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    async function resolveAddresses() {
+      if (!transactions || transactions.length === 0) return;
+      
+      const addressesToResolve = new Set<string>();
+      transactions.forEach((tx) => {
+        if (tx.type === "transfer" || tx.type === "payment") {
+          const addr = tx.metadata?.destinationAddress;
+          // If the name is missing or looks like an address/placeholder, we should resolve it
+          if (addr && (!tx.metadata?.recipientName || tx.metadata.recipientName === "EVM Account" || tx.metadata.recipientName.startsWith("0x"))) {
+            if (!resolvedNames[addr.toLowerCase()]) {
+              addressesToResolve.add(addr);
+            }
+          }
+        }
+      });
+      
+      if (addressesToResolve.size === 0) return;
+
+      const newResolved: Record<string, string> = { ...resolvedNames };
+      
+      // Resolve each address that needs resolving
+      for (const address of Array.from(addressesToResolve)) {
+        try {
+          const data = await BackendClient.resolveAddress(address);
+          if (data && (data.username || data.name)) {
+             newResolved[address.toLowerCase()] = `@${data.username || data.name}`;
+          }
+        // eslint-disable-next-line no-empty
+        } catch(e) {}
+      }
+      
+      setResolvedNames(newResolved);
+    }
+    
+    resolveAddresses();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [transactions]);
 
   const realContacts = useMemo(() => {
     // Generate contacts from transaction history - real data!
@@ -15,16 +56,24 @@ export function useContacts() {
           const recipientAddress =
             tx.metadata?.destinationAddress ||
             (tx.type === "payment" ? tx.internal_ref : undefined);
-          const recipientName =
-            tx.metadata?.recipientName ||
+          
+          let baseName = tx.metadata?.recipientName;
+          if (!baseName || baseName === "EVM Account" || baseName.startsWith("0x")) {
+            baseName = undefined;
+          }
+          
+          let recipientName =
+            resolvedNames[recipientAddress?.toLowerCase() || ""] ||
+            baseName ||
             (tx.type === "payment"
               ? `Merchant ${tx.id.substring(0, 4)}`
-              : undefined);
+              : tx.metadata?.destinationAddress); // Fallback to address
 
           if (recipientAddress && recipientName) {
             const cleanAddr = recipientAddress.trim();
             const initials = recipientName.trim()
               ? recipientName
+                  .replace(/@/g, "")
                   .trim()
                   .split(" ")
                   .map((n: string) => n[0])
@@ -36,7 +85,7 @@ export function useContacts() {
             contactMap.set(cleanAddr.toLowerCase(), {
               id: tx.id || cleanAddr,
               letter: recipientName.trim()[0]?.toUpperCase() || "?",
-              name: recipientName.toUpperCase(),
+              name: recipientName.startsWith('@') ? recipientName : recipientName.toUpperCase(),
               network: "EVM (Arc Testnet)",
               number: cleanAddr,
               initials: initials,
@@ -48,7 +97,7 @@ export function useContacts() {
     }
 
     return Array.from(contactMap.values());
-  }, [transactions]);
+  }, [transactions, resolvedNames]);
 
   return { realContacts };
 }

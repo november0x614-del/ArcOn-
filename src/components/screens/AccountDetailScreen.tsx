@@ -19,6 +19,9 @@ import {
   ChevronDown,
   Zap,
   ShieldCheck,
+  Trash2,
+  X,
+  Settings2,
 } from "lucide-react";
 import { useApp } from "../../contexts/AppContext";
 import { UIDCard } from "../common/UIDCard";
@@ -27,6 +30,8 @@ import { useStore } from "../../store/useStore";
 import { Transaction } from "../../types";
 import { ARC_TOKEN_REGISTRY, syncTokenWithArcScan } from "../../lib/arcRegistry";
 import { TokenIcon } from "../ui/TokenIcon";
+import { BackendClient } from "../../services/api";
+import { useDebounce } from "../../hooks/useDebounce";
 
 interface AccountDetailScreenProps {
   onBack: () => void;
@@ -53,6 +58,7 @@ export function AccountDetailScreen({
     setActiveFilter,
     importedTokens,
     importToken,
+    removeToken,
     displayToast,
   } = useApp();
 
@@ -153,65 +159,60 @@ export function AccountDetailScreen({
   };
 
   const [showCard, setShowCard] = useState(false);
-  const [showUnifiedDetails, setShowUnifiedDetails] = useState(false);
-
+  const [isManageMode, setIsManageMode] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [importTab, setImportTab] = useState<"popular" | "custom">("popular");
   const [customAddress, setCustomAddress] = useState("");
   const [customSymbol, setCustomSymbol] = useState("");
   const [customName, setCustomName] = useState("");
   const [customDecimals, setCustomDecimals] = useState("18");
+  const [isResolving, setIsResolving] = useState(false);
+  const [popularCatalog, setPopularCatalog] = useState<any[]>([]);
 
-  const popularCatalog = Object.values(ARC_TOKEN_REGISTRY)
-    .filter((token) => !token.isNative && token.symbol !== "USDC")
-    .map((token) => ({
-      symbol: token.symbol,
-      name: token.name,
-      decimals: token.decimals,
-      contractAddress: token.contractAddress,
-      // Provide mock values for UI
-      initialBalance: Math.random() * 1000,
-      usdPrice: 1.0,
-      type: "ArcScan Verified Token",
-      color: "bg-slate-800", // Fallback color
-    }));
+  const debouncedAddress = useDebounce(customAddress, 600);
 
-  const handleAutoFillCustom = () => {
-    const templates = [
-      {
-        symbol: "MINT",
-        name: "Arc Mintable Assets",
-        address: "0x4fbc689076bc19ad080bfebd8833fd4038a8faec",
-        decimals: "18",
-      },
-      {
-        symbol: "STAKE",
-        name: "Validator Stake Token",
-        address: "0x8ec8ebd8833fd4038a8faec07f1ea50e30d47376",
-        decimals: "18",
-      },
-      {
-        symbol: "PAY",
-        name: "Arc Gas Refund Pool",
-        address: "0x16fd4038a8faec07f1ea50e30d4737604fbc6890",
-        decimals: "6",
-      },
-      {
-        symbol: "GOLD",
-        name: "Circle Tokenized Gold",
-        address: "0x22cfb8da47fcd3eb7ebd8833fd4038a4acc89d2",
-        decimals: "8",
-      },
-    ];
+  // Fetch popular tokens from API
+  useEffect(() => {
+    if (showImportModal && importTab === "popular") {
+      BackendClient.getTokens().then((tokens) => {
+        if (tokens && Array.isArray(tokens)) {
+          setPopularCatalog(tokens.map(t => ({
+            ...t,
+            initialBalance: Math.random() * 500 + 100, // Still mock balance for newly imported
+            usdPrice: 1.0,
+            type: t.type || "ArcScan Verified Token"
+          })));
+        }
+      });
+    }
+  }, [showImportModal, importTab]);
 
-    const randomTemplate =
-      templates[Math.floor(Math.random() * templates.length)];
-    setCustomAddress(randomTemplate.address);
-    setCustomSymbol(randomTemplate.symbol);
-    setCustomName(randomTemplate.name);
-    setCustomDecimals(randomTemplate.decimals);
-    displayToast(`Autofilled details for ${randomTemplate.symbol}`);
-  };
+  // Auto-resolve custom token details
+  useEffect(() => {
+    if (debouncedAddress && debouncedAddress.startsWith("0x") && debouncedAddress.length >= 42) {
+      const resolve = async () => {
+        setIsResolving(true);
+        try {
+          const metadata = await BackendClient.resolveToken(debouncedAddress);
+          if (metadata && metadata.symbol) {
+            setCustomSymbol(metadata.symbol || "");
+            setCustomName(metadata.name || "");
+            setCustomDecimals(String(metadata.decimals || "18"));
+            displayToast(`Detected ${metadata.symbol} from chain`);
+          } else {
+            displayToast("Invalid contract address or not a token on Arc Scan");
+            setCustomSymbol("");
+            setCustomName("");
+          }
+        } catch (e) {
+          console.warn("Failed to resolve token address", e);
+        } finally {
+          setIsResolving(false);
+        }
+      };
+      resolve();
+    }
+  }, [debouncedAddress]);
 
   const handleImportCustom = () => {
     if (!customAddress || !customSymbol || !customName) {
@@ -260,6 +261,7 @@ export function AccountDetailScreen({
     setCustomName("");
     setCustomDecimals("18");
     setShowImportModal(false);
+    setIsManageMode(false);
   };
 
   return (
@@ -304,7 +306,10 @@ export function AccountDetailScreen({
           <div className="flex items-center gap-6">
             <div
               className={`flex flex-col items-center border-b-[2.5px] pb-1.5 px-1 cursor-pointer transition-colors ${activeTab === "token" ? "border-slate-900" : "border-transparent"}`}
-              onClick={() => setActiveTab("token")}
+              onClick={() => {
+                setActiveTab("token");
+                setIsManageMode(false);
+              }}
             >
               <h3
                 className={`font-bold text-[14px] ${activeTab === "token" ? "text-slate-800" : "text-slate-400"}`}
@@ -314,7 +319,10 @@ export function AccountDetailScreen({
             </div>
             <div
               className={`flex flex-col items-center border-b-[2.5px] pb-1.5 px-1 cursor-pointer transition-colors ${activeTab === "history" ? "border-slate-900" : "border-transparent"}`}
-              onClick={() => setActiveTab("history")}
+              onClick={() => {
+                setActiveTab("history");
+                setIsManageMode(false);
+              }}
             >
               <h3
                 className={`font-bold text-[14px] ${activeTab === "history" ? "text-slate-800" : "text-slate-400"}`}
@@ -323,11 +331,16 @@ export function AccountDetailScreen({
               </h3>
             </div>
           </div>
-          {activeTab === "history" && (
-            <button className="text-slate-800 font-bold text-[13px]">
-              e-Statement
-            </button>
-          )}
+          <div className="flex items-center gap-4">
+            {activeTab === "token" && (
+              <button 
+                onClick={() => setIsManageMode(!isManageMode)}
+                className={`p-2 rounded-full transition-all active:scale-90 ${isManageMode ? "bg-red-50 text-red-500" : "text-slate-900 bg-slate-100/50"}`}
+              >
+                {isManageMode ? <X size={18} /> : <Settings2 size={18} strokeWidth={2} />}
+              </button>
+            )}
+          </div>
         </div>
 
         {activeTab === "history" && (
@@ -345,14 +358,6 @@ export function AccountDetailScreen({
                     </button>
                   ),
                 )}
-              </div>
-              <div className="flex items-center gap-3 ml-2 shrink-0">
-                <button className="text-slate-800 bg-slate-100 p-2 rounded-full">
-                  <Search size={16} strokeWidth={2.5} />
-                </button>
-                <button className="text-slate-400 p-2 rounded-full bg-slate-50">
-                  <Calendar size={16} strokeWidth={2.5} />
-                </button>
               </div>
             </div>
 
@@ -429,220 +434,40 @@ export function AccountDetailScreen({
           <div className="flex-1 overflow-y-auto px-5 py-5 pb-24 bg-slate-50/50">
             <div className="bg-white rounded-[24px] border border-slate-200/50 shadow-[0_4px_24px_rgba(0,0,0,0.02)] overflow-hidden">
               {/* USDC Token Row */}
-              <div className="flex flex-col border-b border-slate-100">
-                <div
-                  className="p-4 flex justify-between items-center hover:bg-slate-50/75 transition-colors cursor-pointer"
-                  onClick={() => setShowUnifiedDetails(!showUnifiedDetails)}
-                >
-                  <div className="flex items-center gap-4">
-                    <TokenIcon 
-                      contractAddress="0x3600000000000000000000000000000000000000"
-                      symbol="USDC"
-                      className="w-12 h-12"
-                      color="bg-blue-100"
-                    />
-                    <div className="flex flex-col">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-[16px] text-slate-800 leading-tight">
-                          USDC
-                        </span>
-                        <span className="bg-slate-100 text-slate-500 text-[8.5px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-sm">
-                          Unified
-                        </span>
-                      </div>
-                      <span className="text-[12px] text-slate-500 font-medium">
-                        USD Coin
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex flex-col items-end">
-                      <span className="font-bold text-[16px] text-slate-800">
-                        {(balance || 0).toLocaleString("en-US", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </span>
-                      <span className="text-[12px] text-slate-400 font-medium tracking-wide">
-                        ~$
-                        {(balance || 0).toLocaleString("en-US", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </span>
-                    </div>
-                    <ChevronDown
-                      size={18}
-                      className={`text-slate-400 transition-transform duration-200 ${showUnifiedDetails ? "rotate-180" : ""}`}
-                    />
-                  </div>
-                </div>
-
-                {/* Simplified Unified Balance List */}
-                {showUnifiedDetails && (
-                  <div className="px-4 pb-4 pt-2 border-t border-slate-50 bg-white/50 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="flex flex-col gap-1 mb-3">
-                      <span className="font-extrabold tracking-wide uppercase text-[10px] text-slate-400">
-                        Balance Distribution
-                      </span>
-                    </div>
-
-                    <div className="space-y-3">
-                      {/* Circle Balance */}
-                      <div className="flex justify-between items-center py-1">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-[#008fcd]">
-                            <ShieldCheck size={16} />
-                          </div>
-                          <div className="flex flex-col text-left">
-                            <span className="text-[12px] font-bold text-slate-800">
-                              Circle Gateway
-                            </span>
-                            <span className="text-[10px] text-slate-400">
-                              Standard ERC-20 (6 Decimals)
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex flex-col items-end">
-                          <span className="font-bold text-[13px] text-slate-700 font-mono">
-                            {showBalance
-                              ? (() => {
-                                  const circleData =
-                                    balanceData?.allBalances?.find(
-                                      (b: any) =>
-                                        !b.token?.isNative &&
-                                        (b.token?.symbol === "USDC" ||
-                                          b.token?.name?.includes("USDC")) &&
-                                        (b.token?.blockchain?.toUpperCase() ===
-                                          "ARC-TESTNET" ||
-                                          !b.token?.blockchain),
-                                    );
-                                  const amt = circleData
-                                    ? parseFloat(circleData.amount || "0")
-                                    : 0;
-                                  return amt.toLocaleString("en-US", {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2,
-                                  });
-                                })()
-                              : "••••"}
-                          </span>
-                          <span className="text-[9px] text-slate-400">
-                            USDC
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="h-px bg-slate-100 w-full"></div>
-
-                      {/* Arc Native Balance */}
-                      <div className="flex justify-between items-center py-1">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600">
-                            <Zap size={16} />
-                          </div>
-                          <div className="flex flex-col text-left">
-                            <span className="text-[12px] font-bold text-slate-800">
-                              Arc Network Native
-                            </span>
-                            <span className="text-[10px] text-slate-400">
-                              Unified Gas Asset (18 Decimals)
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex flex-col items-end">
-                          <span className="font-bold text-[13px] text-slate-700 font-mono">
-                            {showBalance
-                              ? (() => {
-                                  const nativeData =
-                                    balanceData?.allBalances?.find(
-                                      (b: any) =>
-                                        b.token?.isNative &&
-                                        (b.token?.symbol === "USDC" ||
-                                          b.token?.name?.includes("USDC")),
-                                    );
-                                  const amt = nativeData
-                                    ? parseFloat(nativeData.amount || "0")
-                                    : 0;
-                                  return amt.toLocaleString("en-US", {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2,
-                                  });
-                                })()
-                              : "••••"}
-                          </span>
-                          <span className="text-[9px] text-zinc-400">USDC</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 p-2.5 rounded-xl bg-white border border-slate-100">
-                      <p className="text-[9.5px] text-slate-500 leading-relaxed font-medium font-sans">
-                        💡 These balances are virtually unified. You can spend
-                        the combined total instantly on the Arc network without
-                        manual bridging.
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* ARC Token Row */}
-              <div className="p-4 flex justify-between items-center hover:bg-slate-50/75 transition-colors cursor-pointer border-b border-slate-100">
+              <div
+                className="p-4 flex justify-between items-center hover:bg-slate-50/75 transition-colors cursor-pointer border-b border-slate-100"
+              >
                 <div className="flex items-center gap-4">
-                  <TokenIcon
-                    contractAddress="native"
-                    symbol="ARC"
-                    className="w-11 h-11"
-                    color="bg-slate-900 text-white"
+                  <TokenIcon 
+                    contractAddress="0x3600000000000000000000000000000000000000"
+                    symbol="USDC"
+                    className="w-12 h-12"
+                    color="bg-blue-100"
                   />
                   <div className="flex flex-col text-left">
-                    <span className="font-bold text-[15.5px] text-slate-800 leading-tight">
-                      ARC
+                    <span className="font-bold text-slate-800 text-[15px] leading-tight">
+                      USD Coin
                     </span>
-                    <span className="text-[11.5px] text-slate-400 font-medium">
-                      Arc Network
+                    <span className="text-[12px] text-slate-500 mt-0.5">
+                      USDC • Stablecoin
                     </span>
                   </div>
                 </div>
                 <div className="flex flex-col items-end">
-                  <span className="font-bold text-[15.5px] text-slate-800 font-mono">
-                    {showBalance
-                      ? (() => {
-                          const arcTokenData = balanceData?.allBalances?.find(
-                            (b: any) =>
-                              b.token?.symbol === "ARC" ||
-                              b.token?.name?.toUpperCase().includes("ARC"),
-                          );
-                          const amt = arcTokenData
-                            ? parseFloat(arcTokenData.amount || "0")
-                            : 12450.0;
-                          return amt.toLocaleString("en-US", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          });
-                        })()
+                  <span className="font-bold text-[16px] text-slate-800 font-mono">
+                    {showBalance 
+                      ? (balance || 0) === 0 ? "0" : (balance || 0).toLocaleString("en-US", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })
                       : "••••"}
                   </span>
-                  <span className="text-[11.5px] text-slate-400 font-medium tracking-wide">
-                    {showBalance
-                      ? (() => {
-                          const arcTokenData = balanceData?.allBalances?.find(
-                            (b: any) =>
-                              b.token?.symbol === "ARC" ||
-                              b.token?.name?.toUpperCase().includes("ARC"),
-                          );
-                          const amt = arcTokenData
-                            ? parseFloat(arcTokenData.amount || "0")
-                            : 12450.0;
-                          return (
-                            `~$` +
-                            (amt * 0.02).toLocaleString("en-US", {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })
-                          );
-                        })()
+                  <span className="text-[12px] text-slate-400 font-medium tracking-wide">
+                    {showBalance 
+                      ? (balance || 0) === 0 ? "0" : `~$${(balance || 0).toLocaleString("en-US", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}`
                       : "••••"}
                   </span>
                 </div>
@@ -654,75 +479,80 @@ export function AccountDetailScreen({
                   key={token.symbol}
                   className="p-4 flex justify-between items-center hover:bg-slate-50/75 transition-colors cursor-pointer border-b border-slate-100 relative overflow-hidden"
                 >
-                  <div className="flex items-center gap-4">
-                    <TokenIcon
-                      contractAddress={token.contractAddress}
-                      symbol={token.symbol}
-                      className="w-11 h-11"
-                      color={token.color || "bg-slate-800"}
-                    />
-                    <div className="flex flex-col text-left max-w-[150px] sm:max-w-[200px]">
-                      <span className="font-bold text-[15.5px] text-slate-800 leading-tight flex items-center gap-1.5 truncate">
-                        {token.symbol}
-                        <span className="bg-blue-50 text-[#008fcd] text-[8px] uppercase font-mono font-bold tracking-wider px-1.5 py-0.5 rounded-[4px] border border-blue-100 leading-none">
-                          Imported
+                    <div className="flex items-center gap-4">
+                      <TokenIcon
+                        contractAddress={token.contractAddress}
+                        symbol={token.symbol}
+                        className="w-11 h-11"
+                        color={token.color || "bg-slate-800"}
+                      />
+                      <div className="flex flex-col text-left max-w-[150px] sm:max-w-[200px]">
+                        <span className="font-bold text-slate-800 text-[15px] leading-tight">
+                          {token.name || token.symbol}
                         </span>
-                      </span>
-                      <span
-                        className="text-[10.5px] text-slate-400 font-medium truncate font-mono mt-0.5"
-                        title={token.contractAddress}
-                      >
-                        {token.contractAddress.substring(0, 6)}...
-                        {token.contractAddress.substring(
-                          token.contractAddress.length - 4,
+                        <div className="text-[12px] text-slate-500 mt-0.5">
+                          {token.symbol} • {["USDC", "EURC", "USDT", "PYUSD", "USDE", "DAI"].includes(token.symbol.toUpperCase()) ? "Stablecoin" : (token.symbol.toUpperCase().includes("BTC") || token.symbol.toUpperCase().includes("ETH") ? "Wrapped Token" : "Utility Token")}
+                        </div>
+                      </div>
+                    </div>
+                      <div className="flex items-center">
+                        <div className="flex flex-col items-end">
+                          <span className="font-bold text-[15.5px] text-slate-800 font-mono">
+                            {showBalance
+                              ? (() => {
+                                  const amt =
+                                    liveCustomBalances[
+                                      token.contractAddress?.toLowerCase().trim() || ""
+                                    ] !== undefined
+                                      ? liveCustomBalances[
+                                          token.contractAddress?.toLowerCase().trim() || ""
+                                        ]
+                                      : (token.balance || 0);
+                                  return amt === 0 ? "0" : amt.toLocaleString("en-US", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits:
+                                      token.decimals > 6 ? 4 : 2,
+                                  });
+                                })()
+                              : "••••"}
+                          </span>
+                          <span className="text-[11.5px] text-slate-400 font-medium tracking-wide">
+                            {showBalance
+                              ? (() => {
+                                  const amt =
+                                    liveCustomBalances[
+                                      token.contractAddress?.toLowerCase().trim() || ""
+                                    ] !== undefined
+                                      ? liveCustomBalances[
+                                          token.contractAddress?.toLowerCase().trim() || ""
+                                        ]
+                                      : (token.balance || 0);
+                                  return amt === 0 ? "0" : (
+                                    `~$` +
+                                    (amt * (token.usdPrice || 1.0)).toLocaleString("en-US", {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    })
+                                  );
+                                })()
+                              : "••••"}
+                          </span>
+                        </div>
+                        {isManageMode && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (window.confirm(`Remove ${token.symbol}?`)) {
+                                removeToken(token.symbol);
+                                displayToast(`${token.symbol} removed`);
+                              }
+                            }}
+                            className="ml-3 p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors cursor-pointer animate-in zoom-in-50 duration-200 shadow-sm"
+                          >
+                            <Trash2 size={16} />
+                          </button>
                         )}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="flex flex-col items-end">
-                      <span className="font-bold text-[15.5px] text-slate-800 font-mono">
-                        {showBalance
-                          ? (() => {
-                              const amt =
-                                liveCustomBalances[
-                                  token.contractAddress?.toLowerCase().trim() || ""
-                                ] !== undefined
-                                  ? liveCustomBalances[
-                                      token.contractAddress?.toLowerCase().trim() || ""
-                                    ]
-                                  : token.balance;
-                              return amt.toLocaleString("en-US", {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits:
-                                  token.decimals > 6 ? 4 : 2,
-                              });
-                            })()
-                          : "••••"}
-                      </span>
-                      <span className="text-[11.5px] text-slate-400 font-medium tracking-wide">
-                        {showBalance
-                          ? (() => {
-                              const amt =
-                                liveCustomBalances[
-                                  token.contractAddress?.toLowerCase().trim() || ""
-                                ] !== undefined
-                                  ? liveCustomBalances[
-                                      token.contractAddress?.toLowerCase().trim() || ""
-                                    ]
-                                  : token.balance;
-                              return (
-                                `~$` +
-                                (amt * token.usdPrice).toLocaleString("en-US", {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                })
-                              );
-                            })()
-                          : "••••"}
-                      </span>
-                    </div>
-                  </div>
+                      </div>
                 </div>
               ))}
 
@@ -832,8 +662,15 @@ export function AccountDetailScreen({
               {importTab === "popular" ? (
                 <div className="flex flex-col gap-3 min-h-[250px] pb-4 select-none">
                   <p className="text-[12px] text-slate-400 mb-1 font-medium">
-                    Select from popular standard assets on Arc L1 Testnet:
+                    Select from verified standard assets on Arc Network:
                   </p>
+
+                  {popularCatalog.length === 0 && (
+                    <div className="flex flex-col items-center py-10 text-slate-400 gap-2">
+                       <RefreshCw className="animate-spin" size={24} />
+                       <span className="text-[12px]">Loading catalog...</span>
+                    </div>
+                  )}
 
                   {popularCatalog.map((ptok) => {
                     const isAlreadyImported =
@@ -896,21 +733,8 @@ export function AccountDetailScreen({
                 </div>
               ) : (
                 <div className="flex flex-col gap-4 min-h-[250px] pb-4">
-                  <div className="flex justify-between items-center bg-blue-50/50 p-3.5 rounded-2xl border border-blue-100/50 text-left">
-                    <span className="text-[11.5px] text-slate-600 leading-relaxed max-w-[70%] font-medium">
-                      💡 Fast-track testing? Auto-populate mock contract details
-                      instantly with a single tap.
-                    </span>
-                    <button
-                      onClick={handleAutoFillCustom}
-                      className="bg-slate-800 text-white hover:bg-blue-700 text-[11.5px] font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer border-0 shadow-sm"
-                    >
-                      Autofill
-                    </button>
-                  </div>
-
                   <div className="flex flex-col gap-3">
-                    <div className="flex flex-col gap-1 text-left">
+                    <div className="flex flex-col gap-1 text-left relative">
                       <label className="text-[10.5px] font-extrabold uppercase tracking-widest text-slate-500">
                         Token Contract Address
                       </label>
@@ -921,6 +745,11 @@ export function AccountDetailScreen({
                         placeholder="e.g. 0x07f1ea50e30d47376c0dfb3eb853fd40e3a8907a"
                         className="w-full bg-slate-55 border border-slate-100 focus:border-blue-400 focus:bg-white rounded-xl px-4 py-2.5 text-[14px] text-slate-800 font-mono focus:outline-none transition-all placeholder:text-slate-300 shadow-inner"
                       />
+                      {isResolving && (
+                        <div className="absolute right-3 bottom-2.5">
+                          <RefreshCw size={14} className="animate-spin text-blue-500" />
+                        </div>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">

@@ -55,36 +55,30 @@ export async function fetchUnifiedBalance(
   const tokenBalances: any[] = [];
   let totalValueUsd = 0;
 
-  // Prices (Mock for testnet)
-  const ARC_PRICE = 0.02;
+  // prices (aligned with Arc Network where Native = USDC)
   const USDC_PRICE = 1.0;
 
-  // 2. Process Circle Balances
+  // 2. Process Initial Balances from Circle
   if (circleResponse?.data?.tokenBalances) {
     const circleTokens = circleResponse.data.tokenBalances;
     for (const b of circleTokens) {
-      tokenBalances.push(b);
-      const amount = parseFloat(b.amount || "0");
-      const price = b.token?.symbol === "ARC" ? ARC_PRICE : USDC_PRICE;
-      totalValueUsd += amount * price;
+      tokenBalances.push({ ...b });
     }
   }
 
-  // 3. Process Arc L1 Native Assets
+  // 3. Merge Arc Native Assets (Gas)
   const nativeBalanceFormatted = formatUnits(nativeWei, 18);
-
   const existingArcIndex = tokenBalances.findIndex(
-    (b: any) => b.token?.symbol === "ARC",
+    (b: any) => b.token?.symbol === "ARC" || b.token?.isNative === true
   );
+
   if (existingArcIndex >= 0) {
     tokenBalances[existingArcIndex].amount = nativeBalanceFormatted;
-    // We don't add to totalValueUsd again, as it was already added from Circle but wait, if we overwrite it, the total value calculated from Circle is inaccurate.
-    // Let's recalculate total later.
   } else {
     tokenBalances.push({
       token: {
         symbol: "ARC",
-        name: "Arc Network Native Gas Token",
+        name: "Arc Network Native",
         decimals: 18,
         blockchain: "ARC-TESTNET",
         isNative: true,
@@ -93,18 +87,15 @@ export async function fetchUnifiedBalance(
     });
   }
 
-  // 4. Process on-chain USDC (Arc Native ERC20)
-  const nativeUSDCFormatted = parseFloat(formatUnits(nativeUSDCWei, 6));
-
+  // 4. Merge on-chain USDC (ERC20 Contract)
+  const nativeUSDCFormatted = formatUnits(nativeUSDCWei, 6);
   const existingUSDCIndex = tokenBalances.findIndex(
-    (b: any) => b.token?.symbol === "USDC",
+    (b: any) => b.token?.symbol === "USDC" && b.token?.isNative === false
   );
 
   if (existingUSDCIndex >= 0) {
-    // If Circle or someone else already tracks USDC, respect it, but maybe prioritize on-chain if we want to ensure accuracy.
-    // We'll leave the Circle one unmodified to avoid duplicating amounts or we could overwrite it.
-    // For now we don't push a duplicate.
-  } else if (nativeUSDCFormatted > 0) {
+    tokenBalances[existingUSDCIndex].amount = nativeUSDCFormatted;
+  } else {
     tokenBalances.push({
       token: {
         symbol: "USDC",
@@ -114,16 +105,45 @@ export async function fetchUnifiedBalance(
         isNative: false,
         tokenAddress: USDC_ADDRESS,
       },
-      amount: nativeUSDCFormatted.toString(),
+      amount: nativeUSDCFormatted,
     });
   }
 
-  // Recalculate actual total Value from the finalized array
-  totalValueUsd = 0;
+  // 5. Final Deduplication for USDC calculation
+  // Since Native and Token USDC are the same value on ArcScan, we should merge them.
+  let finalUsdcAmount = 0;
+  const otherBalances: any[] = [];
+
   for (const b of tokenBalances) {
-    const amount = parseFloat(b.amount || "0");
-    const price = b.token?.symbol === "ARC" ? ARC_PRICE : USDC_PRICE;
-    totalValueUsd += amount * price;
+    const symbol = b.token?.symbol || "UNKNOWN";
+    if (symbol === "USDC" || symbol === "ARC") {
+      const amt = parseFloat(b.amount || "0");
+      if (amt > finalUsdcAmount) finalUsdcAmount = amt;
+    } else {
+      otherBalances.push(b);
+    }
+  }
+
+  // Push consolidated USDC entry
+  const consolidatedUSDC = {
+    token: {
+      symbol: "USDC",
+      name: "USD Coin",
+      decimals: 6,
+      blockchain: "ARC-TESTNET",
+      isNative: true,
+    },
+    amount: finalUsdcAmount.toString(),
+  };
+
+  const finalBalances = [consolidatedUSDC, ...otherBalances];
+  tokenBalances.length = 0;
+  tokenBalances.push(...finalBalances);
+
+  // Recalculate actual total Value
+  totalValueUsd = finalUsdcAmount * USDC_PRICE;
+  for (const b of otherBalances) {
+    totalValueUsd += parseFloat(b.amount || "0") * 1.0; 
   }
 
   // 5. Consideration of Pending Transactions (Local UI feel)

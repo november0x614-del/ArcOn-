@@ -66,15 +66,15 @@ export function SettingsScreen({
           <div className="mx-4 bg-white rounded-2xl border border-slate-100 flex flex-col overflow-hidden shadow-sm">
             <SettingItem
               icon={<UserCircle size={20} className="text-slate-700" />}
-              label="Nickname"
+              label="Username"
               badge={registeredUser?.username || "Not Set"}
-              onClick={onNamaPanggilan}
+              onClick={() => handleNotImplemented("Username edit represents solid identity and is locked by default.")}
             />
             <SettingItem
               icon={<Mail size={20} className="text-slate-700" />}
               label="Registered Email"
               badge={registeredUser?.email || "Not Set"}
-              onClick={onEmail}
+              onClick={() => handleNotImplemented("Email edit represents solid identity and is locked by default.")}
             />
             <SettingItem
               icon={<Settings size={20} className="text-slate-700" />}

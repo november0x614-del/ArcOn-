@@ -104,7 +104,7 @@ export function FaucetScreen({ onBack }: FaucetScreenProps) {
                 Tokens Sent!
               </h3>
               <p className="text-[13px] text-slate-500 mb-4 text-center">
-                10 ARC & 100 USDC has been sent to your wallet.
+                100 USDC (Gas & Assets) has been sent to your wallet.
               </p>
 
               <div className="bg-slate-50 border border-slate-100 w-full p-4 rounded-xl flex items-center justify-between">
@@ -191,7 +191,7 @@ export function FaucetScreen({ onBack }: FaucetScreenProps) {
                 ) : (
                   <div className="flex items-center justify-center gap-2">
                     <Coins size={18} />
-                    Claim 10 ARC & 100 USDC
+                    Claim 100 Testnet USDC
                   </div>
                 )}
               </button>

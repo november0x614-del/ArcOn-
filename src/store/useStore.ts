@@ -11,11 +11,12 @@ import {
   defaultSelectedShortcuts,
   defaultAvailableShortcuts,
 } from "../components/screens/ManageFavoritesScreen";
+import { BackendClient } from "../services/api";
 
 export type TransactionFilter = "All" | "Received" | "Sent" | "Swaps";
 
 interface AppState {
-  // Navigation & UI
+// ... existing state definitions ...
   viewState: ViewState;
   setViewState: (state: ViewState) => void;
   receiptSource: ViewState;
@@ -24,17 +25,12 @@ interface AppState {
   setShowBalance: (show: boolean) => void;
   activeFilter: TransactionFilter;
   setActiveFilter: (filter: TransactionFilter) => void;
-
-  // Imported Tokens state
   importedTokens: ImportedToken[];
-  importToken: (token: ImportedToken) => void;
-  removeToken: (symbol: string) => void;
-
-  // User & Auth
+  importToken: (token: ImportedToken) => Promise<void>;
+  removeToken: (symbol: string) => Promise<void>;
+  fetchImportedTokens: () => Promise<void>;
   registeredUser: UserIdentity | null;
   setRegisteredUser: (user: UserIdentity | null) => void;
-
-  // Financials
   balance: number;
   allBalances: any[];
   setBalance: (balance: number | ((prev: number) => number)) => void;
@@ -51,14 +47,10 @@ interface AppState {
   stopSyncPolling: () => void;
   selectedTransaction: Transaction | null;
   setSelectedTransaction: (tx: Transaction | null) => void;
-
-  // Market & Inbox logic
   visibleTokenCodes: string[];
   setVisibleTokenCodes: (codes: string[]) => void;
   readReceiptIds: string[];
   markAsRead: (id: string) => void;
-
-  // Shortcuts & Contacts
   selectedShortcuts: ShortcutItem[];
   setSelectedShortcuts: (shortcuts: ShortcutItem[]) => void;
   availableShortcuts: ShortcutItem[];
@@ -69,12 +61,8 @@ interface AppState {
   setTransferAmount: (amount: string) => void;
   transferMemo: string;
   setTransferMemo: (memo: string) => void;
-
-  // Toast
   toast: { message: string; visible: boolean };
   displayToast: (message: string) => void;
-
-  // Settings
   language: string;
   setLanguage: (lang: string) => void;
   network: string;
@@ -101,14 +89,19 @@ export const useStore = create<AppState>()((set) => ({
   setViewState: (state) => set({ viewState: state }),
   receiptSource: "home",
   setReceiptSource: (source) => set({ receiptSource: source }),
-  showBalance: false,
+  showBalance: true,
   setShowBalance: (show) => set({ showBalance: show }),
   activeFilter: "All",
   setActiveFilter: (filter) => set({ activeFilter: filter }),
 
   // User States
   registeredUser: null,
-  setRegisteredUser: (user) => set({ registeredUser: user }),
+  setRegisteredUser: (user) => {
+    set({ registeredUser: user });
+    if (user?.supabaseUid) {
+      useStore.getState().fetchImportedTokens();
+    }
+  },
 
   // Financials
   balance: 0,
@@ -122,56 +115,36 @@ export const useStore = create<AppState>()((set) => ({
     if (!user?.supabaseUid) return;
 
     try {
-      const url = `/api/balance/${user.supabaseUid}`;
-      useStore.getState().addLog(`Fetching balance: GET ${url}`);
-      const response = await fetch(url);
-      if (!response.ok) {
-        const errText = await response.text();
-        useStore
-          .getState()
-          .addLog(`Balance fetch failed: ${url} Status: ${response.status} - ${errText}`);
-        console.error(`Balance fetch failed with status: ${response.status} ${errText}`);
-        return;
-      }
-      const contentType = response.headers.get("content-type");
-      if (contentType && contentType.indexOf("application/json") !== -1) {
-        const text = await response.text();
-        const data = JSON.parse(text);
-        const newBalance = data.balance || 0;
-        useStore
-          .getState()
-          .addLog(`Balance value: ${newBalance} (from ${url})`);
+      const data = await BackendClient.getBalance();
+      const newBalance = data.balance || 0;
+      
+      const state = useStore.getState();
+      
+      // Calculate PnL locally based on current transactions
+      let totalDeposit = 0;
+      state.transactions.forEach((tx) => {
+        if (tx.type === "deposit" || tx.type === "receive") {
+          const amt = Math.abs(parseFloat(tx.amount.replace(/[+-]/g, ""))) || 0;
+          totalDeposit += amt;
+        }
+      });
 
-        const state = useStore.getState();
-        let totalDeposit = 0;
-        state.transactions.forEach((tx) => {
-          if (tx.type === "deposit" || tx.type === "receive") {
-            const amt =
-              Math.abs(parseFloat(tx.amount.replace(/[+-]/g, ""))) || 0;
-            totalDeposit += amt;
-          }
-        });
+      const pnlValue = totalDeposit > 0 ? newBalance - totalDeposit : 0;
+      const pnlPercentage = totalDeposit > 0 ? (pnlValue / totalDeposit) * 100 : 0;
 
-        const pnlValue = totalDeposit > 0 ? newBalance - totalDeposit : 0;
-        const pnlPercentage =
-          totalDeposit > 0 ? (pnlValue / totalDeposit) * 100 : 0;
-
+      // Only update if balance changed to save renders
+      if (state.balance !== newBalance || state.allBalances.length !== (data.allBalances?.length || 0)) {
         set({ balance: newBalance, allBalances: data.allBalances || [], pnlValue, pnlPercentage });
-      } else {
-        console.error(`Received non-JSON response for ${url}`);
       }
     } catch (error: any) {
-      useStore.getState().addLog(`Balance fetch error: ${error}`);
-      if (error.name !== "TypeError" || error.message !== "Failed to fetch") {
-        console.error("Failed to fetch balance", error);
-      }
+      // Errors handled inside apiRequest usually
     }
   },
   pnlValue: 0,
   setPnlValue: (value) => set({ pnlValue: value }),
   pnlPercentage: 0,
   setPnlPercentage: (percentage) => set({ pnlPercentage: percentage }),
-  transactions: [], // Start empty
+  transactions: [],
   isSyncing: false,
   lastSyncTime: null,
   fetchTransactions: async () => {
@@ -181,35 +154,21 @@ export const useStore = create<AppState>()((set) => ({
     try {
       const url = `/api/transactions/${user.supabaseUid}`;
       const response = await fetch(url);
-      if (!response.ok) {
-        const errText = await response.text();
-        console.error("Backend error for transactions:", errText);
-        useStore.getState().addLog(`Transactions Server Error: ${response.status} - ${errText}`);
-        return;
-      }
+      if (!response.ok) return;
+      
       const text = await response.text();
       if (!text) return;
       const dbTransactions = JSON.parse(text);
-
       if (!Array.isArray(dbTransactions)) return;
 
       const transactions: Transaction[] = dbTransactions.map((tx: any) => {
         const rawAmount = parseFloat(tx.amount) || 0;
-        const direction =
-          tx.metadata?.direction ||
-          (tx.type === "receive" || tx.type === "deposit"
-            ? "inbound"
-            : "outbound");
+        const direction = tx.metadata?.direction || (tx.type === "receive" || tx.type === "deposit" ? "inbound" : "outbound");
         const sign = direction === "inbound" ? "+" : "-";
-
+        
         let title = tx.type.charAt(0).toUpperCase() + tx.type.slice(1);
         if (tx.type === "receive") title = "Inbound Transfer";
-        if (tx.type === "bridge") {
-          title =
-            direction === "inbound"
-              ? "CCTP Inbound Bridge"
-              : "CCTP Outbound Bridge";
-        }
+        if (tx.type === "bridge") title = direction === "inbound" ? "CCTP Inbound Bridge" : "CCTP Outbound Bridge";
 
         return {
           id: tx.id || tx.internal_ref,
@@ -220,32 +179,22 @@ export const useStore = create<AppState>()((set) => ({
           timestamp: new Date(tx.created_at).toLocaleString(),
           status: tx.status,
           txHash: tx.tx_hash || tx.metadata?.txHash || tx.internal_ref,
-          explorerUrl:
-            tx.metadata?.explorerUrl ||
-            (tx.tx_hash || tx.internal_ref
-              ? `https://testnet.arcscan.app/tx/${tx.tx_hash || tx.internal_ref}`
-              : undefined),
+          explorerUrl: tx.metadata?.explorerUrl || (tx.tx_hash || tx.internal_ref ? `https://testnet.arcscan.app/tx/${tx.tx_hash || tx.internal_ref}` : undefined),
           metadata: tx.metadata,
         };
       });
 
       const state = useStore.getState();
-      let totalDeposit = 0;
-      transactions.forEach((tx) => {
-        if (tx.type === "deposit" || tx.type === "receive") {
-          const amt = Math.abs(parseFloat(tx.amount.replace(/[+-]/g, ""))) || 0;
-          totalDeposit += amt;
-        }
-      });
+      
+      // Skip update if length and first/last ID are same (basic heuristic for "identitcal")
+      if (state.transactions.length === transactions.length && 
+          state.transactions[0]?.id === transactions[0]?.id &&
+          state.transactions[0]?.status === transactions[0]?.status) {
+        return;
+      }
 
-      const pnlValue = totalDeposit > 0 ? state.balance - totalDeposit : 0;
-      const pnlPercentage =
-        totalDeposit > 0 ? (pnlValue / totalDeposit) * 100 : 0;
-
-      set({ transactions, pnlValue, pnlPercentage });
-    } catch (error: any) {
-      console.error("Failed to fetch transactions", error);
-    }
+      set({ transactions });
+    } catch (error) {}
   },
 
   startSyncPolling: () => {
@@ -253,16 +202,12 @@ export const useStore = create<AppState>()((set) => ({
     if (state.isSyncing) return;
 
     set({ isSyncing: true });
-    state.addLog("REAL-TIME SYNC: Active (Industrial Standard)");
-
     activePollSessionId++;
     const sessionId = activePollSessionId;
 
     const poll = async () => {
       const currentState = useStore.getState();
-      if (!currentState.isSyncing || activePollSessionId !== sessionId) {
-        return;
-      }
+      if (!currentState.isSyncing || activePollSessionId !== sessionId) return;
 
       try {
         await Promise.all([
@@ -270,14 +215,12 @@ export const useStore = create<AppState>()((set) => ({
           currentState.fetchTransactions(),
         ]);
         set({ lastSyncTime: new Date() });
-      } catch (err) {
-        console.error("Polling failed", err);
-      }
+      } catch (err) {}
 
-      // If we have pending transactions, keep polling faster. 
       const hasPending = useStore.getState().transactions.some(tx => tx.status === "pending" || tx.status === "pending_approval");
       
-      const nextDelay = hasPending ? 3000 : 8000;
+      // Industrial standard: Relaxed polling unless something is happening
+      const nextDelay = hasPending ? 3000 : 20000; // 20s if idle, 3s if pending
       
       if (useStore.getState().isSyncing && activePollSessionId === sessionId) {
         setTimeout(poll, nextDelay);
@@ -288,15 +231,13 @@ export const useStore = create<AppState>()((set) => ({
   },
 
   stopSyncPolling: () => {
-    activePollSessionId++; // Invalidate running polls immediately
+    activePollSessionId++;
     set({ isSyncing: false });
-    useStore.getState().addLog("REAL-TIME SYNC: Dormant");
   },
 
   selectedTransaction: null,
   setSelectedTransaction: (tx) => set({ selectedTransaction: tx }),
 
-  // Feature Persistence
   visibleTokenCodes: ["USDC", "EURC", "USDT", "USDe", "DAI", "PYUSD", "cirBTC"],
   setVisibleTokenCodes: (codes) => set({ visibleTokenCodes: codes }),
   readReceiptIds: [],
@@ -307,28 +248,56 @@ export const useStore = create<AppState>()((set) => ({
         : [...state.readReceiptIds, id],
     })),
 
-  // Imported Tokens
   importedTokens: [],
-  importToken: (token) =>
-    set((state) => {
-      const uppercaseSymbol = token.symbol.toUpperCase();
-      if (
-        state.importedTokens.some(
-          (t) => t.symbol.toUpperCase() === uppercaseSymbol,
-        )
-      ) {
-        return state;
-      }
-      return { importedTokens: [...state.importedTokens, token] };
-    }),
-  removeToken: (symbol) =>
-    set((state) => ({
-      importedTokens: state.importedTokens.filter(
-        (t) => t.symbol.toUpperCase() !== symbol.toUpperCase(),
-      ),
-    })),
+  importToken: async (token) => {
+    const state = useStore.getState();
+    const uppercaseSymbol = token.symbol.toUpperCase();
+    if (state.importedTokens.some((t) => t.symbol.toUpperCase() === uppercaseSymbol)) return;
 
-  // Integration
+    // Local update
+    set((state) => ({ importedTokens: [...state.importedTokens, token] }));
+
+    // Sync to backend
+    if (state.registeredUser?.supabaseUid) {
+      try {
+        await BackendClient.saveImportedToken(state.registeredUser.supabaseUid, token);
+      } catch (e) {
+        console.error("Failed to sync imported token to database", e);
+      }
+    }
+  },
+  removeToken: async (symbol) => {
+    const state = useStore.getState();
+    const tokenToRemove = state.importedTokens.find(t => t.symbol.toUpperCase() === symbol.toUpperCase());
+    
+    // Local updates
+    set((state) => ({
+      importedTokens: state.importedTokens.filter((t) => t.symbol.toUpperCase() !== symbol.toUpperCase()),
+    }));
+
+    // Sync to backend
+    if (state.registeredUser?.supabaseUid && tokenToRemove?.contractAddress) {
+      try {
+        await BackendClient.removeImportedToken(state.registeredUser.supabaseUid, tokenToRemove.contractAddress);
+      } catch (e) {
+        console.error("Failed to remove imported token from database", e);
+      }
+    }
+  },
+  fetchImportedTokens: async () => {
+    const user = useStore.getState().registeredUser;
+    if (!user?.supabaseUid) return;
+
+    try {
+      const tokens = await BackendClient.getImportedTokens(user.supabaseUid);
+      if (Array.isArray(tokens)) {
+        set({ importedTokens: tokens });
+      }
+    } catch (e) {
+      console.error("Failed to fetch imported tokens from database", e);
+    }
+  },
+
   selectedShortcuts: defaultSelectedShortcuts,
   setSelectedShortcuts: (shortcuts) => set({ selectedShortcuts: shortcuts }),
   availableShortcuts: defaultAvailableShortcuts,
@@ -340,13 +309,11 @@ export const useStore = create<AppState>()((set) => ({
   transferMemo: "",
   setTransferMemo: (memo) => set({ transferMemo: memo }),
 
-  // Toast
   toast: { message: "", visible: false },
   displayToast: (message) => {
     set({ toast: { message, visible: true } });
     setTimeout(() => set({ toast: { message: "", visible: false } }), 3000);
   },
-  // Settings
   language: "English",
   setLanguage: (lang) => set({ language: lang }),
   network: "ARC TESTNET",
@@ -354,12 +321,22 @@ export const useStore = create<AppState>()((set) => ({
   platformConfig: null,
   setPlatformConfig: (config) => set({ platformConfig: config }),
   fetchPlatformConfig: async () => {
+    // Try localStorage first
+    try {
+      const cached = localStorage.getItem("arc_platform_config");
+      if (cached) {
+        set({ platformConfig: JSON.parse(cached) });
+      }
+    } catch (e) {}
+
     try {
       const res = await fetch("/api/admin/config");
-      if (res.ok) set({ platformConfig: await res.json() });
-    } catch (e) {
-      console.error("Failed to fetch platform config", e);
-    }
+      if (res.ok) {
+        const data = await res.json();
+        set({ platformConfig: data });
+        localStorage.setItem("arc_platform_config", JSON.stringify(data));
+      }
+    } catch (e) {}
   },
   walletConnectSessions: 0,
   setWalletConnectSessions: (count) => set({ walletConnectSessions: count }),

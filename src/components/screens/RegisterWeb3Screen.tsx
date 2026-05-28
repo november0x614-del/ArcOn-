@@ -78,12 +78,28 @@ export function RegisterWeb3Screen({
     setIsCreating(true);
     setError(null);
     try {
-      // 1. Supabase Auth SignUp
+      // 1. Initial Check Username Uniqueness
+      const { data: existingProfiles, error: profileError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("username", username)
+        .limit(1);
+
+      if (profileError) {
+        console.error("Profile check error:", profileError);
+        throw new Error("Failed to verify username availability.");
+      }
+      
+      if (existingProfiles && existingProfiles.length > 0) {
+        throw new Error("Username is already taken. Please choose another one.");
+      }
+
+      // 2. Supabase Auth SignUp
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { full_name: username },
+          data: { full_name: username, username: username },
         },
       });
 

@@ -98,6 +98,12 @@ export interface Transaction {
     direction?: "inbound" | "outbound";
     blockNumber?: number;
     explorerUrl?: string;
+    senderAddress?: string;
+    escrowAddress?: string;
+    senderName?: string;
+    isAsync?: boolean;
+    real?: string;
+    txHash?: string;
   };
 }
 

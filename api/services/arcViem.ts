@@ -260,6 +260,50 @@ export async function getTokenDecimals(tokenAddress: string): Promise<number> {
 }
 
 /**
+ * Fetches common metadata (name, symbol, decimals) for an ERC-20 token contract.
+ */
+export async function getTokenMetadata(tokenAddress: string) {
+  try {
+    const address = tokenAddress as `0x${string}`;
+    
+    // Check if the address is a contract by fetching bytecode
+    const bytecode = await publicClient.getBytecode({ address });
+    if (!bytecode || bytecode === "0x") {
+      console.warn(`[ArcViem] Address ${tokenAddress} is a wallet, not a contract.`);
+      return null;
+    }
+
+    const [name, symbol, decimals] = await Promise.all([
+      publicClient.readContract({
+        address,
+        abi: parseAbi(["function name() view returns (string)"]),
+        functionName: "name",
+      } as any).catch(() => "Unknown Token"),
+      publicClient.readContract({
+        address,
+        abi: parseAbi(["function symbol() view returns (string)"]),
+        functionName: "symbol",
+      } as any).catch(() => "TOKEN"),
+      publicClient.readContract({
+        address,
+        abi: parseAbi(["function decimals() view returns (uint8)"]),
+        functionName: "decimals",
+      } as any).catch(() => 18),
+    ]);
+
+    return {
+      name: String(name),
+      symbol: String(symbol),
+      decimals: Number(decimals),
+      contractAddress: tokenAddress,
+    };
+  } catch (error) {
+    console.error(`[ArcViem] Failed to fetch metadata for ${tokenAddress}:`, error);
+    return null;
+  }
+}
+
+/**
  * Helper to generate ArcScan URLs.
  */
 export function getArcScanUrl(type: "tx" | "address", value: string): string {

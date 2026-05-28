@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useStore } from "../../store/useStore";
 import { useArc } from "../../contexts/ArcContext";
+import { SourceAccountCard } from "../common/SourceAccountCard";
 import { WalletCard } from "../common/WalletCard";
 
 interface AmountInputScreenProps {
@@ -31,6 +32,7 @@ export function AmountInputScreen({
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSourceSelect, setShowSourceSelect] = useState(false);
   const [isEditingMemo, setIsEditingMemo] = useState(false);
+  const [isSending, setIsSending] = useState(false);
 
   // Fee estimating skipped - utilizing Sponsored Gas Station instead
 
@@ -98,10 +100,9 @@ export function AmountInputScreen({
           <label className="text-[12px] font-bold text-slate-400 uppercase tracking-wider block">
             Payment Source
           </label>
-          <WalletCard
-            userName={registeredUser?.username || "Guest"}
+          <SourceAccountCard
             onClick={() => setShowSourceSelect(true)}
-            className="!mb-0"
+            className="!mb-0 !border-slate-100 !p-4 !shadow-none"
           />
         </div>
 
@@ -118,7 +119,6 @@ export function AmountInputScreen({
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               className="text-[36px] font-black w-2/3 outline-none text-slate-800 focus:text-slate-900 bg-transparent placeholder-slate-200"
-              autoFocus
             />
             {amount && (
               <button
@@ -306,42 +306,42 @@ export function AmountInputScreen({
               <label className="text-slate-500 text-[14.5px] mb-2 block text-left">
                 Source Account
               </label>
-              <div className="bg-slate-50 border border-slate-100 rounded-[12px] p-4 flex flex-col gap-0.5 text-left">
-                <span className="font-bold text-slate-800 text-[14.5px]">
-                  {selectedSource.name} - {selectedSource.account}
-                </span>
-                <span className="text-slate-500 text-[13px]">
-                  {selectedSource.balance}
-                  <span className="text-[9px] align-top relative top-[1px]">
-                    {selectedSource.dec}
-                  </span>
-                </span>
-              </div>
+              <SourceAccountCard isSelected={false} className="!p-4 !rounded-xl !border-slate-100 bg-slate-50" />
             </div>
 
             {/* Bottom Confirm Action */}
             <div className="px-5 py-5 bg-white shrink-0 shadow-[0_-10px_20px_rgba(0,0,0,0.03)] border-t border-slate-100">
               <button
-                onClick={() => {
+                disabled={isSending}
+                onClick={async () => {
+                  setIsSending(true);
                   if (selectedSource.isArc && numericAmount > 100) {
-                    // Handle biometric requirement hook? It's easier to handle biometric inside App.tsx or just proceed
-                    // But we can just proceed for simplicity, or we can use onNext which passes through `TransferScreen` to `App`.
-                    // Wait, App just does `setViewState('processing')`.
+                    // Bio verification handler space
                   }
-                  onNext(amount, memo);
+                  await onNext(amount, memo);
+                  setIsSending(false);
                 }}
-                className={`w-full text-white py-[14px] rounded-full flex justify-between px-6 items-center transition-all ${selectedSource.isArc ? "bg-slate-900 hover:bg-slate-800 shadow-[0_4px_14px_rgba(63,162,246,0.4)]" : "bg-slate-900 hover:bg-slate-800 shadow-lg"}`}
+                className={`w-full text-white py-[14px] rounded-full flex justify-between px-6 items-center transition-all ${selectedSource.isArc ? "bg-slate-900 hover:bg-slate-800 shadow-[0_4px_14px_rgba(63,162,246,0.4)]" : "bg-slate-900 hover:bg-slate-800 shadow-lg"} ${isSending ? "opacity-90" : ""}`}
               >
-                <span className="font-bold text-[15px]">Continue Transfer</span>
+                <span className="font-bold text-[15px]">
+                  {isSending ? "Initiating Transfer..." : "Continue Transfer"}
+                </span>
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-[16px]">
-                    {selectedSource.isArc
-                      ? `${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(numericAmount)} USDC`
-                      : `Rp ${new Intl.NumberFormat("id-ID").format(numericAmount + (numericAmount >= 100000 ? 0 : 6500))}`}
-                  </span>
-                  <div className="bg-white/20 p-1 rounded-full">
-                    <ArrowRight size={16} strokeWidth={3} />
-                  </div>
+                  {!isSending && (
+                    <>
+                      <span className="font-bold text-[16px]">
+                        {selectedSource.isArc
+                          ? `${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(numericAmount)} USDC`
+                          : `Rp ${new Intl.NumberFormat("id-ID").format(numericAmount + (numericAmount >= 100000 ? 0 : 6500))}`}
+                      </span>
+                      <div className="bg-white/20 p-1 rounded-full flex shrink-0 border-0">
+                        <ArrowRight size={16} strokeWidth={3} />
+                      </div>
+                    </>
+                  )}
+                  {isSending && (
+                    <div className="w-5 h-5 border-[2.5px] border-white/20 border-t-white rounded-full animate-spin"></div>
+                  )}
                 </div>
               </button>
             </div>
@@ -365,41 +365,9 @@ export function AmountInputScreen({
             </div>
 
             <div className="p-5 flex flex-col gap-3 overflow-y-auto w-full pb-10">
-              {sources.map((src) => (
-                <div
-                  key={src.id}
-                  onClick={() => {
-                    setSelectedSource(src);
-                    setShowSourceSelect(false);
-                  }}
-                  className={`flex flex-col p-4 rounded-2xl border-[1.5px] cursor-pointer hover:bg-slate-50 transition-colors w-full ${selectedSource.id === src.id ? "border-slate-900 bg-slate-100/10 shadow-[0_2px_10px_rgba(63,162,246,0.1)]" : "border-slate-200 bg-white shadow-sm"}`}
-                >
-                  <div className="flex justify-between items-start mb-2 w-full">
-                    <span
-                      className={`font-bold text-[15px] text-left ${selectedSource.id === src.id ? "text-slate-800" : "text-slate-800"}`}
-                    >
-                      {src.name}
-                    </span>
-                    {selectedSource.id === src.id && (
-                      <CheckCircle2
-                        size={20}
-                        className="text-slate-800 shrink-0"
-                      />
-                    )}
-                  </div>
-                  <span className="text-slate-500 text-[13px] tracking-wide font-medium text-left w-full block">
-                    {src.account}
-                  </span>
-                  <span
-                    className={`font-bold text-[14px] mt-2 text-left w-full block ${src.isArc ? "text-slate-800" : "text-[#008fcd]"}`}
-                  >
-                    {src.balance}
-                    <span className="text-[10px] align-top relative top-[1px]">
-                      {src.dec}
-                    </span>
-                  </span>
-                </div>
-              ))}
+              <SourceAccountCard 
+                onClick={() => setShowSourceSelect(false)}
+              />
             </div>
           </div>
         </div>
