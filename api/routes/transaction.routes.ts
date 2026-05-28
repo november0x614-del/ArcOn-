@@ -7,6 +7,9 @@ import { logAuditEvent } from "../services/audit.js";
 import { getPlatformConfigs } from "./admin.routes.js";
 import * as crypto from "crypto";
 
+import { executeAppKitSwap, executeAppKitBridge, executeAppKitSend } from "../services/appkit.js";
+import { BridgeChain } from "@circle-fin/app-kit";
+
 const router = express.Router();
 
 router.get("/transactions/:userId", async (req, res) => {
@@ -87,51 +90,32 @@ router.get("/transactions/:userId", async (req, res) => {
 
 router.post("/swap/execute", async (req, res) => {
   try {
-    const { userId, amount, fromToken, toToken, tokenAddress, targetTokenAddress } = req.body;
+    const { userId, amount, fromToken, toToken } = req.body;
     if (await isUserBlocked(userId)) {
       return res.status(403).json({
         error: "Your account has been disabled by the system administrator. All transaction operations are suspended.",
       });
     }
-    const dexAddress = process.env.ARC_DEX_ROUTER || "0x98b8209823e20A5F90Bfa7d0F108253B82CAe807"; // default to placeholder DEX router
     const supabaseAdmin = getSupabaseAdmin();
 
     const { data: userWallet } = await supabaseAdmin
       .from("user_wallets")
-      .select("wallet_address")
+      .select("wallet_id, wallet_address")
       .eq("id", userId)
       .single();
 
-    if (!userWallet?.wallet_address) {
+    if (!userWallet?.wallet_id) {
       throw new Error("User wallet not found");
     }
 
-    const { executeContractTransaction } = await import("../services/circle.js");
-
-    const amountWei = BigInt(Math.floor(parseFloat(amount) * 1_000_000)).toString(); // assuming 6 decimals for example
-
-    const path = [
-      tokenAddress || "0x0000000000000000000000000000000000000000",
-      targetTokenAddress || "0x0000000000000000000000000000000000000000"
-    ];
-
-    // Real Arc DEX interaction (Uniswap V2 style)
-    const result = await executeContractTransaction(
-      supabaseAdmin,
-      userId,
-      dexAddress,
-      "swapExactTokensForTokens(uint256,uint256,address[],address,uint256)",
-      [
-        amountWei, 
-        "0", // min output
-        path, // path
-        userWallet.wallet_address, // recipient
-        Math.floor(Date.now() / 1000) + 60 * 20 // deadline (20 minutes)
-      ],
-      "MEDIUM"
+    const txHash = await executeAppKitSwap(
+      userWallet.wallet_id,
+      parseFloat(amount),
+      fromToken,
+      toToken
     );
 
-    res.status(200).json({ message: "DEX Swap queued", txId: result.txId });
+    res.status(200).json({ message: "App Kit Swap executed", txId: txHash });
   } catch (error: any) {
     console.error("Swap Error", error);
     res.status(500).json({ error: error.message });
@@ -171,29 +155,30 @@ router.post("/transfer/execute", async (req, res) => {
         error: "Your account has been disabled by the system administrator. All transaction operations are suspended.",
       });
     }
-    const supabase = getSupabaseAdmin();
+    const supabaseAdmin = getSupabaseAdmin();
 
-    const result = await executeTransaction(
-      supabase,
-      userId,
-      amount,
-      destinationAddress,
-      "transfer",
-      {
-        intent: "unified_transfer",
-        finality: "deterministic",
-        memo: memo || "",
-      },
+    const { data: userWallet } = await supabaseAdmin
+      .from("user_wallets")
+      .select("wallet_id")
+      .eq("id", userId)
+      .single();
+
+    if (!userWallet?.wallet_id) throw new Error("Wallet not found");
+
+    const txHash = await executeAppKitSend(
+      userWallet.wallet_id,
+      parseFloat(amount),
+      destinationAddress
     );
 
     res.status(200).json({
-      message: "Unified Transfer initiated",
-      txId: result.txId,
+      message: "App Kit Send initiated",
+      txId: txHash,
       status: "pending",
       memo: memo,
     });
   } catch (error: any) {
-    console.error("Unified Transfer Error:", error);
+    console.error("App Kit Send Error:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -405,22 +390,36 @@ router.post("/stake/execute", async (req, res) => {
 router.post("/bridge/cctp", async (req, res) => {
   try {
     const { userId, amount, destinationAddress, destinationDomain } = req.body;
-    const result = await initiateOutboundBridge(
-      getSupabaseAdmin(),
-      userId,
-      destinationDomain || 0,
+    
+    // Convert destination domain to BridgeChain enum map
+    let targetChain = BridgeChain.Ethereum_Sepolia;
+    if (destinationDomain === 6) targetChain = BridgeChain.Base_Sepolia;
+    if (destinationDomain === 1) targetChain = BridgeChain.Avalanche_Fuji;
+    if (destinationDomain === 26) targetChain = BridgeChain.Arc_Testnet;
+
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data: userWallet } = await supabaseAdmin
+      .from("user_wallets")
+      .select("wallet_id")
+      .eq("id", userId)
+      .single();
+
+    if (!userWallet?.wallet_id) throw new Error("Wallet not found");
+
+    const txHash = await executeAppKitBridge(
+      userWallet.wallet_id,
+      parseFloat(amount),
       destinationAddress,
-      amount,
+      targetChain
     );
 
     res.status(200).json({
-      message: "CCTP Outbound Bridge initiated",
-      approveTxId: result.approveTxId,
-      burnTxId: result.burnTxId,
+      message: "CCTP Bridge via App Kit initiated",
+      burnTxId: txHash,
       status: "pending_burn",
     });
   } catch (error: any) {
-    console.error("CCTP Bridge error:", error);
+    console.error("App Kit Bridge error:", error);
     res.status(500).json({ error: error.message });
   }
 });

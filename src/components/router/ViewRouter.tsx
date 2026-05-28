@@ -41,7 +41,7 @@ import { TransactionHistoryScreen } from "../screens/TransactionHistoryScreen";
 import { HomeScreen } from "../screens/HomeScreen";
 import { AdminDashboardScreen } from "../screens/AdminDashboardScreen";
 import { supabase } from "../../lib/supabaseClient";
-import { ArcAppKitAdapter } from "../../services/arc-app-kit/adapter";
+import { BackendClient } from "../../services/api/index";
 import { useContacts } from "../../hooks/useContacts";
 import { ShieldAlert } from "lucide-react";
 
@@ -536,7 +536,7 @@ export const ViewRouter = React.memo(
                 setViewState("processing");
 
                 try {
-                  await ArcAppKitAdapter.sendUnifiedBalance(
+                  await BackendClient.sendUnifiedBalance(
                     numAmount,
                     selectedContact.account,
                     memo,

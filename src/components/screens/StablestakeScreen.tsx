@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
 import { useStore } from "../../store/useStore";
-import { ArcAppKitAdapter } from "../../services/arc-app-kit/adapter";
+import { BackendClient } from "../../services/api/index";
 
 interface StablestakeScreenProps {
   onBack: () => void;
@@ -39,7 +39,7 @@ export function StablestakeScreen({ onBack }: StablestakeScreenProps) {
 
     setIsStaking(true);
     try {
-      await ArcAppKitAdapter.stakeTokens(parseFloat(stakeAmountInput));
+      await BackendClient.stakeTokens(parseFloat(stakeAmountInput));
       displayToast(`Staking ${stakeAmountInput} USDC initiated!`);
       setStakeAmountInput("");
       startSyncPolling(); 

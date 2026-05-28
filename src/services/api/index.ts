@@ -25,11 +25,11 @@ async function apiRequest(
 }
 
 /**
- * ArcAppKitAdapter
+ * BackendClient
  * Abstraction layer for interacting with the backend and Arc Network.
  * Handles intents like bridge, swap, and unified balance transfers.
  */
-export const ArcAppKitAdapter = {
+export const BackendClient = {
   /**
    * Executes a token swap on Arc Testnet.
    */

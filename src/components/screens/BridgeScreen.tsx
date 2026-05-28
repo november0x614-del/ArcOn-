@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { motion } from "motion/react";
 import { useApp } from "../../contexts/AppContext";
-import { ArcAppKitAdapter } from "../../services/arc-app-kit/adapter";
+import { BackendClient } from "../../services/api/index";
 
 interface BridgeScreenProps {
   onBack: () => void;
@@ -92,7 +92,7 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
     try {
       if (mode === "outbound") {
         // Mock outbound bridging using Adapter CCTP
-        await ArcAppKitAdapter.bridgeTokenCCTP(
+        await BackendClient.bridgeTokenCCTP(
           numAmount,
           destinationAddress,
           toNetwork.domain,

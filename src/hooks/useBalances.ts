@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { ArcAppKitAdapter } from "../services/arc-app-kit/adapter";
+import { BackendClient } from "../services/api/index";
 import { useStore } from "../store/useStore";
 
 export const useBalances = () => {
@@ -10,7 +10,7 @@ export const useBalances = () => {
     queryKey: ["balances", registeredUser?.supabaseUid],
     enabled: !!registeredUser?.supabaseUid,
     queryFn: async () => {
-      const data = await ArcAppKitAdapter.getBalance();
+      const data = await BackendClient.getBalance();
 
       // Update global store with the primary balance (usually USDC)
       if (data && typeof data.balance === "number") {

@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useStore } from "../../store/useStore";
-import { ArcAppKitAdapter } from "../../services/arc-app-kit/adapter";
+import { BackendClient } from "../../services/api/index";
 import { useBalances } from "../../hooks/useBalances";
 import { ARC_TESTNET } from "../../lib/arcConfig";
 import { ARC_TOKEN_REGISTRY, syncTokenWithArcScan } from "../../lib/arcRegistry";
@@ -75,7 +75,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
   useEffect(() => {
     const fetchInitData = async () => {
       try {
-        const newTokens = await ArcAppKitAdapter.getTokens();
+        const newTokens = await BackendClient.getTokens();
         setTokens(newTokens);
         if (!fromToken && newTokens.length > 0) setFromToken(newTokens[0]);
         if (!toToken && newTokens.length > 1) setToToken(newTokens[1]);
@@ -89,7 +89,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
   useEffect(() => {
     // Update rate when tokens change
     if (fromToken && toToken) {
-      ArcAppKitAdapter.getLiveRate(fromToken.symbol, toToken.symbol).then(
+      BackendClient.getLiveRate(fromToken.symbol, toToken.symbol).then(
         (res) => setExchangeRate(res.rate),
       );
     }
@@ -136,7 +136,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
                                  getTokenData(selectedFromToken?.symbol || "")?.token?.tokenAddress || 
                                  "";
 
-      const result = await ArcAppKitAdapter.swapTokens(
+      const result = await BackendClient.swapTokens(
         parseFloat(fromAmount),
         fromToken?.symbol || "",
         toToken?.symbol || "",
