@@ -1,15 +1,25 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
+import { useStore } from "../../store/useStore";
+import { ArcAppKitAdapter } from "../../services/arc-app-kit/adapter";
 
 interface StablestakeScreenProps {
   onBack: () => void;
 }
 
 export function StablestakeScreen({ onBack }: StablestakeScreenProps) {
-  const [stakedAmount, setStakedAmount] = useState(0);
-  const [accruedRewards, setAccruedRewards] = useState(0);
+  const { transactions, registeredUser, displayToast, startSyncPolling } = useStore();
   const [stakeAmountInput, setStakeAmountInput] = useState("");
   const [isStaking, setIsStaking] = useState(false);
+
+  // Calculate staked amount from real transactions
+  const stakedAmount = useMemo(() => {
+    return transactions
+      .filter((tx) => tx.type === "stake" && (tx.status === "complete" || tx.status === "success" || tx.status === "pending"))
+      .reduce((sum, tx) => sum + Math.abs(parseFloat(tx.amount)), 0);
+  }, [transactions]);
+
+  const [accruedRewards, setAccruedRewards] = useState(0);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
@@ -22,6 +32,23 @@ export function StablestakeScreen({ onBack }: StablestakeScreenProps) {
       if (interval) clearInterval(interval);
     };
   }, [stakedAmount]);
+
+  const handleStake = async () => {
+    if (!stakeAmountInput || Number(stakeAmountInput) <= 0) return;
+    if (!registeredUser) return;
+
+    setIsStaking(true);
+    try {
+      await ArcAppKitAdapter.stakeTokens(parseFloat(stakeAmountInput));
+      displayToast(`Staking ${stakeAmountInput} USDC initiated!`);
+      setStakeAmountInput("");
+      startSyncPolling(); 
+    } catch (err: any) {
+      displayToast(`Staking failed: ${err.message}`);
+    } finally {
+      setIsStaking(false);
+    }
+  };
 
   return (
     <div className="w-full h-full bg-slate-50 relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
@@ -123,16 +150,7 @@ export function StablestakeScreen({ onBack }: StablestakeScreenProps) {
                 </span>
               </div>
               <button
-                onClick={() => {
-                  if (!stakeAmountInput || Number(stakeAmountInput) <= 0)
-                    return;
-                  setIsStaking(true);
-                  setTimeout(() => {
-                    setStakedAmount((prev) => prev + Number(stakeAmountInput));
-                    setStakeAmountInput("");
-                    setIsStaking(false);
-                  }, 1000);
-                }}
+                onClick={handleStake}
                 disabled={isStaking || !stakeAmountInput}
                 className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold px-6 rounded-2xl text-[14px] active:scale-95 transition-all flex items-center justify-center gap-2 shrink-0 border-0 cursor-pointer shadow-md"
               >
@@ -168,10 +186,9 @@ export function StablestakeScreen({ onBack }: StablestakeScreenProps) {
 
               <button
                 onClick={() => {
-                  setStakedAmount(0);
-                  setAccruedRewards(0);
+                  displayToast("Unstaking functionality coming soon!");
                 }}
-                className="w-full bg-white border border-slate-200 text-red-500 py-3.5 rounded-2xl text-[14px] font-bold hover:bg-red-50 transition-all cursor-pointer shadow-sm mt-2"
+                className="w-full bg-white border border-slate-200 text-slate-400 py-3.5 rounded-2xl text-[14px] font-bold hover:bg-slate-50 transition-all cursor-pointer shadow-sm mt-2"
               >
                 Withdraw & Unstake All Funds
               </button>

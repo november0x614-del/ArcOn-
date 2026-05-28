@@ -76,12 +76,13 @@ export interface Transaction {
     | "swap"
     | "payment"
     | "receive"
-    | "bridge";
+    | "bridge"
+    | "stake";
   title: string;
   amount: string;
   currency: string;
   timestamp: string;
-  status: "pending" | "success" | "failed";
+  status: "pending" | "success" | "failed" | "pending_approval" | "complete";
   txHash?: string;
   explorerUrl?: string;
   internal_ref?: string;

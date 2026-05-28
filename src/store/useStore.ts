@@ -45,6 +45,10 @@ interface AppState {
   setPnlPercentage: (percentage: number) => void;
   transactions: Transaction[];
   fetchTransactions: () => Promise<void>;
+  isSyncing: boolean;
+  lastSyncTime: Date | null;
+  startSyncPolling: () => void;
+  stopSyncPolling: () => void;
   selectedTransaction: Transaction | null;
   setSelectedTransaction: (tx: Transaction | null) => void;
 
@@ -165,31 +169,18 @@ export const useStore = create<AppState>()((set) => ({
   pnlPercentage: 0,
   setPnlPercentage: (percentage) => set({ pnlPercentage: percentage }),
   transactions: [], // Start empty
+  isSyncing: false,
+  lastSyncTime: null,
   fetchTransactions: async () => {
     const user = useStore.getState().registeredUser;
     if (!user?.supabaseUid) return;
 
     try {
       const url = `/api/transactions/${user.supabaseUid}`;
-      useStore.getState().addLog(`Fetching transactions: GET ${url}`);
       const response = await fetch(url);
-      if (!response.ok) {
-        useStore
-          .getState()
-          .addLog(
-            `Transactions fetch failed: ${url} Status: ${response.status}`,
-          );
-        console.error(
-          `Transactions fetch failed with status: ${response.status}`,
-        );
-        return;
-      }
+      if (!response.ok) return;
       const text = await response.text();
-      useStore.getState().addLog(`Transactions response received from ${url}`);
-      if (!text) {
-        useStore.getState().addLog("Transactions response empty");
-        return;
-      }
+      if (!text) return;
       const dbTransactions = JSON.parse(text);
 
       if (!Array.isArray(dbTransactions)) return;
@@ -244,16 +235,50 @@ export const useStore = create<AppState>()((set) => ({
         totalDeposit > 0 ? (pnlValue / totalDeposit) * 100 : 0;
 
       set({ transactions, pnlValue, pnlPercentage });
-      useStore
-        .getState()
-        .addLog(`Transactions updated: ${transactions.length} total`);
     } catch (error: any) {
-      useStore.getState().addLog(`Transactions fetch error: ${error}`);
-      if (error.name !== "TypeError" || error.message !== "Failed to fetch") {
-        console.error("Failed to fetch transactions", error);
-      }
+      console.error("Failed to fetch transactions", error);
     }
   },
+
+  startSyncPolling: () => {
+    const state = useStore.getState();
+    if (state.isSyncing) return;
+
+    set({ isSyncing: true });
+    state.addLog("REAL-TIME SYNC: Active (Industrial Standard)");
+
+    const poll = async () => {
+      const currentState = useStore.getState();
+      if (!currentState.isSyncing) return;
+
+      try {
+        await Promise.all([
+          currentState.fetchBalance(),
+          currentState.fetchTransactions(),
+        ]);
+        set({ lastSyncTime: new Date() });
+      } catch (err) {
+        console.error("Polling failed", err);
+      }
+
+      // If we have pending transactions, keep polling faster. 
+      const hasPending = useStore.getState().transactions.some(tx => tx.status === "pending" || tx.status === "pending_approval");
+      
+      const nextDelay = hasPending ? 3000 : 8000;
+      
+      if (useStore.getState().isSyncing) {
+        setTimeout(poll, nextDelay);
+      }
+    };
+
+    poll();
+  },
+
+  stopSyncPolling: () => {
+    set({ isSyncing: false });
+    useStore.getState().addLog("REAL-TIME SYNC: Dormant");
+  },
+
   selectedTransaction: null,
   setSelectedTransaction: (tx) => set({ selectedTransaction: tx }),
 

@@ -8,8 +8,35 @@ import {
   getArcScanUrl,
 } from "./arcViem.js";
 import { logAuditEvent } from "./audit.js";
-import { getCircleClientInstance } from "./circleClient.js";
+import { getCircleClientInstance, circleApiFetch } from "./circleClient.js";
 import * as crypto from "crypto";
+
+import { getSupabaseAdmin } from "../config/supabase.js";
+
+async function getGasFeeStrategy(): Promise<"SPONSORED" | "USER_PAID_USDC"> {
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "GAS_FEE_STRATEGY")
+      .maybeSingle();
+    return (data?.value as any) || "SPONSORED";
+  } catch (err) {
+    console.error("[CircleService] Failed to fetch gas strategy:", err);
+    return "SPONSORED";
+  }
+}
+
+export async function getTokenDetails(tokenId: string) {
+  try {
+    const response = await circleApiFetch(`/v1/w3s/tokens/${tokenId}`);
+    return response.data?.token;
+  } catch (error) {
+    console.error(`[CircleService] Failed to fetch token details for ${tokenId}:`, error);
+    return null;
+  }
+}
 
 export async function createWallet(supabaseAdmin: any, userId: string) {
   const client = getCircleClientInstance();
@@ -118,8 +145,62 @@ export async function batchCreateWallets(
   return createdWallets;
 }
 
-const ARC_USDC_TOKEN_ID = "15dc2b5d-0994-58b0-bf8c-3a0501148ee8";
+export const ARC_USDC_TOKEN_ID = "15dc2b5d-0994-58b0-bf8c-3a0501148ee8";
 export const HIGH_VALUE_THRESHOLD = 500; // USDC threshold for mandatory admin approval
+
+/**
+ * Interprets Circle errorReason and errorDetails into human-readable messages.
+ * Based on Circle Documentation: Transaction States and Errors.
+ */
+export function interpretCircleError(reason: string, details?: string): string {
+  const reasonMap: Record<string, string> = {
+    // Blockchain Reasons
+    ESTIMATION_ERROR: "Gagal memperkirakan biaya transaksi (Smart contract revert).",
+    INSUFFICIENT_NATIVE_TOKEN: "Saldo gas (token native) tidak mencukupi.",
+    FEE_EXCEEDS_MAX_ALLOWANCE: "Biaya gas melebihi batas maksimal yang diizinkan.",
+    GAS_LIMIT_TOO_LOW: "Batas gas (gas limit) terlalu rendah.",
+    FAILED_ON_CHAIN: "Transaksi gagal dieksekusi di Blockchain.",
+    PAYMASTER_POLICY_EXCEED_MAX_DAILY_TRANSACTIONS: "Batas harian transaksi Gas Station telah tercapai.",
+    PAYMASTER_POLICY_EXCEED_MAX_SPEND_USD_PER_TX: "Transaksi melebihi batas USD per transaksi Gas Station.",
+    PAYMASTER_POLICY_SENDER_IN_BLOCKLIST: "Alamat pengirim masuk dalam daftar blokir Paymaster.",
+    INTERNAL_ERROR: "Terjadi kesalahan internal pada layanan Circle.",
+    // General API Errors
+    "-1": "Terjadi kesalahan yang tidak diketahui saat memproses permintaan API (Something went wrong).",
+    "2": "Parameter API tidak valid atau format permintaan salah (Invalid Entity/Field).",
+    "3": "Akses ditolak. API Key tidak memiliki izin untuk endpoint ini (Forbidden).",
+    // API Codes (155xxx)
+    "155112": "PIN yang Anda masukkan salah. Silakan coba lagi.",
+    "155119": "PIN Anda terkunci sementara karena terlalu banyak percobaan. Mohon tunggu beberapa saat.",
+    "155121": "Sesi transaksi (Challenge) telah kedaluwarsa. Silakan ulangi transaksi Anda.",
+    "155141": "Anda telah mencapai batas percobaan OTP. Silakan tunggu 60 menit.",
+    "155142": "Batas pengiriman OTP harian telah tercapai.",
+  };
+
+  const detailsMap: Record<string, string> = {
+    "ERC20: transfer amount exceeds balance": "Saldo token tidak mencukupi untuk transfer ini.",
+    "Insufficient Balance": "Saldo tidak mencukupi (token atau gas).",
+    "Blacklistable: account is blacklisted": "Alamat terlibat masuk dalam daftar blokir (USDC Contract Blacklist).",
+    "Check allowance": "Izin penggunaan token (Allowance) tidak mencukupi atau tidak ditemukan.",
+    "ERC20: insufficient allowance": "Izin penggunaan token tidak mencukupi.",
+    "Transfer amount must be greater than zero": "Jumlah transfer harus lebih besar dari nol.",
+    "Amount below minimum": "Jumlah terlalu kecil (di bawah batas minimum).",
+    "AA95 out of gas": "Transaksi kehabisan gas saat eksekusi di blockchain.",
+    "ERC20: transfer to the zero address": "Tidak dapat mengirim ke alamat nol (0x0).",
+  };
+
+  // Prioritize meaningful details if they exist in our map
+  if (details) {
+    for (const [key, msg] of Object.entries(detailsMap)) {
+      if (details.includes(key)) return msg;
+    }
+  }
+
+  // Fallback to reason
+  if (reason && reasonMap[reason]) return reasonMap[reason];
+
+  // Raw fallback
+  return details || reason || "Transaksi gagal karena alasan teknis blockchain.";
+}
 
 export async function executeTransaction(
   supabaseAdmin: any,
@@ -184,16 +265,23 @@ export async function executeTransaction(
 
   // Fase 2: Gas Estimation & Balance Checks
   const sourceAddress = walletData.wallet_address as `0x${string}`;
-  const tokenAddress = (metadata.tokenAddress || USDC_ADDRESS) as `0x${string}`;
+  
+  // Use USDC_ADDRESS as default if no valid tokenAddress provided
+  let tokenAddress = USDC_ADDRESS;
+  if (metadata.tokenAddress && metadata.tokenAddress.startsWith("0x")) {
+    tokenAddress = metadata.tokenAddress;
+  }
+  
+  const tokenAddressTyped = tokenAddress as `0x${string}`;
 
   // Fetch token decimals for correct estimation
-  const decimals = await getTokenDecimals(tokenAddress);
+  const decimals = await getTokenDecimals(tokenAddressTyped);
 
   // Amount in 18-decimal internal for logic checks
   const amountInternal = BigInt(Math.floor(amount * 1_000_000)) * 10n ** 12n;
 
   // Fetch balances FIRST
-  const tokenBalanceRaw = await getTokenBalance(sourceAddress, tokenAddress);
+  const tokenBalanceRaw = await getTokenBalance(sourceAddress, tokenAddressTyped);
 
   // Consistently normalize token balance to 18 decimals internal for comparison
   const tokenBalanceInternal = tokenBalanceRaw * 10n ** BigInt(18 - decimals);
@@ -212,25 +300,37 @@ export async function executeTransaction(
 
   // Fase 3 Preview: Memo support (if provided in metadata)
   // Use tokenId for USDC on Arc, otherwise use tokenAddress
-  const useTokenId = !metadata.tokenAddress || metadata.tokenAddress === USDC_ADDRESS;
+  // IMPORTANT: On Arc Testnet, Native USDC is represented by ARC_USDC_TOKEN_ID in Circle SDK
+  const isUsdc = tokenAddressTyped.toLowerCase() === USDC_ADDRESS.toLowerCase();
+  
+  const formattedAmount = amount.toFixed(decimals > 6 ? 6 : decimals);
+  if (parseFloat(formattedAmount) <= 0 && amount > 0) {
+    throw new Error(`Amount is too small for the required token precision (${decimals} decimals).`);
+  }
 
   const txParams: any = {
     idempotencyKey,
     walletId: walletData.wallet_id,
     destinationAddress: validDest,
-    amount: [amount.toFixed(6)], // Standardize to 6 decimals for USDC transfer string
-    fee: { 
-      type: "level", 
-      config: { 
-        feeLevel: "MEDIUM" 
-      } 
-    },
+    amount: [formattedAmount], 
+    feeLevel: "MEDIUM",
   };
 
-  if (useTokenId) {
+  // Determine Gas Strategy
+  const gasStrategy = await getGasFeeStrategy();
+  if (gasStrategy === "USER_PAID_USDC") {
+    // For Circle Paymaster (User pays in USDC), we set the paymaster for USDC
+    // Based on Circle Documentation for supported chains like Arc Testnet
+    txParams.feeConfig = {
+      type: "paymaster",
+      paymasterId: "usdc_paymaster", // Conventional ID for Circle's USDC Paymaster
+    };
+  }
+
+  if (isUsdc) {
     txParams.tokenId = ARC_USDC_TOKEN_ID;
   } else {
-    txParams.tokenAddress = tokenAddress;
+    txParams.tokenAddress = tokenAddressTyped;
   }
 
   // Perform transaction using Developer SDK
@@ -289,26 +389,32 @@ export async function executeAtomicBatchTransfer(
 
   console.log(`[CircleService] Processing batch of ${recipients.length} transfers for user ${userId}`);
 
+  const gasStrategy = await getGasFeeStrategy();
+
   for (let i = 0; i < recipients.length; i++) {
     const rec = recipients[i];
     const validDest = validateDestination(rec.address);
     const idempotencyKey = crypto.randomUUID();
 
     try {
-      // Using createTransaction for standard transfers
-      const response = await client.createTransaction({
+      const txParams: any = {
         idempotencyKey,
         walletId: walletData.wallet_id,
         destinationAddress: validDest,
         amount: [rec.amount.toFixed(6)], 
         tokenId: ARC_USDC_TOKEN_ID, // Use explicit USDC Token ID for Arc Testnet
-        fee: {
-          type: "level",
-          config: {
-            feeLevel: "HIGH", // Higher priority for batch elements
-          },
-        },
-      });
+        feeLevel: "HIGH", // Higher priority for batch elements
+      };
+
+      if (gasStrategy === "USER_PAID_USDC") {
+        txParams.feeConfig = {
+          type: "paymaster",
+          paymasterId: "usdc_paymaster",
+        };
+      }
+
+      // Using createTransaction for standard transfers
+      const response = await client.createTransaction(txParams);
 
       const circleTxId = response.data?.id;
       if (circleTxId) {

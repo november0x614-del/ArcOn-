@@ -99,3 +99,32 @@ ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can view their own audit logs." ON public.audit_logs FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Service role manages audit logs." ON public.audit_logs FOR ALL USING (auth.role() = 'service_role');
 
+-- 6. CREATE SANCTIONS BLOCKLIST TABLE
+CREATE TABLE public.sanctions_blocklist (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    address TEXT UNIQUE NOT NULL,
+    reason TEXT,
+    added_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- RLS for Sanctions Blocklist
+ALTER TABLE public.sanctions_blocklist ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public can view blocklist." ON public.sanctions_blocklist FOR SELECT USING (true);
+CREATE POLICY "Service role manages sanctions." ON public.sanctions_blocklist FOR ALL USING (auth.role() = 'service_role');
+
+-- 7. CREATE APP SETTINGS TABLE
+CREATE TABLE public.app_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Initial values
+INSERT INTO public.app_settings (key, value) VALUES ('GAS_FEE_STRATEGY', 'SPONSORED') ON CONFLICT (key) DO NOTHING;
+
+-- RLS for App Settings
+ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public can view settings." ON public.app_settings FOR SELECT USING (true);
+CREATE POLICY "Service role manages settings." ON public.app_settings FOR ALL USING (auth.role() = 'service_role');
+

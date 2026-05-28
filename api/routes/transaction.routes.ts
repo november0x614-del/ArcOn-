@@ -1,6 +1,6 @@
 import express from "express";
 import { getSupabaseAdmin, isUserBlocked } from "../config/supabase.js";
-import { executeTransaction, executeAtomicBatchTransfer } from "../services/circle.js";
+import { executeTransaction, executeAtomicBatchTransfer, ARC_USDC_TOKEN_ID } from "../services/circle.js";
 import { initiateOutboundBridge, finalizeInboundBridge } from "../services/bridge.js";
 import { getCircleClientInstance } from "../services/circleClient.js";
 import { logAuditEvent } from "../services/audit.js";
@@ -150,13 +150,8 @@ router.post("/payments/create", async (req, res) => {
       walletId: walletId,
       destinationAddress: destinationAddress,
       amount: [amount.toString()],
-      fee: { 
-        type: "level", 
-        config: { 
-          feeLevel: "MEDIUM" 
-        } 
-      },
-      tokenAddress: "",
+      feeLevel: "MEDIUM",
+      tokenId: ARC_USDC_TOKEN_ID, // Ensure we use USDC token ID by default for payments
     } as any);
 
     await getSupabaseAdmin()
@@ -250,6 +245,36 @@ router.post("/purchase/execute", async (req, res) => {
     res.status(200).json({ message: "Purchase queued", txId: result.txId });
   } catch (error: any) {
     console.error("Purchase error", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post("/stake/execute", async (req, res) => {
+  try {
+    const { userId, amount } = req.body;
+    if (await isUserBlocked(userId)) {
+      return res.status(403).json({
+        error: "Your account has been disabled by the system administrator. All transaction operations are suspended.",
+      });
+    }
+    // Industrial Standard: Staking Vault Address (Example Node Validator)
+    const vaultAddress = "0x5555555555555555555555555555555555555555";
+
+    const result = await executeTransaction(
+      getSupabaseAdmin(),
+      userId,
+      amount,
+      vaultAddress,
+      "stake",
+      { 
+        pool: "StableStake Vault #3A",
+        apy: "12.5%",
+        finality: "deterministic" 
+      },
+    );
+    res.status(200).json({ message: "Staking transaction initiated", txId: result.txId });
+  } catch (error: any) {
+    console.error("Stake Error", error);
     res.status(500).json({ error: error.message });
   }
 });

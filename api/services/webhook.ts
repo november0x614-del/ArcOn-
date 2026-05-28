@@ -1,5 +1,6 @@
 import * as crypto from "crypto";
 import { Request, Response } from "express";
+import { interpretCircleError } from "./circle.js";
 
 // Public key cache
 const publicKeyCache: Record<string, { publicKey: string; algorithm: string }> =
@@ -105,15 +106,22 @@ export async function verifyAndProcessWebhook(
 
       // Arc Deterministic Finality: Arc transactions are immutable after 1 confirmation
       // Circle marks COMPLETE when fully settled, we align with that.
+      const isFailed = transfer.status === "FAILED";
       const newStatus =
         transfer.status === "COMPLETE"
           ? "success"
-          : transfer.status === "FAILED"
+          : isFailed
             ? "failed"
             : "pending";
 
       // Arc hardening: extract txHash if available
       const txHash = transfer.transactionHash || data.txHash;
+
+      // Extract error details if failed
+      let errorMessage = null;
+      if (isFailed) {
+        errorMessage = interpretCircleError(transfer.errorReason, transfer.errorDetails);
+      }
 
       // First fetch the existing transaction to update its metadata
       const { data: existingTx } = await supabaseAdmin
@@ -122,7 +130,20 @@ export async function verifyAndProcessWebhook(
         .eq("internal_ref", internalRef)
         .single();
         
-      const updatedMetadata = existingTx?.metadata ? { ...existingTx.metadata, txHash: txHash || existingTx.metadata.txHash } : { txHash };
+      const updatedMetadata = existingTx?.metadata 
+        ? { 
+            ...existingTx.metadata, 
+            txHash: txHash || existingTx.metadata.txHash,
+            errorReason: isFailed ? transfer.errorReason : existingTx.metadata.errorReason,
+            errorDetails: isFailed ? transfer.errorDetails : existingTx.metadata.errorDetails,
+            errorMessage: errorMessage || existingTx.metadata.errorMessage
+          } 
+        : { 
+            txHash, 
+            errorReason: isFailed ? transfer.errorReason : null,
+            errorDetails: isFailed ? transfer.errorDetails : null,
+            errorMessage 
+          };
 
       const { error } = await supabaseAdmin
         .from("transactions")

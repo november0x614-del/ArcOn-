@@ -10,9 +10,10 @@ import {
   RefreshCw,
   ShoppingBag,
   X,
+  Bug,
 } from "lucide-react";
 import { useApp } from "../../contexts/AppContext";
-import { ARC_TESTNET } from "../../lib/arcConfig";
+import { ARC_TESTNET, getTenderlyUrl } from "../../lib/arcConfig";
 
 interface TransactionHistoryScreenProps {
   onBack: () => void;
@@ -162,15 +163,45 @@ export function TransactionHistoryScreen({
                 {selectedTx.amount} {selectedTx.currency}
               </div>
 
-              <div className="flex items-center gap-1.5 text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full mt-2 border border-emerald-100 shadow-sm">
-                <CheckCircle2 size={16} />
-                <span className="text-[13px] font-bold tracking-wide uppercase">
-                  Arc Native Finalized
-                </span>
-              </div>
-              <p className="text-[10px] text-emerald-600/70 mt-1 font-bold tracking-wider uppercase">
-                Deterministic 1-Conf
-              </p>
+              {selectedTx.status === "failed" ? (
+                <div className="flex items-center gap-1.5 text-red-600 bg-red-50 px-3 py-1.5 rounded-full mt-2 border border-red-100 shadow-sm">
+                  <X size={16} />
+                  <span className="text-[13px] font-bold tracking-wide uppercase">
+                    Transaction Failed
+                  </span>
+                </div>
+              ) : selectedTx.status === "success" ? (
+                <div className="flex items-center gap-1.5 text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full mt-2 border border-emerald-100 shadow-sm">
+                  <CheckCircle2 size={16} />
+                  <span className="text-[13px] font-bold tracking-wide uppercase">
+                    Arc Native Finalized
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 text-amber-600 bg-amber-50 px-3 py-1.5 rounded-full mt-2 border border-amber-100 shadow-sm">
+                  <Clock size={16} />
+                  <span className="text-[13px] font-bold tracking-wide uppercase">
+                    Pending Finality
+                  </span>
+                </div>
+              )}
+
+              {selectedTx.status === "failed" && selectedTx.metadata?.errorMessage && (
+                <div className="mt-4 p-3 bg-red-50 border border-red-100 rounded-xl w-full text-left">
+                  <p className="text-[11px] font-bold text-red-600 uppercase tracking-wider mb-1">
+                    Reason for Failure
+                  </p>
+                  <p className="text-[13px] text-red-800 font-medium">
+                    {selectedTx.metadata.errorMessage}
+                  </p>
+                </div>
+              )}
+
+              {selectedTx.status === "success" && (
+                <p className="text-[10px] text-emerald-600/70 mt-1 font-bold tracking-wider uppercase">
+                  Deterministic 1-Conf
+                </p>
+              )}
 
               <div className="w-full h-px bg-slate-100 my-6"></div>
 

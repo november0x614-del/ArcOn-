@@ -52,10 +52,9 @@ const NETWORKS = [
 export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
   const {
     balance,
-    fetchBalance,
-    fetchTransactions,
     displayToast,
     registeredUser,
+    startSyncPolling,
   } = useApp();
   const [step, setStep] = useState<"form" | "processing" | "success">("form");
   const mode = "outbound"; // Forced to outbound for now
@@ -129,8 +128,7 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
       setProcessingPhase("claiming");
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      await fetchBalance();
-      await fetchTransactions();
+      startSyncPolling();
       setStep("success");
     } catch (error: any) {
       console.error("Bridge failed", error);

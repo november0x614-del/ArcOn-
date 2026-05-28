@@ -183,6 +183,26 @@ export const ArcAppKitAdapter = {
   },
 
   /**
+   * Staking functionality.
+   */
+  async stakeTokens(amount: number) {
+    const { registeredUser } = useStore.getState();
+    if (!registeredUser?.supabaseUid) throw new Error("User not registered");
+
+    console.log(`[Adapter] [Stake] Initiating staking: ${amount} USDC`);
+
+    return apiRequest(
+      "/api/transactions/stake/execute",
+      "POST",
+      {
+        userId: registeredUser.supabaseUid,
+        amount,
+      },
+      "Staking failed",
+    );
+  },
+
+  /**
    * Fetches current balances for the registered user.
    */
   async getBalance() {
@@ -218,6 +238,18 @@ export const ArcAppKitAdapter = {
       "GET",
       undefined,
       "Failed to fetch tokens",
+    );
+  },
+
+  /**
+   * Fetches specific token details using Circle ID.
+   */
+  async getTokenDetails(tokenId: string) {
+    return apiRequest(
+      `/api/tokens/${tokenId}`,
+      "GET",
+      undefined,
+      "Failed to fetch token details",
     );
   },
 

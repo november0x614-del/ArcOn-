@@ -154,7 +154,7 @@ export function TransferScreen({
   onSelectContact,
   onBatchTransfer,
 }: TransferScreenProps) {
-  const { fetchTransactions } = useApp();
+  const { startSyncPolling, stopSyncPolling } = useApp();
   const { realContacts: allContacts } = useContacts();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isAddingFavorite, setIsAddingFavorite] = useState(false);
@@ -188,8 +188,9 @@ export function TransferScreen({
   };
 
   React.useEffect(() => {
-    fetchTransactions();
-  }, [fetchTransactions]);
+    startSyncPolling();
+    return () => stopSyncPolling();
+  }, [startSyncPolling, stopSyncPolling]);
 
   const realContacts = React.useMemo(() => {
     return allContacts.filter((c) => !deletedContactIds.includes(c.id));

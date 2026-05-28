@@ -11,6 +11,7 @@ import {
   keccak256,
   type Address,
 } from "viem";
+import { getSupabaseAdmin } from "../config/supabase.js";
 
 /**
  * Arc Testnet Chain Definition
@@ -140,19 +141,42 @@ export function validateDestination(address: string): `0x${string}` {
 }
 
 /**
- * Checks if an address is blocklisted by the Arc Protocol.
+ * Checks if an address is blocklisted. 
+ * Checks both the blockchain (USDC contract) and the local Supabase sanctions_blocklist.
  */
 export async function isBlocklisted(address: string): Promise<boolean> {
+  const typedAddress = address as `0x${string}`;
+  
   try {
-    const blocked = await publicClient.readContract({
+    // 1. Check Local Supabase Blocklist (Admin-controlled)
+    try {
+      const { data: localBlocked } = await getSupabaseAdmin()
+        .from("sanctions_blocklist")
+        .select("id")
+        .eq("address", getAddress(address))
+        .maybeSingle();
+      
+      if (localBlocked) {
+        console.warn(`[ArcViem] Address ${address} is in LOCAL blocklist.`);
+        return true;
+      }
+    } catch (dbErr) {
+      console.warn("[ArcViem] Failed to check local blocklist, falling back to blockchain-only:", dbErr);
+    }
+
+    // 2. Check Blockchain (Native USDC Blacklist)
+    const blockchainBlocked = await publicClient.readContract({
       address: USDC_ADDRESS,
       abi: parseAbi(["function isBlacklisted(address) view returns (bool)"]),
       functionName: "isBlacklisted",
-      args: [address as `0x${string}`],
+      args: [typedAddress],
     } as any);
-    return !!blocked;
+    
+    return !!blockchainBlocked;
   } catch (error) {
     console.error(`[ArcViem] Failed to check blocklist for ${address}:`, error);
+    // If blockchain check fails, we fail safe (block the transaction) if it's production, 
+    // but here we throw so the caller handles it.
     throw new Error(`Could not verify blocklist status for ${address}`);
   }
 }
@@ -241,6 +265,15 @@ export async function getTokenDecimals(tokenAddress: string): Promise<number> {
 export function getArcScanUrl(type: "tx" | "address", value: string): string {
   const baseUrl = "https://testnet.arcscan.app";
   return `${baseUrl}/${type}/${value}`;
+}
+
+/**
+ * Helper to generate Tenderly Debugger URLs for failed transactions.
+ */
+export function getTenderlyDebugUrl(txHash: string): string {
+  // Arc Testnet is not always natively in Tenderly, but we can use the visual debugger 
+  // with the chain ID 5042002 if supported, or provide a generic search link.
+  return `https://dashboard.tenderly.co/tx/arc-testnet/${txHash}`;
 }
 
 /**

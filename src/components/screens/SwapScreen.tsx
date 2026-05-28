@@ -130,11 +130,17 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
     setSwapFinished(false);
 
     try {
+      const selectedFromToken = fromToken;
+      const targetTokenAddress = selectedFromToken?.contractAddress || 
+                                 selectedFromToken?.tokenAddress || 
+                                 getTokenData(selectedFromToken?.symbol || "")?.token?.tokenAddress || 
+                                 "";
+
       const result = await ArcAppKitAdapter.swapTokens(
         parseFloat(fromAmount),
         fromToken?.symbol || "",
         toToken?.symbol || "",
-        getTokenData(fromToken?.symbol || "")?.token?.tokenAddress || "",
+        targetTokenAddress,
       );
 
       setTxHash(result.txId);

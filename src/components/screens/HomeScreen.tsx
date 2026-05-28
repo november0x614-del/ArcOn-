@@ -53,6 +53,10 @@ export const HomeScreen = React.memo(
       readReceiptIds,
       displayToast,
       registeredUser,
+      startSyncPolling,
+      stopSyncPolling,
+      isSyncing,
+      lastSyncTime,
     } = useApp();
 
     const { refreshBalance } = useArc();
@@ -62,20 +66,26 @@ export const HomeScreen = React.memo(
     ).length;
 
     useEffect(() => {
-      refreshBalance();
-      fetchTransactions();
+      startSyncPolling();
 
-      // Refresh when user returns to the app
-      const handleFocus = () => {
-        refreshBalance();
-        fetchTransactions();
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === "visible") {
+          startSyncPolling();
+        } else {
+          stopSyncPolling();
+        }
       };
+
+      const handleFocus = () => startSyncPolling();
       window.addEventListener("focus", handleFocus);
+      document.addEventListener("visibilitychange", handleVisibilityChange);
 
       return () => {
+        stopSyncPolling();
         window.removeEventListener("focus", handleFocus);
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
       };
-    }, [refreshBalance, fetchTransactions]);
+    }, [startSyncPolling, stopSyncPolling]);
 
     const [activeRekeningTab, setActiveRekeningTab] = useState(0);
 
@@ -296,15 +306,15 @@ export const HomeScreen = React.memo(
           >
             <div className="flex items-center gap-1">
               <div className="relative flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400"></span>
+                <span className={`absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 ${isSyncing ? "animate-ping" : ""}`}></span>
+                <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${isSyncing ? "bg-emerald-400" : "bg-emerald-600"}`}></span>
               </div>
               <span className="text-[8px] font-bold text-emerald-400 uppercase tracking-wider leading-none">
-                Arc Testnet Live
+                {isSyncing ? "Syncing..." : "In Sync"}
               </span>
             </div>
             <span className="text-[7px] text-white/60 font-medium mt-0.5">
-              Unified USDC Gas System
+              {lastSyncTime ? `Last update: ${lastSyncTime.toLocaleTimeString()}` : "Arc Testnet Unified Gas"}
             </span>
           </a>
         </header>

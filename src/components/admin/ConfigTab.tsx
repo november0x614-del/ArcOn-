@@ -382,6 +382,52 @@ export function ConfigTab({
           ))}
         </div>
       </div>
+      {/* Category 5: Master Portal PIN */}
+      <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 overflow-hidden">
+        <div className="bg-[#f8fafc] px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+          <div className="flex items-center gap-2.5 text-slate-800">
+            <ShieldCheck size={16} className="text-slate-500" />
+            <h3 className="font-black text-[13px] uppercase tracking-wider text-slate-800">
+              Master Portal Access
+            </h3>
+          </div>
+          <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full font-black uppercase tracking-tight">
+            MASTER PIN
+          </span>
+        </div>
+        <div className="p-6">
+          <div className="flex flex-col gap-4">
+            <div>
+              <label className="text-[12px] font-bold text-slate-600 ml-1 mb-2 block">
+                Administrative Portal PIN (6 Digits)
+              </label>
+              <div className="flex gap-3">
+                <input
+                  type="password"
+                  maxLength={6}
+                  placeholder="Enter new 6-digit numeric PIN"
+                  className="flex-1 bg-[#f8fafc] border border-slate-200/60 text-slate-800 font-mono font-bold text-[18px] px-4 py-3 rounded-2xl outline-none focus:border-slate-800 focus:bg-white transition-all tracking-[0.4em]"
+                  value={adminPinInput}
+                  onChange={(e) => setAdminPinInput(e.target.value.replace(/\D/g, ""))}
+                />
+                <button
+                  disabled={saving || adminPinInput.length !== 6 || adminPinInput === config.adminPin}
+                  onClick={() => onSave({ adminPin: adminPinInput })}
+                  className="px-6 bg-slate-900 text-white rounded-2xl font-black text-[12px] uppercase tracking-wider hover:bg-slate-800 active:scale-95 transition-all shadow-lg shadow-slate-200 disabled:opacity-30"
+                >
+                  {saving ? "Updating..." : "Update PIN"}
+                </button>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-4 bg-amber-50 rounded-2xl border border-amber-100">
+              <ShieldCheck size={18} className="text-amber-600 shrink-0 mt-0.5" />
+              <p className="text-[11px] text-amber-700 font-medium leading-relaxed">
+                <span className="font-black uppercase">Attention:</span> Changing the Master Portal PIN is a critical security action. This PIN is required to unlock the Admin Dashboard from any device. Ensure you have documented the new PIN securely before updating.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -397,4 +397,119 @@ router.post("/approvals/:txId/decide", async (req, res) => {
   }
 });
 
+// --- COMPLIANCE / SANCTIONS BLOCKLIST ---
+
+router.get("/compliance/blocklist", async (_req, res) => {
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+      .from("sanctions_blocklist")
+      .select("*")
+      .order("created_at", { ascending: false });
+    
+    if (error) throw error;
+    res.json(data || []);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post("/compliance/blocklist", async (req, res) => {
+  try {
+    const { address, reason } = req.body;
+    if (!address) return res.status(400).json({ error: "Address is required" });
+
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+      .from("sanctions_blocklist")
+      .insert({
+        address,
+        reason,
+        added_by: "00000000-0000-0000-0000-000000000000" // Admin by default for now
+      })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    await logAdminAction(
+      "00000000-0000-0000-0000-000000000000",
+      "COMPLIANCE_ADDRESS_BLOCKED",
+      address,
+      { reason }
+    );
+
+    res.json({ message: "Address added to blocklist", data });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.delete("/compliance/blocklist/:address", async (req, res) => {
+  try {
+    const { address } = req.params;
+    const supabase = getSupabaseAdmin();
+    const { error } = await supabase
+      .from("sanctions_blocklist")
+      .delete()
+      .eq("address", address);
+    
+    if (error) throw error;
+
+    await logAdminAction(
+      "00000000-0000-0000-0000-000000000000",
+      "COMPLIANCE_ADDRESS_UNBLOCKED",
+      address
+    );
+
+    res.json({ message: "Address removed from blocklist" });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- INFRASTRUCTURE & SETTINGS ---
+
+router.get("/config/fees", async (_req, res) => {
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "GAS_FEE_STRATEGY")
+      .maybeSingle();
+    
+    if (error) throw error;
+    res.json({ strategy: data?.value || "SPONSORED" });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post("/config/fees", async (req, res) => {
+  try {
+    const { strategy } = req.body;
+    if (!["SPONSORED", "USER_PAID_USDC"].includes(strategy)) {
+      return res.status(400).json({ error: "Invalid strategy" });
+    }
+
+    const supabase = getSupabaseAdmin();
+    const { error } = await supabase
+      .from("app_settings")
+      .upsert({ key: "GAS_FEE_STRATEGY", value: strategy }, { onConflict: "key" });
+    
+    if (error) throw error;
+
+    await logAdminAction(
+      "00000000-0000-0000-0000-000000000000",
+      "FEE_STRATEGY_UPDATED",
+      strategy
+    );
+
+    res.json({ message: `Gas strategy updated to ${strategy}` });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

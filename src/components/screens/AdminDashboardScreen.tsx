@@ -9,6 +9,7 @@ import {
   Ban,
   Trash2,
   ShieldAlert,
+  ShieldOff,
   LayoutDashboard,
   Users,
   Wallet,
@@ -29,6 +30,7 @@ import { ConfigTab } from "../admin/ConfigTab";
 import { DesignTab } from "../admin/DesignTab";
 import { EcommerceTab } from "../admin/EcommerceTab";
 import { InfrastructureTab } from "../admin/InfrastructureTab";
+import { ComplianceTab } from "../admin/ComplianceTab";
 
 interface AdminStats {
   totalUsers: number;
@@ -71,7 +73,7 @@ interface AdminConfig {
   backupPhraseEnabled: boolean;
 }
 
-type TabType = "overview" | "users" | "ledger" | "ops" | "infra" | "settings";
+type TabType = "overview" | "users" | "ledger" | "ops" | "infra" | "compliance" | "settings";
 
 export function AdminDashboardScreen({
   onBack,
@@ -253,8 +255,14 @@ export function AdminDashboardScreen({
   };
 
   useEffect(() => {
-    fetchData();
-  }, [activeTab]);
+    fetchPlatformConfig();
+  }, [fetchPlatformConfig]);
+
+  useEffect(() => {
+    if (isAdminAuthorized) {
+      fetchData();
+    }
+  }, [activeTab, isAdminAuthorized]);
 
   const handleToggleBlock = async (
     userId: string,
@@ -359,6 +367,7 @@ export function AdminDashboardScreen({
     { id: "overview", label: "Command Center", icon: LayoutDashboard },
     { id: "users", label: "User & Security", icon: Users },
     { id: "ledger", label: "Financial Ledger", icon: Wallet },
+    { id: "compliance", label: "Compliance & Sanctions", icon: ShieldOff },
     { id: "ops", label: "Operational Ops", icon: Palette },
     { id: "infra", label: "Infrastructure", icon: ShieldAlert },
     { id: "settings", label: "Global Settings", icon: Settings },
@@ -560,6 +569,7 @@ export function AdminDashboardScreen({
                 />
               )}
               {activeTab === "ops" && <EcommerceTab />}
+              {activeTab === "compliance" && <ComplianceTab />}
               {activeTab === "infra" && <InfrastructureTab />}
               {activeTab === "settings" && (
                 <div className="space-y-8 animate-in fade-in duration-500">

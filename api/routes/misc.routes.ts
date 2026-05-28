@@ -3,6 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 import { publicClient } from "../services/arcViem.js";
 import { verifyAndProcessWebhook } from "../services/webhook.js";
 import { getSupabaseAdmin } from "../config/supabase.js";
+import { getTokenDetails } from "../services/circle.js";
 import * as crypto from "crypto";
 
 const router = express.Router();
@@ -97,6 +98,19 @@ router.get("/tokens", async (_req, res) => {
       contractAddress: "0x07f1ea50e30d47376c0dfb3eb853fd40e3a8907a",
     },
   ]);
+});
+
+router.get("/tokens/:id", async (req, res) => {
+  try {
+    const tokenId = req.params.id;
+    const details = await getTokenDetails(tokenId);
+    if (!details) {
+      return res.status(404).json({ error: "Token details not found in Circle infrastructure." });
+    }
+    res.json(details);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 router.post("/chat", async (req, res) => {

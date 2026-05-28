@@ -30,6 +30,10 @@ export const ARC_TESTNET = {
       url:
         import.meta.env.VITE_ARC_EXPLORER_URL || "https://testnet.arcscan.app",
     },
+    tenderly: {
+      name: "Tenderly",
+      url: "https://dashboard.tenderly.co/tx/arc-testnet",
+    },
   },
   contracts: {
     usdc: {
@@ -48,3 +52,10 @@ export const ARC_TESTNET = {
 export const ARC_CHAIN_ID = ARC_TESTNET.chainId;
 export const USDC_SYMBOL = "USDC";
 export const ARC_SYMBOL = "ARC";
+
+/**
+ * Returns a debugging URL for Tenderly.
+ */
+export const getTenderlyUrl = (txHash: string) => {
+  return `https://dashboard.tenderly.co/tx/arc-testnet/${txHash}`;
+};
