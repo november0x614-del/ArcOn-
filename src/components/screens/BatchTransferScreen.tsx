@@ -14,11 +14,13 @@ import { Contact } from "../../types";
 
 interface BatchTransferScreenProps {
   onBack: () => void;
+  onViewReceipt: (txId: string) => void;
   contacts: Contact[];
 }
 
 export function BatchTransferScreen({
   onBack,
+  onViewReceipt,
   contacts,
 }: BatchTransferScreenProps) {
   const {
@@ -29,6 +31,7 @@ export function BatchTransferScreen({
     registeredUser,
     platformConfig,
     fetchPlatformConfig,
+    startSyncPolling,
   } = useApp();
 
   React.useEffect(() => {
@@ -76,9 +79,11 @@ export function BatchTransferScreen({
           (c.number || "").includes(addr),
       );
       const fullAddr = match ? match.number : addr;
+      // USER_ + [4 char start] + ... + [4 char end]
       const name = match
         ? match.name
-        : `Recipient #${recipients.length + idx + 1}`;
+        : `User_${fullAddr.substring(0, 6)}...${fullAddr.substring(fullAddr.length - 4)}`;
+      
       const formattedAddress =
         fullAddr.length > 12
           ? `${fullAddr.substring(0, 6)}...${fullAddr.substring(fullAddr.length - 4)}`
@@ -156,6 +161,9 @@ export function BatchTransferScreen({
       // Update global state
       await fetchBalance();
       await fetchTransactions();
+      
+      // Start polling to self-heal pending transactions
+      startSyncPolling();
 
       setMultiSendStep("success");
     } catch (error: any) {
@@ -421,9 +429,9 @@ export function BatchTransferScreen({
               <button
                 onClick={startProcessing}
                 disabled={recipients.length === 0}
-                className="w-full bg-slate-900 text-white py-4.5 rounded-full font-black text-[16px] shadow-xl shadow-blue-500/20 hover:bg-slate-800 active:scale-[0.98] transition-all disabled:opacity-30 disabled:shadow-none mb-10 border-0 cursor-pointer"
+                className="w-full h-16 bg-[#0B192C] text-white rounded-[22px] font-bold text-[16px] shadow-lg shadow-slate-200 active:scale-[0.97] transition-all disabled:opacity-30 disabled:shadow-none mb-10 border-0 cursor-pointer flex items-center justify-center"
               >
-                REVIEW BATCH SEND
+                Review Batch Send
               </button>
             </motion.div>
           )}
@@ -446,18 +454,29 @@ export function BatchTransferScreen({
 
               <div className="bg-white border border-slate-100 rounded-[28px] p-6 shadow-sm mb-6">
                 <div className="space-y-4 mb-6">
-                  {recipients.slice(0, 3).map((rec) => (
-                    <div key={rec.id} className="flex justify-between items-center">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-slate-800 text-[14px]">{rec.name}</span>
-                        <span className="font-mono text-[11px] text-slate-400">{rec.displayAddress}</span>
+                  {recipients.slice(0, 3).map((rec) => {
+                    const isNameVerified = rec.name && !rec.name.startsWith("User_") && !rec.name.startsWith("Scanned");
+                    return (
+                      <div key={rec.id} className="flex justify-between items-center bg-slate-50/50 p-3 rounded-2xl border border-slate-100/30">
+                        <div className="flex flex-col min-w-0 flex-1 mr-3">
+                          <span className="font-bold text-slate-900 text-[14px] truncate">{rec.name}</span>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="font-mono text-[10px] text-slate-400">{rec.displayAddress}</span>
+                            <span className={`text-[10px] font-bold flex items-center gap-1 ${isNameVerified ? "text-emerald-500" : "text-amber-500"}`}>
+                              {isNameVerified ? "🟢 Connected" : "🟡 Not Linked"}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span className="font-bold text-slate-900 text-[14px]">{parseFloat(rec.amount).toFixed(2)}</span>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase">USDC</span>
+                        </div>
                       </div>
-                      <span className="font-mono font-bold text-slate-900">{parseFloat(rec.amount).toFixed(2)} USDC</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                   {recipients.length > 3 && (
                     <div className="text-center py-2 border-t border-slate-50 mt-2">
-                      <span className="text-[12px] font-bold text-slate-400">
+                      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                         + {recipients.length - 3} more recipients
                       </span>
                     </div>
@@ -490,18 +509,18 @@ export function BatchTransferScreen({
                 </div>
               </div>
 
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-4">
                 <button
                   onClick={executeBatch}
-                  className="w-full bg-slate-900 text-white py-4.5 rounded-full font-black text-[16px] shadow-xl hover:bg-slate-800 active:scale-[0.98] transition-all border-0 cursor-pointer"
+                  className="w-full h-16 bg-[#0B192C] text-white rounded-[22px] font-bold text-[16px] shadow-lg shadow-slate-200 active:scale-[0.97] transition-all border-0 cursor-pointer flex items-center justify-center"
                 >
-                  CONFIRM & EXECUTE
+                  Confirm & Execute
                 </button>
                 <button
                   onClick={() => setMultiSendStep("form")}
-                  className="w-full bg-slate-100 text-slate-600 py-3.5 rounded-full font-bold text-[14px] hover:bg-slate-200 active:scale-[0.98] transition-all border-0 cursor-pointer"
+                  className="w-full py-4 text-slate-400 font-bold text-[14px] hover:text-slate-600 transition-colors uppercase tracking-widest border-0 bg-transparent cursor-pointer"
                 >
-                  Edit Recipients
+                  Edit Recipients List
                 </button>
               </div>
             </motion.div>
@@ -551,66 +570,74 @@ export function BatchTransferScreen({
                 Transaction batch successfully confirmed on Arc Testnet.
               </p>
 
-              <div className="bg-white border border-slate-100 rounded-[28px] p-6 text-left mb-10 shadow-md">
-                <div className="flex justify-between text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-3 mb-4">
+              <div className="bg-white border-[1.5px] border-slate-100 rounded-[32px] p-6 text-left mb-8 shadow-sm overflow-hidden">
+                <div className="flex justify-between items-center text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-4 mb-4">
                   <span>Batch Distribution</span>
-                  <span>Payout</span>
+                  <span className="text-[#005faa] bg-[#005faa]/5 px-2.5 py-1 rounded-lg">Verified Payout</span>
                 </div>
-                <div className="space-y-4">
+                <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1 mb-4 custom-scrollbar">
                   {recipients.map((rec) => (
                     <div
                       key={rec.id}
-                      className="flex justify-between items-center"
+                      className="flex justify-between items-center bg-slate-50/70 p-3.5 rounded-2xl border border-slate-100/50"
                     >
-                      <div className="flex flex-col">
-                        <span className="font-bold text-slate-900 text-[14px]">
-                          {rec.name}
+                      <div className="flex flex-col min-w-0 flex-1 mr-4">
+                        <span className="font-bold text-slate-900 text-[14px] truncate leading-tight">
+                          {rec.name || (rec.address ? `User_${rec.address.slice(0,6)}...${rec.address.slice(-4)}` : "Recipient")}
                         </span>
                         <span
-                          className="font-mono text-[11px] text-slate-400"
+                          className="font-mono text-[10px] text-slate-400 mt-1"
                           title={rec.address}
                         >
-                          {rec.displayAddress}
+                          {rec.address ? `${rec.address.slice(0, 10)}...${rec.address.slice(-6)}` : rec.displayAddress}
                         </span>
                       </div>
-                      <span className="font-mono font-black text-slate-900 text-[15px]">
-                        {parseFloat(rec.amount || "0").toFixed(2)} USDC
-                      </span>
+                      <div className="flex flex-col items-end shrink-0">
+                        <div className="flex items-center gap-1">
+                          <span className="font-black text-slate-900 text-[15px]">
+                            {parseFloat(rec.amount || "0").toFixed(2)}
+                          </span>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase">USDC</span>
+                        </div>
+                        <span className="text-[8px] font-bold text-emerald-500 uppercase tracking-tighter mt-0.5">Confirmed</span>
+                      </div>
                     </div>
                   ))}
                 </div>
-                <div className="flex justify-between items-center border-t border-slate-100 pt-5 mt-5">
+                <div className="flex justify-between items-center border-t border-slate-50 pt-5 mt-2">
                   <span className="text-[12px] font-bold text-slate-500">
                     Total Transferred
                   </span>
-                  <span className="font-mono font-black text-slate-800 text-lg">
-                    {recipients
-                      .reduce(
-                        (acc, curr) => acc + parseFloat(curr.amount || "0"),
-                        0,
-                      )
-                      .toFixed(2)}{" "}
-                    USDC
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-black text-slate-800 text-[18px]">
+                      {recipients
+                        .reduce(
+                          (acc, curr) => acc + parseFloat(curr.amount || "0"),
+                          0,
+                        )
+                        .toFixed(2)}
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">USDC</span>
+                  </div>
                 </div>
-                <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center overflow-hidden">
-                  <span className="text-[12px] font-bold text-slate-500 italic">
+                <div className="mt-4 pt-4 border-t border-slate-50 flex flex-col gap-1.5">
+                  <span className="text-[11px] font-bold text-slate-300 uppercase tracking-wider italic">
                     Circle Tx ID
                   </span>
-                  <span className="font-mono text-emerald-600 font-bold text-[11px] truncate ml-4 uppercase">
-                    {actualTxId || (recipients.length > 0
-                      ? `ARC_BATCH_${Math.floor(Math.random() * 9000) + 1000}_${Math.random().toString(36).substring(2, 10).toUpperCase()}`
-                      : "ARC_BATCH_FINALIZED")}
+                  <span className="font-mono text-[10px] text-[#10b981] bg-[#10b981]/5 px-3 py-2 rounded-xl border border-[#10b981]/10 break-all leading-relaxed font-bold">
+                    {actualTxId || "ARC_BATCH_FINALIZED"}
                   </span>
                 </div>
               </div>
 
-              <button
-                onClick={onBack}
-                className="w-full bg-slate-900 text-white py-4.5 rounded-full font-black text-[16px] shadow-xl hover:bg-black active:scale-[0.98] transition-all"
-              >
-                Back to Dashboard
-              </button>
+              <div className="flex flex-col gap-4">
+                <button
+                  onClick={onBack}
+                  className="w-full h-16 bg-[#0B192C] text-white rounded-[22px] font-bold text-[16px] shadow-lg shadow-slate-200 active:scale-[0.97] transition-all flex items-center justify-center gap-3 border-0 cursor-pointer"
+                >
+                  Back to Dashboard
+                </button>
+              </div>
             </motion.div>
           )}
         </div>

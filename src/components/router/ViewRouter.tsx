@@ -6,43 +6,45 @@ import { LoginScreen } from "../screens/LoginScreen";
 import { RegisterWeb3Screen } from "../screens/RegisterWeb3Screen";
 import { RegisterSuccessScreen } from "../screens/RegisterSuccessScreen";
 import { PasswordScreen } from "../screens/PasswordScreen";
-import { ForgotPasswordScreen } from "../screens/ForgotPasswordScreen";
-import { SettingsScreen } from "../screens/SettingsScreen";
-import { NamaPanggilanScreen } from "../screens/NamaPanggilanScreen";
-import { EmailScreen } from "../screens/EmailScreen";
-import { OtherAccountsScreen } from "../screens/OtherAccountsScreen";
-import { BayarVAScreen } from "../screens/BayarVAScreen";
-import { EcommerceScreen } from "../screens/EcommerceScreen";
-import { MerchantScreen } from "../screens/MerchantScreen";
-import { FaucetScreen } from "../screens/FaucetScreen";
 import { SwapScreen } from "../screens/SwapScreen";
-import { DepositQRScreen } from "../screens/DepositQRScreen";
-import { StablestakeScreen } from "../screens/StablestakeScreen";
-import { DepositOptionsScreen } from "../screens/DepositOptionsScreen";
-import { ReceiveVAScreen } from "../screens/ReceiveVAScreen";
-import { ReceiveQRISScreen } from "../screens/ReceiveQRISScreen";
-import { LogoutScreen } from "../screens/LogoutScreen";
-import { ArcBirdScreen } from "../screens/ArcBirdScreen";
-import { InboxScreen } from "../screens/InboxScreen";
-import { AccountDetailScreen } from "../screens/AccountDetailScreen";
-import { ReceiptScreen } from "../screens/ReceiptScreen";
-import { ManageFavoritesScreen } from "../screens/ManageFavoritesScreen";
-import { ConnectEWalletScreen } from "../screens/ConnectEWalletScreen";
-import { ScanQRScreen } from "../screens/ScanQRScreen";
-import { AIAgentScreen } from "../screens/AIAgentScreen";
-import { TransferScreen } from "../screens/TransferScreen";
-import { NewTransferScreen } from "../screens/NewTransferScreen";
-import { AmountInputScreen } from "../screens/AmountInputScreen";
-import { BatchTransferScreen } from "../screens/BatchTransferScreen";
-import { WithdrawScreen } from "../screens/WithdrawScreen";
-import { BridgeScreen } from "../screens/BridgeScreen";
-import { TransactionHistoryScreen } from "../screens/TransactionHistoryScreen";
 import { HomeScreen } from "../screens/HomeScreen";
-import { AdminDashboardScreen } from "../screens/AdminDashboardScreen";
 import { supabase } from "../../lib/supabaseClient";
 import { BackendClient } from "../../services/api/index";
 import { useContacts } from "../../hooks/useContacts";
-import { ShieldAlert } from "lucide-react";
+import { ShieldAlert, Loader2 } from "lucide-react";
+
+// Lazy load secondary screens to improve initial load and rendering performance
+const ForgotPasswordScreen = React.lazy(() => import("../screens/ForgotPasswordScreen").then(m => ({ default: m.ForgotPasswordScreen })));
+const SettingsScreen = React.lazy(() => import("../screens/SettingsScreen").then(m => ({ default: m.SettingsScreen })));
+const NamaPanggilanScreen = React.lazy(() => import("../screens/NamaPanggilanScreen").then(m => ({ default: m.NamaPanggilanScreen })));
+const EmailScreen = React.lazy(() => import("../screens/EmailScreen").then(m => ({ default: m.EmailScreen })));
+const OtherAccountsScreen = React.lazy(() => import("../screens/OtherAccountsScreen").then(m => ({ default: m.OtherAccountsScreen })));
+const BayarVAScreen = React.lazy(() => import("../screens/BayarVAScreen").then(m => ({ default: m.BayarVAScreen })));
+const EcommerceScreen = React.lazy(() => import("../screens/EcommerceScreen").then(m => ({ default: m.EcommerceScreen })));
+const MerchantScreen = React.lazy(() => import("../screens/MerchantScreen").then(m => ({ default: m.MerchantScreen })));
+const FaucetScreen = React.lazy(() => import("../screens/FaucetScreen").then(m => ({ default: m.FaucetScreen })));
+const DepositQRScreen = React.lazy(() => import("../screens/DepositQRScreen").then(m => ({ default: m.DepositQRScreen })));
+const StablestakeScreen = React.lazy(() => import("../screens/StablestakeScreen").then(m => ({ default: m.StablestakeScreen })));
+const DepositOptionsScreen = React.lazy(() => import("../screens/DepositOptionsScreen").then(m => ({ default: m.DepositOptionsScreen })));
+const ReceiveVAScreen = React.lazy(() => import("../screens/ReceiveVAScreen").then(m => ({ default: m.ReceiveVAScreen })));
+const ReceiveQRISScreen = React.lazy(() => import("../screens/ReceiveQRISScreen").then(m => ({ default: m.ReceiveQRISScreen })));
+const LogoutScreen = React.lazy(() => import("../screens/LogoutScreen").then(m => ({ default: m.LogoutScreen })));
+const ArcBirdScreen = React.lazy(() => import("../screens/ArcBirdScreen").then(m => ({ default: m.ArcBirdScreen })));
+const InboxScreen = React.lazy(() => import("../screens/InboxScreen").then(m => ({ default: m.InboxScreen })));
+const AccountDetailScreen = React.lazy(() => import("../screens/AccountDetailScreen").then(m => ({ default: m.AccountDetailScreen })));
+const ReceiptScreen = React.lazy(() => import("../screens/ReceiptScreen").then(m => ({ default: m.ReceiptScreen })));
+const ManageFavoritesScreen = React.lazy(() => import("../screens/ManageFavoritesScreen").then(m => ({ default: m.ManageFavoritesScreen })));
+const ConnectEWalletScreen = React.lazy(() => import("../screens/ConnectEWalletScreen").then(m => ({ default: m.ConnectEWalletScreen })));
+const ScanQRScreen = React.lazy(() => import("../screens/ScanQRScreen").then(m => ({ default: m.ScanQRScreen })));
+const AIAgentScreen = React.lazy(() => import("../screens/AIAgentScreen").then(m => ({ default: m.AIAgentScreen })));
+const TransferScreen = React.lazy(() => import("../screens/TransferScreen").then(m => ({ default: m.TransferScreen })));
+const NewTransferScreen = React.lazy(() => import("../screens/NewTransferScreen").then(m => ({ default: m.NewTransferScreen })));
+const AmountInputScreen = React.lazy(() => import("../screens/AmountInputScreen").then(m => ({ default: m.AmountInputScreen })));
+const BatchTransferScreen = React.lazy(() => import("../screens/BatchTransferScreen").then(m => ({ default: m.BatchTransferScreen })));
+const WithdrawScreen = React.lazy(() => import("../screens/WithdrawScreen").then(m => ({ default: m.WithdrawScreen })));
+const BridgeScreen = React.lazy(() => import("../screens/BridgeScreen").then(m => ({ default: m.BridgeScreen })));
+const TransactionHistoryScreen = React.lazy(() => import("../screens/TransactionHistoryScreen").then(m => ({ default: m.TransactionHistoryScreen })));
+const AdminDashboardScreen = React.lazy(() => import("../screens/AdminDashboardScreen").then(m => ({ default: m.AdminDashboardScreen })));
 
 const slideFadeVariants: Variants = {
   initial: {
@@ -128,7 +130,11 @@ export const ViewRouter = React.memo(
           });
           if (res.ok) {
             const data = await res.json();
-            setPlatformConfig(data);
+            // Only update if data is actually different to avoid unnecessary re-renders
+            setPlatformConfig((prev: any) => {
+              if (JSON.stringify(prev) === JSON.stringify(data)) return prev;
+              return data;
+            });
           }
         } catch (err: any) {
           if (err.name !== "AbortError") {
@@ -180,7 +186,13 @@ export const ViewRouter = React.memo(
           exit="exit"
           className="w-full h-full flex flex-col transform-gpu will-change-transform animate-in fade-in duration-300 ease-out"
         >
-          {viewState === "splash" && (
+          <React.Suspense fallback={
+            <div className="w-full h-full flex flex-col items-center justify-center bg-slate-50">
+              <Loader2 className="w-8 h-8 text-slate-400 animate-spin" />
+              <p className="mt-4 text-[13px] font-medium text-slate-500">Loading module...</p>
+            </div>
+          }>
+            {viewState === "splash" && (
             <LoginScreen
               hasIdentity={!!registeredUser}
               onShowToast={displayToast}
@@ -565,6 +577,12 @@ export const ViewRouter = React.memo(
             ) : (
               <BatchTransferScreen
                 onBack={() => setViewState("transfer")}
+                onViewReceipt={(txId) => {
+                  setSelectedTransaction({ internal_ref: txId, type: "batchTransfer" } as any);
+                  setReceiptSource("home");
+                  setViewState("receipt");
+                  fetchTransactions();
+                }}
                 contacts={realContacts}
               />
             ))}
@@ -599,12 +617,13 @@ export const ViewRouter = React.memo(
             <TransactionHistoryScreen onBack={() => setViewState("home")} />
           )}
 
-          {viewState === "adminDashboard" && (
-            <AdminDashboardScreen
-              onBack={() => setViewState("home")}
-              onNavigate={setViewState}
-            />
-          )}
+            {viewState === "adminDashboard" && (
+              <AdminDashboardScreen
+                onBack={() => setViewState("home")}
+                onNavigate={setViewState}
+              />
+            )}
+          </React.Suspense>
 
           {viewState === "home" && (
             <HomeScreen

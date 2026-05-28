@@ -233,23 +233,12 @@ export default function App() {
       <div className="bg-[#EAF3FA] h-[100dvh] w-full overflow-hidden flex flex-col">
         {/* Full screen responsive web application wrapper */}
         <div className="w-full h-full bg-[#EAF3FA] relative overflow-hidden flex flex-col animate-in fade-in duration-500">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={viewState}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3, ease: "easeInOut" }}
-              className="w-full h-full relative"
-            >
-              <ViewRouter
-                isLoggingIn={isLoggingIn}
-                loginEmail={loginEmail}
-                setLoginEmail={setLoginEmail}
-                setIsLoggingIn={setIsLoggingIn}
-              />
-            </motion.div>
-          </AnimatePresence>
+          <ViewRouter
+            isLoggingIn={isLoggingIn}
+            loginEmail={loginEmail}
+            setLoginEmail={setLoginEmail}
+            setIsLoggingIn={setIsLoggingIn}
+          />
         </div>
       </div>
     </ArcProvider>

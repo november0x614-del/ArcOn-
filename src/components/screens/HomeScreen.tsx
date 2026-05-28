@@ -61,11 +61,21 @@ export const HomeScreen = React.memo(
 
     const { refreshBalance } = useArc();
 
+    // Critical Performance Guard: Do not render heavy UI until user data is present
+    if (!registeredUser) {
+      return (
+        <div className="flex-1 flex items-center justify-center bg-[#ecf5fc]">
+          <div className="w-12 h-12 border-4 border-slate-900/10 border-t-slate-900 rounded-full animate-spin"></div>
+        </div>
+      );
+    }
+
     const unreadCount = transactions.filter(
       (tx) => !readReceiptIds.includes(tx.id),
     ).length;
 
     useEffect(() => {
+      // Stabilize polling - start only if not already active
       startSyncPolling();
 
       const handleVisibilityChange = () => {
@@ -76,16 +86,22 @@ export const HomeScreen = React.memo(
         }
       };
 
-      const handleFocus = () => startSyncPolling();
+      const handleFocus = () => {
+        if (document.visibilityState === "visible") {
+          startSyncPolling();
+        }
+      };
+      
       window.addEventListener("focus", handleFocus);
       document.addEventListener("visibilitychange", handleVisibilityChange);
 
       return () => {
-        stopSyncPolling();
+        // Only stop if the component is actually unmounting permanently
+        // or let the global store handle session logic
         window.removeEventListener("focus", handleFocus);
         document.removeEventListener("visibilitychange", handleVisibilityChange);
       };
-    }, [startSyncPolling, stopSyncPolling]);
+    }, []); // Run once on mount
 
     const [activeRekeningTab, setActiveRekeningTab] = useState(0);
 
@@ -119,7 +135,7 @@ export const HomeScreen = React.memo(
           });
           setCurrentPromoIndex(newIndex);
         }
-      }, 4000);
+      }, 6000); // Increased from 4s to 6s for better stability
       return () => clearInterval(interval);
     }, [currentPromoIndex]);
 
@@ -187,7 +203,7 @@ export const HomeScreen = React.memo(
             };
           }),
         );
-      }, 2000); // 2 seconds
+      }, 8000); // Reduced frequency from 2s to 8s for performance
 
       return () => clearInterval(interval);
     }, []);
@@ -672,10 +688,7 @@ export const HomeScreen = React.memo(
                       platformConfig.swapEnabled !== false) && (
                       <div
                         onClick={() => {
-                          // Show a toast message to simulate opening an external browser
-                          displayToast(
-                            "Opening external web browser to ArcSwap...",
-                          );
+                          onNavigate("arcswap");
                         }}
                         className="flex items-center gap-3.5 p-3 rounded-2xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-all active:scale-[0.98]"
                       >

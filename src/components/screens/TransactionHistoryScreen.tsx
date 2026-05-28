@@ -253,6 +253,28 @@ export function TransactionHistoryScreen({
                 </div>
               )}
 
+              {/* Batch Recipients Breakdown in History Detail */}
+              {(selectedTx.type === "batchTransfer" || selectedTx.metadata?.isAtomicBatch) && selectedTx.metadata?.recipients && (
+                <div className="w-full bg-slate-50 rounded-2xl p-4 mt-8 border border-slate-100 text-left">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 px-1">
+                    Distribution Summary
+                  </p>
+                  <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1 custom-scrollbar">
+                    {(selectedTx.metadata.recipients as any[]).map((recipient, i) => (
+                      <div key={i} className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-50 shadow-sm">
+                        <div className="flex flex-col">
+                           <span className="text-[12px] font-bold text-slate-800">{recipient.name || recipient.username || "Unknown"}</span>
+                           <span className="text-[9px] font-mono text-slate-400">0x...{recipient.address?.slice(-6)}</span>
+                        </div>
+                        <span className="text-[12px] font-black text-slate-900">
+                          {recipient.amount} <span className="text-[9px] text-slate-400">USDC</span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="w-full h-px bg-slate-50 my-8"></div>
 
               <div className="w-full space-y-4 px-2">
@@ -288,15 +310,6 @@ export function TransactionHistoryScreen({
                   <p className="text-[10px] text-slate-400 font-mono text-left opacity-80 select-all break-all leading-relaxed">
                     {selectedTx.txHash}
                   </p>
-
-                  <a
-                    href={getExplorerUrl(selectedTx.txHash)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full bg-white text-slate-900 font-black py-3.5 rounded-2xl text-[12px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-emerald-400 transition-all active:scale-95"
-                  >
-                    Blockchain Receipt <ExternalLink size={14} />
-                  </a>
                 </div>
               )}
             </div>

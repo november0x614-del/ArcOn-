@@ -291,23 +291,7 @@ export function AmountInputScreen({
                 )}
               </div>
 
-              <div className="h-[1px] bg-slate-100 w-full mb-6"></div>
-
-              {/* Rekening Sumber inside Confirm */}
-              <label className="text-slate-500 text-[14.5px] mb-2 block text-left">
-                Source Account
-              </label>
-              <div className="bg-slate-50 border border-slate-100 rounded-[12px] p-4 flex flex-col gap-0.5 text-left">
-                <span className="font-bold text-slate-800 text-[14.5px]">
-                  {selectedSource.name} - {selectedSource.account}
-                </span>
-                <span className="text-slate-500 text-[13px]">
-                  {selectedSource.balance}
-                  <span className="text-[9px] align-top relative top-[1px]">
-                    {selectedSource.dec}
-                  </span>
-                </span>
-              </div>
+              <div className="h-[1px] bg-slate-100 w-full mb-4 opacity-50"></div>
             </div>
 
             {/* Bottom Confirm Action */}

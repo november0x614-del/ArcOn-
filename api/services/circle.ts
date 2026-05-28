@@ -7,6 +7,7 @@ import {
   USDC_ADDRESS,
   getArcScanUrl,
 } from "./arcViem.js";
+import { encodeFunctionData, parseAbi } from "viem";
 import { logAuditEvent } from "./audit.js";
 import { getCircleClientInstance, circleApiFetch } from "./circleClient.js";
 import * as crypto from "crypto";
@@ -361,14 +362,15 @@ export async function executeTransaction(
 }
 
 /**
- * Executes a Batch Transfer. 
- * While atomic batching via 'calls' is only available on specific chains, 
- * we use a reliable sequential loop with separate idempotency for each transfer.
+ * Executes a Batch Transfer using MSCA (Modular Smart Contract Account) Multi-call.
+ * This ensures TRUE atomicity: if one transfer fails, the whole batch reverts.
+ * Uses Circle's contractExecution endpoint with 'executeBatch' signature.
  */
 export async function executeAtomicBatchTransfer(
   supabaseAdmin: any,
   userId: string,
   recipients: { address: string; amount: number; name?: string }[],
+  platformFee: number = 0
 ) {
   const { data: walletData } = await supabaseAdmin
     .from("user_wallets")
@@ -376,76 +378,137 @@ export async function executeAtomicBatchTransfer(
     .eq("id", userId)
     .single();
 
-  if (!walletData?.wallet_id) throw new Error("No wallet found for batching");
+  if (!walletData?.wallet_id || !walletData?.wallet_address) {
+    throw new Error("No wallet found for batching");
+  }
+
+  // 1. Fetch token decimals and balance for the batch
+  const decimals = await getTokenDecimals(USDC_ADDRESS);
+  const currentBalance = await getTokenBalance(walletData.wallet_address, USDC_ADDRESS);
+  
+  const totalAmountWithFee = recipients.reduce((sum, r) => sum + r.amount, 0) + platformFee;
+  
+  // Convert total amount to bigint for comparison
+  const totalAmountAtomic = BigInt(Math.floor(totalAmountWithFee * Math.pow(10, decimals)));
+
+  if (currentBalance < totalAmountAtomic) {
+    throw new Error(`Insufficient balance for batch. Need ${totalAmountWithFee.toFixed(2)} USDC, have ${(Number(currentBalance) / Math.pow(10, decimals)).toFixed(2)} USDC`);
+  }
+
+  // 2. Validate all destinations and prepare batch data
+  const calls: any[] = [];
+  
+  // A. Add platform fee transfer if applicable
+  if (platformFee > 0) {
+    let treasuryAddress = process.env.PLATFORM_TREASURY_ADDRESS;
+    if (!treasuryAddress) {
+      const { data: treasuryWallet } = await supabaseAdmin
+        .from("user_wallets")
+        .select("wallet_address")
+        .eq("id", "00000000-0000-0000-0000-000000000000")
+        .single();
+      treasuryAddress = treasuryWallet?.wallet_address;
+    }
+
+    if (treasuryAddress) {
+      const feeAtomic = BigInt(Math.floor(platformFee * Math.pow(10, decimals)));
+      const feeCalldata = encodeFunctionData({
+        abi: parseAbi(["function transfer(address to, uint256 amount)"]),
+        functionName: "transfer",
+        args: [treasuryAddress as `0x${string}`, feeAtomic],
+      });
+      calls.push([USDC_ADDRESS, "0", feeCalldata]);
+    }
+  }
+
+  // B. Add recipient transfers
+  for (const rec of recipients) {
+    const validDest = validateDestination(rec.address);
+    if (await isBlocklisted(validDest)) {
+      throw new Error(`Address ${validDest} is blocklisted. Batch aborted.`);
+    }
+
+    const amountAtomic = BigInt(Math.floor(rec.amount * Math.pow(10, decimals)));
+
+    const calldata = encodeFunctionData({
+      abi: parseAbi(["function transfer(address to, uint256 amount)"]),
+      functionName: "transfer",
+      args: [validDest, amountAtomic],
+    });
+
+    // Format for executeBatch: [targetAddress, nativeValue, callData]
+    calls.push([USDC_ADDRESS, "0", calldata]);
+  }
+
+  if (calls.length === 0) throw new Error("No transactions to batch");
+
+  console.log(`[CircleService] Processing Atomic Batch Transfer (${calls.length} calls) for user ${userId}. Total: ${totalAmountWithFee} USDC`);
 
   const client = getCircleClientInstance();
-  const txIds: string[] = [];
+  const idempotencyKey = crypto.randomUUID();
 
-  // Validate all destinations first to avoid partial failures midway
-  for (const rec of recipients) {
-    const valid = validateDestination(rec.address);
-    if (await isBlocklisted(valid)) {
-      throw new Error(`Address ${valid} is blocklisted. Batch aborted.`);
-    }
-  }
-
-  console.log(`[CircleService] Processing batch of ${recipients.length} transfers for user ${userId}`);
-
-  const gasStrategy = await getGasFeeStrategy();
-
-  for (let i = 0; i < recipients.length; i++) {
-    const rec = recipients[i];
-    const validDest = validateDestination(rec.address);
-    const idempotencyKey = crypto.randomUUID();
-
-    try {
-      const txParams: any = {
-        idempotencyKey,
-        walletId: walletData.wallet_id,
-        destinationAddress: validDest,
-        amount: [rec.amount.toFixed(6)], 
-        tokenId: ARC_USDC_TOKEN_ID, // Use explicit USDC Token ID for Arc Testnet
-        fee: {
-          type: "level",
-          config: {
-            feeLevel: "HIGH"
-          }
-        }
-      };
-
-      // Using createTransaction for standard transfers
-      const response = await client.createTransaction(txParams);
-
-      const circleTxId = response.data?.id;
-      if (circleTxId) {
-        txIds.push(circleTxId);
-
-        // Record each transaction in the database
-        await supabaseAdmin.from("transactions").insert({
-          user_id: userId,
-          amount: `-${rec.amount.toFixed(2)}`,
-          type: "transfer",
-          status: "pending",
-          internal_ref: circleTxId,
-          metadata: {
-            recipientName: rec.name || "Batch Recipient",
-            destinationAddress: rec.address,
-            batchIndex: i,
-            totalInBatch: recipients.length,
-            real: true,
-          },
-        });
+  // 3. Execute via Circle contractExecution
+  // Use slightly more compatible function signature if standard executeBatch is picky
+  // Circle's SCS accounts usually follow the executeBatch((address,uint256,bytes)[]) pattern
+  const txParams: any = {
+    idempotencyKey,
+    walletId: walletData.wallet_id,
+    contractAddress: walletData.wallet_address,
+    abiFunctionSignature: "executeBatch((address, uint256, bytes)[])",
+    abiParameters: [calls], 
+    fee: {
+      type: "level",
+      config: {
+        feeLevel: "HIGH"
       }
-    } catch (error: any) {
-      console.error(`[CircleService] Batch element ${i} failed:`, error.message);
-      // We log but continue if some succeed? No, user probably wants to know.
-      // However, since we already triggered preceding ones, we just record the failure.
-      throw new Error(`Batch interrupted at recipient ${i + 1}: ${error.message}`);
     }
-  }
+  };
 
-  return { txId: txIds[0], allTxIds: txIds };
+  try {
+    const response = await client.createContractExecutionTransaction(txParams);
+
+    if (!response.data?.id) {
+      throw new Error("Contract execution failed: No transaction ID returned from Circle API");
+    }
+
+    const circleTxId = response.data.id;
+
+    // 4. Record the ATOMIC transaction 
+    const { error: dbError } = await supabaseAdmin.from("transactions").insert({
+      user_id: userId,
+      amount: `-${totalAmountWithFee.toFixed(2)}`,
+      type: "batchTransfer",
+      status: "pending",
+      internal_ref: circleTxId,
+      description: `Atomic Batch Transfer to ${recipients.length} recipients`,
+      metadata: {
+        recipients,
+        platformFee,
+        real: true,
+        isAtomicBatch: true,
+        atomicity: "MSCA_MULTI_CALL",
+        contractCall: "executeBatch",
+        decimals,
+      },
+    });
+
+    if (dbError) console.error("[CircleService] Failed to record batch in DB:", dbError);
+
+    return { 
+      txId: circleTxId, 
+      status: "pending",
+      recipientCount: recipients.length,
+      totalAmount: totalAmountWithFee
+    };
+  } catch (error: any) {
+    console.error("[CircleService] Atomic Batch Transaction Failed:", error.message);
+    if (error.response?.data) {
+      console.error("[CircleService] API Error Details:", JSON.stringify(error.response.data));
+    }
+    throw new Error(`Atomic Batch Transaction Failed: ${error.message}`);
+  }
 }
+
 
 export async function executeContractTransaction(
   supabaseAdmin: any,
@@ -463,23 +526,27 @@ export async function executeContractTransaction(
 
   if (!walletData?.wallet_id) throw new Error("No wallet found");
 
+  const client = getCircleClientInstance();
   const idempotencyKey = crypto.randomUUID();
 
-  const payload = {
+  const txParams: any = {
     idempotencyKey,
     walletId: walletData.wallet_id,
     contractAddress,
     abiFunctionSignature,
     abiParameters,
-    fee: { type: "level", config: { feeLevel } },
+    fee: {
+      type: "level",
+      config: {
+        feeLevel
+      }
+    }
   };
 
-  const response = await circleApiFetch("/v1/w3s/developer/transactions/contractExecution", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+  const response = await client.createContractExecutionTransaction(txParams);
 
   const circleTxId = response.data?.id;
+  if (!circleTxId) throw new Error("Contract execution failed: No transaction ID returned");
 
   const { error } = await supabaseAdmin.from("transactions").insert({
     user_id: userId,

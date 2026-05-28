@@ -83,10 +83,11 @@ export function ScanQRScreen({ onBack, onScanResult }: ScanQRScreenProps) {
         scannerRef.current
           .stop()
           .then(() => {
+            const shortAddr = `${walletAddress.substring(0, 6)}...${walletAddress.substring(walletAddress.length - 4)}`;
             onScanResult({
               id: `scanned_${Date.now()}`,
-              name: "Scanned Address",
-              number: `${walletAddress.substring(0, 6)}...${walletAddress.substring(walletAddress.length - 4)}`,
+              name: `User_${shortAddr}`,
+              number: shortAddr,
               avatar: "S",
               account: walletAddress, // Used by AmountInputScreen
               network: "Arc Testnet",
@@ -96,10 +97,11 @@ export function ScanQRScreen({ onBack, onScanResult }: ScanQRScreenProps) {
           .catch((e) => {
             console.error("Failed to stop scanner", e);
             // Force navigation anyway
+            const shortAddr = `${walletAddress.substring(0, 6)}...${walletAddress.substring(walletAddress.length - 4)}`;
             onScanResult({
               id: `scanned_${Date.now()}`,
-              name: "Scanned Address",
-              number: `${walletAddress.substring(0, 6)}...${walletAddress.substring(walletAddress.length - 4)}`,
+              name: `User_${shortAddr}`,
+              number: shortAddr,
               avatar: "S",
               account: walletAddress,
               network: "Arc Testnet",

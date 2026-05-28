@@ -55,6 +55,11 @@ export function NewTransferScreen({
     return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
   };
 
+  const getFallbackName = (addr: string) => {
+    if (!addr || addr.length < 10) return addr;
+    return `User_${formatShortAddress(addr)}`;
+  };
+
   // Auto-verify address when pasted/typed
   useEffect(() => {
     const cleanAddress = accountNumber.trim();
@@ -106,17 +111,19 @@ export function NewTransferScreen({
     }, 800);
   };
 
-  const finalName = addressVerified && receiverName ? receiverName : formatShortAddress(accountNumber);
+  const finalName = addressVerified && receiverName ? receiverName : getFallbackName(accountNumber);
   
-  const initials = addressVerified && receiverName
-    ? receiverName
+  const initials = finalName
+    ? finalName
         .trim()
+        .replace(/@/g, "")
+        .replace(/User_/g, "")
         .split(" ")
         .map((n) => n[0])
         .join("")
         .substring(0, 2)
         .toUpperCase()
-    : "";
+    : "??";
 
   return (
     <div className="absolute inset-0 w-full h-full bg-slate-50 relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
@@ -225,12 +232,22 @@ export function NewTransferScreen({
                       style={getIdenticonGradient(accountNumber)}
                     ></div>
                     <div className="flex flex-col text-left">
-                      <span className="font-mono font-bold text-slate-800 text-[15px]">
-                        {formatShortAddress(accountNumber)}
+                      <span className="font-bold text-slate-900 text-[15px]">
+                        {finalName}
                       </span>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                        External Network
-                      </span>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                          External Network
+                        </span>
+                        <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-white border border-slate-100 shadow-sm">
+                           <span className={addressVerified ? "text-[8px] text-emerald-500" : "text-[8px] text-amber-500"}>
+                             {addressVerified ? "🟢" : "🟡"}
+                           </span>
+                           <span className={`text-[9px] font-bold uppercase tracking-tight ${addressVerified ? "text-emerald-600" : "text-amber-600"}`}>
+                             {addressVerified ? "Connected" : "Not Linked"}
+                           </span>
+                        </div>
+                      </div>
                     </div>
                   </>
                 )}

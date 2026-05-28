@@ -124,6 +124,55 @@ export async function fetchUnifiedBalance(
     }
   }
 
+  // Calculate simulated ledger-based balances across ALL popular tokens
+  const simulatedBalances: Record<string, number> = {
+    USDC: 0,
+    EURC: 0,
+    cirBTC: 0,
+    MINT: 0,
+  };
+
+  try {
+    const { data: txs } = await supabaseAdmin
+      .from("transactions")
+      .select("amount, type, status, metadata")
+      .eq("user_id", userId)
+      .eq("status", "success");
+
+    if (txs) {
+      for (const tx of txs) {
+        const amt = parseFloat(tx.amount || "0");
+        const metadata = tx.metadata || {};
+        const fromTokenSym = metadata.fromToken || "USDC";
+        const toTokenSym = metadata.toToken || "";
+
+        if (tx.type === "swap") {
+          const fromAmount = Math.abs(amt);
+          const toAmount = parseFloat(metadata.toAmount || "0") || (fromAmount * parseFloat(metadata.exchangeRate || "1"));
+          
+          simulatedBalances[fromTokenSym] = (simulatedBalances[fromTokenSym] || 0) - fromAmount;
+          if (toTokenSym) {
+            simulatedBalances[toTokenSym] = (simulatedBalances[toTokenSym] || 0) + toAmount;
+          }
+        } else if (tx.type === "receive" || tx.type === "deposit") {
+          const tokenSym = metadata.token || metadata.symbol || "USDC";
+          simulatedBalances[tokenSym] = (simulatedBalances[tokenSym] || 0) + amt;
+        } else {
+          const tokenSym = metadata.token || metadata.symbol || "USDC";
+          simulatedBalances[tokenSym] = (simulatedBalances[tokenSym] || 0) + amt; // amt is negative for debits
+        }
+      }
+    }
+  } catch (e) {
+    console.error("[BalanceService] Simulated tx calculation failed:", e);
+  }
+
+  // Elevate USDC balance if simulated balance is higher (bypass onchain zero limits)
+  const usdcSimulated = simulatedBalances["USDC"] || 0;
+  if (finalUsdcAmount < usdcSimulated) {
+    finalUsdcAmount = usdcSimulated;
+  }
+
   // Push consolidated USDC entry
   const consolidatedUSDC = {
     token: {
@@ -135,6 +184,36 @@ export async function fetchUnifiedBalance(
     },
     amount: finalUsdcAmount.toString(),
   };
+
+  // Merge simulated balances for other popular tokens (EURC, cirBTC, MINT)
+  const popularTokens = [
+    { symbol: "EURC", name: "Euro Coin", decimals: 6 },
+    { symbol: "cirBTC", name: "Circle Bitcoin", decimals: 8 },
+    { symbol: "MINT", name: "Arc Mintable Assets", decimals: 18 }
+  ];
+
+  for (const token of popularTokens) {
+    const simAmt = simulatedBalances[token.symbol] || 0;
+    const existingIndex = otherBalances.findIndex((b: any) => b.token?.symbol === token.symbol);
+    
+    if (existingIndex >= 0) {
+      const currentAmt = parseFloat(otherBalances[existingIndex].amount || "0");
+      if (currentAmt < simAmt) {
+        otherBalances[existingIndex].amount = simAmt.toString();
+      }
+    } else if (simAmt > 0) {
+      otherBalances.push({
+        token: {
+          symbol: token.symbol,
+          name: token.name,
+          decimals: token.decimals,
+          blockchain: "ARC-TESTNET",
+          isNative: false,
+        },
+        amount: simAmt.toString(),
+      });
+    }
+  }
 
   const finalBalances = [consolidatedUSDC, ...otherBalances];
   tokenBalances.length = 0;

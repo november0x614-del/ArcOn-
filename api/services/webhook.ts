@@ -113,22 +113,28 @@ export async function verifyAndProcessWebhook(
     const data = payload.notification;
     console.log(`Webhook received: ${type}`);
 
-    if (type === "transfers.updated" || type === "transfers.created") {
+    if (
+      type === "transfers.updated" || 
+      type === "transfers.created" || 
+      type === "contractExecutions.updated" ||
+      type === "transactions.updated"
+    ) {
       const transfer = data;
       const internalRef = transfer.id;
 
       // Arc Deterministic Finality: Arc transactions are immutable after 1 confirmation
-      // Circle marks COMPLETE when fully settled, we align with that.
-      const isFailed = transfer.status === "FAILED";
-      const newStatus =
-        transfer.status === "COMPLETE"
+      // Circle marks COMPLETE when fully settled, but CONFIRMED is enough for Web3 UX.
+      const isFailed = transfer.status === "FAILED" || transfer.status === "CANCELLED";
+      const isSuccess = transfer.status === "COMPLETE" || transfer.status === "CONFIRMED";
+      
+      const newStatus = isSuccess
           ? "success"
           : isFailed
             ? "failed"
             : "pending";
 
       // Arc hardening: extract txHash if available
-      const txHash = transfer.transactionHash || data.txHash;
+      const txHash = transfer.transactionHash || transfer.txHash || data.txHash || data.transactionHash || data.txId;
 
       // Extract error details if failed
       let errorMessage = null;

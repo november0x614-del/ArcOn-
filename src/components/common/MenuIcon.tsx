@@ -14,7 +14,7 @@ export interface MenuIconProps {
   onClick?: () => void;
 }
 
-export function MenuIcon({
+export const MenuIcon = React.memo(function MenuIcon({
   icon,
   label,
   color,
@@ -56,4 +56,4 @@ export function MenuIcon({
       </span>
     </div>
   );
-}
+});

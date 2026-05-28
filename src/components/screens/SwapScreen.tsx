@@ -8,6 +8,10 @@ import {
   Zap,
   Search,
   X,
+  Copy,
+  ExternalLink,
+  AlertCircle,
+  HelpCircle,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useStore } from "../../store/useStore";
@@ -53,6 +57,20 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
   const [txHash, setTxHash] = useState("");
   const [slippage, setSlippage] = useState<string>("0.5");
   const [showDetails, setShowDetails] = useState(false);
+
+  const [swapError, setSwapError] = useState<string | null>(null);
+  const [showFaucetGuide, setShowFaucetGuide] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyAddress = () => {
+    const address = registeredUser?.walletAddress || localStorage.getItem("arc_wallet_address") || "";
+    if (address) {
+      navigator.clipboard.writeText(address);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      useStore.getState().displayToast("Alamat dompet berhasil disalin!");
+    }
+  };
 
   const getTokenData = (symbol: string) => {
     return balanceData?.allBalances?.find(
@@ -130,6 +148,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
     setSwapFinished(false);
 
     try {
+      setSwapError(null);
       const selectedFromToken = fromToken;
       const targetTokenAddress = selectedFromToken?.contractAddress || 
                                  selectedFromToken?.tokenAddress || 
@@ -151,6 +170,8 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
     } catch (error: any) {
       console.error(error);
       setIsSwapping(false);
+      setSwapError(error.message || "Swap failed!");
+      setShowFaucetGuide(true);
       useStore.getState().displayToast(error.message || "Swap failed!");
     }
   };
@@ -182,7 +203,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
             <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6 shadow-sm border-4 border-white">
               <Check size={40} className="text-green-500" strokeWidth={3} />
             </div>
-            <h2 className="text-[24px] font-extrabold text-white mb-2">
+            <h2 className="text-[24px] font-extrabold text-slate-900 mb-2">
               Swap Confirmed
             </h2>
             <a
@@ -477,6 +498,88 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded w-fit ${platformConfig?.gasSubsidyEnabled ? "text-emerald-600 bg-emerald-50" : "text-slate-600 bg-slate-50"}`}>
                   {platformConfig?.gasSubsidyEnabled ? "Free" : "Native"}
                 </span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Interactive Faucet Guide */}
+        <div className="mt-4 mb-4">
+          <button
+            type="button"
+            onClick={() => setShowFaucetGuide(!showFaucetGuide)}
+            className="w-full flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition-all text-left group"
+          >
+            <div className="flex items-center gap-2">
+              <HelpCircle size={18} className="text-slate-500 group-hover:text-slate-800 transition-colors" />
+              <div>
+                <div className="text-[13px] font-bold text-slate-800">Butuh Gas fee atau Token Testnet?</div>
+                <div className="text-[11px] text-slate-500 font-medium">Panduan Klaim Faucet Real Arc Testnet</div>
+              </div>
+            </div>
+            <ChevronDown size={16} className={`text-slate-400 transition-transform duration-300 ${showFaucetGuide ? "rotate-180" : ""}`} />
+          </button>
+
+          {showFaucetGuide && (
+            <div className="mt-2.5 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm animate-in slide-in-from-top-3 duration-300 text-left">
+              {swapError && (
+                <div className="bg-amber-50 border border-amber-200/60 rounded-xl p-3 mb-4 flex items-start gap-2 text-left">
+                  <AlertCircle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <span className="text-[12.5px] font-bold text-slate-800 block">Penyebab Transaksi Reverted:</span>
+                    <span className="text-[11px] text-slate-600 font-mono leading-relaxed mt-1 block">
+                      Blockchain menolak simulasi swap. Hal ini umumnya karena dompet Anda belum memiliki koin Gas Native <b>(ARC)</b> untuk membayar biaya transaksi, atau saldo <b>USDC</b> di dompet on-chain asli masih kosong (diperlukan untuk divalidasi oleh smart contract).
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <h3 className="font-bold text-[13.5px] text-slate-900 mb-3 flex items-center gap-1.5 uppercase tracking-wide">
+                <Zap size={14} className="text-amber-500 fill-amber-505" />
+                Langkah Klaim Faucet Resmi Circle (Real)
+              </h3>
+
+              <div className="space-y-4 text-[12.5px] text-slate-600">
+                <div>
+                  <span className="font-bold text-slate-800 block mb-1">1. Salin Alamat Dompet Developer Anda:</span>
+                  <div className="bg-slate-50 border border-slate-150 p-2.5 rounded-lg flex items-center justify-between font-mono text-[12px] text-slate-800">
+                    <span className="truncate select-all pr-2">
+                      {registeredUser?.walletAddress || localStorage.getItem("arc_wallet_address") || "0x..."}
+                    </span>
+                    <button
+                      onClick={handleCopyAddress}
+                      className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-slate-200 text-slate-700 rounded-md hover:bg-slate-50 transition-colors active:scale-95 duration-200"
+                    >
+                      <Copy size={13} />
+                      <span className="text-[11px] font-bold">{copied ? "Disalin" : "Salin"}</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <span className="font-bold text-slate-800 block mb-1">2. Kunjungi Portal Faucet Resmi Circle:</span>
+                  <p className="leading-relaxed mb-2 text-slate-500 text-[11.5px]">
+                    Gunakan Circle Faucet untuk secara otomatis mendanai dompet developer Anda dengan USDC testnet dan native gas token.
+                  </p>
+                  <a
+                    href="https://faucet.circle.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 text-[12px] shadow-sm transition-all duration-300 active:scale-[0.98]"
+                  >
+                    Buka Circle Faucet
+                    <ExternalLink size={14} />
+                  </a>
+                </div>
+
+                <div className="border-t border-slate-100 pt-3">
+                  <span className="font-bold text-slate-800 block mb-1">3. Konfigurasi di Halaman Faucet:</span>
+                  <ul className="list-disc list-inside space-y-1.5 text-slate-500 leading-relaxed pl-1 text-[11.5px]">
+                    <li>Pilih Blockchain: <span className="font-bold text-slate-800">ARC (Testnet)</span></li>
+                    <li>Tempelkan alamat dompet Anda yang telah Anda salin di langkah 1.</li>
+                    <li>Claim Token Gas & USDC. Token akan langsung tiba dalam beberapa detik secara real-time on-chain!</li>
+                  </ul>
+                </div>
               </div>
             </div>
           )}

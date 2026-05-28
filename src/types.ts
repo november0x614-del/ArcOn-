@@ -77,7 +77,8 @@ export interface Transaction {
     | "payment"
     | "receive"
     | "bridge"
-    | "stake";
+    | "stake"
+    | "batchTransfer";
   title: string;
   amount: string;
   currency: string;
@@ -102,8 +103,12 @@ export interface Transaction {
     escrowAddress?: string;
     senderName?: string;
     isAsync?: boolean;
-    real?: string;
+    real?: string | boolean;
     txHash?: string;
+    isAtomicBatch?: boolean;
+    isBatch?: boolean;
+    recipients?: any[];
+    platformFee?: number;
   };
 }
 

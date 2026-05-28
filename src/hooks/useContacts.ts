@@ -28,16 +28,27 @@ export function useContacts() {
 
       const newResolved: Record<string, string> = { ...resolvedNames };
       
-      // Resolve each address that needs resolving
-      for (const address of Array.from(addressesToResolve)) {
+      // Resolve all addresses in parallel for performance
+      const resolvePromises = Array.from(addressesToResolve).map(async (address) => {
         try {
           const data = await BackendClient.resolveAddress(address);
           if (data && (data.username || data.name)) {
              newResolved[address.toLowerCase()] = `@${data.username || data.name}`;
+          } else {
+            // Fallback for unregistered addresses: User_0x1234...ABCD
+            const start = address.slice(0, 6);
+            const end = address.slice(-4);
+            newResolved[address.toLowerCase()] = `User_${start}...${end}`;
           }
-        // eslint-disable-next-line no-empty
-        } catch(e) {}
-      }
+        } catch(e) {
+          // Fallback on error: User_0x1234...ABCD
+          const start = address.slice(0, 6);
+          const end = address.slice(-4);
+          newResolved[address.toLowerCase()] = `User_${start}...${end}`;
+        }
+      });
+
+      await Promise.all(resolvePromises);
       
       setResolvedNames(newResolved);
     }
@@ -67,13 +78,14 @@ export function useContacts() {
             baseName ||
             (tx.type === "payment"
               ? `Merchant ${tx.id.substring(0, 4)}`
-              : tx.metadata?.destinationAddress); // Fallback to address
+              : recipientAddress ? `User_${recipientAddress.substring(0,6)}...${recipientAddress.substring(recipientAddress.length-4)}` : "Unknown"); 
 
           if (recipientAddress && recipientName) {
             const cleanAddr = recipientAddress.trim();
             const initials = recipientName.trim()
               ? recipientName
                   .replace(/@/g, "")
+                  .replace(/User_/g, "")
                   .trim()
                   .split(" ")
                   .map((n: string) => n[0])

@@ -86,7 +86,7 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
   const myUsernameDisplay = registeredUser?.username ? `@${registeredUser.username}` : "My Arc Wallet";
 
   const isDeposit = tx?.type === "receive" || tx?.type === "deposit" || tx?.metadata?.direction === "inbound";
-  const isBatch = tx?.type === "batchTransfer";
+  const isBatch = tx?.type === "batchTransfer" || tx?.metadata?.isAtomicBatch === true || tx?.metadata?.isBatch === true;
 
   const formatAddrShort = (addr: string) => addr ? `0x${addr.substring(2, 6)}...${addr.slice(-4)}` : "";
 
@@ -128,7 +128,9 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
     : myUsernameDisplay;
 
   let receiverName = "Arc Network";
-  if (isDeposit) {
+  if (isBatch) {
+    receiverName = "Batch Multi-Transfer";
+  } else if (isDeposit) {
     receiverName = myUsernameDisplay;
   } else if (resolvedReceiverUsername) {
     receiverName = `@${resolvedReceiverUsername}`;
@@ -167,31 +169,8 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
             </h2>
           </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={() =>
-              handleCopy(JSON.stringify(tx, null, 2), "JSON Metadata")
-            }
-            className="p-2 hover:bg-white/10 rounded-full transition-all cursor-pointer border-0 bg-transparent text-slate-300 hover:text-white"
-            title="Download JSON Metadata"
-          >
-            <Download size={19} />
-          </button>
-          {(!isPending || tx?.metadata?.explorerUrl || (tx?.metadata as any)?.txHash) && (
-            <button
-              onClick={() =>
-                window.open(
-                  tx?.metadata?.explorerUrl ||
-                    `https://testnet.arcscan.app/tx/${txHash}`,
-                  "_blank",
-                )
-              }
-              className="p-2 hover:bg-white/10 rounded-full transition-all cursor-pointer border-0 bg-transparent text-slate-300 hover:text-white"
-              title="Buka di Explorer"
-            >
-              <Share2 size={19} />
-            </button>
-          )}
+        <div className="flex items-center gap-1.5 opacity-0 pointer-events-none">
+          <HelpCircle size={19} />
         </div>
       </div>
 
@@ -389,16 +368,24 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
 
                 {/* Fee Breakdown */}
                 <div className="flex flex-col gap-1.5 pt-4 border-t border-slate-50">
+                   {tx?.metadata?.platformFee && (
+                     <div className="flex justify-between items-center mb-1">
+                        <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">Platform Fee</span>
+                        <span className="text-[14px] font-medium text-slate-800">
+                          {tx.metadata.platformFee} USDC
+                        </span>
+                     </div>
+                   )}
                    <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">Estimated Fees</span>
+                      <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">Network Fee</span>
                       <span className="text-[14px] font-bold text-slate-800">
                         {isBatch ? "0.05" : "0.01"} USDC
                       </span>
                    </div>
                    <p className="text-[10px] text-slate-400 font-medium italic">
                      {isBatch 
-                       ? "*Includes batch processing gas optimization and platform convenience fee."
-                       : "*Network execution fee for single transfer."}
+                       ? "*Termasuk efisiensi gas batch SCA dan biaya kemudahan platform."
+                       : "*Biaya eksekusi jaringan untuk transfer tunggal."}
                    </p>
                 </div>
               </div>
