@@ -89,9 +89,9 @@ export async function executeAppKitBridge(
  */
 export async function executeAppKitSwap(
   walletAddress: string,
-  amount: number,
-  fromToken: any,
-  toToken: any
+  amount: string,
+  tokenIn: string,
+  tokenOut: string
 ) {
   const { appKit, adapter } = getAppKit();
   
@@ -101,9 +101,9 @@ export async function executeAppKitSwap(
       chain: "Arc_Testnet",
       address: walletAddress
     },
-    amountIn: amount.toString(),
-    tokenIn: fromToken,
-    tokenOut: toToken,
+    amountIn: amount,
+    tokenIn,
+    tokenOut,
   } as any);
   return txHash;
 }

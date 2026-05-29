@@ -117,31 +117,30 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
       return;
     }
 
-    const PLATFORM_FEE_PERCENT = platformConfig ? parseFloat(platformConfig.swapFee || "0.1") : 0.1;
-    const usdcBalance = getTokenBalance("USDC");
-    const requiredMinUsdc = 0.10; // Basic check for platform fee context
-
-    if (usdcBalance < requiredMinUsdc) {
-      useStore.getState().displayToast(`Insufficient USDC balance for Platform Fee (~${PLATFORM_FEE_PERCENT}% of nominal).`);
-      return;
-    }
-
     setIsSwapping(true);
     setSwapFinished(false);
 
     try {
-      const selectedFromToken = fromToken;
-      const targetTokenAddress = selectedFromToken?.contractAddress || 
-                                 selectedFromToken?.tokenAddress || 
-                                 getTokenData(selectedFromToken?.symbol || "")?.token?.tokenAddress || 
-                                 "";
+      // Call the new backend swap route
+      const response = await fetch("/swap/execute", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: registeredUser?.supabaseUid,
+          amountIn: fromAmount,
+          tokenIn: fromToken?.symbol || "",
+          tokenOut: toToken?.symbol || "",
+        }),
+      });
 
-      const result = await BackendClient.swapTokens(
-        parseFloat(fromAmount),
-        fromToken?.symbol || "",
-        toToken?.symbol || "",
-        targetTokenAddress,
-      );
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Swap failed");
+      }
+
+      const result = await response.json();
 
       setTxHash(result.txId);
       setIsSwapping(false);
@@ -266,7 +265,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
         <div className="relative mb-6">
           {/* From */}
           <div
-            className={`bg-white p-5 rounded-[24px] shadow-sm border transition-all duration-300 relative z-10 ${isSwapping ? "border-blue-400/50 shadow-blue-100/50 opacity-80" : "border-slate-200 focus-within:border-slate-400"}`}
+            className={`bg-white p-5 rounded-2xl shadow-sm border transition-all duration-300 relative z-10 ${isSwapping ? "border-blue-400/50 shadow-blue-100/50 opacity-80" : "border-slate-200 focus-within:border-slate-400"}`}
           >
             <div className="flex justify-between items-center mb-4">
               <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
@@ -345,7 +344,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
 
           {/* To */}
           <div
-            className={`bg-white p-5 rounded-[24px] shadow-sm border mt-1.5 transition-all duration-300 relative z-10 ${isSwapping ? "border-orange-400/50 shadow-orange-100/50 opacity-80" : "border-slate-200 gap-2"}`}
+            className={`bg-white p-5 rounded-2xl shadow-sm border mt-1.5 transition-all duration-300 relative z-10 ${isSwapping ? "border-orange-400/50 shadow-orange-100/50 opacity-80" : "border-slate-200 gap-2"}`}
           >
             <div className="flex justify-between items-center mb-4">
               <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
@@ -493,7 +492,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
               fromToken?.symbol === toToken?.symbol
             }
             onClick={handleSwap}
-            className={`w-full font-bold py-4 rounded-full transition-all flex items-center justify-center gap-3 text-[15px] active:scale-95
+            className={`w-full font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-3 text-[15px] active:scale-[0.98]
               ${
                 !fromAmount ||
                 parseFloat(fromAmount) === 0 ||

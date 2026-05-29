@@ -1,6 +1,6 @@
 import express from "express";
 import { getSupabaseAdmin, isUserBlocked } from "../config/supabase.js";
-import { executeTransaction, executeAtomicBatchTransfer, ARC_USDC_TOKEN_ID } from "../services/circle.js";
+import { executeTransaction, executeAtomicBatchTransfer, ARC_USDC_TOKEN_ID, createWallet } from "../services/circle.js";
 import { initiateOutboundBridge, finalizeInboundBridge } from "../services/bridge.js";
 import { getCircleClientInstance } from "../services/circleClient.js";
 import { logAuditEvent } from "../services/audit.js";
@@ -92,7 +92,7 @@ router.get("/transactions/:userId", async (req, res) => {
 
 router.post("/swap/execute", async (req, res) => {
   try {
-    const { userId, amount, fromToken, toToken } = req.body;
+    const { userId, amountIn, tokenIn, tokenOut } = req.body;
     if (await isUserBlocked(userId)) {
       return res.status(403).json({
         error: "Your account has been disabled by the system administrator. All transaction operations are suspended.",
@@ -106,15 +106,25 @@ router.post("/swap/execute", async (req, res) => {
       .eq("id", userId)
       .single();
 
-    if (!userWallet?.wallet_address) {
-      throw new Error("User wallet not found");
+    let walletToUse = userWallet;
+
+    if (!walletToUse?.wallet_address) {
+      console.log(`[SwapRoute] Wallet not found for user ${userId}, attempting lazy creation...`);
+      try {
+        const newWallet = await createWallet(supabaseAdmin, userId);
+        walletToUse = { wallet_id: newWallet.walletId, wallet_address: newWallet.address };
+        console.log(`[SwapRoute] Wallet created successfully for user ${userId}: ${newWallet.address}`);
+      } catch (createErr: any) {
+        console.error(`[SwapRoute] Failed to create wallet during swap for user ${userId}:`, createErr);
+        throw new Error("User wallet not found and creation failed");
+      }
     }
 
     const txHash = await executeAppKitSwap(
-      userWallet.wallet_address,
-      parseFloat(amount),
-      fromToken,
-      toToken
+      walletToUse.wallet_address,
+      amountIn,
+      tokenIn,
+      tokenOut
     );
 
     res.status(200).json({ message: "App Kit Swap executed", txId: txHash });

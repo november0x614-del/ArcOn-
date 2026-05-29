@@ -497,20 +497,20 @@ export const HomeScreen = React.memo(
               </section>
 
               {/* Favorite Transactions Section */}
-              <section className="bg-white rounded-[24px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] mb-3 lg:mb-0 mx-4 lg:mx-0 border border-slate-50/50">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-[17px] font-bold text-slate-800 tracking-tight">
+              <section className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 mb-6 lg:mb-0 mx-4 lg:mx-0">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-[18px] font-bold text-slate-900 tracking-tight">
                     Favorite Transactions
                   </h2>
                   <button
-                    className="text-slate-800 p-2 hover:bg-slate-100 rounded-full transition-all active:scale-95 border-0 bg-transparent"
+                    className="text-slate-500 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 p-2.5 rounded-full transition-all active:scale-95 border-0"
                     onClick={() => onNavigate("manageFavorites")}
                   >
-                    <Settings2 size={18} strokeWidth={2} />
+                    <Settings2 size={18} strokeWidth={2.5} />
                   </button>
                 </div>
 
-                <div className="grid grid-cols-4 gap-y-5 gap-x-2">
+                <div className="grid grid-cols-4 gap-y-8 gap-x-4">
                   {filteredShortcuts
                     .filter((item) => item.label !== "DApp Browser")
                     .map((item) => (
