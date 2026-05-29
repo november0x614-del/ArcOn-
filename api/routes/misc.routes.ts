@@ -246,6 +246,47 @@ Please respond concisely and helpfully in Indonesian. Use the system state conte
   }
 });
 
+router.post("/auth/cleanup-unconfirmed", async (req, res) => {
+  try {
+    const { email, username } = req.body;
+    if (!email || !username) {
+      return res.status(400).json({ error: "Email and username are required for pre-flight cleanup." });
+    }
+
+    const supabase = getSupabaseAdmin();
+
+    // 1. Temukan profil berdasarkan username
+    const { data: profileByUsername } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("username", username)
+      .maybeSingle();
+
+    if (profileByUsername) {
+      const { data: { user }, error: getUserError } = await supabase.auth.admin.getUserById(profileByUsername.id);
+      if (!getUserError && user && !user.email_confirmed_at) {
+        console.log(`[Cleanup] Menghapus user unconfirmed dengan username '${username}' (ID: ${user.id})`);
+        await supabase.auth.admin.deleteUser(user.id);
+      }
+    }
+
+    // 2. Temukan user berdasarkan email jika statusnya belum terkonfirmasi
+    const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
+    if (!listError && users) {
+      const matchByEmail = users.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
+      if (matchByEmail && !matchByEmail.email_confirmed_at) {
+        console.log(`[Cleanup] Menghapus user unconfirmed dengan email '${email}' (ID: ${matchByEmail.id})`);
+        await supabase.auth.admin.deleteUser(matchByEmail.id);
+      }
+    }
+
+    res.json({ success: true, message: "Stale unconfirmed credentials cleaned up successfully." });
+  } catch (error: any) {
+    console.error("Cleanup unconfirmed user error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.post("/webhook/simulate", async (req, res) => {
   try {
     const { userId, amount } = req.body;

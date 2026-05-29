@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ArrowLeft, Mail, ShieldCheck, CheckCircle2, Lock } from "lucide-react";
+import { ArrowLeft, Mail, ShieldCheck, CheckCircle2, Lock, Check } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 
 interface ForgotPasswordScreenProps {
@@ -15,6 +15,14 @@ export function ForgotPasswordScreen({ onBack, initialEmail = "" }: ForgotPasswo
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Password complexity checks
+  const hasLowercase = /[a-z]/.test(newPassword);
+  const hasUppercase = /[A-Z]/.test(newPassword);
+  const hasDigit = /[0-9]/.test(newPassword);
+  const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"|<>?,./`~]/.test(newPassword);
+  const isLongEnough = newPassword.length >= 6;
+  const isPasswordValid = hasLowercase && hasUppercase && hasDigit && hasSpecial && isLongEnough;
 
   const handleSendOtp = async () => {
     if (!email || !email.includes("@")) {
@@ -64,8 +72,8 @@ export function ForgotPasswordScreen({ onBack, initialEmail = "" }: ForgotPasswo
   };
 
   const handleUpdatePassword = async () => {
-    if (newPassword.length < 6) {
-      setError("Password must be at least 6 characters.");
+    if (!isPasswordValid) {
+      setError("Password must meet all security requirements.");
       return;
     }
     
@@ -207,7 +215,7 @@ export function ForgotPasswordScreen({ onBack, initialEmail = "" }: ForgotPasswo
 
           {step === 3 && (
             <div className="animate-in slide-in-from-right duration-300 flex-1 flex flex-col">
-              <p className="text-[14.5px] text-slate-500 mb-8 mt-2 text-center">
+              <p className="text-[14.5px] text-slate-500 mb-6 mt-2 text-center font-medium">
                 Create a new strong password for your account.
               </p>
 
@@ -217,12 +225,58 @@ export function ForgotPasswordScreen({ onBack, initialEmail = "" }: ForgotPasswo
                   placeholder="New Password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full bg-[#f8fafc] border-[1.5px] border-slate-200 focus:border-slate-900 rounded-2xl py-4 px-5 pl-12 text-slate-800 text-[15px] font-semibold placeholder:text-slate-400 focus:outline-none transition-all"
+                  className="w-full bg-[#f8fafc] border-[1.5px] border-slate-200 focus:border-slate-900 rounded-2xl py-4 px-5 pl-12 pr-12 text-slate-800 text-[15px] font-semibold placeholder:text-slate-400 focus:outline-none transition-all"
                 />
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                   <Lock size={20} strokeWidth={2} />
                 </div>
+                {isPasswordValid && (
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-green-500 animate-in zoom-in duration-200">
+                    <CheckCircle2 size={20} />
+                  </div>
+                )}
               </div>
+
+              {/* Password Requirements Checklist */}
+              {newPassword.length > 0 && (
+                <div className="bg-slate-50 border-[1.5px] border-slate-200/60 rounded-2xl p-4 mt-1 mb-4 space-y-2.5 animate-in slide-in-from-top-2 duration-200 text-left">
+                  <p className="text-[12px] font-bold text-slate-800 tracking-tight">
+                    PASSWORD SECURITY REQUIREMENTS:
+                  </p>
+                  <div className="grid grid-cols-1 gap-2 text-[12.5px]">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${isLongEnough ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}>
+                        <Check size={11} className={isLongEnough ? "stroke-[3]" : ""} />
+                      </div>
+                      <span className={isLongEnough ? "text-green-700 font-medium" : "text-slate-500"}>Minimal 6 karakter</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${hasLowercase ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}>
+                        <Check size={11} className={hasLowercase ? "stroke-[3]" : ""} />
+                      </div>
+                      <span className={hasLowercase ? "text-green-700 font-medium" : "text-slate-500"}>Satu huruf kecil (a-z)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${hasUppercase ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}>
+                        <Check size={11} className={hasUppercase ? "stroke-[3]" : ""} />
+                      </div>
+                      <span className={hasUppercase ? "text-green-700 font-medium" : "text-slate-500"}>Satu huruf besar (A-Z)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${hasDigit ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}>
+                        <Check size={11} className={hasDigit ? "stroke-[3]" : ""} />
+                      </div>
+                      <span className={hasDigit ? "text-green-700 font-medium" : "text-slate-500"}>Satu angka (0-9)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${hasSpecial ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}>
+                        <Check size={11} className={hasSpecial ? "stroke-[3]" : ""} />
+                      </div>
+                      <span className={hasSpecial ? "text-green-700 font-medium" : "text-slate-500"}>Satu karakter spesial (cth: !, @, #, $, %, etc.)</span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {error && (
                 <div className="bg-red-50 border border-red-100 p-3 rounded-xl mb-4">
@@ -235,8 +289,8 @@ export function ForgotPasswordScreen({ onBack, initialEmail = "" }: ForgotPasswo
               <div className="mt-auto pt-6">
                 <button
                   onClick={handleUpdatePassword}
-                  disabled={isLoading || newPassword.length < 6}
-                  className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl transition-all shadow-[0_8px_20px_rgba(63,162,246,0.25)] flex justify-center items-center gap-2 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed border-0"
+                  disabled={isLoading || !isPasswordValid}
+                  className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl transition-all shadow-[0_8px_20px_rgba(15,23,42,0.15)] flex justify-center items-center gap-2 active:scale-[0.98] border-0 disabled:opacity-50 disabled:bg-slate-300 disabled:shadow-none disabled:cursor-not-allowed"
                 >
                   {isLoading ? "Updating..." : "Update Password"}
                 </button>

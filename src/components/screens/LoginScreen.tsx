@@ -30,8 +30,8 @@ export function LoginScreen({
         <div className="absolute bottom-[-30px] left-[-30px] w-[150px] h-[150px] bg-blue-400/30 rounded-full blur-xl"></div>
 
         <div className="z-10 bg-white/20 p-4 rounded-3xl backdrop-blur-md mb-6 border border-white/30 shadow-[0_8px_32px_rgba(0,0,0,0.1)]">
-          <div className="bg-white text-slate-800 p-3 rounded-2xl shadow-sm">
-            <Wallet size={36} strokeWidth={2.5} />
+          <div className="bg-white rounded-2xl shadow-sm w-[80px] h-[80px] overflow-hidden">
+            <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
           </div>
         </div>
 

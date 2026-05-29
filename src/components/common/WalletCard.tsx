@@ -1,5 +1,7 @@
 import React from "react";
 import { Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { useShallow } from "zustand/react/shallow";
+import { useStore } from "../../store/useStore";
 import { useApp } from "../../contexts/AppContext";
 import { UIDCardTheme } from "../../types";
 import { THEME_STYLES } from "../../utils/theme";
@@ -24,7 +26,16 @@ export const WalletCard = React.memo(function WalletCard({
     pnlPercentage,
     registeredUser,
     balance: unifiedBalance,
-  } = useApp();
+  } = useStore(
+    useShallow((state) => ({
+      showBalance: state.showBalance,
+      setShowBalance: state.setShowBalance,
+      pnlValue: state.pnlValue,
+      pnlPercentage: state.pnlPercentage,
+      registeredUser: state.registeredUser,
+      balance: state.balance,
+    }))
+  );
 
   const balanceValue =
     typeof unifiedBalance === "number"

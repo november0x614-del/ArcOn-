@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { useShallow } from "zustand/react/shallow";
+import { useStore } from "../../store/useStore";
 import { ViewState, ShortcutItem } from "../../types";
 import { useApp } from "../../contexts/AppContext";
 import { useArc } from "../../contexts/ArcContext";
@@ -57,7 +59,21 @@ export const HomeScreen = React.memo(
       stopSyncPolling,
       isSyncing,
       lastSyncTime,
-    } = useApp();
+    } = useStore(
+      useShallow((state) => ({
+        transactions: state.transactions,
+        visibleTokenCodes: state.visibleTokenCodes,
+        setVisibleTokenCodes: state.setVisibleTokenCodes,
+        fetchTransactions: state.fetchTransactions,
+        readReceiptIds: state.readReceiptIds,
+        displayToast: state.displayToast,
+        registeredUser: state.registeredUser,
+        startSyncPolling: state.startSyncPolling,
+        stopSyncPolling: state.stopSyncPolling,
+        isSyncing: state.isSyncing,
+        lastSyncTime: state.lastSyncTime,
+      }))
+    );
 
     const { refreshBalance } = useArc();
 

@@ -37,12 +37,12 @@ export function PasswordScreen({
         </button>
 
         <div className="z-10 bg-white/20 p-4 rounded-3xl backdrop-blur-md mb-4 border border-white/30 shadow-[0_8px_32px_rgba(0,0,0,0.1)]">
-          <div className="bg-white text-slate-800 p-3 rounded-2xl shadow-sm">
-            <Wallet size={36} strokeWidth={2.5} />
+          <div className="bg-white rounded-2xl shadow-sm w-[80px] h-[80px] overflow-hidden">
+            <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
           </div>
         </div>
 
-        <h1 className="text-2xl font-bold text-slate-800 tracking-tight mb-1 text-center drop-shadow-sm">
+        <h1 className="text-2xl font-bold text-white tracking-tight mb-1 text-center drop-shadow-sm">
           Welcome Back
         </h1>
         <p className="text-blue-100 text-center text-[13px] font-medium px-6 leading-relaxed">

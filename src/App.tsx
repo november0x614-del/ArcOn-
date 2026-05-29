@@ -1,5 +1,6 @@
 import React from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { useShallow } from "zustand/react/shallow";
 import { useApp } from "./contexts/AppContext";
 import { useStore } from "./store/useStore";
 import { supabase } from "./lib/supabaseClient";
@@ -17,7 +18,17 @@ export default function App() {
     registeredUser,
     setRegisteredUser,
     resetState,
-  } = useApp();
+  } = useStore(
+    useShallow((state) => ({
+      viewState: state.viewState,
+      setViewState: state.setViewState,
+      fetchBalance: state.fetchBalance,
+      fetchTransactions: state.fetchTransactions,
+      registeredUser: state.registeredUser,
+      setRegisteredUser: state.setRegisteredUser,
+      resetState: state.resetState,
+    }))
+  );
 
   const handleUserSession = React.useCallback(
     async (user: any) => {

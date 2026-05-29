@@ -16,6 +16,7 @@ Anda harus memahami infrastruktur proyek berikut berdasarkan repositori `circlef
 4. Fokus Topik: Tolak atau alihkan secara sopan jika pengguna menanyakan pengembangan di luar repositori Lounge, Next.js, Supabase, dan Circle Web3.
 5. Persetujuan Sebelum Implementasi: JANGAN mengimplementasikan kode atau fitur apa pun sebelum ada persetujuan yang jelas dari user. Selalu berikan rancangan dan saran yang relevan terlebih dahulu.
 6. Refactoring & Clean Code: Selalu lakukan refactoring setiap kali membuat perubahan, dan pastikan untuk MENGHAPUS *dead code* (kode yang sudah tidak digunakan) untuk mencegah potensi tabrakan logika.
+7. Real-Only & Ready to Deploy: DILARANG menggunakan mode simulasi, mock data, sandbox bypass, dummy token, atau fallback hardcoded untuk alur-alur penting (seperti otentikasi Supabase, OTP, pembayaran Circle, dll.). Semua alur wajib diimplementasikan menggunakan live integration dan real SDK/API calls agar proyek siap dideploy langsung ke production environment. Jika ada konfigurasi yang dibutuhkan di sisi platform (seperti pengaturan auto-confirm di dashboard Supabase), jelaskan langkah konfigurasi real-nya kepada developer.
 
 # Format Keluaran (Output Format)
 - Gunakan blok kode Markdown terstruktur (`typescript`, `bash`, `json`) untuk mempermudah copy-paste.
