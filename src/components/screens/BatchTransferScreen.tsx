@@ -31,7 +31,6 @@ export function BatchTransferScreen({
     registeredUser,
     platformConfig,
     fetchPlatformConfig,
-    startSyncPolling,
   } = useApp();
 
   React.useEffect(() => {
@@ -79,11 +78,9 @@ export function BatchTransferScreen({
           (c.number || "").includes(addr),
       );
       const fullAddr = match ? match.number : addr;
-      // USER_ + [4 char start] + ... + [4 char end]
       const name = match
         ? match.name
-        : `User_${fullAddr.substring(0, 6)}...${fullAddr.substring(fullAddr.length - 4)}`;
-      
+        : `Recipient #${recipients.length + idx + 1}`;
       const formattedAddress =
         fullAddr.length > 12
           ? `${fullAddr.substring(0, 6)}...${fullAddr.substring(fullAddr.length - 4)}`
@@ -161,9 +158,6 @@ export function BatchTransferScreen({
       // Update global state
       await fetchBalance();
       await fetchTransactions();
-      
-      // Start polling to self-heal pending transactions
-      startSyncPolling();
 
       setMultiSendStep("success");
     } catch (error: any) {
@@ -462,9 +456,7 @@ export function BatchTransferScreen({
                           <span className="font-bold text-slate-900 text-[14px] truncate">{rec.name}</span>
                           <div className="flex items-center gap-1.5 mt-0.5">
                             <span className="font-mono text-[10px] text-slate-400">{rec.displayAddress}</span>
-                            <span className={`text-[10px] font-bold flex items-center gap-1 ${isNameVerified ? "text-emerald-500" : "text-amber-500"}`}>
-                              {isNameVerified ? "🟢 Connected" : "🟡 Not Linked"}
-                            </span>
+                            <span className={`text-[8px] ${isNameVerified ? "text-emerald-500" : "text-amber-500"}`}>{isNameVerified ? "🟢" : "🟡"}</span>
                           </div>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">

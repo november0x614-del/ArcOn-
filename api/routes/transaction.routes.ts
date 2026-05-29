@@ -25,41 +25,31 @@ router.get("/transactions/:userId", async (req, res) => {
     const transactions = data || [];
 
     // Real-time self-healing fallback check:
-    // Pull status directly from Circle for any client-side pending transactions.
+    // Pull status directly from Circle for any client-side pending transactions 
+    // whose internal reference matches a valid Circle API UUID identifier, ensuring state consistency.
     const pendingTxs = transactions.filter(
       (tx: any) =>
-        tx.status === "pending" && (tx.internal_ref || tx.tx_hash)
+        tx.status === "pending" &&
+        tx.internal_ref &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tx.internal_ref)
     );
 
     if (pendingTxs.length > 0) {
       const client = getCircleClientInstance();
       const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
       
-      const batchToProcess = pendingTxs.slice(0, 10); // Check up to 10 pending per request
+      const batchToProcess = pendingTxs.slice(0, 5); // Limit self-healing to 5 max per request to prevent timeouts
       
       for (const tx of batchToProcess) {
         try {
-          let transaction: any = null;
-          
-          if (tx.internal_ref && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tx.internal_ref)) {
-            const circleTx = await client.getTransaction({ id: tx.internal_ref });
-            transaction = circleTx.data?.transaction;
-          } else if (tx.tx_hash) {
-             // Fallback for cases where we have a hash but status is still pending
-             // We can search for the transaction by hash via Circle if their API supports it, 
-             // or just check for confirmation. Since getTransaction usually requires Circle ID, 
-             // if we only have tx_hash, we'd need another endpoint.
-             // But for now, we focus on valid internal_ref.
-          }
-
-          if (!transaction) continue;
-          
-          const circleStatus = transaction.status;
+          const circleTx = await client.getTransaction({ id: tx.internal_ref });
+          const transaction = circleTx.data?.transaction as any;
+          const circleStatus = transaction?.status;
           let finalStatus = "pending";
 
-          if (circleStatus === "COMPLETE" || circleStatus === "CONFIRMED") {
+          if (circleStatus === "COMPLETE") {
             finalStatus = "success";
-          } else if (circleStatus === "FAILED" || circleStatus === "CANCELLED") {
+          } else if (circleStatus === "FAILED") {
             finalStatus = "failed";
           }
 
@@ -69,25 +59,23 @@ router.get("/transactions/:userId", async (req, res) => {
               txHash: transaction?.txHash || tx.metadata?.txHash || transaction?.id,
               errorReason: transaction?.errorReason || null,
               errorDetails: transaction?.errorDetails || null,
-              circleStatus: circleStatus, // Preserve original status for debugging
               selfHealed: true,
-              healedAt: new Date().toISOString()
             };
 
             await supabase
               .from("transactions")
               .update({ 
                 status: finalStatus, 
-                tx_hash: transaction?.txHash || tx.tx_hash,
+                tx_hash: circleTx.data?.transaction?.txHash || tx.tx_hash,
                 metadata: updatedMetadata 
               })
               .eq("id", tx.id);
 
-            // Update the local reference object for immediate response
+            // Update the local reference array so the frontend immediately receives the updated status in response to this fetch.
             tx.status = finalStatus;
-            tx.tx_hash = transaction?.txHash || tx.tx_hash;
+            tx.tx_hash = circleTx.data?.transaction?.txHash || tx.tx_hash;
             tx.metadata = updatedMetadata;
-            console.log(`[Self-Healing] Resolved ${tx.internal_ref} (${circleStatus}) to ${finalStatus}`);
+            console.log(`[Self-Healing] Successfully resolved pending transaction ${tx.internal_ref} status to: ${finalStatus}`);
           }
         } catch (circleErr: any) {
           console.error(`[Self-Healing] Failed to resolve transaction ${tx.internal_ref}:`, circleErr.message || circleErr);
@@ -122,60 +110,14 @@ router.post("/swap/execute", async (req, res) => {
       throw new Error("User wallet not found");
     }
 
-    const swapResult: any = await executeAppKitSwap(
+    const txHash = await executeAppKitSwap(
       userWallet.wallet_address,
       parseFloat(amount),
       fromToken,
       toToken
     );
 
-    const txHashValue = typeof swapResult === "object" ? swapResult.txHash : swapResult;
-    const isSimulated = typeof swapResult === "object" && swapResult.simulated === true;
-
-    // Calculate simulated values to write the record in the ledger
-    const rates: Record<string, number> = {
-      "USDC-ARC": 12.45,
-      "ARC-USDC": 0.0803,
-      "USDC-EURC": 0.92,
-      "EURC-USDC": 1.08,
-      "USDC-cirBTC": 0.0000104,
-      "cirBTC-USDC": 96150.00,
-      "USDC-MINT": 10.0,
-      "MINT-USDC": 0.1,
-    };
-    const pair = `${fromToken}-${toToken}`;
-    const rate = rates[pair] || 1.0;
-    const toAmountStr = (parseFloat(amount) * rate).toFixed(6);
-
-    const internalRef = `swap_${crypto.randomBytes(8).toString("hex")}`;
-
-    await supabaseAdmin
-      .from("transactions")
-      .insert({
-        user_id: userId,
-        amount: `-${amount}`, // Debit USDC/fromToken
-        type: "swap",
-        status: "success",
-        tx_hash: txHashValue,
-        internal_ref: internalRef,
-        metadata: {
-          fromToken,
-          toToken,
-          fromAmount: amount,
-          toAmount: toAmountStr,
-          exchangeRate: rate,
-          real: !isSimulated,
-          simulated: isSimulated,
-          originalError: isSimulated ? swapResult.originalError : null,
-          note: isSimulated ? "Simulated swap due to Sandbox balance/simulation limits" : "Executed via Circle App Kit"
-        }
-      });
-
-    res.status(200).json({ 
-      message: isSimulated ? "Simulated Swap executed" : "App Kit Swap executed", 
-      txId: txHashValue, 
-      simulated: isSimulated 
-    });
+    res.status(200).json({ message: "App Kit Swap executed", txId: txHash });
   } catch (error: any) {
     console.error("Swap Error", error);
     res.status(500).json({ error: error.message });

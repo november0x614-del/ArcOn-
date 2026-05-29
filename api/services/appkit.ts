@@ -1,6 +1,5 @@
 import { AppKit, BridgeChain } from "@circle-fin/app-kit";
 import { createCircleWalletsAdapter, CircleWalletsAdapter } from "@circle-fin/adapter-circle-wallets";
-import * as crypto from "crypto";
 
 let appKitInstance: AppKit | null = null;
 let appKitAdapter: CircleWalletsAdapter | null = null;
@@ -13,14 +12,9 @@ export const getAppKit = () => {
 
   const apiKey = process.env.CIRCLE_API_KEY;
   const entitySecret = process.env.CIRCLE_ENTITY_SECRET;
-  const kitKey = process.env.KIT_KEY;
 
   if (!apiKey || !entitySecret) {
     throw new Error("Missing Circle API keys for AppKit");
-  }
-
-  if (!kitKey) {
-    throw new Error("Missing KIT_KEY in environment variables. Expected format: KIT_KEY:<keyId>:<keySecret>");
   }
 
   const adapter = createCircleWalletsAdapter({
@@ -33,7 +27,6 @@ export const getAppKit = () => {
   appKitAdapter = adapter;
  
   appKitInstance = new AppKit({
-    kitKey,
     // @ts-ignore
     adapter,
   } as any);
@@ -50,8 +43,6 @@ export async function executeAppKitSend(
   destinationAddress: string
 ) {
   const { appKit, adapter } = getAppKit();
-  const kitKey = process.env.KIT_KEY;
-
   const txHash = await appKit.send({
     from: {
       adapter,
@@ -60,11 +51,8 @@ export async function executeAppKitSend(
     },
     to: destinationAddress,
     amount: amount.toString(),
-    token: "USDC",
-    config: {
-      kitKey
-    }
-  } as any);
+    token: "USDC"
+  });
   return txHash;
 }
 
@@ -78,7 +66,6 @@ export async function executeAppKitBridge(
   targetChain: any 
 ) {
   const { appKit, adapter } = getAppKit();
-  const kitKey = process.env.KIT_KEY;
   
   const txHash = await appKit.bridge({
     from: {
@@ -93,10 +80,7 @@ export async function executeAppKitBridge(
     },
     amount: amount.toString(),
     token: "USDC",
-    config: {
-      kitKey
-    }
-  } as any);
+  });
   return txHash;
 }
 
@@ -110,7 +94,6 @@ export async function executeAppKitSwap(
   toToken: any
 ) {
   const { appKit, adapter } = getAppKit();
-  const kitKey = process.env.KIT_KEY;
   
   const txHash = await appKit.swap({
     from: {
@@ -121,9 +104,6 @@ export async function executeAppKitSwap(
     amountIn: amount.toString(),
     tokenIn: fromToken,
     tokenOut: toToken,
-    config: {
-      kitKey
-    }
   } as any);
   return txHash;
 }

@@ -186,14 +186,10 @@ export const useStore = create<AppState>()((set) => ({
 
       const state = useStore.getState();
       
-      // Skip update if length and all transaction statuses are same
-      const isIdentical = state.transactions.length === transactions.length && 
-                          state.transactions.every((tx, idx) => 
-                            tx.id === transactions[idx]?.id && 
-                            tx.status === transactions[idx]?.status
-                          );
-
-      if (isIdentical) {
+      // Skip update if length and first/last ID are same (basic heuristic for "identitcal")
+      if (state.transactions.length === transactions.length && 
+          state.transactions[0]?.id === transactions[0]?.id &&
+          state.transactions[0]?.status === transactions[0]?.status) {
         return;
       }
 

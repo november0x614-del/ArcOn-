@@ -688,7 +688,10 @@ export const HomeScreen = React.memo(
                       platformConfig.swapEnabled !== false) && (
                       <div
                         onClick={() => {
-                          onNavigate("arcswap");
+                          // Show a toast message to simulate opening an external browser
+                          displayToast(
+                            "Opening external web browser to ArcSwap...",
+                          );
                         }}
                         className="flex items-center gap-3.5 p-3 rounded-2xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-all active:scale-[0.98]"
                       >
