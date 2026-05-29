@@ -117,15 +117,18 @@ export async function verifyAndProcessWebhook(
 
     const type = payload.notificationType;
     const data = payload.notification;
-    console.log(`Webhook received: ${type}`);
+    console.log(`Webhook received: ${type}, transactionType: ${data?.transactionType}`);
 
-    if (
+    const isInbound = type === "transactions.inbound" || data?.transactionType === "INBOUND";
+    const isOutbound = (
       type === "transfers.updated" ||
       type === "transfers.created" ||
       type === "contractExecutions.updated" ||
       type === "transactions.outbound" ||
       type === "transactions.updated"
-    ) {
+    ) && !isInbound;
+
+    if (isOutbound) {
       const transfer = data;
       const internalRef = transfer.id;
 
@@ -198,17 +201,20 @@ export async function verifyAndProcessWebhook(
       } else {
         console.log(`Transaction ${internalRef} updated to ${newStatus}`);
       }
-    } else if (type === "transactions.inbound") {
+    } else if (isInbound) {
       console.log("Processing inbound transaction:", JSON.stringify(data));
       const {
         id,
         amounts,
+        amount,
         destinationAddress,
         sourceAddress,
         createDate,
         txHash,
+        transactionType
       } = data;
-      const amountValue = amounts[0]; // Take the first amount (USDC)
+      
+      const amountValue = amounts?.[0] || amount || 0;
 
       // Arc Hardening: Memo Parsing
       // In a real exchange, we would check the 'memo' field if provided via a Memo contract
@@ -216,6 +222,15 @@ export async function verifyAndProcessWebhook(
       console.log(
         `[Webhook] Inbound transaction ${id} has memo: ${memo || "none"}`,
       );
+
+      // E-Commerce Database Hook for Escrow
+      if (memo && memo.startsWith("ORDER-")) {
+        console.log(`[Webhook] Order Escrow Payment Detected for ${memo}, upgrading status to ESCROWED`);
+        await supabaseAdmin
+          .from("ecommerce_orders")
+          .update({ status: "ESCROWED", tx_hash: txHash || "pending" })
+          .eq("memo", memo);
+      }
 
       const { data: walletData, error: walletError } = await supabaseAdmin
         .from("user_wallets")
@@ -230,6 +245,20 @@ export async function verifyAndProcessWebhook(
       });
 
       if (walletData && !walletError) {
+        // Arc Hardening: Idempotency check to prevent duplicate inbound receipts
+        const { data: existingTx } = await supabaseAdmin
+          .from("transactions")
+          .select("id")
+          .eq("internal_ref", id)
+          .maybeSingle();
+
+        if (existingTx) {
+          console.log(
+            `[Webhook] Inbound transaction ${id} already processed. Skipping duplicate insert.`,
+          );
+          return res.status(200).send("Accepted");
+        }
+
         const { error } = await supabaseAdmin.from("transactions").insert({
           user_id: walletData.id,
           amount: amountValue,

@@ -152,52 +152,52 @@ router.post("/swap/execute", async (req, res) => {
       metadata: { fromToken, toToken },
     });
 
-    (async () => {
-      try {
-        const txHash = await executeAppKitSwap(
-          userWallet.wallet_address,
-          parseFloat(amount),
-          fromToken,
-          toToken,
-        );
-        
-        await supabaseAdmin
-          .from("transactions")
-          .update({
-            tx_hash: txHash,
-            status: "success",
-          })
-          .eq("internal_ref", internalRef);
+    try {
+      const txHash = await executeAppKitSwap(
+        userWallet.wallet_address,
+        parseFloat(amount),
+        fromToken,
+        toToken,
+      );
+      
+      await supabaseAdmin
+        .from("transactions")
+        .update({
+          tx_hash: txHash,
+          status: "success",
+        })
+        .eq("internal_ref", internalRef);
 
-        await supabaseAdmin
-          .from("transaction_ledger")
-          .update({
-            tx_hash: txHash,
-            status: "COMPLETE",
-          })
-          .eq("circle_tx_id", internalRef);
-      } catch (err: any) {
-        console.error("Async swap failed:", err);
-        
-        await supabaseAdmin
-          .from("transactions")
-          .update({
-            status: "failed",
-            metadata: { error: err.message || "Failed to execute transaction" },
-          })
-          .eq("internal_ref", internalRef);
+      await supabaseAdmin
+        .from("transaction_ledger")
+        .update({
+          tx_hash: txHash,
+          status: "COMPLETE",
+        })
+        .eq("circle_tx_id", internalRef);
 
-        await supabaseAdmin
-          .from("transaction_ledger")
-          .update({
-            status: "FAILED",
-            metadata: { error: err.message || "Failed to execute transaction" },
-          })
-          .eq("circle_tx_id", internalRef);
-      }
-    })();
+      res.status(200).json({ message: "App Kit Swap successful", txId: txHash });
+    } catch (err: any) {
+      console.error("Swap failed:", err);
+      
+      await supabaseAdmin
+        .from("transactions")
+        .update({
+          status: "failed",
+          metadata: { error: err.message || "Failed to execute transaction" },
+        })
+        .eq("internal_ref", internalRef);
 
-    res.status(200).json({ message: "App Kit Swap queued", txId: internalRef });
+      await supabaseAdmin
+        .from("transaction_ledger")
+        .update({
+          status: "FAILED",
+          metadata: { error: err.message || "Failed to execute transaction" },
+        })
+        .eq("circle_tx_id", internalRef);
+
+      res.status(400).json({ error: err.message || "Failed to execute swap transaction" });
+    }
   } catch (error: any) {
     console.error("Swap Error:", error);
     res.status(500).json({ error: error.message });
@@ -616,6 +616,16 @@ router.post("/bridge/cctp", async (req, res) => {
 
     const internalRef = `bridge_${crypto.randomBytes(8).toString("hex")}`;
     
+    // Write to standard transactions table for UI History visibility
+    await supabaseAdmin.from("transactions").insert({
+      user_id: userId,
+      type: "transfer",
+      amount: `-${amount}`,
+      status: "pending",
+      internal_ref: internalRef,
+      metadata: { destinationDomain, targetChain, real: true },
+    });
+
     await supabaseAdmin.from("transaction_ledger").insert({
       user_id: userId,
       tx_type: "BRIDGE_BURN",
@@ -634,6 +644,15 @@ router.post("/bridge/cctp", async (req, res) => {
           destinationAddress,
           targetChain,
         );
+        
+        await supabaseAdmin
+          .from("transactions")
+          .update({
+            tx_hash: txHash,
+            status: "success",
+          })
+          .eq("internal_ref", internalRef);
+
         await supabaseAdmin
           .from("transaction_ledger")
           .update({
@@ -643,6 +662,15 @@ router.post("/bridge/cctp", async (req, res) => {
           .eq("circle_tx_id", internalRef);
       } catch (err: any) {
         console.error("Async cctp bridge failed:", err);
+        
+        await supabaseAdmin
+          .from("transactions")
+          .update({
+            status: "failed",
+            metadata: { error: err.message || "Failed to execute transaction" },
+          })
+          .eq("internal_ref", internalRef);
+
         await supabaseAdmin
           .from("transaction_ledger")
           .update({

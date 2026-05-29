@@ -6,6 +6,7 @@ import walletRoutes from "./routes/wallet.routes.js";
 import transactionRoutes from "./routes/transaction.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 import miscRoutes from "./routes/misc.routes.js";
+import ecommerceRoutes from "./routes/ecommerce.routes.js";
 
 // Re-export core services for server/other files that reference index
 export { getSupabaseAdmin, isUserBlocked };
@@ -57,6 +58,9 @@ app.use("/admin", adminRoutes);
 
 app.use("/api", miscRoutes);
 app.use("/", miscRoutes);
+
+app.use("/api", ecommerceRoutes);
+app.use("/", ecommerceRoutes);
 
 // Export Express App
 export default app;

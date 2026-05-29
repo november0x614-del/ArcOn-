@@ -38,39 +38,39 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
   const products = [
     {
       id: 1,
-      name: "Spotify Premium (1 Month)",
-      price: "4.50",
+      name: "Arc Founder Pass (NFT)",
+      price: "10.00",
       image:
-        "https://images.unsplash.com/photo-1614680376593-902f74cf0d41?q=80&w=300&auto=format&fit=crop",
-      category: "Subscription",
-      desc: "Enjoy ad-free music on all devices. Instant activation after payment confirmation on the Arc network.",
+        "https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=300&auto=format&fit=crop",
+      category: "Digital Collectible",
+      desc: "Exclusive Founder Pass for the Arc Network. Unlock premium access, airdrops, and governance voting rights. Mints instantly across chains.",
     },
     {
       id: 2,
-      name: "MLBB 500 Diamonds",
-      price: "8.90",
+      name: "Metaverse Land Parcel #402",
+      price: "25.00",
       image:
-        "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=300&auto=format&fit=crop",
-      category: "Game Voucher",
-      desc: "Instant Mobile Legends diamond top-up. Enter user ID at checkout for automatic delivery via smart contract.",
+        "https://images.unsplash.com/photo-1614729939124-032f0b56c9ce?q=80&w=300&auto=format&fit=crop",
+      category: "Virtual Real Estate",
+      desc: "Prime virtual land fragment in the Decentralized Arcadia metaverse. Build, deploy, or trade on the open market.",
     },
     {
       id: 3,
-      name: "Netflix Card $15",
-      price: "15.00",
+      name: "GameFi Premium Avatar",
+      price: "8.50",
       image:
-        "https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?q=80&w=300&auto=format&fit=crop",
-      category: "Entertainment",
-      desc: "Global Netflix balance voucher. The voucher code will appear on your transaction receipt immediately after the transaction is final.",
+        "https://images.unsplash.com/photo-1634608350678-43d994efdc5f?q=80&w=300&auto=format&fit=crop",
+      category: "Game Asset",
+      desc: "Legendary Tier playable avatar. Fully interoperable with 3 leading Web3 games. Includes custom 3D model and verifiable ownership.",
     },
     {
       id: 4,
-      name: "Steam Wallet $20",
-      price: "20.00",
+      name: "Exclusive Digital Art 'Orbit'",
+      price: "50.00",
       image:
-        "https://images.unsplash.com/photo-1585644131013-176865239a2d?q=80&w=300&auto=format&fit=crop",
-      category: "Game Voucher",
-      desc: "Top up your Steam Wallet to buy the latest games. Supports cross-border transactions using USDC.",
+        "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=300&auto=format&fit=crop",
+      category: "Fine Art NFT",
+      desc: "1/100 limited edition digital art piece by renowned crypto-artist. Features programmable dynamic visuals based on gas prices.",
     },
   ];
 
@@ -109,13 +109,14 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
 
       setPaymentStatus("broadcasting");
 
-      const response = await fetch("/api/purchase/execute", {
+      const response = await fetch("/api/ecommerce/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: registeredUser?.supabaseUid,
+          buyerId: registeredUser?.supabaseUid,
+          productId: selectedProduct.id,
           amount: totalToPay,
-          product: selectedProduct.name,
+          memo: selectedProduct.name,
         }),
       });
 
@@ -360,10 +361,10 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
         <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-1">
           {[
             "All",
-            "Game Voucher",
-            "Subscription",
-            "Entertainment",
-            "Others",
+            "Digital Collectible",
+            "Virtual Real Estate",
+            "Game Asset",
+            "Fine Art NFT",
           ].map((cat, i) => (
             <span
               key={cat}

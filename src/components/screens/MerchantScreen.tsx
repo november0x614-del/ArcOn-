@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ArrowLeft,
   Box,
@@ -30,56 +30,90 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
   const [products] = useState([
     {
       id: 1,
-      name: "Spotify Premium (1M)",
-      price: 4.5,
-      stock: 120,
+      name: "Arc Founder Pass (NFT)",
+      price: 10.00,
+      stock: 50,
       image:
-        "https://images.unsplash.com/photo-1614680376593-902f74cf0d41?auto=format&fit=crop&q=80&w=200&h=200",
-      category: "Subscription",
+        "https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?auto=format&fit=crop&q=80&w=200&h=200",
+      category: "Digital Collectible",
       sales: 45,
     },
     {
       id: 2,
-      name: "MLBB 500 Diamonds",
-      price: 8.9,
-      stock: 50,
+      name: "Metaverse Land Parcel #402",
+      price: 25.00,
+      stock: 5,
       image:
-        "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&q=80&w=200&h=200",
-      category: "Game Voucher",
-      sales: 128,
+        "https://images.unsplash.com/photo-1614729939124-032f0b56c9ce?auto=format&fit=crop&q=80&w=200&h=200",
+      category: "Virtual Real Estate",
+      sales: 2,
     },
     {
       id: 3,
-      name: "Netflix Voucher $15",
-      price: 15.0,
-      stock: 25,
+      name: "GameFi Premium Avatar",
+      price: 8.50,
+      stock: 100,
       image:
-        "https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?auto=format&fit=crop&q=80&w=200&h=200",
-      category: "Entertainment",
-      sales: 22,
+        "https://images.unsplash.com/photo-1634608350678-43d994efdc5f?auto=format&fit=crop&q=80&w=200&h=200",
+      category: "Game Asset",
+      sales: 82,
     },
   ]);
 
-  const [recentSales] = useState([
-    {
-      id: "tx-881",
-      product: "Spotify Premium",
-      amount: 4.5,
-      fee: 0.07,
-      status: "Settled",
-      time: "10m ago",
-      buyer: "0x7A...2b",
-    },
-    {
-      id: "tx-882",
-      product: "MLBB 500 Diamonds",
-      amount: 8.9,
-      fee: 0.13,
-      status: "Escrowed",
-      time: "Just now",
-      buyer: "0x3B...9f",
-    },
-  ]);
+  const [recentSales, setRecentSales] = useState<any[]>([]);
+  const [loadingSales, setLoadingSales] = useState(false);
+
+  useEffect(() => {
+    const fetchSales = async () => {
+      setLoadingSales(true);
+      try {
+        const response = await fetch(`/api/ecommerce/merchant/sales/${address || "0xMerchant"}`);
+        if (response.ok) {
+           const data = await response.json();
+           setRecentSales(data);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoadingSales(false);
+      }
+    };
+    if (address) {
+       fetchSales();
+    }
+  }, [address]);
+
+  const [processingRelease, setProcessingRelease] = useState<string | null>(null);
+
+  const handleFinalize = async (sale: any) => {
+    try {
+      setProcessingRelease(sale.id);
+      
+      const response = await fetch("/api/ecommerce/release-escrow", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId: sale.id,
+          sellerAddress: address || "0xMerchant",
+          totalAmount: sale.amount,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        alert("Split Payment Completed & NFT Transferred:\n" + JSON.stringify(data.details, null, 2));
+        setRecentSales((prev) => prev.map((s) => s.id === sale.id ? { ...s, status: data.details?.status || "RELEASED" } : s));
+      } else {
+        alert("Error releasing escrow: " + (data.error || "Unknown error"));
+      }
+
+    } catch (err: any) {
+      alert("Error: " + err.message);
+    } finally {
+      setProcessingRelease(null);
+    }
+  };
 
   return (
     <div className="w-full h-full bg-[#FAFAFA] relative flex flex-col z-40 animate-in slide-in-from-bottom duration-300">
@@ -281,23 +315,23 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div
-                          className={`w-[42px] h-[42px] rounded-xl flex items-center justify-center font-bold text-[11px] border shadow-sm ${sale.status === "Escrowed" ? "bg-orange-50 text-orange-600 border-orange-100" : "bg-emerald-50 text-emerald-600 border-emerald-100"}`}
+                          className={`w-[42px] h-[42px] rounded-xl flex items-center justify-center font-bold text-[11px] border shadow-sm ${sale.status === "ESCROWED" || sale.status === "PENDING_ESCROW" ? "bg-orange-50 text-orange-600 border-orange-100" : "bg-emerald-50 text-emerald-600 border-emerald-100"}`}
                         >
-                          {sale.buyer.substring(0, 4)}
+                          {(sale.buyer_id || sale.buyer || "USR").substring(0, 4)}
                         </div>
                         <div>
                           <p className="font-bold text-[14px] text-slate-800 mb-0.5">
-                            {sale.product}
+                            {sale.product_name || sale.product}
                           </p>
                           <div className="flex items-center gap-2">
                             <p className="text-[11px] font-medium text-slate-500">
-                              {sale.time}
+                              {new Date(sale.created_at || Date.now()).toLocaleTimeString()}
                             </p>
                             <span className="text-[10px] text-slate-300">
                               •
                             </span>
                             <p className="text-[11px] font-bold text-slate-600">
-                              Fee: {sale.fee} USDC
+                              Fee: {(parseFloat(sale.amount) * 0.05).toFixed(2)} USDC
                             </p>
                           </div>
                         </div>
@@ -308,7 +342,7 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
                         </span>
                         <span
                           className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
-                            sale.status === "Escrowed"
+                            sale.status === "ESCROWED" || sale.status === "PENDING_ESCROW"
                               ? "bg-orange-100 text-orange-700 animate-pulse"
                               : "bg-emerald-100 text-emerald-700"
                           }`}
@@ -317,9 +351,13 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
                         </span>
                       </div>
                     </div>
-                    {sale.status === "Escrowed" && (
-                      <button className="w-full mt-3 py-2 bg-slate-900 text-white text-[11px] font-bold rounded-lg shadow-sm hover:bg-slate-800 transition-all active:scale-95 border-0">
-                        Finalize Arc Settlement (Release Funds)
+                    {(sale.status === "ESCROWED" || sale.status === "PENDING_ESCROW") && (
+                      <button 
+                        onClick={() => handleFinalize({ ...sale, amount: sale.amount })}
+                        disabled={processingRelease === sale.id}
+                        className="w-full mt-3 py-2 bg-slate-900 text-white text-[11px] font-bold rounded-lg shadow-sm hover:bg-slate-800 transition-all active:scale-95 border-0 disabled:opacity-50"
+                       >
+                        {processingRelease === sale.id ? "Processing via API..." : "Finalize Arc Settlement (Release Funds)"}
                       </button>
                     )}
                     <div className="w-full h-[1px] bg-slate-50 mt-4 last:hidden"></div>

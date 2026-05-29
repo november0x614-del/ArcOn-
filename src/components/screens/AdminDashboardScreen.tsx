@@ -17,6 +17,7 @@ import {
   ChevronRight,
   Menu,
   Zap,
+  ShoppingCart,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { ViewState } from "../../types";
@@ -29,6 +30,7 @@ import { ConfigTab } from "../admin/ConfigTab";
 import { DesignTab } from "../admin/DesignTab";
 import { InfrastructureTab } from "../admin/InfrastructureTab";
 import { ComplianceTab } from "../admin/ComplianceTab";
+import { EcommerceAdminTab } from "../admin/EcommerceAdminTab";
 
 interface AdminStats {
   totalUsers: number;
@@ -79,6 +81,7 @@ type TabType =
   | "ledger"
   | "infra"
   | "compliance"
+  | "ecommerce"
   | "settings";
 
 export function AdminDashboardScreen({
@@ -387,6 +390,7 @@ export function AdminDashboardScreen({
   const navItems = [
     { id: "overview", label: "Command Center", icon: LayoutDashboard },
     { id: "users", label: "User & Security", icon: Users },
+    { id: "ecommerce", label: "E-Commerce & Escrow", icon: ShoppingCart },
     { id: "ledger", label: "Financial Ledger", icon: Wallet },
     { id: "compliance", label: "Compliance & Sanctions", icon: ShieldOff },
     { id: "infra", label: "Infrastructure", icon: ShieldAlert },
@@ -613,6 +617,7 @@ export function AdminDashboardScreen({
                       onSelectUser={setSelectedUser}
                     />
                   )}
+                  {activeTab === "ecommerce" && <EcommerceAdminTab />}
                   {activeTab === "ledger" && (
                     <TreasuryTab
                       loading={loading}

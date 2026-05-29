@@ -29,7 +29,6 @@ export const getAppKit = () => {
   const entitySecret = process.env.CIRCLE_ENTITY_SECRET;
 
   const kitKey = getValidKitKey();
-  console.log("KIT KEY IS:", kitKey ? "SET (length: " + kitKey.length + ")" : "NOT SET");
 
   if (!apiKey || !entitySecret || !kitKey) {
     throw new Error("Missing Circle API keys or KIT_KEY for AppKit");
@@ -63,7 +62,7 @@ export async function executeAppKitSend(
   const { appKit, adapter } = getAppKit();
   const kitKey = getValidKitKey();
   
-  const txHash = await appKit.send({
+  const result = await appKit.send({
     from: {
       adapter,
       chain: "Arc_Testnet",
@@ -75,8 +74,8 @@ export async function executeAppKitSend(
     config: {
       kitKey: kitKey as string,
     }
-  });
-  return txHash;
+  } as any);
+  return result.txHash;
 }
 
 /**
@@ -91,7 +90,7 @@ export async function executeAppKitBridge(
   const { appKit, adapter } = getAppKit();
   const kitKey = getValidKitKey();
 
-  const txHash = await appKit.bridge({
+  const result = await appKit.bridge({
     from: {
       adapter,
       chain: "Arc_Testnet",
@@ -107,8 +106,8 @@ export async function executeAppKitBridge(
     config: {
       kitKey: kitKey as string,
     }
-  });
-  return txHash;
+  } as any);
+  return result.steps?.find((s: any) => s.txHash)?.txHash || "bridge-successful";
 }
 
 /**
@@ -123,7 +122,7 @@ export async function executeAppKitSwap(
   const { appKit, adapter } = getAppKit();
   const kitKey = getValidKitKey();
 
-  const txHash = await appKit.swap({
+  const result = await appKit.swap({
     from: {
       adapter,
       chain: "Arc_Testnet",
@@ -136,5 +135,5 @@ export async function executeAppKitSwap(
       kitKey: kitKey as string,
     }
   } as any);
-  return txHash;
+  return result.txHash;
 }

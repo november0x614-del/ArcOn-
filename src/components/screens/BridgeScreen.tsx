@@ -339,14 +339,21 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
                 Destination Wallet
               </label>
               <button
-                onClick={() =>
-                  setDestinationAddress(
-                    "0x" +
-                      Array.from({ length: 40 }, () =>
-                        Math.floor(Math.random() * 16).toString(16),
-                      ).join(""),
-                  )
-                }
+                onClick={async () => {
+                  try {
+                    const eth = (window as any).ethereum;
+                    if (eth) {
+                      const accounts = await eth.request({ method: 'eth_requestAccounts' });
+                      if (accounts && accounts[0]) {
+                        setDestinationAddress(accounts[0]);
+                      }
+                    } else {
+                      alert("Please install an external wallet like MetaMask");
+                    }
+                  } catch (e: any) {
+                    console.error(e);
+                  }
+                }}
                 className="text-[10px] font-bold text-indigo-500 hover:text-indigo-600 bg-indigo-50 px-2 py-1.5 rounded-lg border-0 cursor-pointer flex items-center gap-1 transition-all"
               >
                 Connect External
