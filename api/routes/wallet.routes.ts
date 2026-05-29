@@ -1,8 +1,8 @@
 import express from "express";
-import { getSupabaseAdmin } from "../config/supabase.js";
-import { createWallet } from "../services/circle.js";
-import { fetchUnifiedBalance } from "../services/balance.js";
-import { publicClient } from "../services/arcViem.js";
+import { getSupabaseAdmin } from "../config/supabase";
+import { createWallet } from "../services/circle";
+import { fetchUnifiedBalance } from "../services/balance";
+import { publicClient } from "../services/arcViem";
 import { formatUnits } from "viem";
 
 const router = express.Router();

@@ -115,9 +115,7 @@ export default function App() {
             walletId: walletInfo.wallet_id,
             walletAddress: walletInfo.wallet_address,
             supabaseUid: user.id,
-            registrationDate: new Date(user.created_at).toLocaleDateString(
-              "id-ID",
-            ),
+            registrationDate: user.created_at ? new Date(user.created_at).toLocaleDateString("id-ID") : "N/A",
           });
 
           // Only navigate to home if we were stuck on entry points
@@ -129,13 +127,14 @@ export default function App() {
           console.error(
             "Critical: User Logged In but No Wallet Found and Provisioning Failed.",
           );
-          // Stay on splash/loading for now
+          useStore.getState().displayToast("Your account wallet could not be loaded. Missing Server Environment Variables (Vercel) or API Error.");
         }
 
-        // Always clear loading states at the end
-        setIsLoggingIn(false);
       } catch (e) {
         console.error("Critical handleUserSession failure:", e);
+      } finally {
+        // Always clear loading states at the end
+        setIsLoggingIn(false);
       }
     },
     [setRegisteredUser, setViewState],

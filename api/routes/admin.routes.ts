@@ -1,12 +1,12 @@
 import express from "express";
-import { getSupabaseAdmin } from "../config/supabase.js";
+import { getSupabaseAdmin } from "../config/supabase";
 import {
   createWallet,
   batchCreateWallets,
   interpretCircleError,
   autoSweepWallets,
-} from "../services/circle.js";
-import { fetchUnifiedBalance } from "../services/balance.js";
+} from "../services/circle";
+import { fetchUnifiedBalance } from "../services/balance";
 import * as crypto from "crypto";
 import {
   getWalletDetails,
@@ -14,8 +14,8 @@ import {
   fetchSystemTransactions,
   fetchPendingApprovals,
   decideApproval,
-} from "../services/admin.js";
-import { logAdminAction } from "../services/audit.js";
+} from "../services/admin";
+import { logAdminAction } from "../services/audit";
 
 const router = express.Router();
 

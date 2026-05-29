@@ -1,9 +1,9 @@
 import express from "express";
 import { GoogleGenAI } from "@google/genai";
-import { publicClient, getTokenMetadata } from "../services/arcViem.js";
-import { verifyAndProcessWebhook } from "../services/webhook.js";
-import { getSupabaseAdmin } from "../config/supabase.js";
-import { getTokenDetails } from "../services/circle.js";
+import { publicClient, getTokenMetadata } from "../services/arcViem";
+import { verifyAndProcessWebhook } from "../services/webhook";
+import { getSupabaseAdmin } from "../config/supabase";
+import { getTokenDetails } from "../services/circle";
 import * as crypto from "crypto";
 
 const router = express.Router();

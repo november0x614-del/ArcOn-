@@ -1,7 +1,7 @@
 import express from "express";
 import crypto from "crypto";
-import { getSupabaseAdmin } from "../config/supabase.js";
-import { executeTransaction } from "../services/circle.js";
+import { getSupabaseAdmin } from "../config/supabase";
+import { executeTransaction } from "../services/circle";
 
 const router = express.Router();
 

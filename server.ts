@@ -1,4 +1,4 @@
-import app, { getSupabaseAdmin } from "./api/index.js";
+import app, { getSupabaseAdmin } from "./api/index";
 import path from "path";
 import express from "express";
 import { createServer as createViteServer } from "vite";
