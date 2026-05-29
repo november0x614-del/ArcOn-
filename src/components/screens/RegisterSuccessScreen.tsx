@@ -34,7 +34,8 @@ export function RegisterSuccessScreen({
         <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl mb-6 text-left">
           <p className="text-[13px] font-medium text-blue-800 leading-relaxed">
             <strong className="block mb-1">Check Your Email</strong>
-            We've sent a confirmation link to your email. You must verify it before you can log in.
+            We've sent a confirmation link to your email. You must verify it
+            before you can log in.
           </p>
         </div>
       )}

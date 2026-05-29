@@ -246,7 +246,7 @@ export const ViewRouter = React.memo(
                 // We NO LONGER call setViewState("home") here.
                 // The central handleUserSession in App.tsx will detect the new session,
                 // verify/provision the wallet, and then navigate to "home" securely.
-                // We keep setIsLoggingIn(true) so the loading spinner stays visible 
+                // We keep setIsLoggingIn(true) so the loading spinner stays visible
                 // until the transition happens from App.tsx.
               }}
               onForgotPassword={() => setViewState("forgotPassword")}
@@ -254,8 +254,8 @@ export const ViewRouter = React.memo(
           )}
 
           {viewState === "forgotPassword" && (
-            <ForgotPasswordScreen 
-              onBack={() => setViewState("password")} 
+            <ForgotPasswordScreen
+              onBack={() => setViewState("password")}
               initialEmail={loginEmail}
             />
           )}
@@ -349,8 +349,6 @@ export const ViewRouter = React.memo(
             <DepositOptionsScreen
               onBack={() => setViewState("home")}
               onSelectUSDC={() => setViewState("receive")}
-              onSelectVA={() => setViewState("receiveVA")}
-              onSelectQRIS={() => setViewState("receiveQRIS")}
               onSelectWithdraw={() => setViewState("withdraw")}
               platformConfig={platformConfig}
             />
@@ -368,7 +366,7 @@ export const ViewRouter = React.memo(
 
           {viewState === "receiveQRIS" &&
             (platformConfig && platformConfig.qrisEnabled === false ? (
-               renderLockedScreen(
+              renderLockedScreen(
                 "Standard QRIS Deposit",
                 "QRIS payment code generation gateway is temporarily disabled by the payment processor.",
               )
@@ -386,16 +384,6 @@ export const ViewRouter = React.memo(
               }}
             />
           )}
-
-          {viewState === "arcswap" &&
-            (platformConfig && platformConfig.swapEnabled === false ? (
-              renderLockedScreen(
-                "USDC Swap Pool Feature",
-                "Asset exchange service is temporarily frozen by Admin for liquidity balancing.",
-              )
-            ) : (
-              <SwapScreen onBack={() => setViewState("home")} />
-            ))}
 
           {viewState === "arcbird" &&
             (platformConfig && platformConfig.arcBirdEnabled === false ? (
@@ -531,26 +519,30 @@ export const ViewRouter = React.memo(
                   displayToast("Minimum transfer amount is 1 USDC.");
                   return;
                 }
-                const totalWithFee = numAmount + 0.10;
+                const totalWithFee = numAmount + 0.1;
                 if (totalWithFee > balance) {
-                  displayToast(`Insufficient USDC balance. Need ${totalWithFee.toFixed(2)} USDC (includes 0.10 Platform Fee).`);
+                  displayToast(
+                    `Insufficient USDC balance. Need ${totalWithFee.toFixed(2)} USDC (includes 0.10 Platform Fee).`,
+                  );
                   return;
                 }
 
                 setTransferAmount(amount);
                 setTransferMemo(memo);
-                
+
                 try {
                   await BackendClient.sendUnifiedBalance(
                     numAmount,
                     selectedContact.account,
                     memo,
-                    selectedContact.name
+                    selectedContact.name,
                   );
 
                   await fetchBalance();
                   await fetchTransactions();
-                  displayToast(`Transfer to ${selectedContact.name} initiated!`);
+                  displayToast(
+                    `Transfer to ${selectedContact.name} initiated!`,
+                  );
                   setViewState("transfer");
                 } catch (error) {
                   console.error(error);
@@ -570,7 +562,10 @@ export const ViewRouter = React.memo(
               <BatchTransferScreen
                 onBack={() => setViewState("transfer")}
                 onViewReceipt={(txId) => {
-                  setSelectedTransaction({ internal_ref: txId, type: "batchTransfer" } as any);
+                  setSelectedTransaction({
+                    internal_ref: txId,
+                    type: "batchTransfer",
+                  } as any);
                   setReceiptSource("home");
                   setViewState("receipt");
                   fetchTransactions();

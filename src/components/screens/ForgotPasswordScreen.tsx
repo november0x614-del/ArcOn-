@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { ArrowLeft, Mail, ShieldCheck, CheckCircle2, Lock, Check } from "lucide-react";
+import {
+  ArrowLeft,
+  Mail,
+  ShieldCheck,
+  CheckCircle2,
+  Lock,
+  Check,
+} from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 
 interface ForgotPasswordScreenProps {
@@ -7,12 +14,15 @@ interface ForgotPasswordScreenProps {
   initialEmail?: string;
 }
 
-export function ForgotPasswordScreen({ onBack, initialEmail = "" }: ForgotPasswordScreenProps) {
+export function ForgotPasswordScreen({
+  onBack,
+  initialEmail = "",
+}: ForgotPasswordScreenProps) {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1); // 1: Email, 2: OTP, 3: New Password, 4: Success
   const [email, setEmail] = useState(initialEmail);
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,20 +32,22 @@ export function ForgotPasswordScreen({ onBack, initialEmail = "" }: ForgotPasswo
   const hasDigit = /[0-9]/.test(newPassword);
   const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"|<>?,./`~]/.test(newPassword);
   const isLongEnough = newPassword.length >= 6;
-  const isPasswordValid = hasLowercase && hasUppercase && hasDigit && hasSpecial && isLongEnough;
+  const isPasswordValid =
+    hasLowercase && hasUppercase && hasDigit && hasSpecial && isLongEnough;
 
   const handleSendOtp = async () => {
     if (!email || !email.includes("@")) {
       setError("Please enter a valid email address.");
       return;
     }
-    
+
     setIsLoading(true);
     setError(null);
     try {
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email);
+      const { error: resetError } =
+        await supabase.auth.resetPasswordForEmail(email);
       if (resetError) throw resetError;
-      
+
       setStep(2);
     } catch (err: any) {
       console.error("Reset Password Error:", err);
@@ -50,7 +62,7 @@ export function ForgotPasswordScreen({ onBack, initialEmail = "" }: ForgotPasswo
       setError("Please enter a valid code.");
       return;
     }
-    
+
     setIsLoading(true);
     setError(null);
     try {
@@ -60,7 +72,7 @@ export function ForgotPasswordScreen({ onBack, initialEmail = "" }: ForgotPasswo
         type: "recovery",
       });
       if (verifyError) throw verifyError;
-      
+
       // OTP verified successfully, user is temporarily authenticated and can update password
       setStep(3);
     } catch (err: any) {
@@ -76,7 +88,7 @@ export function ForgotPasswordScreen({ onBack, initialEmail = "" }: ForgotPasswo
       setError("Password must meet all security requirements.");
       return;
     }
-    
+
     setIsLoading(true);
     setError(null);
     try {
@@ -84,7 +96,7 @@ export function ForgotPasswordScreen({ onBack, initialEmail = "" }: ForgotPasswo
         password: newPassword,
       });
       if (updateError) throw updateError;
-      
+
       setStep(4);
     } catch (err: any) {
       console.error("Update Password Error:", err);
@@ -109,7 +121,7 @@ export function ForgotPasswordScreen({ onBack, initialEmail = "" }: ForgotPasswo
           {step === 3 && "New Password"}
           {step === 4 && "Success"}
         </h1>
-        
+
         {step !== 4 && (
           <div className="mt-2 flex items-center gap-1.5 bg-black/20 px-3 py-1.5 rounded-full border border-white/10 backdrop-blur-sm relative z-10">
             <ShieldCheck size={14} className="text-green-400" />
@@ -130,11 +142,11 @@ export function ForgotPasswordScreen({ onBack, initialEmail = "" }: ForgotPasswo
       {/* Bottom Area: Form */}
       <div className="flex-1 px-8 pt-8 pb-10 flex flex-col bg-white">
         <div className="flex-1 flex flex-col">
-          
           {step === 1 && (
             <div className="animate-in slide-in-from-right duration-300 flex-1 flex flex-col">
               <p className="text-[14.5px] text-slate-500 mb-8 mt-2 text-center">
-                We will send a password reset confirmation code to your registered email address.
+                We will send a password reset confirmation code to your
+                registered email address.
               </p>
 
               <div className="w-full relative mb-4">
@@ -173,7 +185,8 @@ export function ForgotPasswordScreen({ onBack, initialEmail = "" }: ForgotPasswo
           {step === 2 && (
             <div className="animate-in slide-in-from-right duration-300 flex-1 flex flex-col">
               <p className="text-[14.5px] text-slate-500 mb-8 mt-2 text-center">
-                We've sent a code to <span className="font-bold text-slate-700">{email}</span>.
+                We've sent a code to{" "}
+                <span className="font-bold text-slate-700">{email}</span>.
               </p>
 
               <div className="mb-4">
@@ -181,7 +194,9 @@ export function ForgotPasswordScreen({ onBack, initialEmail = "" }: ForgotPasswo
                   type="text"
                   maxLength={8}
                   value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ""))}
+                  onChange={(e) =>
+                    setOtp(e.target.value.replace(/[^0-9]/g, ""))
+                  }
                   placeholder="000000"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-4 outline-none focus:ring-2 focus:ring-[#005faa]/20 focus:border-[#005faa] focus:bg-white text-[24px] tracking-[0.5em] text-center font-bold text-slate-900 transition-all placeholder:text-slate-300"
                 />
@@ -204,7 +219,11 @@ export function ForgotPasswordScreen({ onBack, initialEmail = "" }: ForgotPasswo
                   {isLoading ? "Verifying..." : "Verify Code"}
                 </button>
                 <button
-                  onClick={() => { setStep(1); setOtp(""); setError(null); }}
+                  onClick={() => {
+                    setStep(1);
+                    setOtp("");
+                    setError(null);
+                  }}
                   className="w-full bg-transparent text-slate-500 font-bold py-3 transition-colors hover:text-slate-800 text-[14px]"
                 >
                   Mistyped email? Change here
@@ -245,34 +264,99 @@ export function ForgotPasswordScreen({ onBack, initialEmail = "" }: ForgotPasswo
                   </p>
                   <div className="grid grid-cols-1 gap-2 text-[12.5px]">
                     <div className="flex items-center gap-2">
-                      <div className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${isLongEnough ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}>
-                        <Check size={11} className={isLongEnough ? "stroke-[3]" : ""} />
+                      <div
+                        className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${isLongEnough ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}
+                      >
+                        <Check
+                          size={11}
+                          className={isLongEnough ? "stroke-[3]" : ""}
+                        />
                       </div>
-                      <span className={isLongEnough ? "text-green-700 font-medium" : "text-slate-500"}>Minimal 6 karakter</span>
+                      <span
+                        className={
+                          isLongEnough
+                            ? "text-green-700 font-medium"
+                            : "text-slate-500"
+                        }
+                      >
+                        Minimal 6 karakter
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${hasLowercase ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}>
-                        <Check size={11} className={hasLowercase ? "stroke-[3]" : ""} />
+                      <div
+                        className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${hasLowercase ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}
+                      >
+                        <Check
+                          size={11}
+                          className={hasLowercase ? "stroke-[3]" : ""}
+                        />
                       </div>
-                      <span className={hasLowercase ? "text-green-700 font-medium" : "text-slate-500"}>Satu huruf kecil (a-z)</span>
+                      <span
+                        className={
+                          hasLowercase
+                            ? "text-green-700 font-medium"
+                            : "text-slate-500"
+                        }
+                      >
+                        Satu huruf kecil (a-z)
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${hasUppercase ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}>
-                        <Check size={11} className={hasUppercase ? "stroke-[3]" : ""} />
+                      <div
+                        className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${hasUppercase ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}
+                      >
+                        <Check
+                          size={11}
+                          className={hasUppercase ? "stroke-[3]" : ""}
+                        />
                       </div>
-                      <span className={hasUppercase ? "text-green-700 font-medium" : "text-slate-500"}>Satu huruf besar (A-Z)</span>
+                      <span
+                        className={
+                          hasUppercase
+                            ? "text-green-700 font-medium"
+                            : "text-slate-500"
+                        }
+                      >
+                        Satu huruf besar (A-Z)
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${hasDigit ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}>
-                        <Check size={11} className={hasDigit ? "stroke-[3]" : ""} />
+                      <div
+                        className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${hasDigit ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}
+                      >
+                        <Check
+                          size={11}
+                          className={hasDigit ? "stroke-[3]" : ""}
+                        />
                       </div>
-                      <span className={hasDigit ? "text-green-700 font-medium" : "text-slate-500"}>Satu angka (0-9)</span>
+                      <span
+                        className={
+                          hasDigit
+                            ? "text-green-700 font-medium"
+                            : "text-slate-500"
+                        }
+                      >
+                        Satu angka (0-9)
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${hasSpecial ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}>
-                        <Check size={11} className={hasSpecial ? "stroke-[3]" : ""} />
+                      <div
+                        className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${hasSpecial ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}
+                      >
+                        <Check
+                          size={11}
+                          className={hasSpecial ? "stroke-[3]" : ""}
+                        />
                       </div>
-                      <span className={hasSpecial ? "text-green-700 font-medium" : "text-slate-500"}>Satu karakter spesial (cth: !, @, #, $, %, etc.)</span>
+                      <span
+                        className={
+                          hasSpecial
+                            ? "text-green-700 font-medium"
+                            : "text-slate-500"
+                        }
+                      >
+                        Satu karakter spesial (cth: !, @, #, $, %, etc.)
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -307,7 +391,8 @@ export function ForgotPasswordScreen({ onBack, initialEmail = "" }: ForgotPasswo
                 Password Updated!
               </h2>
               <p className="text-slate-500 text-[14px] mb-10 px-4 leading-relaxed">
-                Your password has been successfully reset. You can now use your new password to log in.
+                Your password has been successfully reset. You can now use your
+                new password to log in.
               </p>
               <button
                 onClick={onBack}
@@ -317,10 +402,8 @@ export function ForgotPasswordScreen({ onBack, initialEmail = "" }: ForgotPasswo
               </button>
             </div>
           )}
-
         </div>
       </div>
     </div>
   );
 }
-

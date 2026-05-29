@@ -14,7 +14,10 @@ import { useStore } from "../../store/useStore";
 import { BackendClient } from "../../services/api/index";
 import { useBalances } from "../../hooks/useBalances";
 import { ARC_TESTNET } from "../../lib/arcConfig";
-import { ARC_TOKEN_REGISTRY, syncTokenWithArcScan } from "../../lib/arcRegistry";
+import {
+  ARC_TOKEN_REGISTRY,
+  syncTokenWithArcScan,
+} from "../../lib/arcRegistry";
 import { TokenIcon } from "../ui/TokenIcon";
 
 interface SwapScreenProps {
@@ -22,11 +25,7 @@ interface SwapScreenProps {
 }
 
 export function SwapScreen({ onBack }: SwapScreenProps) {
-  const {
-    registeredUser,
-    platformConfig,
-    fetchPlatformConfig,
-  } = useStore();
+  const { registeredUser, platformConfig, fetchPlatformConfig } = useStore();
   const queryClient = useQueryClient();
   const { data: balanceData } = useBalances();
 
@@ -56,14 +55,14 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
 
   const getTokenData = (symbol: string) => {
     return balanceData?.allBalances?.find(
-      (b: any) => b.token?.symbol === symbol
+      (b: any) => b.token?.symbol === symbol,
     );
   };
 
   const getTokenBalance = (symbol: string) => {
     if (!balanceData?.allBalances) return 0;
     const matchingTokens = balanceData.allBalances.filter(
-      (b: any) => b.token?.symbol === symbol
+      (b: any) => b.token?.symbol === symbol,
     );
     let total = 0;
     for (const tokenData of matchingTokens) {
@@ -89,8 +88,8 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
   useEffect(() => {
     // Update rate when tokens change
     if (fromToken && toToken) {
-      BackendClient.getLiveRate(fromToken.symbol, toToken.symbol).then(
-        (res) => setExchangeRate(res.rate),
+      BackendClient.getLiveRate(fromToken.symbol, toToken.symbol).then((res) =>
+        setExchangeRate(res.rate),
       );
     }
   }, [fromToken, toToken]);
@@ -117,30 +116,38 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
       return;
     }
 
+    const PLATFORM_FEE_PERCENT = platformConfig
+      ? parseFloat(platformConfig.swapFee || "0.1")
+      : 0.1;
+    const usdcBalance = getTokenBalance("USDC");
+    const requiredMinUsdc = 0.1; // Basic check for platform fee context
+
+    if (usdcBalance < requiredMinUsdc) {
+      useStore
+        .getState()
+        .displayToast(
+          `Insufficient USDC balance for Platform Fee (~${PLATFORM_FEE_PERCENT}% of nominal).`,
+        );
+      return;
+    }
+
     setIsSwapping(true);
     setSwapFinished(false);
 
     try {
-      // Call the new backend swap route
-      const response = await fetch("/swap/execute", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId: registeredUser?.supabaseUid,
-          amountIn: fromAmount,
-          tokenIn: fromToken?.symbol || "",
-          tokenOut: toToken?.symbol || "",
-        }),
-      });
+      const selectedFromToken = fromToken;
+      const targetTokenAddress =
+        selectedFromToken?.contractAddress ||
+        selectedFromToken?.tokenAddress ||
+        getTokenData(selectedFromToken?.symbol || "")?.token?.tokenAddress ||
+        "";
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Swap failed");
-      }
-
-      const result = await response.json();
+      const result = await BackendClient.swapTokens(
+        parseFloat(fromAmount),
+        fromToken?.symbol || "",
+        toToken?.symbol || "",
+        targetTokenAddress,
+      );
 
       setTxHash(result.txId);
       setIsSwapping(false);
@@ -221,7 +228,9 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
                 ) : (
                   <span className="text-[12px] font-mono text-slate-600 break-all text-right">
                     {txHash} <br />
-                    <span className="text-[10px] text-slate-400">(Process ID - Pending On-chain Finality)</span>
+                    <span className="text-[10px] text-slate-400">
+                      (Process ID - Pending On-chain Finality)
+                    </span>
                   </span>
                 )}
               </div>
@@ -265,7 +274,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
         <div className="relative mb-6">
           {/* From */}
           <div
-            className={`bg-white p-5 rounded-2xl shadow-sm border transition-all duration-300 relative z-10 ${isSwapping ? "border-blue-400/50 shadow-blue-100/50 opacity-80" : "border-slate-200 focus-within:border-slate-400"}`}
+            className={`bg-white p-5 rounded-[24px] shadow-sm border transition-all duration-300 relative z-10 ${isSwapping ? "border-blue-400/50 shadow-blue-100/50 opacity-80" : "border-slate-200 focus-within:border-slate-400"}`}
           >
             <div className="flex justify-between items-center mb-4">
               <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
@@ -307,7 +316,9 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
                   className="flex items-center gap-2 bg-slate-50 border border-slate-200 hover:bg-slate-100 transition-colors px-3 py-2 rounded-full shrink-0 h-10"
                 >
                   <TokenIcon
-                    contractAddress={fromToken?.contractAddress || fromToken?.tokenAddress}
+                    contractAddress={
+                      fromToken?.contractAddress || fromToken?.tokenAddress
+                    }
                     symbol={fromToken?.symbol || ""}
                     className="w-6 h-6 text-[8px] shadow-sm shrink-0"
                     color={fromToken?.color || "bg-slate-300"}
@@ -344,7 +355,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
 
           {/* To */}
           <div
-            className={`bg-white p-5 rounded-2xl shadow-sm border mt-1.5 transition-all duration-300 relative z-10 ${isSwapping ? "border-orange-400/50 shadow-orange-100/50 opacity-80" : "border-slate-200 gap-2"}`}
+            className={`bg-white p-5 rounded-[24px] shadow-sm border mt-1.5 transition-all duration-300 relative z-10 ${isSwapping ? "border-orange-400/50 shadow-orange-100/50 opacity-80" : "border-slate-200 gap-2"}`}
           >
             <div className="flex justify-between items-center mb-4">
               <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
@@ -373,7 +384,9 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
                   className="flex items-center gap-2 bg-slate-50 border border-slate-200 hover:bg-slate-100 transition-colors px-3 py-2 rounded-full shrink-0 h-10"
                 >
                   <TokenIcon
-                    contractAddress={toToken?.contractAddress || toToken?.tokenAddress}
+                    contractAddress={
+                      toToken?.contractAddress || toToken?.tokenAddress
+                    }
                     symbol={toToken?.symbol || ""}
                     className="w-6 h-6 text-[8px] shadow-sm shrink-0"
                     color={toToken?.color || "bg-slate-300"}
@@ -472,8 +485,12 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
                 </span>
               </div>
               <div className="flex justify-between items-center mt-1">
-                <span className="text-[12px] text-slate-500">Network Gas (Sponsored)</span>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded w-fit ${platformConfig?.gasSubsidyEnabled ? "text-emerald-600 bg-emerald-50" : "text-slate-600 bg-slate-50"}`}>
+                <span className="text-[12px] text-slate-500">
+                  Network Gas (Sponsored)
+                </span>
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded w-fit ${platformConfig?.gasSubsidyEnabled ? "text-emerald-600 bg-emerald-50" : "text-slate-600 bg-slate-50"}`}
+                >
                   {platformConfig?.gasSubsidyEnabled ? "Free" : "Native"}
                 </span>
               </div>
@@ -492,7 +509,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
               fromToken?.symbol === toToken?.symbol
             }
             onClick={handleSwap}
-            className={`w-full font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-3 text-[15px] active:scale-[0.98]
+            className={`w-full font-bold py-4 rounded-full transition-all flex items-center justify-center gap-3 text-[15px] active:scale-95
               ${
                 !fromAmount ||
                 parseFloat(fromAmount) === 0 ||
@@ -561,8 +578,12 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
               {tokens
                 .filter(
                   (t) =>
-                    (t.name?.toLowerCase() || "").includes(searchToken.toLowerCase()) ||
-                    (t.symbol?.toLowerCase() || "").includes(searchToken.toLowerCase()),
+                    (t.name?.toLowerCase() || "").includes(
+                      searchToken.toLowerCase(),
+                    ) ||
+                    (t.symbol?.toLowerCase() || "").includes(
+                      searchToken.toLowerCase(),
+                    ),
                 )
                 .map((token) => (
                   <button
@@ -576,7 +597,9 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
                   >
                     <div className="flex items-center gap-3">
                       <TokenIcon
-                        contractAddress={token.contractAddress || token.tokenAddress}
+                        contractAddress={
+                          token.contractAddress || token.tokenAddress
+                        }
                         symbol={token.symbol}
                         className="w-10 h-10 text-[10px] shadow-sm"
                         color={token.color || "bg-slate-300"}

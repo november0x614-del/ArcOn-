@@ -34,7 +34,7 @@ export const WalletCard = React.memo(function WalletCard({
       pnlPercentage: state.pnlPercentage,
       registeredUser: state.registeredUser,
       balance: state.balance,
-    }))
+    })),
   );
 
   const balanceValue =
@@ -122,7 +122,9 @@ export const WalletCard = React.memo(function WalletCard({
             >
               PnL
             </span>
-            <span className={`text-[11px] sm:text-[12px] font-bold ${pnlValue >= 0 ? "text-emerald-500" : "text-rose-500"} whitespace-nowrap`}>
+            <span
+              className={`text-[11px] sm:text-[12px] font-bold ${pnlValue >= 0 ? "text-emerald-500" : "text-rose-500"} whitespace-nowrap`}
+            >
               {(() => {
                 return `${pnlValue >= 0 ? "+" : "-"}${Math.abs(pnlValue).toFixed(2).replace(".", ",")} (${pnlPercentage >= 0 ? "+" : ""}${pnlPercentage.toFixed(2).replace(".", ",")}%)`;
               })()}

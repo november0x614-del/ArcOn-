@@ -22,7 +22,8 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
+    // Leverage browser caching for static assets to reduce server load
+    app.use(express.static(distPath, { maxAge: "1y" }));
     app.get("*", (_req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });

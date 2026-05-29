@@ -108,7 +108,7 @@ router.get("/tokens", async (_req, res) => {
       type: "Utility Token",
       contractAddress: "0x4fbc689076bc19ad080bfebd8833fd4038a8faec",
       decimals: 18,
-    }
+    },
   ]);
 });
 
@@ -125,7 +125,9 @@ router.get("/tokens/resolve/:address", async (req, res) => {
     }
     const metadata = await getTokenMetadata(address);
     if (!metadata) {
-      return res.status(404).json({ error: "Contract not found or not a valid token" });
+      return res
+        .status(404)
+        .json({ error: "Contract not found or not a valid token" });
     }
     res.json(metadata);
   } catch (error: any) {
@@ -136,19 +138,21 @@ router.get("/tokens/resolve/:address", async (req, res) => {
 router.post("/tokens/import", async (req, res) => {
   try {
     const { userId, symbol, name, contractAddress, decimals } = req.body;
-    if (!userId || !contractAddress) return res.status(400).json({ error: "Missing data" });
+    if (!userId || !contractAddress)
+      return res.status(400).json({ error: "Missing data" });
 
     const supabase = getSupabaseAdmin();
-    const { error } = await supabase
-      .from("user_tokens")
-      .upsert({
+    const { error } = await supabase.from("user_tokens").upsert(
+      {
         user_id: userId,
         symbol,
         name,
         contract_address: contractAddress.toLowerCase(),
         decimals,
-        last_synced_at: new Date().toISOString()
-      }, { onConflict: "user_id, contract_address" });
+        last_synced_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id, contract_address" },
+    );
 
     if (error) throw error;
     res.json({ success: true });
@@ -167,12 +171,14 @@ router.get("/tokens/imported/:userId", async (req, res) => {
       .eq("user_id", userId);
 
     if (error) throw error;
-    res.json(data.map((t: any) => ({
-      symbol: t.symbol,
-      name: t.name,
-      contractAddress: t.contract_address,
-      decimals: t.decimals
-    })));
+    res.json(
+      data.map((t: any) => ({
+        symbol: t.symbol,
+        name: t.name,
+        contractAddress: t.contract_address,
+        decimals: t.decimals,
+      })),
+    );
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -200,7 +206,9 @@ router.get("/tokens/:id", async (req, res) => {
     const tokenId = req.params.id;
     const details = await getTokenDetails(tokenId);
     if (!details) {
-      return res.status(404).json({ error: "Token details not found in Circle infrastructure." });
+      return res
+        .status(404)
+        .json({ error: "Token details not found in Circle infrastructure." });
     }
     res.json(details);
   } catch (error: any) {
@@ -242,7 +250,9 @@ Please respond concisely and helpfully in Indonesian. Use the system state conte
     res.json({ reply: response.text });
   } catch (error: any) {
     console.error(error);
-    res.status(500).json({ error: error.message || "Failed to generate response" });
+    res
+      .status(500)
+      .json({ error: error.message || "Failed to generate response" });
   }
 });
 
@@ -250,7 +260,11 @@ router.post("/auth/cleanup-unconfirmed", async (req, res) => {
   try {
     const { email, username } = req.body;
     if (!email || !username) {
-      return res.status(400).json({ error: "Email and username are required for pre-flight cleanup." });
+      return res
+        .status(400)
+        .json({
+          error: "Email and username are required for pre-flight cleanup.",
+        });
     }
 
     const supabase = getSupabaseAdmin();
@@ -263,24 +277,39 @@ router.post("/auth/cleanup-unconfirmed", async (req, res) => {
       .maybeSingle();
 
     if (profileByUsername) {
-      const { data: { user }, error: getUserError } = await supabase.auth.admin.getUserById(profileByUsername.id);
+      const {
+        data: { user },
+        error: getUserError,
+      } = await supabase.auth.admin.getUserById(profileByUsername.id);
       if (!getUserError && user && !user.email_confirmed_at) {
-        console.log(`[Cleanup] Menghapus user unconfirmed dengan username '${username}' (ID: ${user.id})`);
+        console.log(
+          `[Cleanup] Menghapus user unconfirmed dengan username '${username}' (ID: ${user.id})`,
+        );
         await supabase.auth.admin.deleteUser(user.id);
       }
     }
 
     // 2. Temukan user berdasarkan email jika statusnya belum terkonfirmasi
-    const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
+    const {
+      data: { users },
+      error: listError,
+    } = await supabase.auth.admin.listUsers();
     if (!listError && users) {
-      const matchByEmail = users.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
+      const matchByEmail = users.find(
+        (u: any) => u.email?.toLowerCase() === email.toLowerCase(),
+      );
       if (matchByEmail && !matchByEmail.email_confirmed_at) {
-        console.log(`[Cleanup] Menghapus user unconfirmed dengan email '${email}' (ID: ${matchByEmail.id})`);
+        console.log(
+          `[Cleanup] Menghapus user unconfirmed dengan email '${email}' (ID: ${matchByEmail.id})`,
+        );
         await supabase.auth.admin.deleteUser(matchByEmail.id);
       }
     }
 
-    res.json({ success: true, message: "Stale unconfirmed credentials cleaned up successfully." });
+    res.json({
+      success: true,
+      message: "Stale unconfirmed credentials cleaned up successfully.",
+    });
   } catch (error: any) {
     console.error("Cleanup unconfirmed user error:", error);
     res.status(500).json({ error: error.message });
@@ -308,25 +337,28 @@ router.post("/webhook/simulate", async (req, res) => {
 });
 
 // Support GET (health-check/verification) and OPTIONS (CORS preflight) alongside POST on the Webhook route
-router.route("/circle/webhook")
+router
+  .route("/circle/webhook")
   .options((req, res) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Circle-Signature, X-Circle-Key-ID");
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "Content-Type, X-Circle-Signature, X-Circle-Key-ID",
+    );
     res.status(200).end();
   })
   .get((req, res) => {
     res.status(200).json({
       status: "active",
-      message: "Lounge Webhook Endpoint. Send a POST request with Circle signature headers to process notifications.",
-      timestamp: new Date().toISOString()
+      message:
+        "Lounge Webhook Endpoint. Send a POST request with Circle signature headers to process notifications.",
+      timestamp: new Date().toISOString(),
     });
   })
-  .post(
-    async (req, res) => {
-      res.setHeader("Access-Control-Allow-Origin", "*");
-      await verifyAndProcessWebhook(req, res, getSupabaseAdmin());
-    }
-  );
+  .post(async (req, res) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    await verifyAndProcessWebhook(req, res, getSupabaseAdmin());
+  });
 
 export default router;

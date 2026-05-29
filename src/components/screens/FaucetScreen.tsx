@@ -127,7 +127,8 @@ export function FaucetScreen({ onBack }: FaucetScreenProps) {
               </div>
 
               <div className="mt-3 text-[11px] text-slate-400 text-center px-4 font-medium italic">
-                * This transaction is locally simulated for preview purposes and won't appear on ArcScan.
+                * This transaction is locally simulated for preview purposes and
+                won't appear on ArcScan.
               </div>
 
               <button

@@ -87,7 +87,7 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
     // Find specific USDC balance for accurate validation
     const usdcData = allBalances.find((b: any) => b.token?.symbol === "USDC");
     const actualUSDC = usdcData ? parseFloat(usdcData.amount) : 0;
-    
+
     const totalWithFee = Number(selectedProduct.price) * 1.015;
     if (totalWithFee > actualUSDC) {
       displayToast(
@@ -143,16 +143,24 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
             ).join("-");
 
       setTransactionMetadata({
-        txHash: data.txHash || "0x" + Array.from({ length: 64 }, () => "0123456789abcdef"[Math.floor(Math.random() * 16)]).join(""),
+        txHash:
+          data.txHash ||
+          "0x" +
+            Array.from(
+              { length: 64 },
+              () => "0123456789abcdef"[Math.floor(Math.random() * 16)],
+            ).join(""),
         date: new Date().toISOString(),
-        merchantBase: data.useEscrow 
-          ? (data.escrowAddress ? `${data.escrowAddress.slice(0, 6)}...${data.escrowAddress.slice(-4)}` : "0x8F3C...A74D") 
+        merchantBase: data.useEscrow
+          ? data.escrowAddress
+            ? `${data.escrowAddress.slice(0, 6)}...${data.escrowAddress.slice(-4)}`
+            : "0x8F3C...A74D"
           : "0x2222...2222",
         voucherCode,
         serviceFee: serviceFee.toFixed(2),
         totalPaid: totalToPay.toFixed(2),
         useEscrow: data.useEscrow,
-        escrowAddress: data.escrowAddress
+        escrowAddress: data.escrowAddress,
       });
 
       displayToast("Payment Confirmed on Arc Testnet! 🎉");
@@ -226,7 +234,10 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
                 <div className="w-full flex flex-col gap-1.5 p-3.5 bg-violet-50/50 border border-violet-100/50 rounded-2xl animate-in zoom-in-95 duration-300">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-bold text-violet-800 uppercase tracking-tight flex items-center gap-1.5">
-                      <ShieldCheck size={13} className="text-violet-500 fill-violet-100/50" />
+                      <ShieldCheck
+                        size={13}
+                        className="text-violet-500 fill-violet-100/50"
+                      />
                       On-Chain Escrow Lock
                     </span>
                     <span className="text-[9.5px] text-violet-600 bg-violet-100/50 px-2 py-0.5 rounded-md font-black uppercase tracking-wider">
@@ -234,7 +245,14 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
                     </span>
                   </div>
                   <p className="text-[10.5px] text-violet-600 leading-normal font-medium">
-                    Funds are safely locked inside <code className="bg-violet-100/50 px-1 py-0.5 rounded font-mono font-bold text-violet-800">{transactionMetadata.escrowAddress ? `${transactionMetadata.escrowAddress.slice(0, 10)}...${transactionMetadata.escrowAddress.slice(-4)}` : "LoungeHub"}</code>. Platform will trigger automatic settlement once fulfillment confirmation is received.
+                    Funds are safely locked inside{" "}
+                    <code className="bg-violet-100/50 px-1 py-0.5 rounded font-mono font-bold text-violet-800">
+                      {transactionMetadata.escrowAddress
+                        ? `${transactionMetadata.escrowAddress.slice(0, 10)}...${transactionMetadata.escrowAddress.slice(-4)}`
+                        : "LoungeHub"}
+                    </code>
+                    . Platform will trigger automatic settlement once
+                    fulfillment confirmation is received.
                   </p>
                 </div>
               )}
@@ -570,10 +588,18 @@ export function EcommerceScreen({ onBack }: EcommerceScreenProps) {
                   Pay with Web3 Wallet
                 </h5>
                 <p className="text-[12px] text-slate-800/70 leading-relaxed">
-                  Transactions are secured by Arc Testnet. Your current USDC balance
-                  is{" "}
+                  Transactions are secured by Arc Testnet. Your current USDC
+                  balance is{" "}
                   <span className="font-bold text-slate-800">
-                    {(allBalances.find((b: any) => b.token?.symbol === "USDC") ? parseFloat(allBalances.find((b: any) => b.token?.symbol === "USDC").amount) : 0).toFixed(2)} USDC
+                    {(allBalances.find((b: any) => b.token?.symbol === "USDC")
+                      ? parseFloat(
+                          allBalances.find(
+                            (b: any) => b.token?.symbol === "USDC",
+                          ).amount,
+                        )
+                      : 0
+                    ).toFixed(2)}{" "}
+                    USDC
                   </span>
                   .
                 </p>

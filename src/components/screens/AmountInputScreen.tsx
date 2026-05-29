@@ -22,7 +22,8 @@ export function AmountInputScreen({
   onBack,
   onNext,
 }: AmountInputScreenProps) {
-  const { registeredUser, balance, allBalances, transferAmount, transferMemo } = useStore();
+  const { registeredUser, balance, allBalances, transferAmount, transferMemo } =
+    useStore();
   const { getFeeEstimate } = useArc();
   const [amount, setAmount] = useState(
     transferAmount && transferAmount !== "0" ? transferAmount : "",
@@ -58,13 +59,13 @@ export function AmountInputScreen({
   const sources = [currentSource];
 
   const numericAmount = amount ? parseFloat(amount) : 0;
-  
+
   // Accurate USDC Balance check for Arc Testnet
   const usdcData = allBalances.find((b) => b.token?.symbol === "USDC");
   const actualUSDC = usdcData ? parseFloat(usdcData.amount) : 0;
-  
+
   // Total needed (including platform fee)
-  const totalRequired = numericAmount + 0.10;
+  const totalRequired = numericAmount + 0.1;
   const hasEnough = actualUSDC >= totalRequired;
 
   return (
@@ -90,10 +91,10 @@ export function AmountInputScreen({
             {contact.name}
           </h2>
           <div className="mt-2 px-4 py-1.5 bg-slate-50 rounded-full border border-slate-100">
-             <p className="text-slate-500 text-[12px] font-bold tracking-tight text-center flex items-center gap-1.5">
-               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-               {contact.bank || contact.network} - {contact.account}
-             </p>
+            <p className="text-slate-500 text-[12px] font-bold tracking-tight text-center flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              {contact.bank || contact.network} - {contact.account}
+            </p>
           </div>
         </div>
 
@@ -120,20 +121,26 @@ export function AmountInputScreen({
               </button>
             )}
             <div className="flex items-center gap-2 bg-slate-100 rounded-full py-1.5 px-3 border border-slate-200 h-9 shrink-0">
-              <span className="font-bold text-[14px] text-slate-800 tracking-tight">USDC</span>
+              <span className="font-bold text-[14px] text-slate-800 tracking-tight">
+                USDC
+              </span>
             </div>
           </div>
-          
+
           <div className="flex items-center justify-between mt-2 pt-3 border-t border-slate-100">
             <span className="text-[12px] text-slate-500 font-medium">
               USDC Balance: {actualUSDC.toFixed(2)} USDC
             </span>
             <button
-                onClick={() => setAmount(actualUSDC >= 0.1 ? (actualUSDC - 0.1).toFixed(2) : "0")}
-                className="text-[11px] font-bold bg-slate-200 text-slate-700 px-2.5 py-1 rounded-md hover:bg-slate-300 transition-colors cursor-pointer border-none"
-              >
-                MAX
-              </button>
+              onClick={() =>
+                setAmount(
+                  actualUSDC >= 0.1 ? (actualUSDC - 0.1).toFixed(2) : "0",
+                )
+              }
+              className="text-[11px] font-bold bg-slate-200 text-slate-700 px-2.5 py-1 rounded-md hover:bg-slate-300 transition-colors cursor-pointer border-none"
+            >
+              MAX
+            </button>
           </div>
         </div>
 
@@ -265,7 +272,8 @@ export function AmountInputScreen({
                       </span>
                     </div>
                     <p className="text-[10px] text-slate-500 leading-tight mt-2 border-t border-slate-200/50 pt-2">
-                       Platform fees are used for application operation. Your network gas fee is sponsored by Arc Gas Station.
+                      Platform fees are used for application operation. Your
+                      network gas fee is sponsored by Arc Gas Station.
                     </p>
                   </div>
                 ) : (

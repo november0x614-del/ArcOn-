@@ -1,9 +1,20 @@
 import express from "express";
 import { getSupabaseAdmin } from "../config/supabase.js";
-import { createWallet, batchCreateWallets, interpretCircleError, autoSweepWallets } from "../services/circle.js";
+import {
+  createWallet,
+  batchCreateWallets,
+  interpretCircleError,
+  autoSweepWallets,
+} from "../services/circle.js";
 import { fetchUnifiedBalance } from "../services/balance.js";
 import * as crypto from "crypto";
-import { getWalletDetails, upgradeWallet, fetchSystemTransactions, fetchPendingApprovals, decideApproval } from "../services/admin.js";
+import {
+  getWalletDetails,
+  upgradeWallet,
+  fetchSystemTransactions,
+  fetchPendingApprovals,
+  decideApproval,
+} from "../services/admin.js";
 import { logAdminAction } from "../services/audit.js";
 
 const router = express.Router();
@@ -113,12 +124,16 @@ router.get("/users", async (_req, res) => {
 
     let authUsers: any[] = [];
     try {
-      const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
+      const { data: authData, error: authError } =
+        await supabase.auth.admin.listUsers();
       if (!authError && authData) {
         authUsers = authData.users || [];
       }
     } catch (err) {
-      console.warn("Could not list auth users from Supabase admin client:", err);
+      console.warn(
+        "Could not list auth users from Supabase admin client:",
+        err,
+      );
     }
 
     const adminEmail =
@@ -131,17 +146,24 @@ router.get("/users", async (_req, res) => {
       const authUser = authUsers.find((u) => u.id === w.id);
 
       const isDeleted = authUser?.user_metadata?.deleted === true;
-      const isBlocked = authUser?.user_metadata?.blocked === true || !!authUser?.banned_until;
+      const isBlocked =
+        authUser?.user_metadata?.blocked === true || !!authUser?.banned_until;
       const status = isDeleted ? "Archived" : isBlocked ? "Blocked" : "Active";
 
-      let email = authUser?.email || `user_${w.wallet_address.substring(2, 6)}@testnet.com`;
+      let email =
+        authUser?.email ||
+        `user_${w.wallet_address.substring(2, 6)}@testnet.com`;
       if (w.id === "00000000-0000-0000-0000-000000000000") {
         email = adminEmail;
       }
 
       return {
         id: w.id,
-        name: profile?.full_name || (w.id === "00000000-0000-0000-0000-000000000000" ? "Platform Admin" : "Anonymous"),
+        name:
+          profile?.full_name ||
+          (w.id === "00000000-0000-0000-0000-000000000000"
+            ? "Platform Admin"
+            : "Anonymous"),
         email: email,
         wallet: w.wallet_address,
         walletId: w.wallet_id,
@@ -167,7 +189,8 @@ router.get("/users/:userId/wallet", async (req, res) => {
       .eq("id", userId)
       .single();
 
-    if (!walletData?.wallet_id) return res.status(404).json({ error: "Wallet not found" });
+    if (!walletData?.wallet_id)
+      return res.status(404).json({ error: "Wallet not found" });
 
     const details = await getWalletDetails(walletData.wallet_id);
     res.json(details);
@@ -186,7 +209,8 @@ router.post("/users/:userId/upgrade", async (req, res) => {
       .eq("id", userId)
       .single();
 
-    if (!walletData?.wallet_id) return res.status(404).json({ error: "Wallet not found" });
+    if (!walletData?.wallet_id)
+      return res.status(404).json({ error: "Wallet not found" });
 
     const result = await upgradeWallet(walletData.wallet_id);
     res.json({ message: "Upgrade initiated", result });
@@ -231,14 +255,17 @@ router.delete("/users/:userId", async (req, res) => {
 
     const supabase = getSupabaseAdmin();
 
-    const { error: updateError } = await supabase.auth.admin.updateUserById(userId, {
-      ban_duration: "876000h",
-      user_metadata: {
-        blocked: true,
-        deleted: true,
-        deletedAt: new Date().toISOString(),
+    const { error: updateError } = await supabase.auth.admin.updateUserById(
+      userId,
+      {
+        ban_duration: "876000h",
+        user_metadata: {
+          blocked: true,
+          deleted: true,
+          deletedAt: new Date().toISOString(),
+        },
       },
-    });
+    );
 
     if (updateError) throw updateError;
 
@@ -282,7 +309,7 @@ router.get("/stats", async (_req, res) => {
       transactions.forEach((tx) => {
         const amt = Math.abs(parseFloat(tx.amount || "0"));
         totalVolume += amt;
-        
+
         // Logical check for Batch vs Single
         if (tx.type === "batchTransfer") {
           batchVolume += amt;
@@ -302,7 +329,11 @@ router.get("/stats", async (_req, res) => {
         .single();
 
       if (adminWallet) {
-        const balanceResult = await fetchUnifiedBalance("00000000-0000-0000-0000-000000000000", adminWallet, supabase);
+        const balanceResult = await fetchUnifiedBalance(
+          "00000000-0000-0000-0000-000000000000",
+          adminWallet,
+          supabase,
+        );
         if (balanceResult?.balance) {
           treasuryBalanceStr = `${balanceResult.balance} USDC`;
         }
@@ -318,7 +349,7 @@ router.get("/stats", async (_req, res) => {
       volumeData: {
         batch: batchVolume,
         single: singleVolume,
-      }
+      },
     });
   } catch (error: any) {
     console.error("Failed to fetch admin stats:", error);
@@ -408,10 +439,10 @@ router.post("/approvals/:txId/decide", async (req, res) => {
     const { decision } = req.body; // 'approve' | 'reject'
     const result = await decideApproval(txId, decision);
     await logAdminAction(
-      "00000000-0000-0000-0000-000000000000", 
-      decision === "approve" ? "TREASURY_TX_APPROVED" : "TREASURY_TX_REJECTED", 
-      txId, 
-      { decision }
+      "00000000-0000-0000-0000-000000000000",
+      decision === "approve" ? "TREASURY_TX_APPROVED" : "TREASURY_TX_REJECTED",
+      txId,
+      { decision },
     );
     res.json(result);
   } catch (error: any) {
@@ -428,7 +459,7 @@ router.get("/compliance/blocklist", async (_req, res) => {
       .from("sanctions_blocklist")
       .select("*")
       .order("created_at", { ascending: false });
-    
+
     if (error) throw error;
     res.json(data || []);
   } catch (error: any) {
@@ -447,18 +478,18 @@ router.post("/compliance/blocklist", async (req, res) => {
       .insert({
         address,
         reason,
-        added_by: "00000000-0000-0000-0000-000000000000" // Admin by default for now
+        added_by: "00000000-0000-0000-0000-000000000000", // Admin by default for now
       })
       .select()
       .single();
-    
+
     if (error) throw error;
-    
+
     await logAdminAction(
       "00000000-0000-0000-0000-000000000000",
       "COMPLIANCE_ADDRESS_BLOCKED",
       address,
-      { reason }
+      { reason },
     );
 
     res.json({ message: "Address added to blocklist", data });
@@ -475,13 +506,13 @@ router.delete("/compliance/blocklist/:address", async (req, res) => {
       .from("sanctions_blocklist")
       .delete()
       .eq("address", address);
-    
+
     if (error) throw error;
 
     await logAdminAction(
       "00000000-0000-0000-0000-000000000000",
       "COMPLIANCE_ADDRESS_UNBLOCKED",
-      address
+      address,
     );
 
     res.json({ message: "Address removed from blocklist" });
@@ -500,7 +531,7 @@ router.get("/config/fees", async (_req, res) => {
       .select("value")
       .eq("key", "GAS_FEE_STRATEGY")
       .maybeSingle();
-    
+
     if (error) throw error;
     res.json({ strategy: data?.value || "SPONSORED" });
   } catch (error: any) {
@@ -518,14 +549,17 @@ router.post("/config/fees", async (req, res) => {
     const supabase = getSupabaseAdmin();
     const { error } = await supabase
       .from("app_settings")
-      .upsert({ key: "GAS_FEE_STRATEGY", value: strategy }, { onConflict: "key" });
-    
+      .upsert(
+        { key: "GAS_FEE_STRATEGY", value: strategy },
+        { onConflict: "key" },
+      );
+
     if (error) throw error;
 
     await logAdminAction(
       "00000000-0000-0000-0000-000000000000",
       "FEE_STRATEGY_UPDATED",
-      strategy
+      strategy,
     );
 
     res.json({ message: `Gas strategy updated to ${strategy}` });
@@ -537,12 +571,18 @@ router.post("/config/fees", async (req, res) => {
 router.post("/wallet/auto-sweep", async (req, res) => {
   try {
     const { threshold, secret } = req.body;
-    if (secret !== process.env.ADMIN_SECRET) return res.status(403).json({ error: "Unauthorized" });
-    
-    const treasuryAddress = process.env.PLATFORM_TREASURY_ADDRESS;
-    if (!treasuryAddress) return res.status(400).json({ error: "Treasury address not configured" });
+    if (secret !== process.env.ADMIN_SECRET)
+      return res.status(403).json({ error: "Unauthorized" });
 
-    const result = await autoSweepWallets(getSupabaseAdmin(), threshold || 50, treasuryAddress);
+    const treasuryAddress = process.env.PLATFORM_TREASURY_ADDRESS;
+    if (!treasuryAddress)
+      return res.status(400).json({ error: "Treasury address not configured" });
+
+    const result = await autoSweepWallets(
+      getSupabaseAdmin(),
+      threshold || 50,
+      treasuryAddress,
+    );
     res.json({ message: "Sweep completed", result });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -556,7 +596,9 @@ router.get("/config/pending-transactions", async (_req, res) => {
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from("transactions")
-      .select("id, user_id, amount, type, status, internal_ref, created_at, metadata")
+      .select(
+        "id, user_id, amount, type, status, internal_ref, created_at, metadata",
+      )
       .eq("status", "pending")
       .order("created_at", { ascending: false });
 
@@ -571,14 +613,22 @@ router.post("/config/simulate-circle-webhook", async (req, res) => {
   try {
     const { internalRef, status, errorReason, errorDetails } = req.body;
     if (!internalRef || !status) {
-      return res.status(400).json({ error: "internalRef and status are required (and optionally errorReason, errorDetails)" });
+      return res
+        .status(400)
+        .json({
+          error:
+            "internalRef and status are required (and optionally errorReason, errorDetails)",
+        });
     }
 
     const supabase = getSupabaseAdmin();
 
     const isFailed = status === "FAILED";
-    const newStatus = status === "COMPLETE" ? "success" : isFailed ? "failed" : "pending";
-    const txHash = isFailed ? null : `0x${crypto.randomBytes(32).toString("hex")}`;
+    const newStatus =
+      status === "COMPLETE" ? "success" : isFailed ? "failed" : "pending";
+    const txHash = isFailed
+      ? null
+      : `0x${crypto.randomBytes(32).toString("hex")}`;
 
     // 1. Fetch transaction metadata first
     const { data: existingTx, error: fetchError } = await supabase
@@ -589,14 +639,16 @@ router.post("/config/simulate-circle-webhook", async (req, res) => {
 
     if (fetchError) throw fetchError;
     if (!existingTx) {
-      return res.status(404).json({ error: "Transaction not found with that internal reference" });
+      return res
+        .status(404)
+        .json({ error: "Transaction not found with that internal reference" });
     }
 
     let errorMessage = null;
     if (isFailed) {
       errorMessage = interpretCircleError(
-        errorReason || "FAILED_ON_CHAIN", 
-        errorDetails || "Insufficient Balance"
+        errorReason || "FAILED_ON_CHAIN",
+        errorDetails || "Insufficient Balance",
       );
     }
 
@@ -604,16 +656,22 @@ router.post("/config/simulate-circle-webhook", async (req, res) => {
       ? {
           ...existingTx.metadata,
           txHash: txHash || existingTx.metadata.txHash,
-          errorReason: isFailed ? (errorReason || "FAILED_ON_CHAIN") : existingTx.metadata.errorReason,
-          errorDetails: isFailed ? (errorDetails || "Insufficient Balance") : existingTx.metadata.errorDetails,
+          errorReason: isFailed
+            ? errorReason || "FAILED_ON_CHAIN"
+            : existingTx.metadata.errorReason,
+          errorDetails: isFailed
+            ? errorDetails || "Insufficient Balance"
+            : existingTx.metadata.errorDetails,
           errorMessage: errorMessage || existingTx.metadata.errorMessage,
           simulated: true,
           simulatedAt: new Date().toISOString(),
         }
       : {
           txHash,
-          errorReason: isFailed ? (errorReason || "FAILED_ON_CHAIN") : null,
-          errorDetails: isFailed ? (errorDetails || "Insufficient Balance") : null,
+          errorReason: isFailed ? errorReason || "FAILED_ON_CHAIN" : null,
+          errorDetails: isFailed
+            ? errorDetails || "Insufficient Balance"
+            : null,
           errorMessage,
           simulated: true,
           simulatedAt: new Date().toISOString(),
@@ -621,9 +679,9 @@ router.post("/config/simulate-circle-webhook", async (req, res) => {
 
     const { error: updateError } = await supabase
       .from("transactions")
-      .update({ 
-        status: newStatus, 
-        metadata: updatedMetadata 
+      .update({
+        status: newStatus,
+        metadata: updatedMetadata,
       })
       .eq("internal_ref", internalRef);
 
@@ -634,14 +692,14 @@ router.post("/config/simulate-circle-webhook", async (req, res) => {
       "00000000-0000-0000-0000-000000000000",
       "TRANSACTION_WEBHOOK_SIMULATED",
       internalRef,
-      { status: newStatus, isFailed }
+      { status: newStatus, isFailed },
     );
 
     res.json({
       success: true,
       message: `Successfully simulated webhook event: Transaction ${internalRef} updated to ${newStatus}`,
       txHash,
-      status: newStatus
+      status: newStatus,
     });
   } catch (error: any) {
     console.error("[Simulate webhook route] error:", error);

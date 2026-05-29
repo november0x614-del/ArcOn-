@@ -50,12 +50,7 @@ const NETWORKS = [
 ];
 
 export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
-  const {
-    balance,
-    displayToast,
-    registeredUser,
-    startSyncPolling,
-  } = useApp();
+  const { balance, displayToast, registeredUser, startSyncPolling } = useApp();
   const [step, setStep] = useState<"form" | "processing" | "success">("form");
   const mode = "outbound"; // Forced to outbound for now
   const [processingPhase, setProcessingPhase] = useState<
@@ -76,9 +71,11 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
       displayToast("Please enter a valid amount.");
       return;
     }
-    const totalWithFee = numAmount + 0.10;
+    const totalWithFee = numAmount + 0.1;
     if (mode === "outbound" && totalWithFee > balance) {
-      displayToast(`Insufficient USDC balance. Need ${totalWithFee.toFixed(2)} USDC (includes 0.10 Platform Fee).`);
+      displayToast(
+        `Insufficient USDC balance. Need ${totalWithFee.toFixed(2)} USDC (includes 0.10 Platform Fee).`,
+      );
       return;
     }
     if (!destinationAddress.trim()) {
@@ -276,7 +273,9 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
           >
             <ArrowLeft size={20} className="text-white" />
           </button>
-          <h3 className="font-bold text-[16px] tracking-tight text-white ml-2">CCTP BRIDGE</h3>
+          <h3 className="font-bold text-[16px] tracking-tight text-white ml-2">
+            CCTP BRIDGE
+          </h3>
         </div>
         <button
           onClick={() => setShowPending(true)}
@@ -419,13 +418,17 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-[13px] text-slate-500">Network Gas (Sponsored)</span>
+                <span className="text-[13px] text-slate-500">
+                  Network Gas (Sponsored)
+                </span>
                 <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md w-fit">
                   Free
                 </span>
               </div>
               <div className="pt-3.5 border-t border-slate-100 flex justify-between items-center mt-2.5">
-                <span className="text-[13px] font-bold text-slate-500">Arc Settlement</span>
+                <span className="text-[13px] font-bold text-slate-500">
+                  Arc Settlement
+                </span>
                 <span className="text-[12px] font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded-md">
                   Instant Finality
                 </span>

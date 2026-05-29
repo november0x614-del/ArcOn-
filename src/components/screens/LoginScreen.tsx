@@ -31,7 +31,11 @@ export function LoginScreen({
 
         <div className="z-10 bg-white/20 p-4 rounded-3xl backdrop-blur-md mb-6 border border-white/30 shadow-[0_8px_32px_rgba(0,0,0,0.1)]">
           <div className="bg-white rounded-2xl shadow-sm w-[80px] h-[80px] overflow-hidden">
-            <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
+            <img
+              src="/logo.png"
+              alt="Logo"
+              className="w-full h-full object-cover"
+            />
           </div>
         </div>
 

@@ -4,10 +4,10 @@ export async function logAuditEvent(
   userId: string,
   action: string,
   targetId: string | null = null,
-  metadata: any = {}
+  metadata: any = {},
 ) {
   const supabase = getSupabaseAdmin();
-  
+
   const { error } = await supabase.from("transactions").insert({
     user_id: userId,
     amount: "0.00",
@@ -17,8 +17,8 @@ export async function logAuditEvent(
     metadata: {
       ...metadata,
       isAudit: true,
-      timestamp: new Date().toISOString()
-    }
+      timestamp: new Date().toISOString(),
+    },
   });
 
   if (error) {

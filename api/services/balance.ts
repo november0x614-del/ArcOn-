@@ -38,14 +38,19 @@ export async function fetchUnifiedBalance(
       ? getCircleClientInstance()
           .getWalletTokenBalance({ id: walletId })
           .catch((err) => {
-            console.warn(`[CircleBalance API] getWalletTokenBalance failed for wallet ${walletId}:`, err.message);
+            console.warn(
+              `[CircleBalance API] getWalletTokenBalance failed for wallet ${walletId}:`,
+              err.message,
+            );
             return null;
           })
       : null,
-    publicClient.getBalance({ address: walletAddress as `0x${string}` }).catch((e) => {
-      console.warn("RPC getBalance failed:", e.message);
-      return 0n;
-    }),
+    publicClient
+      .getBalance({ address: walletAddress as `0x${string}` })
+      .catch((e) => {
+        console.warn("RPC getBalance failed:", e.message);
+        return 0n;
+      }),
     getTokenBalance(walletAddress, USDC_ADDRESS).catch((e) => {
       console.warn("RPC getTokenBalance failed:", e.message);
       return 0n;
@@ -69,7 +74,7 @@ export async function fetchUnifiedBalance(
   // 3. Merge Arc Native Assets (Gas)
   const nativeBalanceFormatted = formatUnits(nativeWei, 18);
   const existingArcIndex = tokenBalances.findIndex(
-    (b: any) => b.token?.symbol === "ARC" || b.token?.isNative === true
+    (b: any) => b.token?.symbol === "ARC" || b.token?.isNative === true,
   );
 
   if (existingArcIndex >= 0) {
@@ -90,7 +95,7 @@ export async function fetchUnifiedBalance(
   // 4. Merge on-chain USDC (ERC20 Contract)
   const nativeUSDCFormatted = formatUnits(nativeUSDCWei, 6);
   const existingUSDCIndex = tokenBalances.findIndex(
-    (b: any) => b.token?.symbol === "USDC" && b.token?.isNative === false
+    (b: any) => b.token?.symbol === "USDC" && b.token?.isNative === false,
   );
 
   if (existingUSDCIndex >= 0) {
@@ -143,7 +148,7 @@ export async function fetchUnifiedBalance(
   // Recalculate actual total Value
   totalValueUsd = finalUsdcAmount * USDC_PRICE;
   for (const b of otherBalances) {
-    totalValueUsd += parseFloat(b.amount || "0") * 1.0; 
+    totalValueUsd += parseFloat(b.amount || "0") * 1.0;
   }
 
   // 5. Consideration of Pending Transactions (Local UI feel)

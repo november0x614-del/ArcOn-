@@ -28,7 +28,10 @@ import { UIDCard } from "../common/UIDCard";
 import { useBalances } from "../../hooks/useBalances";
 import { useStore } from "../../store/useStore";
 import { Transaction } from "../../types";
-import { ARC_TOKEN_REGISTRY, syncTokenWithArcScan } from "../../lib/arcRegistry";
+import {
+  ARC_TOKEN_REGISTRY,
+  syncTokenWithArcScan,
+} from "../../lib/arcRegistry";
 import { TokenIcon } from "../ui/TokenIcon";
 import { BackendClient } from "../../services/api";
 import { useDebounce } from "../../hooks/useDebounce";
@@ -119,7 +122,9 @@ export function AccountDetailScreen({
     if (activeFilter === "All") return true;
     if (activeFilter === "Received") return tx.type === "deposit";
     if (activeFilter === "Sent")
-      return ["withdraw", "transfer", "purchase"].includes(tx.type);
+      return ["withdraw", "transfer", "purchase", "batchTransfer"].includes(
+        tx.type,
+      );
     if (activeFilter === "Swaps") return tx.type === "swap";
     return true;
   });
@@ -176,12 +181,14 @@ export function AccountDetailScreen({
     if (showImportModal && importTab === "popular") {
       BackendClient.getTokens().then((tokens) => {
         if (tokens && Array.isArray(tokens)) {
-          setPopularCatalog(tokens.map(t => ({
-            ...t,
-            initialBalance: Math.random() * 500 + 100, // Still mock balance for newly imported
-            usdPrice: 1.0,
-            type: t.type || "ArcScan Verified Token"
-          })));
+          setPopularCatalog(
+            tokens.map((t) => ({
+              ...t,
+              initialBalance: Math.random() * 500 + 100, // Still mock balance for newly imported
+              usdPrice: 1.0,
+              type: t.type || "ArcScan Verified Token",
+            })),
+          );
         }
       });
     }
@@ -189,7 +196,11 @@ export function AccountDetailScreen({
 
   // Auto-resolve custom token details
   useEffect(() => {
-    if (debouncedAddress && debouncedAddress.startsWith("0x") && debouncedAddress.length >= 42) {
+    if (
+      debouncedAddress &&
+      debouncedAddress.startsWith("0x") &&
+      debouncedAddress.length >= 42
+    ) {
       const resolve = async () => {
         setIsResolving(true);
         try {
@@ -333,11 +344,15 @@ export function AccountDetailScreen({
           </div>
           <div className="flex items-center gap-4">
             {activeTab === "token" && (
-              <button 
+              <button
                 onClick={() => setIsManageMode(!isManageMode)}
                 className={`p-2 rounded-full transition-all active:scale-90 ${isManageMode ? "bg-red-50 text-red-500" : "text-slate-900 bg-slate-100/50"}`}
               >
-                {isManageMode ? <X size={18} /> : <Settings2 size={18} strokeWidth={2} />}
+                {isManageMode ? (
+                  <X size={18} />
+                ) : (
+                  <Settings2 size={18} strokeWidth={2} />
+                )}
               </button>
             )}
           </div>
@@ -434,11 +449,9 @@ export function AccountDetailScreen({
           <div className="flex-1 overflow-y-auto px-5 py-5 pb-24 bg-slate-50/50">
             <div className="bg-white rounded-[24px] border border-slate-200/50 shadow-[0_4px_24px_rgba(0,0,0,0.02)] overflow-hidden">
               {/* USDC Token Row */}
-              <div
-                className="p-4 flex justify-between items-center hover:bg-slate-50/75 transition-colors cursor-pointer border-b border-slate-100"
-              >
+              <div className="p-4 flex justify-between items-center hover:bg-slate-50/75 transition-colors cursor-pointer border-b border-slate-100">
                 <div className="flex items-center gap-4">
-                  <TokenIcon 
+                  <TokenIcon
                     contractAddress="0x3600000000000000000000000000000000000000"
                     symbol="USDC"
                     className="w-12 h-12"
@@ -455,19 +468,23 @@ export function AccountDetailScreen({
                 </div>
                 <div className="flex flex-col items-end">
                   <span className="font-bold text-[16px] text-slate-800 font-mono">
-                    {showBalance 
-                      ? (balance || 0) === 0 ? "0" : (balance || 0).toLocaleString("en-US", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })
+                    {showBalance
+                      ? (balance || 0) === 0
+                        ? "0"
+                        : (balance || 0).toLocaleString("en-US", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })
                       : "••••"}
                   </span>
                   <span className="text-[12px] text-slate-400 font-medium tracking-wide">
-                    {showBalance 
-                      ? (balance || 0) === 0 ? "0" : `~$${(balance || 0).toLocaleString("en-US", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}`
+                    {showBalance
+                      ? (balance || 0) === 0
+                        ? "0"
+                        : `~$${(balance || 0).toLocaleString("en-US", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}`
                       : "••••"}
                   </span>
                 </div>
@@ -479,80 +496,103 @@ export function AccountDetailScreen({
                   key={token.symbol}
                   className="p-4 flex justify-between items-center hover:bg-slate-50/75 transition-colors cursor-pointer border-b border-slate-100 relative overflow-hidden"
                 >
-                    <div className="flex items-center gap-4">
-                      <TokenIcon
-                        contractAddress={token.contractAddress}
-                        symbol={token.symbol}
-                        className="w-11 h-11"
-                        color={token.color || "bg-slate-800"}
-                      />
-                      <div className="flex flex-col text-left max-w-[150px] sm:max-w-[200px]">
-                        <span className="font-bold text-slate-800 text-[15px] leading-tight">
-                          {token.name || token.symbol}
-                        </span>
-                        <div className="text-[12px] text-slate-500 mt-0.5">
-                          {token.symbol} • {["USDC", "EURC", "USDT", "PYUSD", "USDE", "DAI"].includes(token.symbol.toUpperCase()) ? "Stablecoin" : (token.symbol.toUpperCase().includes("BTC") || token.symbol.toUpperCase().includes("ETH") ? "Wrapped Token" : "Utility Token")}
-                        </div>
+                  <div className="flex items-center gap-4">
+                    <TokenIcon
+                      contractAddress={token.contractAddress}
+                      symbol={token.symbol}
+                      className="w-11 h-11"
+                      color={token.color || "bg-slate-800"}
+                    />
+                    <div className="flex flex-col text-left max-w-[150px] sm:max-w-[200px]">
+                      <span className="font-bold text-slate-800 text-[15px] leading-tight">
+                        {token.name || token.symbol}
+                      </span>
+                      <div className="text-[12px] text-slate-500 mt-0.5">
+                        {token.symbol} •{" "}
+                        {[
+                          "USDC",
+                          "EURC",
+                          "USDT",
+                          "PYUSD",
+                          "USDE",
+                          "DAI",
+                        ].includes(token.symbol.toUpperCase())
+                          ? "Stablecoin"
+                          : token.symbol.toUpperCase().includes("BTC") ||
+                              token.symbol.toUpperCase().includes("ETH")
+                            ? "Wrapped Token"
+                            : "Utility Token"}
                       </div>
                     </div>
-                      <div className="flex items-center">
-                        <div className="flex flex-col items-end">
-                          <span className="font-bold text-[15.5px] text-slate-800 font-mono">
-                            {showBalance
-                              ? (() => {
-                                  const amt =
-                                    liveCustomBalances[
-                                      token.contractAddress?.toLowerCase().trim() || ""
-                                    ] !== undefined
-                                      ? liveCustomBalances[
-                                          token.contractAddress?.toLowerCase().trim() || ""
-                                        ]
-                                      : (token.balance || 0);
-                                  return amt === 0 ? "0" : amt.toLocaleString("en-US", {
+                  </div>
+                  <div className="flex items-center">
+                    <div className="flex flex-col items-end">
+                      <span className="font-bold text-[15.5px] text-slate-800 font-mono">
+                        {showBalance
+                          ? (() => {
+                              const amt =
+                                liveCustomBalances[
+                                  token.contractAddress?.toLowerCase().trim() ||
+                                    ""
+                                ] !== undefined
+                                  ? liveCustomBalances[
+                                      token.contractAddress
+                                        ?.toLowerCase()
+                                        .trim() || ""
+                                    ]
+                                  : token.balance || 0;
+                              return amt === 0
+                                ? "0"
+                                : amt.toLocaleString("en-US", {
                                     minimumFractionDigits: 2,
                                     maximumFractionDigits:
                                       token.decimals > 6 ? 4 : 2,
                                   });
-                                })()
-                              : "••••"}
-                          </span>
-                          <span className="text-[11.5px] text-slate-400 font-medium tracking-wide">
-                            {showBalance
-                              ? (() => {
-                                  const amt =
-                                    liveCustomBalances[
-                                      token.contractAddress?.toLowerCase().trim() || ""
-                                    ] !== undefined
-                                      ? liveCustomBalances[
-                                          token.contractAddress?.toLowerCase().trim() || ""
-                                        ]
-                                      : (token.balance || 0);
-                                  return amt === 0 ? "0" : (
-                                    `~$` +
-                                    (amt * (token.usdPrice || 1.0)).toLocaleString("en-US", {
+                            })()
+                          : "••••"}
+                      </span>
+                      <span className="text-[11.5px] text-slate-400 font-medium tracking-wide">
+                        {showBalance
+                          ? (() => {
+                              const amt =
+                                liveCustomBalances[
+                                  token.contractAddress?.toLowerCase().trim() ||
+                                    ""
+                                ] !== undefined
+                                  ? liveCustomBalances[
+                                      token.contractAddress
+                                        ?.toLowerCase()
+                                        .trim() || ""
+                                    ]
+                                  : token.balance || 0;
+                              return amt === 0
+                                ? "0"
+                                : `~$` +
+                                    (
+                                      amt * (token.usdPrice || 1.0)
+                                    ).toLocaleString("en-US", {
                                       minimumFractionDigits: 2,
                                       maximumFractionDigits: 2,
-                                    })
-                                  );
-                                })()
-                              : "••••"}
-                          </span>
-                        </div>
-                        {isManageMode && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (window.confirm(`Remove ${token.symbol}?`)) {
-                                removeToken(token.symbol);
-                                displayToast(`${token.symbol} removed`);
-                              }
-                            }}
-                            className="ml-3 p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors cursor-pointer animate-in zoom-in-50 duration-200 shadow-sm"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        )}
-                      </div>
+                                    });
+                            })()
+                          : "••••"}
+                      </span>
+                    </div>
+                    {isManageMode && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (window.confirm(`Remove ${token.symbol}?`)) {
+                            removeToken(token.symbol);
+                            displayToast(`${token.symbol} removed`);
+                          }
+                        }}
+                        className="ml-3 p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors cursor-pointer animate-in zoom-in-50 duration-200 shadow-sm"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
 
@@ -667,8 +707,8 @@ export function AccountDetailScreen({
 
                   {popularCatalog.length === 0 && (
                     <div className="flex flex-col items-center py-10 text-slate-400 gap-2">
-                       <RefreshCw className="animate-spin" size={24} />
-                       <span className="text-[12px]">Loading catalog...</span>
+                      <RefreshCw className="animate-spin" size={24} />
+                      <span className="text-[12px]">Loading catalog...</span>
                     </div>
                   )}
 
@@ -747,7 +787,10 @@ export function AccountDetailScreen({
                       />
                       {isResolving && (
                         <div className="absolute right-3 bottom-2.5">
-                          <RefreshCw size={14} className="animate-spin text-blue-500" />
+                          <RefreshCw
+                            size={14}
+                            className="animate-spin text-blue-500"
+                          />
                         </div>
                       )}
                     </div>

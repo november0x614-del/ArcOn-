@@ -61,7 +61,13 @@ export async function verifyAndProcessWebhook(
     const signatureBuffer = Buffer.from(signature, "base64");
 
     // Standardize body for signature verification to support both raw buffers and pre-parsed bodies
-    const rawBodyBuffer = (req as any).rawBody || (Buffer.isBuffer(req.body) ? req.body : Buffer.from(typeof req.body === "string" ? req.body : JSON.stringify(req.body)));
+    const rawBodyBuffer =
+      (req as any).rawBody ||
+      (Buffer.isBuffer(req.body)
+        ? req.body
+        : Buffer.from(
+            typeof req.body === "string" ? req.body : JSON.stringify(req.body),
+          ));
 
     if (algorithm === "ED25519") {
       isVerified = crypto.verify(
@@ -113,27 +119,38 @@ export async function verifyAndProcessWebhook(
     const data = payload.notification;
     console.log(`Webhook received: ${type}`);
 
-    if (type === "transfers.updated" || type === "transfers.created" || type === "contractExecutions.updated") {
+    if (
+      type === "transfers.updated" ||
+      type === "transfers.created" ||
+      type === "contractExecutions.updated" ||
+      type === "transactions.outbound" ||
+      type === "transactions.updated"
+    ) {
       const transfer = data;
       const internalRef = transfer.id;
 
       // Arc Deterministic Finality: Arc transactions are immutable after 1 confirmation
       // Circle marks COMPLETE when fully settled, we align with that.
-      const isFailed = transfer.status === "FAILED";
+      const txStatus = transfer.status || transfer.state;
+      const isFailed = txStatus === "FAILED";
       const newStatus =
-        transfer.status === "COMPLETE"
+        txStatus === "COMPLETE"
           ? "success"
           : isFailed
             ? "failed"
             : "pending";
 
       // Arc hardening: extract txHash if available
-      const txHash = transfer.transactionHash || data.txHash || data.transactionHash;
+      const txHash =
+        transfer.transactionHash || data.txHash || data.transactionHash;
 
       // Extract error details if failed
       let errorMessage = null;
       if (isFailed) {
-        errorMessage = interpretCircleError(transfer.errorReason, transfer.errorDetails);
+        errorMessage = interpretCircleError(
+          transfer.errorReason,
+          transfer.errorDetails,
+        );
       }
 
       // First fetch the existing transaction to update its metadata
@@ -142,26 +159,39 @@ export async function verifyAndProcessWebhook(
         .select("metadata")
         .eq("internal_ref", internalRef)
         .single();
-        
-      const updatedMetadata = existingTx?.metadata 
-        ? { 
-            ...existingTx.metadata, 
+
+      const updatedMetadata = existingTx?.metadata
+        ? {
+            ...existingTx.metadata,
             txHash: txHash || existingTx.metadata.txHash,
-            errorReason: isFailed ? transfer.errorReason : existingTx.metadata.errorReason,
-            errorDetails: isFailed ? transfer.errorDetails : existingTx.metadata.errorDetails,
-            errorMessage: errorMessage || existingTx.metadata.errorMessage
-          } 
-        : { 
-            txHash, 
+            errorReason: isFailed
+              ? transfer.errorReason
+              : existingTx.metadata.errorReason,
+            errorDetails: isFailed
+              ? transfer.errorDetails
+              : existingTx.metadata.errorDetails,
+            errorMessage: errorMessage || existingTx.metadata.errorMessage,
+          }
+        : {
+            txHash,
             errorReason: isFailed ? transfer.errorReason : null,
             errorDetails: isFailed ? transfer.errorDetails : null,
-            errorMessage 
+            errorMessage,
           };
 
       const { error } = await supabaseAdmin
         .from("transactions")
         .update({ status: newStatus, metadata: updatedMetadata })
         .eq("internal_ref", internalRef);
+
+      // Ledger equivalent update
+      await supabaseAdmin
+        .from("transaction_ledger")
+        .update({
+          status: newStatus === "success" ? "COMPLETE" : newStatus === "failed" ? "FAILED" : "PENDING",
+          tx_hash: txHash,
+        })
+        .eq("circle_tx_id", internalRef);
 
       if (error) {
         console.error("Supabase update error:", error);
@@ -212,6 +242,20 @@ export async function verifyAndProcessWebhook(
             destinationAddress,
             txHash,
             finality: "deterministic",
+            memo: memo || null,
+          },
+        });
+
+        await supabaseAdmin.from("transaction_ledger").insert({
+          user_id: walletData.id,
+          tx_type: "RECEIVE", 
+          amount: amountValue,
+          destination_address: destinationAddress,
+          circle_tx_id: id,
+          tx_hash: txHash,
+          status: "COMPLETE",
+          metadata: {
+            sourceAddress,
             memo: memo || null,
           },
         });

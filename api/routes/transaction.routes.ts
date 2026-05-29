@@ -1,13 +1,24 @@
 import express from "express";
 import { getSupabaseAdmin, isUserBlocked } from "../config/supabase.js";
-import { executeTransaction, executeAtomicBatchTransfer, ARC_USDC_TOKEN_ID, createWallet } from "../services/circle.js";
-import { initiateOutboundBridge, finalizeInboundBridge } from "../services/bridge.js";
+import {
+  executeTransaction,
+  executeAtomicBatchTransfer,
+  ARC_USDC_TOKEN_ID,
+} from "../services/circle.js";
+import {
+  initiateOutboundBridge,
+  finalizeInboundBridge,
+} from "../services/bridge.js";
 import { getCircleClientInstance } from "../services/circleClient.js";
 import { logAuditEvent } from "../services/audit.js";
 import { getPlatformConfigs } from "./admin.routes.js";
 import * as crypto from "crypto";
 
-import { executeAppKitSwap, executeAppKitBridge, executeAppKitSend } from "../services/appkit.js";
+import {
+  executeAppKitSwap,
+  executeAppKitBridge,
+  executeAppKitSend,
+} from "../services/appkit.js";
 import { BridgeChain } from "@circle-fin/app-kit";
 
 const router = express.Router();
@@ -25,26 +36,29 @@ router.get("/transactions/:userId", async (req, res) => {
     const transactions = data || [];
 
     // Real-time self-healing fallback check:
-    // Pull status directly from Circle for any client-side pending transactions 
+    // Pull status directly from Circle for any client-side pending transactions
     // whose internal reference matches a valid Circle API UUID identifier, ensuring state consistency.
     const pendingTxs = transactions.filter(
       (tx: any) =>
         tx.status === "pending" &&
         tx.internal_ref &&
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tx.internal_ref)
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          tx.internal_ref,
+        ),
     );
 
     if (pendingTxs.length > 0) {
       const client = getCircleClientInstance();
-      const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-      
+      const sleep = (ms: number) =>
+        new Promise((resolve) => setTimeout(resolve, ms));
+
       const batchToProcess = pendingTxs.slice(0, 5); // Limit self-healing to 5 max per request to prevent timeouts
-      
+
       for (const tx of batchToProcess) {
         try {
           const circleTx = await client.getTransaction({ id: tx.internal_ref });
           const transaction = circleTx.data?.transaction as any;
-          const circleStatus = transaction?.status;
+          const circleStatus = transaction?.status || transaction?.state;
           let finalStatus = "pending";
 
           if (circleStatus === "COMPLETE") {
@@ -56,7 +70,8 @@ router.get("/transactions/:userId", async (req, res) => {
           if (finalStatus !== "pending") {
             const updatedMetadata = {
               ...(tx.metadata || {}),
-              txHash: transaction?.txHash || tx.metadata?.txHash || transaction?.id,
+              txHash:
+                transaction?.txHash || tx.metadata?.txHash || transaction?.id,
               errorReason: transaction?.errorReason || null,
               errorDetails: transaction?.errorDetails || null,
               selfHealed: true,
@@ -64,10 +79,10 @@ router.get("/transactions/:userId", async (req, res) => {
 
             await supabase
               .from("transactions")
-              .update({ 
-                status: finalStatus, 
+              .update({
+                status: finalStatus,
                 tx_hash: circleTx.data?.transaction?.txHash || tx.tx_hash,
-                metadata: updatedMetadata 
+                metadata: updatedMetadata,
               })
               .eq("id", tx.id);
 
@@ -75,10 +90,15 @@ router.get("/transactions/:userId", async (req, res) => {
             tx.status = finalStatus;
             tx.tx_hash = circleTx.data?.transaction?.txHash || tx.tx_hash;
             tx.metadata = updatedMetadata;
-            console.log(`[Self-Healing] Successfully resolved pending transaction ${tx.internal_ref} status to: ${finalStatus}`);
+            console.log(
+              `[Self-Healing] Successfully resolved pending transaction ${tx.internal_ref} status to: ${finalStatus}`,
+            );
           }
         } catch (circleErr: any) {
-          console.error(`[Self-Healing] Failed to resolve transaction ${tx.internal_ref}:`, circleErr.message || circleErr);
+          console.error(
+            `[Self-Healing] Failed to resolve transaction ${tx.internal_ref}:`,
+            circleErr.message || circleErr,
+          );
         }
         await sleep(500); // 500ms delay to prevent rate limits
       }
@@ -92,10 +112,11 @@ router.get("/transactions/:userId", async (req, res) => {
 
 router.post("/swap/execute", async (req, res) => {
   try {
-    const { userId, amountIn, tokenIn, tokenOut } = req.body;
+    const { userId, amount, fromToken, toToken } = req.body;
     if (await isUserBlocked(userId)) {
       return res.status(403).json({
-        error: "Your account has been disabled by the system administrator. All transaction operations are suspended.",
+        error:
+          "Your account has been disabled by the system administrator. All transaction operations are suspended.",
       });
     }
     const supabaseAdmin = getSupabaseAdmin();
@@ -106,30 +127,79 @@ router.post("/swap/execute", async (req, res) => {
       .eq("id", userId)
       .single();
 
-    let walletToUse = userWallet;
-
-    if (!walletToUse?.wallet_address) {
-      console.log(`[SwapRoute] Wallet not found for user ${userId}, attempting lazy creation...`);
-      try {
-        const newWallet = await createWallet(supabaseAdmin, userId);
-        walletToUse = { wallet_id: newWallet.walletId, wallet_address: newWallet.address };
-        console.log(`[SwapRoute] Wallet created successfully for user ${userId}: ${newWallet.address}`);
-      } catch (createErr: any) {
-        console.error(`[SwapRoute] Failed to create wallet during swap for user ${userId}:`, createErr);
-        throw new Error("User wallet not found and creation failed");
-      }
+    if (!userWallet?.wallet_address) {
+      throw new Error("User wallet not found");
     }
 
-    const txHash = await executeAppKitSwap(
-      walletToUse.wallet_address,
-      amountIn,
-      tokenIn,
-      tokenOut
-    );
+    const internalRef = `swap_${crypto.randomBytes(8).toString("hex")}`;
 
-    res.status(200).json({ message: "App Kit Swap executed", txId: txHash });
+    // Write to standard transactions table for UI History visibility
+    await supabaseAdmin.from("transactions").insert({
+      user_id: userId,
+      type: "swap",
+      amount: `-${amount}`,
+      status: "pending",
+      internal_ref: internalRef,
+      metadata: { fromToken, toToken, real: true },
+    });
+
+    await supabaseAdmin.from("transaction_ledger").insert({
+      user_id: userId,
+      tx_type: "SWAP",
+      amount: amount,
+      circle_tx_id: internalRef,
+      status: "PENDING",
+      metadata: { fromToken, toToken },
+    });
+
+    (async () => {
+      try {
+        const txHash = await executeAppKitSwap(
+          userWallet.wallet_address,
+          parseFloat(amount),
+          fromToken,
+          toToken,
+        );
+        
+        await supabaseAdmin
+          .from("transactions")
+          .update({
+            tx_hash: txHash,
+            status: "success",
+          })
+          .eq("internal_ref", internalRef);
+
+        await supabaseAdmin
+          .from("transaction_ledger")
+          .update({
+            tx_hash: txHash,
+            status: "COMPLETE",
+          })
+          .eq("circle_tx_id", internalRef);
+      } catch (err: any) {
+        console.error("Async swap failed:", err);
+        
+        await supabaseAdmin
+          .from("transactions")
+          .update({
+            status: "failed",
+            metadata: { error: err.message || "Failed to execute transaction" },
+          })
+          .eq("internal_ref", internalRef);
+
+        await supabaseAdmin
+          .from("transaction_ledger")
+          .update({
+            status: "FAILED",
+            metadata: { error: err.message || "Failed to execute transaction" },
+          })
+          .eq("circle_tx_id", internalRef);
+      }
+    })();
+
+    res.status(200).json({ message: "App Kit Swap queued", txId: internalRef });
   } catch (error: any) {
-    console.error("Swap Error", error);
+    console.error("Swap Error:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -139,20 +209,57 @@ router.post("/bridge/execute", async (req, res) => {
     const { userId, amount, fromNetwork, toNetwork } = req.body;
     if (await isUserBlocked(userId)) {
       return res.status(403).json({
-        error: "Your account has been disabled by the system administrator. All transaction operations are suspended.",
+        error:
+          "Your account has been disabled by the system administrator. All transaction operations are suspended.",
       });
     }
     const bridgeAddress = "0x0000000000000000000000000000000000000000";
+    const supabaseAdmin = getSupabaseAdmin();
+    const internalRef = `bridge_${crypto.randomBytes(8).toString("hex")}`;
 
-    const result = await executeTransaction(
-      getSupabaseAdmin(),
-      userId,
-      amount,
-      bridgeAddress,
-      "transfer",
-      { fromNetwork, toNetwork },
-    );
-    res.status(200).json({ message: "Bridge transfer queued", txId: result.txId });
+    await supabaseAdmin.from("transaction_ledger").insert({
+      user_id: userId,
+      tx_type: "BRIDGE_BURN",
+      amount: amount,
+      destination_address: bridgeAddress,
+      circle_tx_id: internalRef,
+      status: "PENDING",
+      metadata: { fromNetwork, toNetwork },
+    });
+
+    (async () => {
+      try {
+        const result = await executeTransaction(
+          supabaseAdmin,
+          userId,
+          amount,
+          bridgeAddress,
+          "transfer",
+          { fromNetwork, toNetwork },
+        );
+        
+        await supabaseAdmin
+          .from("transaction_ledger")
+          .update({
+            tx_hash: result.txId,
+            status: "COMPLETE",
+          })
+          .eq("circle_tx_id", internalRef);
+      } catch (err: any) {
+        console.error("Async bridge execute failed:", err);
+        await supabaseAdmin
+          .from("transaction_ledger")
+          .update({
+            status: "FAILED",
+            metadata: { error: err.message || "Failed to execute transaction" },
+          })
+          .eq("circle_tx_id", internalRef);
+      }
+    })();
+
+    res
+      .status(200)
+      .json({ message: "Bridge transfer queued", txId: internalRef });
   } catch (error: any) {
     console.error("Bridge execute error:", error);
     res.status(500).json({ error: error.message });
@@ -161,10 +268,12 @@ router.post("/bridge/execute", async (req, res) => {
 
 router.post("/transfer/execute", async (req, res) => {
   try {
-    const { userId, amount, destinationAddress, memo, recipientName } = req.body;
+    const { userId, amount, destinationAddress, memo, recipientName } =
+      req.body;
     if (await isUserBlocked(userId)) {
       return res.status(403).json({
-        error: "Your account has been disabled by the system administrator. All transaction operations are suspended.",
+        error:
+          "Your account has been disabled by the system administrator. All transaction operations are suspended.",
       });
     }
     const supabaseAdmin = getSupabaseAdmin();
@@ -179,23 +288,35 @@ router.post("/transfer/execute", async (req, res) => {
 
     const internalRef = `send_${crypto.randomBytes(8).toString("hex")}`;
 
-    // Add to pending queue in DB immediately
-    await supabaseAdmin
-      .from("transactions")
-      .insert({
-        user_id: userId,
-        amount: `-${amount}`,
-        type: "transfer",
-        status: "pending",
-        internal_ref: internalRef,
-        metadata: {
-          recipientName: recipientName || "EVM Account",
-          destinationAddress,
-          memo,
-          real: true,
-          isAsync: true
-        },
-      });
+    // Add to pending queue in DB immediately (legacy for compatibility)
+    await supabaseAdmin.from("transactions").insert({
+      user_id: userId,
+      amount: `-${amount}`,
+      type: "transfer",
+      status: "pending",
+      internal_ref: internalRef,
+      metadata: {
+        recipientName: recipientName || "EVM Account",
+        destinationAddress,
+        memo,
+        real: true,
+        isAsync: true,
+      },
+    });
+
+    // Write to the requested transaction_ledger
+    await supabaseAdmin.from("transaction_ledger").insert({
+      user_id: userId,
+      tx_type: "SEND",
+      amount: amount,
+      destination_address: destinationAddress,
+      circle_tx_id: internalRef,
+      status: "PENDING",
+      metadata: {
+        recipientName: recipientName || "EVM Account",
+        memo,
+      },
+    });
 
     // Run execution in background (Non-blocking as required by user prompt)
     (async () => {
@@ -203,25 +324,41 @@ router.post("/transfer/execute", async (req, res) => {
         const txHash = await executeAppKitSend(
           userWallet.wallet_address,
           parseFloat(amount),
-          destinationAddress
+          destinationAddress,
         );
-        
+
         await supabaseAdmin
           .from("transactions")
           .update({
             tx_hash: txHash,
-            status: "success"
+            status: "success",
           })
           .eq("internal_ref", internalRef);
+          
+        await supabaseAdmin
+          .from("transaction_ledger")
+          .update({
+            tx_hash: txHash,
+            status: "COMPLETE",
+          })
+          .eq("circle_tx_id", internalRef);
       } catch (err: any) {
         console.error("Async send failed:", err);
         await supabaseAdmin
           .from("transactions")
           .update({
             status: "failed",
-            description: err.message || "Failed to execute transaction"
+            description: err.message || "Failed to execute transaction",
           })
           .eq("internal_ref", internalRef);
+          
+        await supabaseAdmin
+          .from("transaction_ledger")
+          .update({
+            status: "FAILED",
+            metadata: { error: err.message || "Failed to execute transaction" },
+          })
+          .eq("circle_tx_id", internalRef);
       }
     })();
 
@@ -242,12 +379,13 @@ router.post("/withdraw/execute", async (req, res) => {
     const { userId, amount, bank, memo } = req.body;
     if (await isUserBlocked(userId)) {
       return res.status(403).json({
-        error: "Your account has been disabled by the system administrator. All transaction operations are suspended.",
+        error:
+          "Your account has been disabled by the system administrator. All transaction operations are suspended.",
       });
     }
     const supabaseAdmin = getSupabaseAdmin();
     let treasuryAddress = process.env.PLATFORM_TREASURY_ADDRESS;
-    
+
     if (!treasuryAddress) {
       const { data: treasuryWallet } = await supabaseAdmin
         .from("user_wallets")
@@ -256,7 +394,7 @@ router.post("/withdraw/execute", async (req, res) => {
         .single();
       treasuryAddress = treasuryWallet?.wallet_address;
     }
-    
+
     if (!treasuryAddress) {
       throw new Error("Treasury wallet not configured");
     }
@@ -278,7 +416,8 @@ router.post("/withdraw/execute", async (req, res) => {
 
 router.post("/payments/create", async (req, res) => {
   try {
-    const { walletId, destinationAddress, amount, userId, recipientName } = req.body;
+    const { walletId, destinationAddress, amount, userId, recipientName } =
+      req.body;
     const client = getCircleClientInstance();
 
     if (parseFloat(amount) > 100) {
@@ -304,7 +443,8 @@ router.post("/payments/create", async (req, res) => {
         amount: `-${amount}`,
         type: "transfer",
         status: "pending",
-        internal_ref: response.data?.id || `req_${crypto.randomBytes(8).toString("hex")}`,
+        internal_ref:
+          response.data?.id || `req_${crypto.randomBytes(8).toString("hex")}`,
         metadata: {
           recipientName: recipientName || "EVM Account",
           destinationAddress: destinationAddress,
@@ -322,7 +462,7 @@ router.post("/payments/create", async (req, res) => {
 router.post("/payments/batch", async (req, res) => {
   try {
     const { userId, recipients, platformFee } = req.body;
-    
+
     if (await isUserBlocked(userId)) {
       return res.status(403).json({
         error: "Your account has been disabled. Transaction suspended.",
@@ -332,8 +472,10 @@ router.post("/payments/batch", async (req, res) => {
     const recipientCount = Array.isArray(recipients) ? recipients.length : 0;
     const feeValue = parseFloat(platformFee || "0");
 
-    console.log(`[BatchRoute] Initiating Atomic Batch for User ${userId} with ${recipientCount} recipients. Fee: ${feeValue} USDC`);
-    
+    console.log(
+      `[BatchRoute] Initiating Atomic Batch for User ${userId} with ${recipientCount} recipients. Fee: ${feeValue} USDC`,
+    );
+
     // Using atomic service with platformFee inclusion
     const result = await executeAtomicBatchTransfer(
       getSupabaseAdmin(),
@@ -343,8 +485,21 @@ router.post("/payments/batch", async (req, res) => {
         amount: parseFloat(r.amount),
         name: r.name,
       })),
-      feeValue
+      feeValue,
     );
+
+    await getSupabaseAdmin().from("transaction_ledger").insert({
+      user_id: userId,
+      tx_type: "SEND",
+      amount: result.totalAmount,
+      circle_tx_id: result.txId,
+      status: "PENDING",
+      metadata: {
+        isBatch: true,
+        recipientCount: result.recipientCount,
+        platformFee: feeValue,
+      },
+    });
 
     res.json({
       success: true,
@@ -364,18 +519,20 @@ router.post("/purchase/execute", async (req, res) => {
     const { userId, amount, product } = req.body;
     if (await isUserBlocked(userId)) {
       return res.status(403).json({
-        error: "Your account has been disabled by the system administrator. All transaction operations are suspended.",
+        error:
+          "Your account has been disabled by the system administrator. All transaction operations are suspended.",
       });
     }
 
     const config = getPlatformConfigs();
     const useEscrow = config?.useLoungeHubEscrow === true;
-    const recipientAddress = useEscrow 
-      ? (config?.loungeHubContractAddress || "0x8F3Cf9D0eAcC841cA4E8D77fDeFfD15C9C0A74D4")
+    const recipientAddress = useEscrow
+      ? config?.loungeHubContractAddress ||
+        "0x8F3Cf9D0eAcC841cA4E8D77fDeFfD15C9C0A74D4"
       : "0x2222222222222222222222222222222222222222";
 
-    const memoText = useEscrow 
-      ? `[On-Chain Escrow Locked - LoungeHub] Purchase ${product}` 
+    const memoText = useEscrow
+      ? `[On-Chain Escrow Locked - LoungeHub] Purchase ${product}`
       : `Purchase ${product}`;
 
     const result = await executeTransaction(
@@ -384,18 +541,20 @@ router.post("/purchase/execute", async (req, res) => {
       amount,
       recipientAddress,
       "purchase",
-      { 
+      {
         product,
         memo: memoText,
         useEscrow,
-        escrowAddress: recipientAddress
+        escrowAddress: recipientAddress,
       },
     );
-    res.status(200).json({ 
-      message: useEscrow ? "Purchase locked in Escrow Contract" : "Purchase queued", 
+    res.status(200).json({
+      message: useEscrow
+        ? "Purchase locked in Escrow Contract"
+        : "Purchase queued",
       txId: result.txId,
       useEscrow,
-      escrowAddress: recipientAddress
+      escrowAddress: recipientAddress,
     });
   } catch (error: any) {
     console.error("Purchase error", error);
@@ -408,7 +567,8 @@ router.post("/stake/execute", async (req, res) => {
     const { userId, amount } = req.body;
     if (await isUserBlocked(userId)) {
       return res.status(403).json({
-        error: "Your account has been disabled by the system administrator. All transaction operations are suspended.",
+        error:
+          "Your account has been disabled by the system administrator. All transaction operations are suspended.",
       });
     }
     // Industrial Standard: Staking Vault Address (Example Node Validator)
@@ -420,13 +580,15 @@ router.post("/stake/execute", async (req, res) => {
       amount,
       vaultAddress,
       "stake",
-      { 
+      {
         pool: "StableStake Vault #3A",
         apy: "12.5%",
-        finality: "deterministic" 
+        finality: "deterministic",
       },
     );
-    res.status(200).json({ message: "Staking transaction initiated", txId: result.txId });
+    res
+      .status(200)
+      .json({ message: "Staking transaction initiated", txId: result.txId });
   } catch (error: any) {
     console.error("Stake Error", error);
     res.status(500).json({ error: error.message });
@@ -436,7 +598,7 @@ router.post("/stake/execute", async (req, res) => {
 router.post("/bridge/cctp", async (req, res) => {
   try {
     const { userId, amount, destinationAddress, destinationDomain } = req.body;
-    
+
     // Convert destination domain to BridgeChain enum map
     let targetChain = BridgeChain.Ethereum_Sepolia;
     if (destinationDomain === 6) targetChain = BridgeChain.Base_Sepolia;
@@ -452,16 +614,48 @@ router.post("/bridge/cctp", async (req, res) => {
 
     if (!userWallet?.wallet_address) throw new Error("Wallet not found");
 
-    const txHash = await executeAppKitBridge(
-      userWallet.wallet_address,
-      parseFloat(amount),
-      destinationAddress,
-      targetChain
-    );
+    const internalRef = `bridge_${crypto.randomBytes(8).toString("hex")}`;
+    
+    await supabaseAdmin.from("transaction_ledger").insert({
+      user_id: userId,
+      tx_type: "BRIDGE_BURN",
+      amount: amount,
+      destination_address: destinationAddress,
+      circle_tx_id: internalRef,
+      status: "PENDING",
+      metadata: { destinationDomain, targetChain: targetChain },
+    });
+
+    (async () => {
+      try {
+        const txHash = await executeAppKitBridge(
+          userWallet.wallet_address,
+          parseFloat(amount),
+          destinationAddress,
+          targetChain,
+        );
+        await supabaseAdmin
+          .from("transaction_ledger")
+          .update({
+            tx_hash: txHash,
+            status: "COMPLETE",
+          })
+          .eq("circle_tx_id", internalRef);
+      } catch (err: any) {
+        console.error("Async cctp bridge failed:", err);
+        await supabaseAdmin
+          .from("transaction_ledger")
+          .update({
+            status: "FAILED",
+            metadata: { error: err.message || "Failed to execute transaction" },
+          })
+          .eq("circle_tx_id", internalRef);
+      }
+    })();
 
     res.status(200).json({
-      message: "CCTP Bridge via App Kit initiated",
-      burnTxId: txHash,
+      message: "CCTP Bridge via App Kit queued",
+      burnTxId: internalRef,
       status: "pending_burn",
     });
   } catch (error: any) {
@@ -473,8 +667,45 @@ router.post("/bridge/cctp", async (req, res) => {
 router.post("/bridge/inbound/claim", async (req, res) => {
   try {
     const { userId, sourceTxHash, sourceChainRpc } = req.body;
-    await finalizeInboundBridge(getSupabaseAdmin(), userId, sourceTxHash, sourceChainRpc);
-    res.status(200).json({ message: "Inbound bridge claim initiated" });
+    const supabaseAdmin = getSupabaseAdmin();
+    const internalRef = `claim_${crypto.randomBytes(8).toString("hex")}`;
+    
+    await supabaseAdmin.from("transaction_ledger").insert({
+      user_id: userId,
+      tx_type: "BRIDGE_MINT",
+      amount: "0", // the exact amount can be updated afterwards
+      circle_tx_id: internalRef,
+      status: "PENDING",
+      metadata: { sourceTxHash, sourceChainRpc },
+    });
+
+    (async () => {
+      try {
+        await finalizeInboundBridge(
+          supabaseAdmin,
+          userId,
+          sourceTxHash,
+          sourceChainRpc,
+        );
+        await supabaseAdmin
+          .from("transaction_ledger")
+          .update({
+            status: "COMPLETE",
+          })
+          .eq("circle_tx_id", internalRef);
+      } catch (err: any) {
+        console.error("Async inbound claim error:", err);
+        await supabaseAdmin
+          .from("transaction_ledger")
+          .update({
+            status: "FAILED",
+            metadata: { error: err.message || "Failed to finalize claim" },
+          })
+          .eq("circle_tx_id", internalRef);
+      }
+    })();
+
+    res.status(200).json({ message: "Inbound bridge claim queued", txId: internalRef });
   } catch (error: any) {
     console.error("Inbound Bridge Claim error:", error);
     res.status(500).json({ error: error.message });

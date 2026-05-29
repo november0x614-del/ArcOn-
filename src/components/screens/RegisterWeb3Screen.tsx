@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { ArrowLeft, Wallet, Eye, EyeOff, CheckCircle2, Check } from "lucide-react";
+import {
+  ArrowLeft,
+  Wallet,
+  Eye,
+  EyeOff,
+  CheckCircle2,
+  Check,
+} from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 
 interface RegisterWeb3ScreenProps {
@@ -39,10 +46,16 @@ export function RegisterWeb3Screen({
   const hasDigit = /[0-9]/.test(password);
   const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"|<>?,./`~]/.test(password);
   const isLongEnough = password.length >= 6;
-  const isPasswordValid = hasLowercase && hasUppercase && hasDigit && hasSpecial && isLongEnough;
+  const isPasswordValid =
+    hasLowercase && hasUppercase && hasDigit && hasSpecial && isLongEnough;
 
   // Final Action: Wallet Creation (Happens AFTER OTP, or skipped if no OTP required)
-  const executeWalletCreation = async (userId: string, authSession: any, verifiedEmail: string, verifiedUsername: string) => {
+  const executeWalletCreation = async (
+    userId: string,
+    authSession: any,
+    verifiedEmail: string,
+    verifiedUsername: string,
+  ) => {
     try {
       const response = await fetch("/api/wallets/create", {
         method: "POST",
@@ -96,19 +109,24 @@ export function RegisterWeb3Screen({
     setIsVerifying(true);
     setError(null);
     try {
-      const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
-        email,
-        token: otp,
-        type: "signup",
-      });
+      const { data: verifyData, error: verifyError } =
+        await supabase.auth.verifyOtp({
+          email,
+          token: otp,
+          type: "signup",
+        });
 
       if (verifyError || !verifyData.user) {
         throw verifyError || new Error("Verification failed.");
       }
 
       // Proceed to create wallet
-      await executeWalletCreation(verifyData.user.id, verifyData.session, email, username);
-      
+      await executeWalletCreation(
+        verifyData.user.id,
+        verifyData.session,
+        email,
+        username,
+      );
     } catch (err: any) {
       console.error("OTP Verification Error:", err);
       setError(err.message || "Invalid OTP code. Please try again.");
@@ -154,7 +172,9 @@ export function RegisterWeb3Screen({
         throw new Error("Failed to verify username availability.");
       }
       if (existingProfiles && existingProfiles.length > 0) {
-        throw new Error("Username is already taken. Please choose another one.");
+        throw new Error(
+          "Username is already taken. Please choose another one.",
+        );
       }
 
       // Supabase Auth SignUp
@@ -168,8 +188,14 @@ export function RegisterWeb3Screen({
 
       if (authError) throw authError;
 
-      if (authData.user && authData.user.identities && authData.user.identities.length === 0) {
-        throw new Error("Email already registered. Please go back to login with your password.");
+      if (
+        authData.user &&
+        authData.user.identities &&
+        authData.user.identities.length === 0
+      ) {
+        throw new Error(
+          "Email already registered. Please go back to login with your password.",
+        );
       }
       if (!authData.user || !authData.user.id) {
         throw new Error("Registration failed. Please try again.");
@@ -180,10 +206,11 @@ export function RegisterWeb3Screen({
       // Check if email confirmation is required by looking at session
       let needsEmailConfirmation = false;
       if (!authData.session) {
-        const { error: newSignInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+        const { error: newSignInError } =
+          await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
         if (newSignInError) {
           needsEmailConfirmation = true;
         }
@@ -194,13 +221,23 @@ export function RegisterWeb3Screen({
         setIsCreating(false);
       } else {
         // Auto-confirmed, proceed to wallet creation immediately
-        await executeWalletCreation(authData.user.id, authData.session, email, username);
+        await executeWalletCreation(
+          authData.user.id,
+          authData.session,
+          email,
+          username,
+        );
       }
     } catch (err: any) {
       console.error("Auth Creation Error:", err);
-      let msg = err.message || "Sorry, a system error occurred. Please try again.";
-      if (err.message?.includes("rate limit") || err.message?.includes("too many requests")) {
-        msg = "Too many attempts. Silakan tunggu 1-2 menit sebelum mencoba kembali.";
+      let msg =
+        err.message || "Sorry, a system error occurred. Please try again.";
+      if (
+        err.message?.includes("rate limit") ||
+        err.message?.includes("too many requests")
+      ) {
+        msg =
+          "Too many attempts. Silakan tunggu 1-2 menit sebelum mencoba kembali.";
       }
       setError(msg);
       setIsCreating(false);
@@ -267,7 +304,10 @@ export function RegisterWeb3Screen({
                   placeholder="name@email.com"
                 />
                 {email.includes("@") && email.includes(".") && (
-                  <CheckCircle2 size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-green-500" />
+                  <CheckCircle2
+                    size={18}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-green-500"
+                  />
                 )}
               </div>
             </div>
@@ -285,7 +325,10 @@ export function RegisterWeb3Screen({
                 />
                 <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center">
                   {isPasswordValid && (
-                    <CheckCircle2 size={18} className="text-green-500 mr-1 animate-in zoom-in duration-200" />
+                    <CheckCircle2
+                      size={18}
+                      className="text-green-500 mr-1 animate-in zoom-in duration-200"
+                    />
                   )}
                   <button
                     type="button"
@@ -305,34 +348,99 @@ export function RegisterWeb3Screen({
                   </p>
                   <div className="grid grid-cols-1 gap-2 text-[12.5px]">
                     <div className="flex items-center gap-2">
-                      <div className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${isLongEnough ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}>
-                        <Check size={11} className={isLongEnough ? "stroke-[3]" : ""} />
+                      <div
+                        className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${isLongEnough ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}
+                      >
+                        <Check
+                          size={11}
+                          className={isLongEnough ? "stroke-[3]" : ""}
+                        />
                       </div>
-                      <span className={isLongEnough ? "text-green-700 font-medium" : "text-slate-500"}>Minimal 6 karakter</span>
+                      <span
+                        className={
+                          isLongEnough
+                            ? "text-green-700 font-medium"
+                            : "text-slate-500"
+                        }
+                      >
+                        Minimal 6 karakter
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${hasLowercase ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}>
-                        <Check size={11} className={hasLowercase ? "stroke-[3]" : ""} />
+                      <div
+                        className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${hasLowercase ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}
+                      >
+                        <Check
+                          size={11}
+                          className={hasLowercase ? "stroke-[3]" : ""}
+                        />
                       </div>
-                      <span className={hasLowercase ? "text-green-700 font-medium" : "text-slate-500"}>Satu huruf kecil (a-z)</span>
+                      <span
+                        className={
+                          hasLowercase
+                            ? "text-green-700 font-medium"
+                            : "text-slate-500"
+                        }
+                      >
+                        Satu huruf kecil (a-z)
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${hasUppercase ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}>
-                        <Check size={11} className={hasUppercase ? "stroke-[3]" : ""} />
+                      <div
+                        className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${hasUppercase ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}
+                      >
+                        <Check
+                          size={11}
+                          className={hasUppercase ? "stroke-[3]" : ""}
+                        />
                       </div>
-                      <span className={hasUppercase ? "text-green-700 font-medium" : "text-slate-500"}>Satu huruf besar (A-Z)</span>
+                      <span
+                        className={
+                          hasUppercase
+                            ? "text-green-700 font-medium"
+                            : "text-slate-500"
+                        }
+                      >
+                        Satu huruf besar (A-Z)
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${hasDigit ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}>
-                        <Check size={11} className={hasDigit ? "stroke-[3]" : ""} />
+                      <div
+                        className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${hasDigit ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}
+                      >
+                        <Check
+                          size={11}
+                          className={hasDigit ? "stroke-[3]" : ""}
+                        />
                       </div>
-                      <span className={hasDigit ? "text-green-700 font-medium" : "text-slate-500"}>Satu angka (0-9)</span>
+                      <span
+                        className={
+                          hasDigit
+                            ? "text-green-700 font-medium"
+                            : "text-slate-500"
+                        }
+                      >
+                        Satu angka (0-9)
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${hasSpecial ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}>
-                        <Check size={11} className={hasSpecial ? "stroke-[3]" : ""} />
+                      <div
+                        className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${hasSpecial ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}
+                      >
+                        <Check
+                          size={11}
+                          className={hasSpecial ? "stroke-[3]" : ""}
+                        />
                       </div>
-                      <span className={hasSpecial ? "text-green-700 font-medium" : "text-slate-500"}>Satu karakter spesial (cth: !, @, #, $, %, etc.)</span>
+                      <span
+                        className={
+                          hasSpecial
+                            ? "text-green-700 font-medium"
+                            : "text-slate-500"
+                        }
+                      >
+                        Satu karakter spesial (cth: !, @, #, $, %, etc.)
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -342,7 +450,13 @@ export function RegisterWeb3Screen({
 
           <div className="mt-auto pt-6 pb-6 space-y-3">
             <button
-              disabled={!username || !email || !password || !isPasswordValid || isCreating}
+              disabled={
+                !username ||
+                !email ||
+                !password ||
+                !isPasswordValid ||
+                isCreating
+              }
               onClick={() => setStep(2)}
               className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl transition-all shadow-[0_8px_20px_rgba(15,23,42,0.15)] flex justify-center items-center gap-2 active:scale-[0.98] border-0 disabled:opacity-50 disabled:bg-slate-300 disabled:shadow-none disabled:cursor-not-allowed text-[15px]"
             >
@@ -350,8 +464,7 @@ export function RegisterWeb3Screen({
             </button>
 
             <p className="text-[11px] text-slate-400 text-center mt-4">
-              By continuing, you agree to Lounge Terms and Security
-              Guidelines.
+              By continuing, you agree to Lounge Terms and Security Guidelines.
             </p>
           </div>
         </div>
@@ -364,13 +477,19 @@ export function RegisterWeb3Screen({
               <div className="relative mb-10 mt-[-10vh] flex items-center justify-center">
                 {/* Outer Glow */}
                 <div className="absolute w-28 h-28 bg-slate-900/5 rounded-full animate-pulse"></div>
-                
+
                 {/* Outer Ring */}
                 <div className="absolute w-24 h-24 border-[3px] border-slate-100 border-t-slate-900 rounded-full animate-spin"></div>
-                
+
                 {/* Inner Ring (Reverse Spin) */}
-                <div className="absolute w-20 h-20 border-[2px] border-transparent border-b-slate-400/30 rounded-full animate-spin" style={{ animationDirection: "reverse", animationDuration: "1.5s" }}></div>
-                
+                <div
+                  className="absolute w-20 h-20 border-[2px] border-transparent border-b-slate-400/30 rounded-full animate-spin"
+                  style={{
+                    animationDirection: "reverse",
+                    animationDuration: "1.5s",
+                  }}
+                ></div>
+
                 {/* Center Icon Container */}
                 <div className="relative z-10 w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.05)] border border-slate-50">
                   <Wallet size={26} className="text-slate-800" />
@@ -447,7 +566,7 @@ export function RegisterWeb3Screen({
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:ring-2 focus:ring-[#0f172a]/20 focus:border-[#0f172a] focus:bg-white text-[24px] tracking-[0.5em] text-center font-bold text-slate-900 transition-all placeholder:text-slate-300"
               />
             </div>
-            
+
             {error && (
               <div className="bg-red-50 border border-red-100 p-3 rounded-xl mt-2">
                 <p className="text-[13px] text-red-600 font-medium text-center">
@@ -499,10 +618,15 @@ export function RegisterWeb3Screen({
             <div className="flex flex-col gap-3">
               <button
                 onClick={async () => {
-                   setError(null);
-                   if (signUpData?.user?.id) {
-                     await executeWalletCreation(signUpData.user.id, signUpData.session, email, username);
-                   }
+                  setError(null);
+                  if (signUpData?.user?.id) {
+                    await executeWalletCreation(
+                      signUpData.user.id,
+                      signUpData.session,
+                      email,
+                      username,
+                    );
+                  }
                 }}
                 className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl transition-all shadow-[0_8px_20px_rgba(15,23,42,0.2)] flex justify-center items-center gap-2 active:scale-[0.98] border-0"
               >

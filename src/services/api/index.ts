@@ -48,7 +48,12 @@ export const BackendClient = {
   async updatePreferences(preferences: any) {
     const { registeredUser } = useStore.getState();
     if (!registeredUser?.supabaseUid) throw new Error("User not registered");
-    return apiRequest(`/api/preferences/${registeredUser.supabaseUid}`, "PUT", { preferences }, "Failed to update preferences");
+    return apiRequest(
+      `/api/preferences/${registeredUser.supabaseUid}`,
+      "PUT",
+      { preferences },
+      "Failed to update preferences",
+    );
   },
 
   async swapTokens(
@@ -102,7 +107,7 @@ export const BackendClient = {
         amount,
         destinationAddress,
         memo,
-        recipientName
+        recipientName,
       },
       "Transfer failed",
     );
@@ -242,7 +247,10 @@ export const BackendClient = {
 
   setCachedData(key: string, data: any) {
     try {
-      localStorage.setItem(key, JSON.stringify({ data, timestamp: Date.now() }));
+      localStorage.setItem(
+        key,
+        JSON.stringify({ data, timestamp: Date.now() }),
+      );
     } catch (e) {}
   },
 
@@ -321,11 +329,19 @@ export const BackendClient = {
     if (!cleanAddr || !cleanAddr.startsWith("0x")) return null;
 
     const CACHE_KEY = `arc_token_metadata_${cleanAddr}`;
-    const cached = BackendClient.getCachedData(CACHE_KEY, 7 * 24 * 60 * 60 * 1000); // 7 days
+    const cached = BackendClient.getCachedData(
+      CACHE_KEY,
+      7 * 24 * 60 * 60 * 1000,
+    ); // 7 days
     if (cached) return cached;
 
     try {
-      const data = await apiRequest(`/api/tokens/resolve/${cleanAddr}`, "GET", undefined, "Failed to resolve token");
+      const data = await apiRequest(
+        `/api/tokens/resolve/${cleanAddr}`,
+        "GET",
+        undefined,
+        "Failed to resolve token",
+      );
       if (data) {
         BackendClient.setCachedData(CACHE_KEY, data);
       }
@@ -337,18 +353,33 @@ export const BackendClient = {
   },
 
   async saveImportedToken(userId: string, token: any) {
-    return apiRequest(`/api/tokens/import`, "POST", {
-      userId,
-      ...token
-    }, "Failed to save token to database");
+    return apiRequest(
+      `/api/tokens/import`,
+      "POST",
+      {
+        userId,
+        ...token,
+      },
+      "Failed to save token to database",
+    );
   },
 
   async getImportedTokens(userId: string) {
-    return apiRequest(`/api/tokens/imported/${userId}`, "GET", undefined, "Failed to fetch imported tokens");
+    return apiRequest(
+      `/api/tokens/imported/${userId}`,
+      "GET",
+      undefined,
+      "Failed to fetch imported tokens",
+    );
   },
 
   async removeImportedToken(userId: string, address: string) {
-    return apiRequest(`/api/tokens/imported/${userId}/${address}`, "DELETE", undefined, "Failed to delete token");
+    return apiRequest(
+      `/api/tokens/imported/${userId}/${address}`,
+      "DELETE",
+      undefined,
+      "Failed to delete token",
+    );
   },
 
   /**

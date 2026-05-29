@@ -9,6 +9,7 @@ import {
   Smartphone,
   Circle,
   Info,
+  Layers,
 } from "lucide-react";
 import { useApp } from "../../contexts/AppContext";
 
@@ -19,9 +20,9 @@ interface InboxScreenProps {
 
 export function InboxScreen({ onBack, onTransactionClick }: InboxScreenProps) {
   const { transactions, readReceiptIds, markAsRead } = useApp();
-  const [activeTab, setActiveTab] = useState<"receipts" | "notifications" | "promos">(
-    "receipts",
-  );
+  const [activeTab, setActiveTab] = useState<
+    "receipts" | "notifications" | "promos"
+  >("receipts");
   const [selectedNotification, setSelectedNotification] = useState<{
     title: string;
     desc: string;
@@ -200,7 +201,9 @@ function ResiContent({
               <TransactionItem
                 id={tx.id}
                 icon={
-                  tx.type === "purchase" || tx.type === "transfer" ? (
+                  tx.type === "batchTransfer" ? (
+                    <Layers size={22} className="text-indigo-500" />
+                  ) : tx.type === "purchase" || tx.type === "transfer" ? (
                     <Wallet size={22} className="text-slate-800" />
                   ) : (
                     <ArrowRight size={22} className="text-emerald-500" />
@@ -412,7 +415,7 @@ function NotifikasiContent({
             )
           }
         />
- 
+
         <NotificationItem
           id="n5"
           isRead={readIds.includes("n5")}

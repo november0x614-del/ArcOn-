@@ -72,7 +72,7 @@ export const HomeScreen = React.memo(
         stopSyncPolling: state.stopSyncPolling,
         isSyncing: state.isSyncing,
         lastSyncTime: state.lastSyncTime,
-      }))
+      })),
     );
 
     const { refreshBalance } = useArc();
@@ -107,7 +107,7 @@ export const HomeScreen = React.memo(
           startSyncPolling();
         }
       };
-      
+
       window.addEventListener("focus", handleFocus);
       document.addEventListener("visibilitychange", handleVisibilityChange);
 
@@ -115,7 +115,10 @@ export const HomeScreen = React.memo(
         // Only stop if the component is actually unmounting permanently
         // or let the global store handle session logic
         window.removeEventListener("focus", handleFocus);
-        document.removeEventListener("visibilitychange", handleVisibilityChange);
+        document.removeEventListener(
+          "visibilitychange",
+          handleVisibilityChange,
+        );
       };
     }, []); // Run once on mount
 
@@ -338,15 +341,21 @@ export const HomeScreen = React.memo(
           >
             <div className="flex items-center gap-1">
               <div className="relative flex h-1.5 w-1.5">
-                <span className={`absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 ${isSyncing ? "animate-ping" : ""}`}></span>
-                <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${isSyncing ? "bg-emerald-400" : "bg-emerald-600"}`}></span>
+                <span
+                  className={`absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 ${isSyncing ? "animate-ping" : ""}`}
+                ></span>
+                <span
+                  className={`relative inline-flex rounded-full h-1.5 w-1.5 ${isSyncing ? "bg-emerald-400" : "bg-emerald-600"}`}
+                ></span>
               </div>
               <span className="text-[8px] font-bold text-emerald-400 uppercase tracking-wider leading-none">
                 {isSyncing ? "Syncing..." : "In Sync"}
               </span>
             </div>
             <span className="text-[7px] text-white/60 font-medium mt-0.5">
-              {lastSyncTime ? `Last update: ${lastSyncTime.toLocaleTimeString()}` : "Arc Network Testnet"}
+              {lastSyncTime
+                ? `Last update: ${lastSyncTime.toLocaleTimeString()}`
+                : "Arc Network Testnet"}
             </span>
           </a>
         </header>
@@ -497,20 +506,20 @@ export const HomeScreen = React.memo(
               </section>
 
               {/* Favorite Transactions Section */}
-              <section className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 mb-6 lg:mb-0 mx-4 lg:mx-0">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-[18px] font-bold text-slate-900 tracking-tight">
+              <section className="bg-white rounded-[24px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] mb-3 lg:mb-0 mx-4 lg:mx-0 border border-slate-50/50">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-[17px] font-bold text-slate-800 tracking-tight">
                     Favorite Transactions
                   </h2>
                   <button
-                    className="text-slate-500 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 p-2.5 rounded-full transition-all active:scale-95 border-0"
+                    className="text-slate-800 p-2 hover:bg-slate-100 rounded-full transition-all active:scale-95 border-0 bg-transparent"
                     onClick={() => onNavigate("manageFavorites")}
                   >
-                    <Settings2 size={18} strokeWidth={2.5} />
+                    <Settings2 size={18} strokeWidth={2} />
                   </button>
                 </div>
 
-                <div className="grid grid-cols-4 gap-y-8 gap-x-4">
+                <div className="grid grid-cols-4 gap-y-5 gap-x-2">
                   {filteredShortcuts
                     .filter((item) => item.label !== "DApp Browser")
                     .map((item) => (
@@ -969,7 +978,8 @@ export const HomeScreen = React.memo(
               </div>
 
               <p className="text-xs text-slate-500 mb-6 leading-relaxed">
-                Select the tokens you want to display on the live market feed home page.
+                Select the tokens you want to display on the live market feed
+                home page.
               </p>
 
               <div className="flex flex-col gap-3 max-h-[300px] overflow-y-auto pr-1 scrollbar-hide">

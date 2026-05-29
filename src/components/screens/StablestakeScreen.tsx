@@ -8,14 +8,21 @@ interface StablestakeScreenProps {
 }
 
 export function StablestakeScreen({ onBack }: StablestakeScreenProps) {
-  const { transactions, registeredUser, displayToast, startSyncPolling } = useStore();
+  const { transactions, registeredUser, displayToast, startSyncPolling } =
+    useStore();
   const [stakeAmountInput, setStakeAmountInput] = useState("");
   const [isStaking, setIsStaking] = useState(false);
 
   // Calculate staked amount from real transactions
   const stakedAmount = useMemo(() => {
     return transactions
-      .filter((tx) => tx.type === "stake" && (tx.status === "complete" || tx.status === "success" || tx.status === "pending"))
+      .filter(
+        (tx) =>
+          tx.type === "stake" &&
+          (tx.status === "complete" ||
+            tx.status === "success" ||
+            tx.status === "pending"),
+      )
       .reduce((sum, tx) => sum + Math.abs(parseFloat(tx.amount)), 0);
   }, [transactions]);
 
@@ -42,7 +49,7 @@ export function StablestakeScreen({ onBack }: StablestakeScreenProps) {
       await BackendClient.stakeTokens(parseFloat(stakeAmountInput));
       displayToast(`Staking ${stakeAmountInput} USDC initiated!`);
       setStakeAmountInput("");
-      startSyncPolling(); 
+      startSyncPolling();
     } catch (err: any) {
       displayToast(`Staking failed: ${err.message}`);
     } finally {

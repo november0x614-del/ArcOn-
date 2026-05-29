@@ -23,7 +23,10 @@ export const getCircleClientInstance = () => {
 /**
  * Basic fetch wrapper for Circle REST API endpoints not covered by the SDK.
  */
-export const circleApiFetch = async (endpoint: string, options: RequestInit = {}) => {
+export const circleApiFetch = async (
+  endpoint: string,
+  options: RequestInit = {},
+) => {
   const apiKey = process.env.CIRCLE_API_KEY;
   if (!apiKey) throw new Error("CIRCLE_API_KEY is required");
 

@@ -108,19 +108,23 @@ export function BatchTransferScreen({
     setRecipients((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const PLATFORM_FEE = platformConfig ? parseFloat(platformConfig.withdrawFee || "0.25") : 0.25;
-  const NETWORK_GAS = platformConfig?.gasSubsidyEnabled ? 0.00 : 0.05;
+  const PLATFORM_FEE = platformConfig
+    ? parseFloat(platformConfig.withdrawFee || "0.25")
+    : 0.25;
+  const NETWORK_GAS = platformConfig?.gasSubsidyEnabled ? 0.0 : 0.05;
 
   const totalPayout = recipients.reduce(
     (acc, curr) => acc + parseFloat(curr.amount || "0"),
     0,
   );
-  
+
   const totalRequired = totalPayout + PLATFORM_FEE + NETWORK_GAS;
 
   const startProcessing = () => {
     if (totalRequired > balance) {
-      displayToast("Insufficient balance for this batch transfer including fees.");
+      displayToast(
+        "Insufficient balance for this batch transfer including fees.",
+      );
       return;
     }
     setMultiSendStep("confirm");
@@ -148,7 +152,8 @@ export function BatchTransferScreen({
       });
 
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Batch transfer failed");
+      if (!response.ok)
+        throw new Error(result.error || "Batch transfer failed");
 
       setProcessingStatus("Broadcasting successfully completed.");
       if (result.txId) {
@@ -162,7 +167,12 @@ export function BatchTransferScreen({
       setMultiSendStep("success");
     } catch (error: any) {
       console.error("Batch send failed", error);
-      displayToast(error.message || "Batch transfer failed.");
+      let errorMessage = error.message;
+      if (errorMessage.includes("blocklisted")) {
+        errorMessage =
+          "Batch aborted: One or more recipients are in the blocklist.";
+      }
+      displayToast(errorMessage || "Batch transfer failed.");
       setMultiSendStep("form");
     }
   };
@@ -449,19 +459,37 @@ export function BatchTransferScreen({
               <div className="bg-white border border-slate-100 rounded-[28px] p-6 shadow-sm mb-6">
                 <div className="space-y-4 mb-6">
                   {recipients.slice(0, 3).map((rec) => {
-                    const isNameVerified = rec.name && !rec.name.startsWith("User_") && !rec.name.startsWith("Scanned");
+                    const isNameVerified =
+                      rec.name &&
+                      !rec.name.startsWith("User_") &&
+                      !rec.name.startsWith("Scanned");
                     return (
-                      <div key={rec.id} className="flex justify-between items-center bg-slate-50/50 p-3 rounded-2xl border border-slate-100/30">
+                      <div
+                        key={rec.id}
+                        className="flex justify-between items-center bg-slate-50/50 p-3 rounded-2xl border border-slate-100/30"
+                      >
                         <div className="flex flex-col min-w-0 flex-1 mr-3">
-                          <span className="font-bold text-slate-900 text-[14px] truncate">{rec.name}</span>
+                          <span className="font-bold text-slate-900 text-[14px] truncate">
+                            {rec.name}
+                          </span>
                           <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="font-mono text-[10px] text-slate-400">{rec.displayAddress}</span>
-                            <span className={`text-[8px] ${isNameVerified ? "text-emerald-500" : "text-amber-500"}`}>{isNameVerified ? "🟢" : "🟡"}</span>
+                            <span className="font-mono text-[10px] text-slate-400">
+                              {rec.displayAddress}
+                            </span>
+                            <span
+                              className={`text-[8px] ${isNameVerified ? "text-emerald-500" : "text-amber-500"}`}
+                            >
+                              {isNameVerified ? "🟢" : "🟡"}
+                            </span>
                           </div>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
-                          <span className="font-bold text-slate-900 text-[14px]">{parseFloat(rec.amount).toFixed(2)}</span>
-                          <span className="text-[9px] font-bold text-slate-400 uppercase">USDC</span>
+                          <span className="font-bold text-slate-900 text-[14px]">
+                            {parseFloat(rec.amount).toFixed(2)}
+                          </span>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase">
+                            USDC
+                          </span>
                         </div>
                       </div>
                     );
@@ -477,23 +505,40 @@ export function BatchTransferScreen({
 
                 <div className="pt-5 border-t border-slate-100 space-y-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-[13px] text-slate-500 font-bold">Total Payout</span>
-                    <span className="font-mono font-bold text-slate-800">{totalPayout.toFixed(2)} USDC</span>
+                    <span className="text-[13px] text-slate-500 font-bold">
+                      Total Payout
+                    </span>
+                    <span className="font-mono font-bold text-slate-800">
+                      {totalPayout.toFixed(2)} USDC
+                    </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-[13px] text-slate-500 font-bold flex items-center gap-1.5">
                       Platform Fee
-                      <div className="w-3.5 h-3.5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-[8px] font-black cursor-help" title="Application distribution fee">i</div>
+                      <div
+                        className="w-3.5 h-3.5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-[8px] font-black cursor-help"
+                        title="Application distribution fee"
+                      >
+                        i
+                      </div>
                     </span>
-                    <span className="font-mono font-bold text-slate-800">{PLATFORM_FEE.toFixed(2)} USDC</span>
+                    <span className="font-mono font-bold text-slate-800">
+                      {PLATFORM_FEE.toFixed(2)} USDC
+                    </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-[13px] text-slate-500 font-bold">Network Gas</span>
-                    <span className="font-mono font-bold text-slate-800">{NETWORK_GAS.toFixed(2)} USDC</span>
+                    <span className="text-[13px] text-slate-500 font-bold">
+                      Network Gas
+                    </span>
+                    <span className="font-mono font-bold text-slate-800">
+                      {NETWORK_GAS.toFixed(2)} USDC
+                    </span>
                   </div>
-                  
+
                   <div className="pt-4 mt-2 border-t-2 border-dashed border-slate-100 flex justify-between items-center">
-                    <span className="text-[15px] text-slate-900 font-black">Total Amount</span>
+                    <span className="text-[15px] text-slate-900 font-black">
+                      Total Amount
+                    </span>
                     <span className="text-[20px] font-mono font-black text-slate-900">
                       {totalRequired.toFixed(2)} USDC
                     </span>
@@ -565,7 +610,9 @@ export function BatchTransferScreen({
               <div className="bg-white border-[1.5px] border-slate-100 rounded-[32px] p-6 text-left mb-8 shadow-sm overflow-hidden">
                 <div className="flex justify-between items-center text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-4 mb-4">
                   <span>Batch Distribution</span>
-                  <span className="text-[#005faa] bg-[#005faa]/5 px-2.5 py-1 rounded-lg">Verified Payout</span>
+                  <span className="text-[#005faa] bg-[#005faa]/5 px-2.5 py-1 rounded-lg">
+                    Verified Payout
+                  </span>
                 </div>
                 <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1 mb-4 custom-scrollbar">
                   {recipients.map((rec) => (
@@ -575,13 +622,18 @@ export function BatchTransferScreen({
                     >
                       <div className="flex flex-col min-w-0 flex-1 mr-4">
                         <span className="font-bold text-slate-900 text-[14px] truncate leading-tight">
-                          {rec.name || (rec.address ? `User_${rec.address.slice(0,6)}...${rec.address.slice(-4)}` : "Recipient")}
+                          {rec.name ||
+                            (rec.address
+                              ? `User_${rec.address.slice(0, 6)}...${rec.address.slice(-4)}`
+                              : "Recipient")}
                         </span>
                         <span
                           className="font-mono text-[10px] text-slate-400 mt-1"
                           title={rec.address}
                         >
-                          {rec.address ? `${rec.address.slice(0, 10)}...${rec.address.slice(-6)}` : rec.displayAddress}
+                          {rec.address
+                            ? `${rec.address.slice(0, 10)}...${rec.address.slice(-6)}`
+                            : rec.displayAddress}
                         </span>
                       </div>
                       <div className="flex flex-col items-end shrink-0">
@@ -589,9 +641,13 @@ export function BatchTransferScreen({
                           <span className="font-black text-slate-900 text-[15px]">
                             {parseFloat(rec.amount || "0").toFixed(2)}
                           </span>
-                          <span className="text-[9px] font-bold text-slate-400 uppercase">USDC</span>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase">
+                            USDC
+                          </span>
                         </div>
-                        <span className="text-[8px] font-bold text-emerald-500 uppercase tracking-tighter mt-0.5">Confirmed</span>
+                        <span className="text-[8px] font-bold text-emerald-500 uppercase tracking-tighter mt-0.5">
+                          Confirmed
+                        </span>
                       </div>
                     </div>
                   ))}
@@ -609,7 +665,9 @@ export function BatchTransferScreen({
                         )
                         .toFixed(2)}
                     </span>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">USDC</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">
+                      USDC
+                    </span>
                   </div>
                 </div>
                 <div className="mt-4 pt-4 border-t border-slate-50 flex flex-col gap-1.5">
@@ -692,14 +750,19 @@ export function BatchTransferScreen({
             {/* Select All Controller */}
             <div className="px-5 py-3 border-b border-slate-50 flex justify-between items-center shrink-0 bg-slate-50/50">
               <span className="text-[13px] font-bold text-slate-500">
-                {selectedQuickAddIds.length} of {filteredModalContacts.length} Contacts Selected
+                {selectedQuickAddIds.length} of {filteredModalContacts.length}{" "}
+                Contacts Selected
               </span>
               <button
                 onClick={() => {
-                  if (selectedQuickAddIds.length === filteredModalContacts.length) {
+                  if (
+                    selectedQuickAddIds.length === filteredModalContacts.length
+                  ) {
                     setSelectedQuickAddIds([]);
                   } else {
-                    setSelectedQuickAddIds(filteredModalContacts.map((c) => c.id));
+                    setSelectedQuickAddIds(
+                      filteredModalContacts.map((c) => c.id),
+                    );
                   }
                 }}
                 className="bg-white border border-slate-200 text-slate-800 hover:bg-slate-100 px-3.5 py-1.5 rounded-full text-[12px] font-bold transition-all active:scale-[0.97] cursor-pointer"
@@ -727,7 +790,9 @@ export function BatchTransferScreen({
                     className={`flex items-center justify-between py-4 cursor-pointer hover:bg-slate-50 -mx-5 px-5 transition-colors ${isSelected ? "bg-slate-50/50" : ""}`}
                   >
                     <div className="flex items-center gap-4">
-                      <div className={`w-[44px] h-[44px] rounded-full flex items-center justify-center font-bold text-[13px] border ${isSelected ? "bg-slate-900 text-white border-slate-900" : "bg-slate-100 text-slate-700 border-slate-200"}`}>
+                      <div
+                        className={`w-[44px] h-[44px] rounded-full flex items-center justify-center font-bold text-[13px] border ${isSelected ? "bg-slate-900 text-white border-slate-900" : "bg-slate-100 text-slate-700 border-slate-200"}`}
+                      >
                         {contact.initials}
                       </div>
                       <div className="text-left">
@@ -735,8 +800,11 @@ export function BatchTransferScreen({
                           {contact.name}
                         </p>
                         <p className="font-mono text-slate-400 text-[11px] mt-1 pr-1 truncate max-w-[220px]">
-                          {contact.number.substring(0, 14)}...{contact.number.substring(contact.number.length - 4)}
-                          <span className="font-sans italic ml-1 text-slate-300">({contact.network || "Arc Network"})</span>
+                          {contact.number.substring(0, 14)}...
+                          {contact.number.substring(contact.number.length - 4)}
+                          <span className="font-sans italic ml-1 text-slate-300">
+                            ({contact.network || "Arc Network"})
+                          </span>
                         </p>
                       </div>
                     </div>
@@ -783,13 +851,15 @@ export function BatchTransferScreen({
               <button
                 onClick={() => {
                   if (selectedQuickAddIds.length === 0) return;
-                  
+
                   const selectedAddresses = contacts
                     .filter((c) => selectedQuickAddIds.includes(c.id))
                     .map((c) => c.number)
                     .join(", ");
 
-                  setNewAddress((prev) => prev ? `${prev}, ${selectedAddresses}` : selectedAddresses);
+                  setNewAddress((prev) =>
+                    prev ? `${prev}, ${selectedAddresses}` : selectedAddresses,
+                  );
                   setShowQuickAddModal(false);
                   displayToast(
                     `Selected ${selectedQuickAddIds.length} contacts populated!`,

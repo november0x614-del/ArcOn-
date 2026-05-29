@@ -46,12 +46,28 @@ CREATE TABLE public.transactions (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
     amount DECIMAL NOT NULL,
-    type TEXT CHECK (type IN ('deposit', 'withdraw', 'transfer', 'payment', 'swap', 'receive')) NOT NULL,
+    type TEXT CHECK (type IN ('deposit', 'withdraw', 'transfer', 'batchTransfer', 'payment', 'swap', 'receive')) NOT NULL,
     status TEXT CHECK (status IN ('pending', 'success', 'failed')) NOT NULL,
     tx_hash TEXT,
     internal_ref TEXT UNIQUE,
     metadata JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 4.5. CREATE TRANSACTION LEDGER TABLE (Extended Ledger)
+CREATE TABLE public.transaction_ledger (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    tx_type VARCHAR(50) NOT NULL, -- Enum: 'SEND', 'SWAP', 'BRIDGE_BURN', 'BRIDGE_MINT'
+    amount NUMERIC,
+    token_address VARCHAR(255),
+    destination_address VARCHAR(255),
+    circle_tx_id VARCHAR(255) UNIQUE, -- Identifier mutlak resi API Circle
+    tx_hash VARCHAR(255), -- Hash on-chain (terisi saat Webhook COMPLETE)
+    status VARCHAR(50) DEFAULT 'PENDING',
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ==========================================
@@ -61,6 +77,7 @@ CREATE TABLE public.transactions (
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_wallets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.transaction_ledger ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.balances ENABLE ROW LEVEL SECURITY;
 
 -- Profiles: Semua orang bisa baca profile (untuk transfer antar user), tapi update hanya milik sendiri
@@ -74,6 +91,10 @@ CREATE POLICY "Service role manages wallets." ON public.user_wallets FOR ALL TO 
 -- Transactions: User hanya bisa BACA transaksinya sendiri. Server (Service Role) bisa mengelola semuanya.
 CREATE POLICY "Users can view their own transactions." ON public.transactions FOR SELECT USING (user_id = (SELECT auth.uid()));
 CREATE POLICY "Service role manages transactions." ON public.transactions FOR ALL TO service_role USING (true);
+
+-- Transaction Ledger: User hanya bisa BACA transaksinya sendiri. Server (Service Role) bisa mengelola semuanya.
+CREATE POLICY "Users can view their own transaction ledger." ON public.transaction_ledger FOR SELECT USING (user_id = (SELECT auth.uid()));
+CREATE POLICY "Service role manages transaction ledger." ON public.transaction_ledger FOR ALL TO service_role USING (true);
 
 -- Balances: User hanya bisa BACA saldonya sendiri. Server (Service Role) bisa mengelola semuanya.
 CREATE POLICY "Users can view their own balances." ON public.balances FOR SELECT USING (user_id = (SELECT auth.uid()));

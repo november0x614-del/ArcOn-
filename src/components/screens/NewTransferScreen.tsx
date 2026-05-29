@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Landmark, AtSign, Loader2, CheckCircle2, ArrowLeft, X } from "lucide-react";
+import {
+  Landmark,
+  AtSign,
+  Loader2,
+  CheckCircle2,
+  ArrowLeft,
+  X,
+} from "lucide-react";
 import { BackendClient } from "../../services/api";
 import { useStore } from "../../store/useStore";
 
@@ -111,8 +118,11 @@ export function NewTransferScreen({
     }, 800);
   };
 
-  const finalName = addressVerified && receiverName ? receiverName : getFallbackName(accountNumber);
-  
+  const finalName =
+    addressVerified && receiverName
+      ? receiverName
+      : getFallbackName(accountNumber);
+
   const initials = finalName
     ? finalName
         .trim()
@@ -147,7 +157,9 @@ export function NewTransferScreen({
         <div className="flex w-full mt-6 mb-6">
           <div className="flex-1 flex justify-center items-center gap-2 border-r border-slate-200 cursor-pointer">
             <Landmark size={18} className="text-slate-800" />
-            <span className="text-slate-800 font-bold text-[14px]">Account</span>
+            <span className="text-slate-800 font-bold text-[14px]">
+              Account
+            </span>
           </div>
           <div className="flex-1 flex justify-center items-center gap-2 cursor-pointer group">
             <AtSign
@@ -162,7 +174,6 @@ export function NewTransferScreen({
 
         {/* Transfer Form Container */}
         <div className="bg-white rounded-[24px] p-5 shadow-sm border border-slate-100 mb-6 flex flex-col gap-6 relative">
-          
           {/* Wallet Address Input */}
           <div className="flex flex-col gap-2">
             <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider text-left">
@@ -205,55 +216,68 @@ export function NewTransferScreen({
           </div>
 
           {/* Dynamic Receiver Profile Card */}
-          {accountNumber.length === 42 && !addressError && !isVerifyingAddress && (
-            <div className="border border-slate-100 rounded-[16px] p-4 flex items-center justify-between shadow-[0_2px_10px_rgba(0,0,0,0.02)] animate-in fade-in zoom-in-95 duration-300 bg-white">
-              <div className="flex items-center gap-4">
-                {addressVerified && receiverName ? (
-                  <>
-                    <div className="w-[42px] h-[42px] rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-slate-700 text-[14px]">
-                      {initials}
-                    </div>
-                    <div className="flex flex-col text-left">
-                      <span className="font-bold text-slate-800 text-[15px]">
-                        {receiverName}
-                      </span>
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <CheckCircle2 size={12} className="text-emerald-500" />
-                        <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">
-                          Verified Arc User
-                        </span>
+          {accountNumber.length === 42 &&
+            !addressError &&
+            !isVerifyingAddress && (
+              <div className="border border-slate-100 rounded-[16px] p-4 flex items-center justify-between shadow-[0_2px_10px_rgba(0,0,0,0.02)] animate-in fade-in zoom-in-95 duration-300 bg-white">
+                <div className="flex items-center gap-4">
+                  {addressVerified && receiverName ? (
+                    <>
+                      <div className="w-[42px] h-[42px] rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-slate-700 text-[14px]">
+                        {initials}
                       </div>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div
-                      className="w-[42px] h-[42px] rounded-full border border-slate-200 shadow-sm"
-                      style={getIdenticonGradient(accountNumber)}
-                    ></div>
-                    <div className="flex flex-col text-left">
-                      <span className="font-bold text-slate-900 text-[15px]">
-                        {finalName}
-                      </span>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                          External Network
+                      <div className="flex flex-col text-left">
+                        <span className="font-bold text-slate-800 text-[15px]">
+                          {receiverName}
                         </span>
-                        <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-white border border-slate-100 shadow-sm">
-                           <span className={addressVerified ? "text-[8px] text-emerald-500" : "text-[8px] text-amber-500"}>
-                             {addressVerified ? "🟢" : "🟡"}
-                           </span>
-                           <span className={`text-[9px] font-bold uppercase tracking-tight ${addressVerified ? "text-emerald-600" : "text-amber-600"}`}>
-                             {addressVerified ? "Connected" : "Not Linked"}
-                           </span>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <CheckCircle2
+                            size={12}
+                            className="text-emerald-500"
+                          />
+                          <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">
+                            Verified Arc User
+                          </span>
                         </div>
                       </div>
-                    </div>
-                  </>
-                )}
+                    </>
+                  ) : (
+                    <>
+                      <div
+                        className="w-[42px] h-[42px] rounded-full border border-slate-200 shadow-sm"
+                        style={getIdenticonGradient(accountNumber)}
+                      ></div>
+                      <div className="flex flex-col text-left">
+                        <span className="font-bold text-slate-900 text-[15px]">
+                          {finalName}
+                        </span>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                            External Network
+                          </span>
+                          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-white border border-slate-100 shadow-sm">
+                            <span
+                              className={
+                                addressVerified
+                                  ? "text-[8px] text-emerald-500"
+                                  : "text-[8px] text-amber-500"
+                              }
+                            >
+                              {addressVerified ? "🟢" : "🟡"}
+                            </span>
+                            <span
+                              className={`text-[9px] font-bold uppercase tracking-tight ${addressVerified ? "text-emerald-600" : "text-amber-600"}`}
+                            >
+                              {addressVerified ? "Connected" : "Not Linked"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
         </div>
       </div>
 

@@ -39,7 +39,9 @@ export function WithdrawScreen({ onBack, onSuccess }: WithdrawScreenProps) {
   const [accountNumber] = useState("8830192831");
 
   // Sponsored fee - no client estimation needed
-  const PLATFORM_FEE = platformConfig ? parseFloat(platformConfig.withdrawFee || "0.10") : 0.10;
+  const PLATFORM_FEE = platformConfig
+    ? parseFloat(platformConfig.withdrawFee || "0.10")
+    : 0.1;
   const IS_GAS_FREE = platformConfig?.gasSubsidyEnabled;
 
   const handleWithdraw = async () => {
@@ -50,7 +52,9 @@ export function WithdrawScreen({ onBack, onSuccess }: WithdrawScreenProps) {
     }
     const totalRequired = numAmount + PLATFORM_FEE; // amount + platform fee
     if (totalRequired > balance) {
-      displayToast(`Insufficient balance. Requires ${totalRequired.toFixed(2)} USDC (inc. ${PLATFORM_FEE.toFixed(2)} Platform Fee)`);
+      displayToast(
+        `Insufficient balance. Requires ${totalRequired.toFixed(2)} USDC (inc. ${PLATFORM_FEE.toFixed(2)} Platform Fee)`,
+      );
       return;
     }
 
@@ -177,7 +181,7 @@ export function WithdrawScreen({ onBack, onSuccess }: WithdrawScreenProps) {
               <span className="font-bold text-slate-800 text-[14px]">USDC</span>
             </div>
           </div>
-          
+
           <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-100">
             <span className="text-[12px] text-slate-500 font-medium">
               Available: {balance.toFixed(2)} USDC
@@ -222,13 +226,19 @@ export function WithdrawScreen({ onBack, onSuccess }: WithdrawScreenProps) {
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-[13px] text-slate-500">Network Gas (Sponsored)</span>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded w-fit ${IS_GAS_FREE ? "text-emerald-600 bg-emerald-50" : "text-slate-600 bg-slate-50"}`}>
+              <span className="text-[13px] text-slate-500">
+                Network Gas (Sponsored)
+              </span>
+              <span
+                className={`text-[10px] font-bold px-2 py-0.5 rounded w-fit ${IS_GAS_FREE ? "text-emerald-600 bg-emerald-50" : "text-slate-600 bg-slate-50"}`}
+              >
                 {IS_GAS_FREE ? "Gratis" : "Native"}
               </span>
             </div>
             <div className="pt-3 border-t border-slate-100 flex justify-between items-center mt-2">
-              <span className="text-[13px] font-bold text-slate-500">Processing Time</span>
+              <span className="text-[13px] font-bold text-slate-500">
+                Processing Time
+              </span>
               <span className="text-[13px] font-bold text-slate-800 bg-slate-50 px-2 py-1 rounded-md">
                 ~5-15 Min
               </span>

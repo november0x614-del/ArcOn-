@@ -16,7 +16,7 @@ import { BackendClient } from "../services/api";
 export type TransactionFilter = "All" | "Received" | "Sent" | "Swaps";
 
 interface AppState {
-// ... existing state definitions ...
+  // ... existing state definitions ...
   viewState: ViewState;
   setViewState: (state: ViewState) => void;
   receiptSource: ViewState;
@@ -117,9 +117,9 @@ export const useStore = create<AppState>()((set) => ({
     try {
       const data = await BackendClient.getBalance();
       const newBalance = data.balance || 0;
-      
+
       const state = useStore.getState();
-      
+
       // Calculate PnL locally based on current transactions
       let totalDeposit = 0;
       state.transactions.forEach((tx) => {
@@ -130,11 +130,20 @@ export const useStore = create<AppState>()((set) => ({
       });
 
       const pnlValue = totalDeposit > 0 ? newBalance - totalDeposit : 0;
-      const pnlPercentage = totalDeposit > 0 ? (pnlValue / totalDeposit) * 100 : 0;
+      const pnlPercentage =
+        totalDeposit > 0 ? (pnlValue / totalDeposit) * 100 : 0;
 
       // Only update if balance changed to save renders
-      if (state.balance !== newBalance || state.allBalances.length !== (data.allBalances?.length || 0)) {
-        set({ balance: newBalance, allBalances: data.allBalances || [], pnlValue, pnlPercentage });
+      if (
+        state.balance !== newBalance ||
+        state.allBalances.length !== (data.allBalances?.length || 0)
+      ) {
+        set({
+          balance: newBalance,
+          allBalances: data.allBalances || [],
+          pnlValue,
+          pnlPercentage,
+        });
       }
     } catch (error: any) {
       // Errors handled inside apiRequest usually
@@ -155,7 +164,7 @@ export const useStore = create<AppState>()((set) => ({
       const url = `/api/transactions/${user.supabaseUid}`;
       const response = await fetch(url);
       if (!response.ok) return;
-      
+
       const text = await response.text();
       if (!text) return;
       const dbTransactions = JSON.parse(text);
@@ -163,12 +172,20 @@ export const useStore = create<AppState>()((set) => ({
 
       const transactions: Transaction[] = dbTransactions.map((tx: any) => {
         const rawAmount = parseFloat(tx.amount) || 0;
-        const direction = tx.metadata?.direction || (tx.type === "receive" || tx.type === "deposit" ? "inbound" : "outbound");
+        const direction =
+          tx.metadata?.direction ||
+          (tx.type === "receive" || tx.type === "deposit"
+            ? "inbound"
+            : "outbound");
         const sign = direction === "inbound" ? "+" : "-";
-        
+
         let title = tx.type.charAt(0).toUpperCase() + tx.type.slice(1);
         if (tx.type === "receive") title = "Inbound Transfer";
-        if (tx.type === "bridge") title = direction === "inbound" ? "CCTP Inbound Bridge" : "CCTP Outbound Bridge";
+        if (tx.type === "bridge")
+          title =
+            direction === "inbound"
+              ? "CCTP Inbound Bridge"
+              : "CCTP Outbound Bridge";
 
         return {
           id: tx.id || tx.internal_ref,
@@ -179,17 +196,23 @@ export const useStore = create<AppState>()((set) => ({
           timestamp: new Date(tx.created_at).toLocaleString(),
           status: tx.status,
           txHash: tx.tx_hash || tx.metadata?.txHash || tx.internal_ref,
-          explorerUrl: tx.metadata?.explorerUrl || (tx.tx_hash || tx.internal_ref ? `https://testnet.arcscan.app/tx/${tx.tx_hash || tx.internal_ref}` : undefined),
+          explorerUrl:
+            tx.metadata?.explorerUrl ||
+            (tx.tx_hash || tx.internal_ref
+              ? `https://testnet.arcscan.app/tx/${tx.tx_hash || tx.internal_ref}`
+              : undefined),
           metadata: tx.metadata,
         };
       });
 
       const state = useStore.getState();
-      
+
       // Skip update if length and first/last ID are same (basic heuristic for "identitcal")
-      if (state.transactions.length === transactions.length && 
-          state.transactions[0]?.id === transactions[0]?.id &&
-          state.transactions[0]?.status === transactions[0]?.status) {
+      if (
+        state.transactions.length === transactions.length &&
+        state.transactions[0]?.id === transactions[0]?.id &&
+        state.transactions[0]?.status === transactions[0]?.status
+      ) {
         return;
       }
 
@@ -217,11 +240,15 @@ export const useStore = create<AppState>()((set) => ({
         set({ lastSyncTime: new Date() });
       } catch (err) {}
 
-      const hasPending = useStore.getState().transactions.some(tx => tx.status === "pending" || tx.status === "pending_approval");
-      
+      const hasPending = useStore
+        .getState()
+        .transactions.some(
+          (tx) => tx.status === "pending" || tx.status === "pending_approval",
+        );
+
       // Industrial standard: Relaxed polling unless something is happening
       const nextDelay = hasPending ? 3000 : 20000; // 20s if idle, 3s if pending
-      
+
       if (useStore.getState().isSyncing && activePollSessionId === sessionId) {
         setTimeout(poll, nextDelay);
       }
@@ -252,7 +279,12 @@ export const useStore = create<AppState>()((set) => ({
   importToken: async (token) => {
     const state = useStore.getState();
     const uppercaseSymbol = token.symbol.toUpperCase();
-    if (state.importedTokens.some((t) => t.symbol.toUpperCase() === uppercaseSymbol)) return;
+    if (
+      state.importedTokens.some(
+        (t) => t.symbol.toUpperCase() === uppercaseSymbol,
+      )
+    )
+      return;
 
     // Local update
     set((state) => ({ importedTokens: [...state.importedTokens, token] }));
@@ -260,7 +292,10 @@ export const useStore = create<AppState>()((set) => ({
     // Sync to backend
     if (state.registeredUser?.supabaseUid) {
       try {
-        await BackendClient.saveImportedToken(state.registeredUser.supabaseUid, token);
+        await BackendClient.saveImportedToken(
+          state.registeredUser.supabaseUid,
+          token,
+        );
       } catch (e) {
         console.error("Failed to sync imported token to database", e);
       }
@@ -268,17 +303,24 @@ export const useStore = create<AppState>()((set) => ({
   },
   removeToken: async (symbol) => {
     const state = useStore.getState();
-    const tokenToRemove = state.importedTokens.find(t => t.symbol.toUpperCase() === symbol.toUpperCase());
-    
+    const tokenToRemove = state.importedTokens.find(
+      (t) => t.symbol.toUpperCase() === symbol.toUpperCase(),
+    );
+
     // Local updates
     set((state) => ({
-      importedTokens: state.importedTokens.filter((t) => t.symbol.toUpperCase() !== symbol.toUpperCase()),
+      importedTokens: state.importedTokens.filter(
+        (t) => t.symbol.toUpperCase() !== symbol.toUpperCase(),
+      ),
     }));
 
     // Sync to backend
     if (state.registeredUser?.supabaseUid && tokenToRemove?.contractAddress) {
       try {
-        await BackendClient.removeImportedToken(state.registeredUser.supabaseUid, tokenToRemove.contractAddress);
+        await BackendClient.removeImportedToken(
+          state.registeredUser.supabaseUid,
+          tokenToRemove.contractAddress,
+        );
       } catch (e) {
         console.error("Failed to remove imported token from database", e);
       }

@@ -74,7 +74,9 @@ const ToggleItem = memo(
           <span className="text-[13px] font-black text-slate-800 leading-tight">
             {label}
           </span>
-          <span className="text-[11px] text-slate-500 font-medium mt-1 uppercase tracking-tight opacity-75">{desc}</span>
+          <span className="text-[11px] text-slate-500 font-medium mt-1 uppercase tracking-tight opacity-75">
+            {desc}
+          </span>
         </div>
         <button
           type="button"
@@ -114,7 +116,7 @@ export function ConfigTab({
     );
 
   const [contractAddressInput, setContractAddressInput] = useState(
-    config.loungeHubContractAddress || ""
+    config.loungeHubContractAddress || "",
   );
   const [deploying, setDeploying] = useState(false);
 
@@ -127,9 +129,12 @@ export function ConfigTab({
   const handleDeploySimulation = () => {
     setDeploying(true);
     setTimeout(() => {
-      const generatedAddress = "0x" + Array.from({ length: 40 }, () =>
-        "0123456789ABCDEF"[Math.floor(Math.random() * 16)]
-      ).join("");
+      const generatedAddress =
+        "0x" +
+        Array.from(
+          { length: 40 },
+          () => "0123456789ABCDEF"[Math.floor(Math.random() * 16)],
+        ).join("");
       setContractAddressInput(generatedAddress);
       setDeploying(false);
       onSave({
@@ -374,19 +379,22 @@ export function ConfigTab({
             SOLIDITY PROTOCOL
           </span>
         </div>
-         <div className="p-6 space-y-5">
+        <div className="p-6 space-y-5">
           <div className="flex justify-between items-start pb-4 border-b border-slate-50 group">
             <div className="flex flex-col pr-4">
               <span className="text-[13.5px] font-bold text-slate-800 leading-tight">
                 Enable On-Chain Escrow Settlement
               </span>
               <span className="text-[11px] text-slate-400 font-medium mt-1 uppercase tracking-tight leading-normal">
-                Process e-commerce purchases through LoungeHub.sol escrow lockbox on Arc Testnet instead of direct transfers.
+                Process e-commerce purchases through LoungeHub.sol escrow
+                lockbox on Arc Testnet instead of direct transfers.
               </span>
             </div>
             <button
               type="button"
-              onClick={() => handleToggle("useLoungeHubEscrow", !config.useLoungeHubEscrow)}
+              onClick={() =>
+                handleToggle("useLoungeHubEscrow", !config.useLoungeHubEscrow)
+              }
               className={`w-12 h-7 rounded-full relative shrink-0 transition-all duration-200 cursor-pointer ${config.useLoungeHubEscrow ? "bg-violet-500 shadow-sm" : "bg-slate-300"}`}
             >
               <span
@@ -424,7 +432,12 @@ export function ConfigTab({
                 </button>
               </div>
               <span className="text-[10.5px] text-slate-400 font-medium ml-1 block">
-                Source: <code className="bg-slate-100 px-1 py-0.5 rounded text-violet-600 font-mono">contracts/LoungeHub.sol</code> • Deploys automated escrow system enforcing buy escrow state on Arc Testnet blockchain.
+                Source:{" "}
+                <code className="bg-slate-100 px-1 py-0.5 rounded text-violet-600 font-mono">
+                  contracts/LoungeHub.sol
+                </code>{" "}
+                • Deploys automated escrow system enforcing buy escrow state on
+                Arc Testnet blockchain.
               </span>
             </div>
 
@@ -432,9 +445,18 @@ export function ConfigTab({
               <div className="p-4 bg-violet-50/50 rounded-2xl border border-violet-100/50 flex gap-3 text-[11.5px] text-violet-700 leading-relaxed font-medium animate-in zoom-in-95 duration-200">
                 <Info size={16} className="text-violet-500 shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-bold uppercase tracking-tight">On-Chain Escrow Mode Active</p>
+                  <p className="font-bold uppercase tracking-tight">
+                    On-Chain Escrow Mode Active
+                  </p>
                   <p className="mt-1">
-                    Funds will route to <code className="bg-violet-100/60 px-1 py-0.5 rounded font-mono text-violet-800 font-bold">{contractAddressInput}</code>. Backend automatically updates state inside Supabase and monitors the fulfillment event synchronously. Once shipped, platform resolves on-chain payouts splitting 1.5% to treasury address.
+                    Funds will route to{" "}
+                    <code className="bg-violet-100/60 px-1 py-0.5 rounded font-mono text-violet-800 font-bold">
+                      {contractAddressInput}
+                    </code>
+                    . Backend automatically updates state inside Supabase and
+                    monitors the fulfillment event synchronously. Once shipped,
+                    platform resolves on-chain payouts splitting 1.5% to
+                    treasury address.
                   </p>
                 </div>
               </div>
@@ -452,7 +474,9 @@ export function ConfigTab({
             disabled={saving || loading}
             className="w-full mt-2 bg-violet-600 hover:bg-violet-700 text-white font-black text-[14px] py-4 rounded-[18px] disabled:opacity-50 active:scale-[0.98] transition-all flex items-center justify-center cursor-pointer shadow-lg shadow-violet-100"
           >
-            {saving ? "Saving Escrow Setup..." : "Save Escrow Protocol Parameters"}
+            {saving
+              ? "Saving Escrow Setup..."
+              : "Save Escrow Protocol Parameters"}
           </button>
         </div>
       </div>
@@ -535,10 +559,16 @@ export function ConfigTab({
                   placeholder="Enter new 6-digit numeric PIN"
                   className="flex-1 bg-[#f8fafc] border border-slate-200/60 text-slate-800 font-mono font-bold text-[18px] px-4 py-3 rounded-2xl outline-none focus:border-slate-800 focus:bg-white transition-all tracking-[0.4em]"
                   value={adminPinInput}
-                  onChange={(e) => setAdminPinInput(e.target.value.replace(/\D/g, ""))}
+                  onChange={(e) =>
+                    setAdminPinInput(e.target.value.replace(/\D/g, ""))
+                  }
                 />
                 <button
-                  disabled={saving || adminPinInput.length !== 6 || adminPinInput === config.adminPin}
+                  disabled={
+                    saving ||
+                    adminPinInput.length !== 6 ||
+                    adminPinInput === config.adminPin
+                  }
                   onClick={() => onSave({ adminPin: adminPinInput })}
                   className="px-6 bg-slate-900 text-white rounded-2xl font-black text-[12px] uppercase tracking-wider hover:bg-slate-800 active:scale-95 transition-all shadow-lg shadow-slate-200 disabled:opacity-30"
                 >
@@ -547,9 +577,16 @@ export function ConfigTab({
               </div>
             </div>
             <div className="flex items-start gap-3 p-4 bg-amber-50 rounded-2xl border border-amber-100">
-              <ShieldCheck size={18} className="text-amber-600 shrink-0 mt-0.5" />
+              <ShieldCheck
+                size={18}
+                className="text-amber-600 shrink-0 mt-0.5"
+              />
               <p className="text-[11px] text-amber-700 font-medium leading-relaxed">
-                <span className="font-black uppercase">Attention:</span> Changing the Master Portal PIN is a critical security action. This PIN is required to unlock the Admin Dashboard from any device. Ensure you have documented the new PIN securely before updating.
+                <span className="font-black uppercase">Attention:</span>{" "}
+                Changing the Master Portal PIN is a critical security action.
+                This PIN is required to unlock the Admin Dashboard from any
+                device. Ensure you have documented the new PIN securely before
+                updating.
               </p>
             </div>
           </div>

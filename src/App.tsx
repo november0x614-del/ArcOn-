@@ -27,7 +27,7 @@ export default function App() {
       registeredUser: state.registeredUser,
       setRegisteredUser: state.setRegisteredUser,
       resetState: state.resetState,
-    }))
+    })),
   );
 
   const handleUserSession = React.useCallback(
@@ -43,25 +43,32 @@ export default function App() {
             walletInfo = await response.json();
           }
         } catch (err) {
-          console.warn("Wallet lookup failed, will attempt provisioning if needed.", err);
+          console.warn(
+            "Wallet lookup failed, will attempt provisioning if needed.",
+            err,
+          );
         }
 
         const currentView = useStore.getState().viewState;
 
         // 2. INTERRUPTED REGISTRATION RECOVERY (Auto-Provisioning)
         // If we have a user but no wallet, and we're not explicitly in the middle of a registration screen
-        const needsWallet = !walletInfo || !walletInfo.wallet_id || !walletInfo.wallet_address;
-        const isNotRegistering = currentView !== "register" && currentView !== "registerSuccess";
+        const needsWallet =
+          !walletInfo || !walletInfo.wallet_id || !walletInfo.wallet_address;
+        const isNotRegistering =
+          currentView !== "register" && currentView !== "registerSuccess";
 
         if (needsWallet && isNotRegistering) {
           isProvisioning = true;
           // Set a temporary loading state if we're coming from splash/login
           if (currentView === "splash" || currentView === "password") {
-             // We'll keep them on splash or a similar loading indicator
+            // We'll keep them on splash or a similar loading indicator
           }
 
           try {
-            console.log("Starting auto-provisioning for interrupted registration...");
+            console.log(
+              "Starting auto-provisioning for interrupted registration...",
+            );
             const createRes = await fetch("/api/wallets/create", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -74,7 +81,10 @@ export default function App() {
                 wallet_id: newData.walletId || newData.wallet_id,
                 wallet_address: newData.address || newData.wallet_address,
               };
-              console.log("Auto-provisioning successful:", walletInfo.wallet_address);
+              console.log(
+                "Auto-provisioning successful:",
+                walletInfo.wallet_address,
+              );
             } else {
               const errorData = await createRes.json();
               console.error("Auto-provisioning failed:", errorData);
@@ -87,7 +97,8 @@ export default function App() {
 
         // 3. SECURE REDIRECT GUARD
         // Only proceed if we have a wallet or if we're in the middle of registration flow
-        const hasValidWallet = walletInfo?.wallet_id && walletInfo?.wallet_address;
+        const hasValidWallet =
+          walletInfo?.wallet_id && walletInfo?.wallet_address;
 
         if (hasValidWallet) {
           // Sync to localStorage
@@ -95,13 +106,18 @@ export default function App() {
           localStorage.setItem("arc_user_id", user.id);
 
           setRegisteredUser({
-            username: user.user_metadata?.full_name || user.user_metadata?.username || "Arc User",
+            username:
+              user.user_metadata?.full_name ||
+              user.user_metadata?.username ||
+              "Arc User",
             email: user.email || "",
             isVerified: true,
             walletId: walletInfo.wallet_id,
             walletAddress: walletInfo.wallet_address,
             supabaseUid: user.id,
-            registrationDate: new Date(user.created_at).toLocaleDateString("id-ID"),
+            registrationDate: new Date(user.created_at).toLocaleDateString(
+              "id-ID",
+            ),
           });
 
           // Only navigate to home if we were stuck on entry points
@@ -110,13 +126,14 @@ export default function App() {
           }
         } else if (isNotRegistering) {
           // If no wallet and not registering, and auto-provisioning failed, we might need a logout or error screen
-          console.error("Critical: User Logged In but No Wallet Found and Provisioning Failed.");
+          console.error(
+            "Critical: User Logged In but No Wallet Found and Provisioning Failed.",
+          );
           // Stay on splash/loading for now
         }
 
         // Always clear loading states at the end
         setIsLoggingIn(false);
-
       } catch (e) {
         console.error("Critical handleUserSession failure:", e);
       }
