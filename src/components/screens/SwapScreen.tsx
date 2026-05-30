@@ -52,6 +52,12 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
   const [txHash, setTxHash] = useState("");
   const [slippage, setSlippage] = useState<string>("0.5");
   const [showDetails, setShowDetails] = useState(false);
+  const [swapError, setSwapError] = useState<{
+    title: string;
+    message: string;
+    code: string;
+    show: boolean;
+  } | null>(null);
 
   const getTokenData = (symbol: string) => {
     return balanceData?.allBalances?.find(
@@ -144,8 +150,8 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
 
       const result = await BackendClient.swapTokens(
         parseFloat(fromAmount),
-        fromToken?.symbol || "",
-        toToken?.symbol || "",
+        fromToken,
+        toToken,
         targetTokenAddress,
       );
 
@@ -157,7 +163,22 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
     } catch (error: any) {
       console.error(error);
       setIsSwapping(false);
-      useStore.getState().displayToast(error.message || "Swap failed!");
+      
+      const errMsg = error.message || "";
+      if (
+        errMsg.includes("INPUT_UNSUPPORTED_ROUTE") || 
+        errMsg.includes("No route available") || 
+        errMsg.includes("Route or resource not found")
+      ) {
+        setSwapError({
+          title: "Swap Route Unsupported on Arc Testnet",
+          code: "INPUT_UNSUPPORTED_ROUTE",
+          message: `The Circle Stablecoin Services could not find an active on-chain swap route from ${fromToken?.symbol || "selected token"} to ${toToken?.symbol || "selected token"} on the Arc Testnet.`,
+          show: true,
+        });
+      } else {
+        useStore.getState().displayToast(errMsg || "Swap failed!");
+      }
     }
   };
 
@@ -624,6 +645,44 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
                   </button>
                 ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Swap Error Explanation Modal */}
+      {swapError && swapError.show && (
+        <div className="absolute inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-white rounded-[28px] max-w-sm w-full p-6 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200 flex flex-col">
+            <div className="w-14 h-14 bg-amber-50 rounded-full flex items-center justify-center mb-5 text-amber-500 shrink-0 mx-auto">
+              <svg width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+            </div>
+            
+            <h3 className="text-[17px] font-bold text-slate-900 tracking-tight text-center mb-2 leading-snug uppercase">
+              {swapError.title}
+            </h3>
+            
+            <div className="text-[11px] font-mono text-amber-600 font-bold text-center mb-4 bg-amber-50/50 py-1 px-2.5 rounded-lg w-fit mx-auto border border-amber-100/30">
+              {swapError.code}
+            </div>
+
+            <p className="text-[13px] text-slate-600 leading-relaxed mb-6 font-normal">
+              {swapError.message}
+              <span className="block my-3 border-t border-slate-100"></span>
+              <span className="text-slate-500 text-[12px] block font-medium leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100">
+                💡 <strong>Under the Hood:</strong> On Arc Testnet, Circle Swap services require active pool routing to be established. Because swap liquidity is restricted in sandbox, standard on-chain routing is limited. All payment flows remain 100% active.
+              </span>
+            </p>
+
+            <button
+              onClick={() => setSwapError(null)}
+              className="w-full bg-[#0f172a] text-white font-bold py-3.5 rounded-[20px] shadow-sm hover:bg-slate-800 active:scale-[0.98] transition-all text-[14px] outline-none"
+            >
+              Understand & Dismiss
+            </button>
           </div>
         </div>
       )}

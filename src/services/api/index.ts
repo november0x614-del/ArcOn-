@@ -58,15 +58,15 @@ export const BackendClient = {
 
   async swapTokens(
     amount: number,
-    fromToken: string,
-    toToken: string,
+    fromToken: any,
+    toToken: any,
     tokenAddress: string,
   ) {
     const { registeredUser } = useStore.getState();
     if (!registeredUser?.supabaseUid) throw new Error("User not registered");
 
     console.log(
-      `[Adapter] Initiating swap: ${amount} ${fromToken} -> ${toToken}`,
+      `[Adapter] Initiating swap: ${amount} ${fromToken?.symbol} -> ${toToken?.symbol}`,
     );
 
     return apiRequest(

@@ -129,8 +129,8 @@ export async function executeAppKitSwap(
       address: walletAddress,
     },
     amountIn: amount.toString(),
-    tokenIn: fromToken,
-    tokenOut: toToken,
+    tokenIn: typeof fromToken === 'object' ? (fromToken.contractAddress || fromToken.symbol) : fromToken,
+    tokenOut: typeof toToken === 'object' ? (toToken.contractAddress || toToken.symbol) : toToken,
     config: {
       kitKey: kitKey as string,
     }
