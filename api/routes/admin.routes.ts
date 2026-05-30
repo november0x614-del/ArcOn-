@@ -1,10 +1,14 @@
 import express from "express";
 import { getSupabaseAdmin } from "../config/supabase";
+import { authenticateAdmin } from "../middleware/adminAuth";
+import { getTokenBalance, USDC_ADDRESS } from "../services/arcViem";
+import { formatUnits } from "viem";
 import {
   createWallet,
   batchCreateWallets,
   interpretCircleError,
   autoSweepWallets,
+  manualSweepAdminWallet,
 } from "../services/circle";
 import { fetchUnifiedBalance } from "../services/balance";
 import * as crypto from "crypto";
@@ -19,10 +23,35 @@ import { logAdminAction } from "../services/audit";
 
 const router = express.Router();
 
+// Publicly reachable routes that rely on dashboard PIN auth (temporary fix for monitoring)
+router.get("/otc/treasury-balance", async (req, res) => {
+  try {
+    const config = getPlatformConfigs();
+    const treasuryAddress = config.treasuryWalletAddress;
+    
+    if (!treasuryAddress) {
+      return res.status(500).json({ error: "Treasury address not configured in Platform Settings" });
+    }
+
+    const balanceRaw = await getTokenBalance(treasuryAddress, USDC_ADDRESS);
+    const balance = formatUnits(balanceRaw, 6);
+
+    res.json({ address: treasuryAddress, balance });
+  } catch (error: any) {
+    console.error("Failed to fetch treasury balance:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+
 let platformConfigs = {
   swapFee: "0.15%",
   withdrawFee: "0.00 USDC",
   bridgeFee: "2.00 USDC",
+  minTransferAmount: "0.1",
+  minSwapAmount: "0.1",
+  minBridgeAmount: "0.1",
   dailyTransferLimit: "5000.00 USDC",
   gasSubsidyEnabled: true,
 
@@ -48,7 +77,42 @@ let platformConfigs = {
   adminPin: "123456",
   useLoungeHubEscrow: false,
   loungeHubContractAddress: "0x8F3Cf9D0eAcC841cA4E8D77fDeFfD15C9C0A74D4",
+  treasuryWalletAddress: process.env.PLATFORM_TREASURY_ADDRESS || "0x98A16172aACc841cA4E8D77fDeFfD15C9C0A7400",
 };
+
+// Internal cache sync
+async function syncConfigsFromDB() {
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "PLATFORM_CONFIGS")
+      .maybeSingle();
+
+    if (error) {
+      console.error("[SyncConfig] Error fetching from DB:", error);
+      return;
+    }
+
+    if (data?.value) {
+      platformConfigs = { ...platformConfigs, ...data.value };
+      console.log("[SyncConfig] Successfully synced from Supabase.");
+    } else {
+      // First time initialization in DB if empty
+      console.log("[SyncConfig] No config found in DB, seeding defaults...");
+      await supabase.from("app_settings").upsert(
+        { key: "PLATFORM_CONFIGS", value: platformConfigs },
+        { onConflict: "key" }
+      );
+    }
+  } catch (err) {
+    console.error("[SyncConfig] Critical failure:", err);
+  }
+}
+
+// Initial sync
+syncConfigsFromDB();
 
 router.post("/init", async (_req, res) => {
   try {
@@ -93,18 +157,33 @@ export function getPlatformConfigs() {
   return platformConfigs;
 }
 
-router.get("/config", (_req, res) => {
+router.get("/config", async (_req, res) => {
+  // Ensure we are synced (or we could just fetch from DB directly here for 100% certainty)
   res.json(platformConfigs);
 });
 
-router.post("/config", (req, res) => {
+router.post("/config", async (req, res) => {
   try {
-    platformConfigs = { ...platformConfigs, ...req.body };
+    const newConfig = { ...platformConfigs, ...req.body };
+    const supabase = getSupabaseAdmin();
+    
+    // Save to Supabase
+    const { error } = await supabase.from("app_settings").upsert(
+      { key: "PLATFORM_CONFIGS", value: newConfig },
+      { onConflict: "key" }
+    );
+
+    if (error) throw error;
+
+    // Update local cache
+    platformConfigs = newConfig;
+
     res.json({
-      message: "Config updated successfully",
+      message: "Config updated and persisted successfully",
       config: platformConfigs,
     });
   } catch (error: any) {
+    console.error("[ConfigUpdate] Failed:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -112,15 +191,27 @@ router.post("/config", (req, res) => {
 router.get("/users", async (_req, res) => {
   try {
     const supabase = getSupabaseAdmin();
+    console.log("[AdminUsers] Starting fetch...");
     const { data: wallets, error: walletsError } = await supabase
       .from("user_wallets")
       .select("id, wallet_id, wallet_address, created_at");
 
-    if (walletsError) throw walletsError;
-
-    const { data: profiles } = await supabase
+    if (walletsError) {
+      console.error("[AdminUsers] Wallets fetch error:", JSON.stringify(walletsError, null, 2));
+      throw walletsError;
+    }
+    
+    console.log(`[AdminUsers] Fetched ${wallets?.length || 0} wallet records.`);
+    
+    const { data: profiles, error: profilesError } = await supabase
       .from("profiles")
-      .select("id, full_name, avatar_url");
+      .select("id, full_name, avatar_url");                
+
+    if (profilesError) {
+      console.error("[AdminUsers] Profiles fetch error:", JSON.stringify(profilesError, null, 2));
+    } else {
+      console.log(`[AdminUsers] Fetched ${profiles?.length || 0} profile records.`);
+    }
 
     let authUsers: any[] = [];
     try {
@@ -357,12 +448,70 @@ router.get("/stats", async (_req, res) => {
   }
 });
 
+router.use(authenticateAdmin);
+
 router.get("/transactions", async (req, res) => {
   try {
     const limit = parseInt(req.query.limit as string) || 20;
     const transactions = await fetchSystemTransactions(limit);
     res.json(transactions);
   } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post("/otc/reconcile", async (req, res) => {
+  try {
+    const { txId, adminId } = req.body;
+    const supabase = getSupabaseAdmin();
+
+    // 1. Get transaction
+    const { data: tx, error: fetchError } = await supabase
+      .from("transactions")
+      .select("*")
+      .eq("id", txId)
+      .single();
+    
+    if (fetchError || !tx) throw new Error("Transaction not found");
+
+    // 2. Perform reconciliation (update status)
+    const { error: updateError } = await supabase
+      .from("transactions")
+      .update({ status: "success" })
+      .eq("id", txId);
+    
+    if (updateError) throw updateError;
+
+    // 3. Log into audit_logs
+    await supabase
+      .from("audit_logs")
+      .insert({
+        user_email: "admin", // Or fetch email from adminId if possible
+        action: "OTC_RECONCILED",
+        tx_hash: tx.tx_hash,
+        details: { txId, reconciled_by: adminId }
+      });
+
+    res.json({ message: "Reconciled successfully" });
+  } catch (error: any) {
+    console.error("Failed to reconcile OTC transaction:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get("/otc/pending", async (_req, res) => {
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+      .from("transactions")
+      .select("*")
+      .eq("status", "manual_reconciliation_required")
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    res.json(data || []);
+  } catch (error: any) {
+    console.error("Failed to fetch pending OTC transactions:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -585,6 +734,40 @@ router.post("/wallet/auto-sweep", async (req, res) => {
     );
     res.json({ message: "Sweep completed", result });
   } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post("/treasury/sweep", async (req, res) => {
+  try {
+    const { amount } = req.body;
+    const config = getPlatformConfigs();
+    const treasuryAddress = config.treasuryWalletAddress;
+
+    if (!treasuryAddress) {
+      return res.status(400).json({ error: "Treasury address not configured in Platform Settings" });
+    }
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ error: "Amount must be greater than zero" });
+    }
+
+    const result = await manualSweepAdminWallet(
+      getSupabaseAdmin(),
+      parseFloat(amount),
+      treasuryAddress
+    );
+
+    await logAdminAction(
+      "00000000-0000-0000-0000-000000000000",
+      "TREASURY_MANUAL_SWEEP",
+      treasuryAddress,
+      { amount }
+    );
+
+    res.json({ message: "Manual sweep transaction initiated", result });
+  } catch (error: any) {
+    console.error("Manual Sweep Error:", error);
     res.status(500).json({ error: error.message });
   }
 });

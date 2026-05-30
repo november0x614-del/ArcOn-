@@ -14,6 +14,9 @@ interface AdminConfig {
   withdrawFee: string;
   bridgeFee: string;
   dailyTransferLimit: string;
+  minTransferAmount: string;
+  minSwapAmount: string;
+  minBridgeAmount: string;
   gasSubsidyEnabled: boolean;
   transferEnabled: boolean;
   withdrawEnabled: boolean;
@@ -35,6 +38,9 @@ interface AdminConfig {
   adminPin: string;
   useLoungeHubEscrow: boolean;
   loungeHubContractAddress: string;
+  batchBaseFee: string;
+  batchPerRecipientFee: string;
+  treasuryWalletAddress: string;
 }
 
 interface ConfigTabProps {
@@ -43,12 +49,22 @@ interface ConfigTabProps {
   saving: boolean;
   swapFeeInput: string;
   setSwapFeeInput: (v: string) => void;
-  withdrawFeeInput: string;
-  setWithdrawFeeInput: (v: string) => void;
   bridgeFeeInput: string;
   setBridgeFeeInput: (v: string) => void;
   dailyTransferLimitInput: string;
   setDailyTransferLimitInput: (v: string) => void;
+  minTransferAmountInput: string;
+  setMinTransferAmountInput: (v: string) => void;
+  minSwapAmountInput: string;
+  setMinSwapAmountInput: (v: string) => void;
+  minBridgeAmountInput: string;
+  setMinBridgeAmountInput: (v: string) => void;
+  batchBaseFeeInput: string;
+  setBatchBaseFeeInput: (v: string) => void;
+  batchPerRecipientFeeInput: string;
+  setBatchPerRecipientFeeInput: (v: string) => void;
+  treasuryWalletInput: string;
+  setTreasuryWalletInput: (v: string) => void;
   adminPinInput: string;
   setAdminPinInput: (v: string) => void;
   onSave: (fields: Partial<AdminConfig>) => void;
@@ -98,12 +114,22 @@ export function ConfigTab({
   saving,
   swapFeeInput,
   setSwapFeeInput,
-  withdrawFeeInput,
-  setWithdrawFeeInput,
   bridgeFeeInput,
   setBridgeFeeInput,
   dailyTransferLimitInput,
   setDailyTransferLimitInput,
+  minTransferAmountInput,
+  setMinTransferAmountInput,
+  minSwapAmountInput,
+  setMinSwapAmountInput,
+  minBridgeAmountInput,
+  setMinBridgeAmountInput,
+  batchBaseFeeInput,
+  setBatchBaseFeeInput,
+  batchPerRecipientFeeInput,
+  setBatchPerRecipientFeeInput,
+  treasuryWalletInput,
+  setTreasuryWalletInput,
   adminPinInput,
   setAdminPinInput,
   onSave,
@@ -156,7 +182,7 @@ export function ConfigTab({
           <div className="flex items-center gap-2.5 text-slate-800">
             <Settings2 size={16} className="text-slate-500" />
             <h3 className="font-black text-[13px] uppercase tracking-wider text-slate-800">
-              FEES & TRANSACTION LIMITS
+              PLATFORM FEES & TRANSACTION LIMIT
             </h3>
           </div>
           <span className="text-[10px] bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full font-black uppercase tracking-tight">
@@ -173,17 +199,6 @@ export function ConfigTab({
                 type="text"
                 value={swapFeeInput}
                 onChange={(e) => setSwapFeeInput(e.target.value)}
-                className="w-full bg-[#f8fafc] border border-slate-200/60 text-slate-800 font-mono font-bold text-[13px] px-4 py-3 rounded-2xl outline-none focus:border-slate-800 focus:bg-white transition-all"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[12px] font-bold text-slate-600 ml-1">
-                Send / Transfer Fee
-              </label>
-              <input
-                type="text"
-                value={withdrawFeeInput}
-                onChange={(e) => setWithdrawFeeInput(e.target.value)}
                 className="w-full bg-[#f8fafc] border border-slate-200/60 text-slate-800 font-mono font-bold text-[13px] px-4 py-3 rounded-2xl outline-none focus:border-slate-800 focus:bg-white transition-all"
               />
             </div>
@@ -206,6 +221,66 @@ export function ConfigTab({
                 type="text"
                 value={dailyTransferLimitInput}
                 onChange={(e) => setDailyTransferLimitInput(e.target.value)}
+                className="w-full bg-[#f8fafc] border border-slate-200/60 text-slate-800 font-mono font-bold text-[13px] px-4 py-3 rounded-2xl outline-none focus:border-slate-800 focus:bg-white transition-all"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-x-5 gap-y-6">
+            <div className="space-y-2">
+              <label className="text-[12px] font-bold text-slate-600 ml-1">
+                Min Transfer
+              </label>
+              <input
+                type="text"
+                value={minTransferAmountInput}
+                onChange={(e) => setMinTransferAmountInput(e.target.value)}
+                className="w-full bg-[#f8fafc] border border-slate-200/60 text-slate-800 font-mono font-bold text-[13px] px-4 py-3 rounded-2xl outline-none focus:border-slate-800 focus:bg-white transition-all"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[12px] font-bold text-slate-600 ml-1">
+                Min Swap
+              </label>
+              <input
+                type="text"
+                value={minSwapAmountInput}
+                onChange={(e) => setMinSwapAmountInput(e.target.value)}
+                className="w-full bg-[#f8fafc] border border-slate-200/60 text-slate-800 font-mono font-bold text-[13px] px-4 py-3 rounded-2xl outline-none focus:border-slate-800 focus:bg-white transition-all"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[12px] font-bold text-slate-600 ml-1">
+                Min Bridge
+              </label>
+              <input
+                type="text"
+                value={minBridgeAmountInput}
+                onChange={(e) => setMinBridgeAmountInput(e.target.value)}
+                className="w-full bg-[#f8fafc] border border-slate-200/60 text-slate-800 font-mono font-bold text-[13px] px-4 py-3 rounded-2xl outline-none focus:border-slate-800 focus:bg-white transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-x-5 gap-y-6">
+            <div className="space-y-2">
+              <label className="text-[12px] font-bold text-slate-600 ml-1">
+                Transfer Base Fee (USDC)
+              </label>
+              <input
+                type="text"
+                value={batchBaseFeeInput}
+                onChange={(e) => setBatchBaseFeeInput(e.target.value)}
+                className="w-full bg-[#f8fafc] border border-slate-200/60 text-slate-800 font-mono font-bold text-[13px] px-4 py-3 rounded-2xl outline-none focus:border-slate-800 focus:bg-white transition-all"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[12px] font-bold text-slate-600 ml-1">
+                Per Recipient Incremental (USDC)
+              </label>
+              <input
+                type="text"
+                value={batchPerRecipientFeeInput}
+                onChange={(e) => setBatchPerRecipientFeeInput(e.target.value)}
                 className="w-full bg-[#f8fafc] border border-slate-200/60 text-slate-800 font-mono font-bold text-[13px] px-4 py-3 rounded-2xl outline-none focus:border-slate-800 focus:bg-white transition-all"
               />
             </div>
@@ -237,9 +312,15 @@ export function ConfigTab({
             onClick={() =>
               onSave({
                 swapFee: swapFeeInput,
-                withdrawFee: withdrawFeeInput,
+                withdrawFee: batchBaseFeeInput, // Synchronize with Batch Base Fee
                 bridgeFee: bridgeFeeInput,
                 dailyTransferLimit: dailyTransferLimitInput,
+                minTransferAmount: minTransferAmountInput,
+                minSwapAmount: minSwapAmountInput,
+                minBridgeAmount: minBridgeAmountInput,
+                batchBaseFee: batchBaseFeeInput,
+                batchPerRecipientFee: batchPerRecipientFeeInput,
+                treasuryWalletAddress: treasuryWalletInput,
               })
             }
             disabled={saving || loading}
@@ -482,6 +563,51 @@ export function ConfigTab({
       </div>
 
       {/* Category 4: Integration & Security */}
+      <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 overflow-hidden">
+        <div className="bg-[#f8fafc] px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+          <div className="flex items-center gap-2.5 text-slate-800">
+            <ShieldCheck size={16} className="text-slate-500" />
+            <h3 className="font-black text-[13px] uppercase tracking-wider text-slate-800">
+              Treasury & External Settlement
+            </h3>
+          </div>
+          <span className="text-[10px] bg-slate-100 text-slate-900 px-3 py-1 rounded-full font-black uppercase tracking-tight">
+            TREASURY
+          </span>
+        </div>
+        <div className="p-6 space-y-6">
+          <div className="space-y-2">
+            <label className="text-[12px] font-bold text-slate-600 ml-1">
+              Main Treasury Wallet Address (External Sweep Destination)
+            </label>
+            <div className="flex flex-col gap-2">
+              <input
+                type="text"
+                value={treasuryWalletInput}
+                onChange={(e) => setTreasuryWalletInput(e.target.value)}
+                placeholder="0x..."
+                className="w-full bg-[#f8fafc] border border-slate-200/60 text-slate-800 font-mono font-bold text-[13px] px-4 py-3 rounded-2xl outline-none focus:border-slate-800 focus:bg-white transition-all"
+              />
+              <p className="text-[11px] text-slate-400 font-medium ml-1">
+                Destinasi akhir untuk penarikan otomatis (Sweep) dari Platform Fees yang terkumpul di Hot Wallet Admin.
+              </p>
+            </div>
+          </div>
+          <button
+              onClick={() =>
+                onSave({
+                  treasuryWalletAddress: treasuryWalletInput,
+                })
+              }
+              disabled={saving || loading || !treasuryWalletInput || treasuryWalletInput === config.treasuryWalletAddress}
+              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-black text-[14px] py-4 rounded-[18px] disabled:opacity-50 active:scale-[0.98] transition-all flex items-center justify-center cursor-pointer shadow-lg shadow-slate-200"
+            >
+              {saving ? "Updating Treasury..." : "Update Treasury Address"}
+            </button>
+        </div>
+      </div>
+
+      {/* Category 5: Integration & Security */}
       <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 overflow-hidden">
         <div className="bg-[#f8fafc] px-5 py-4 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-2.5 text-slate-800">

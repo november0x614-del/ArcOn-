@@ -31,6 +31,8 @@ import { DesignTab } from "../admin/DesignTab";
 import { InfrastructureTab } from "../admin/InfrastructureTab";
 import { ComplianceTab } from "../admin/ComplianceTab";
 import { EcommerceAdminTab } from "../admin/EcommerceAdminTab";
+import { OtcReconciliationTab } from "../admin/OtcReconciliationTab";
+import { TreasuryMonitoringTab } from "../admin/TreasuryMonitoringTab";
 
 interface AdminStats {
   totalUsers: number;
@@ -73,6 +75,12 @@ interface AdminConfig {
   backupPhraseEnabled: boolean;
   useLoungeHubEscrow: boolean;
   loungeHubContractAddress: string;
+  minTransferAmount: string;
+  minSwapAmount: string;
+  minBridgeAmount: string;
+  batchBaseFee: string;
+  batchPerRecipientFee: string;
+  treasuryWalletAddress: string;
 }
 
 type TabType =
@@ -82,6 +90,8 @@ type TabType =
   | "infra"
   | "compliance"
   | "ecommerce"
+  | "otc"
+  | "treasury"
   | "settings";
 
 export function AdminDashboardScreen({
@@ -114,6 +124,7 @@ export function AdminDashboardScreen({
     "identity" | "wallet" | "activity"
   >("identity");
   const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
+  const [otcTransactions, setOtcTransactions] = useState<any[]>([]);
   const [deleteValidation, setDeleteValidation] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isAdminAuthorized, setIsAdminAuthorized] = useState(false);
@@ -136,9 +147,14 @@ export function AdminDashboardScreen({
 
   // Config form state
   const [swapFeeInput, setSwapFeeInput] = useState("");
-  const [withdrawFeeInput, setWithdrawFeeInput] = useState("");
   const [bridgeFeeInput, setBridgeFeeInput] = useState("");
   const [dailyTransferLimitInput, setDailyTransferLimitInput] = useState("");
+  const [minTransferAmountInput, setMinTransferAmountInput] = useState("");
+  const [minSwapAmountInput, setMinSwapAmountInput] = useState("");
+  const [minBridgeAmountInput, setMinBridgeAmountInput] = useState("");
+  const [batchBaseFeeInput, setBatchBaseFeeInput] = useState("");
+  const [batchPerRecipientFeeInput, setBatchPerRecipientFeeInput] = useState("");
+  const [treasuryWalletInput, setTreasuryWalletInput] = useState("");
   const [adminPinInputConfig, setAdminPinInputConfig] = useState("");
 
   const fetchStats = useCallback(async () => {
@@ -154,6 +170,15 @@ export function AdminDashboardScreen({
     try {
       const res = await fetch("/api/admin/users");
       if (res.ok) setUsers(await res.json());
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
+
+  const fetchOtcTransactions = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/otc/pending");
+      if (res.ok) setOtcTransactions(await res.json());
     } catch (err) {
       console.error(err);
     }
@@ -245,9 +270,14 @@ export function AdminDashboardScreen({
       const data = useStore.getState().platformConfig;
       if (data) {
         setSwapFeeInput(data.swapFee);
-        setWithdrawFeeInput(data.withdrawFee);
         setBridgeFeeInput(data.bridgeFee);
         setDailyTransferLimitInput(data.dailyTransferLimit || "5000.00 USDC");
+        setMinTransferAmountInput(data.minTransferAmount || "0.1");
+        setMinSwapAmountInput(data.minSwapAmount || "0.1");
+        setMinBridgeAmountInput(data.minBridgeAmount || "0.1");
+        setBatchBaseFeeInput(data.batchBaseFee || "0.15 USDC");
+        setBatchPerRecipientFeeInput(data.batchPerRecipientFee || "0.02 USDC");
+        setTreasuryWalletInput(data.treasuryWalletAddress || "");
         setAdminPinInputConfig(data.adminPin || "123456");
       }
     } catch (err) {
@@ -267,6 +297,9 @@ export function AdminDashboardScreen({
           fetchTransactions(),
           fetchApprovals(),
         ]);
+      }
+      if (activeTab === "otc") {
+        await fetchOtcTransactions();
       }
       if (activeTab === "settings") {
         await fetchConfigData();
@@ -391,6 +424,8 @@ export function AdminDashboardScreen({
     { id: "overview", label: "Command Center", icon: LayoutDashboard },
     { id: "users", label: "User & Security", icon: Users },
     { id: "ecommerce", label: "E-Commerce & Escrow", icon: ShoppingCart },
+    { id: "otc", label: "OTC Reconciliation", icon: RefreshCw },
+    { id: "treasury", label: "Treasury Monitor", icon: Wallet },
     { id: "ledger", label: "Financial Ledger", icon: Wallet },
     { id: "compliance", label: "Compliance & Sanctions", icon: ShieldOff },
     { id: "infra", label: "Infrastructure", icon: ShieldAlert },
@@ -618,6 +653,33 @@ export function AdminDashboardScreen({
                     />
                   )}
                   {activeTab === "ecommerce" && <EcommerceAdminTab />}
+                  {activeTab === "otc" && (
+                    <OtcReconciliationTab
+                      pendingTxs={otcTransactions}
+                      loading={loading}
+                      onResolve={async (txId: string) => {
+                        setSaving(true);
+                        try {
+                          const res = await fetch("/api/admin/otc/reconcile", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json", "x-admin-secret": process.env.ADMIN_SECRET || "" },
+                            body: JSON.stringify({ txId, adminId: "00000000-0000-0000-0000-000000000000" }),
+                          });
+                          if (res.ok) {
+                            setSuccessMsg("Reconciliation successful.");
+                            fetchOtcTransactions();
+                          }
+                        } catch (err) {
+                          console.error(err);
+                          setError("Failed to reconcile transaction.");
+                        } finally {
+                          setSaving(false);
+                        }
+                      }}
+                      saving={saving}
+                    />
+                  )}
+                  {activeTab === "treasury" && <TreasuryMonitoringTab />}
                   {activeTab === "ledger" && (
                     <TreasuryTab
                       loading={loading}
@@ -638,12 +700,22 @@ export function AdminDashboardScreen({
                         saving={saving}
                         swapFeeInput={swapFeeInput}
                         setSwapFeeInput={setSwapFeeInput}
-                        withdrawFeeInput={withdrawFeeInput}
-                        setWithdrawFeeInput={setWithdrawFeeInput}
                         bridgeFeeInput={bridgeFeeInput}
                         setBridgeFeeInput={setBridgeFeeInput}
                         dailyTransferLimitInput={dailyTransferLimitInput}
                         setDailyTransferLimitInput={setDailyTransferLimitInput}
+                        minTransferAmountInput={minTransferAmountInput}
+                        setMinTransferAmountInput={setMinTransferAmountInput}
+                        minSwapAmountInput={minSwapAmountInput}
+                        setMinSwapAmountInput={setMinSwapAmountInput}
+                        minBridgeAmountInput={minBridgeAmountInput}
+                        setMinBridgeAmountInput={setMinBridgeAmountInput}
+                        batchBaseFeeInput={batchBaseFeeInput}
+                        setBatchBaseFeeInput={setBatchBaseFeeInput}
+                        batchPerRecipientFeeInput={batchPerRecipientFeeInput}
+                        setBatchPerRecipientFeeInput={setBatchPerRecipientFeeInput}
+                        treasuryWalletInput={treasuryWalletInput}
+                        setTreasuryWalletInput={setTreasuryWalletInput}
                         adminPinInput={adminPinInputConfig}
                         setAdminPinInput={setAdminPinInputConfig}
                         onSave={handleSaveConfig}

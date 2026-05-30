@@ -515,14 +515,24 @@ export const ViewRouter = React.memo(
               onBack={() => setViewState("transfer")}
               onNext={async (amount, memo) => {
                 const numAmount = parseFloat(amount);
-                if (numAmount < 1) {
-                  displayToast("Minimum transfer amount is 1 USDC.");
+                
+                // Dynamic Check: Minimum Transfer
+                const minTransfer = parseFloat(platformConfig?.minTransferAmount || "1");
+                if (numAmount < minTransfer) {
+                  displayToast(`Minimum transfer amount is ${minTransfer} USDC.`);
                   return;
                 }
-                const totalWithFee = numAmount + 0.1;
+
+                // Dynamic Check: Fees
+                let fee = 0;
+                if (platformConfig?.withdrawFee) {
+                   fee = parseFloat(platformConfig.withdrawFee.replace(/[^0-9.]/g, '')) || 0;
+                }
+                
+                const totalWithFee = numAmount + fee;
                 if (totalWithFee > balance) {
                   displayToast(
-                    `Insufficient USDC balance. Need ${totalWithFee.toFixed(2)} USDC (includes 0.10 Platform Fee).`,
+                    `Insufficient USDC balance. Need ${totalWithFee.toFixed(2)} USDC ${fee > 0 ? `(includes ${fee.toFixed(2)} Platform Fee)` : ""}.`,
                   );
                   return;
                 }

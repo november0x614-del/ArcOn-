@@ -5,6 +5,8 @@ import {
   ChevronRight,
   CheckCircle2,
   Loader2,
+  ArrowRight,
+  X,
 } from "lucide-react";
 import { useApp } from "../../contexts/AppContext";
 import { useArc } from "../../contexts/ArcContext";
@@ -33,14 +35,15 @@ export function WithdrawScreen({ onBack, onSuccess }: WithdrawScreenProps) {
 
   const { getFeeEstimate } = useArc();
   const [step, setStep] = useState<"form" | "processing" | "success">("form");
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [amount, setAmount] = useState("");
   const [memo, setMemo] = useState("");
   const [selectedBank] = useState("Central Asia Bank (BCA)");
   const [accountNumber] = useState("8830192831");
 
   // Sponsored fee - no client estimation needed
-  const PLATFORM_FEE = platformConfig
-    ? parseFloat(platformConfig.withdrawFee || "0.10")
+  const PLATFORM_FEE = platformConfig?.withdrawFee
+    ? parseFloat(platformConfig.withdrawFee.replace(/[^0-9.]/g, '')) || 0.1
     : 0.1;
   const IS_GAS_FREE = platformConfig?.gasSubsidyEnabled;
 
@@ -232,7 +235,7 @@ export function WithdrawScreen({ onBack, onSuccess }: WithdrawScreenProps) {
               <span
                 className={`text-[10px] font-bold px-2 py-0.5 rounded w-fit ${IS_GAS_FREE ? "text-emerald-600 bg-emerald-50" : "text-slate-600 bg-slate-50"}`}
               >
-                {IS_GAS_FREE ? "Gratis" : "Native"}
+                {IS_GAS_FREE ? "Free" : "Native"}
               </span>
             </div>
             <div className="pt-3 border-t border-slate-100 flex justify-between items-center mt-2">
@@ -260,12 +263,82 @@ export function WithdrawScreen({ onBack, onSuccess }: WithdrawScreenProps) {
 
       <div className="absolute bottom-0 left-0 right-0 p-5 bg-white border-t border-slate-50">
         <button
-          onClick={handleWithdraw}
-          className="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold transition-all active:scale-[0.98] border-0 cursor-pointer shadow-lg shadow-blue-200"
+          onClick={() => setShowConfirmModal(true)}
+          disabled={!amount || parseFloat(amount) <= 0 || (parseFloat(amount) + PLATFORM_FEE) > balance}
+          className={`w-full py-4 rounded-2xl font-bold transition-all active:scale-[0.98] border-0 cursor-pointer shadow-lg
+            ${(!amount || parseFloat(amount) <= 0 || (parseFloat(amount) + PLATFORM_FEE) > balance) 
+              ? "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none" 
+              : "bg-slate-900 text-white shadow-slate-200 hover:bg-slate-800"}
+          `}
         >
-          Confirm Withdrawal
+          {(!amount || parseFloat(amount) <= 0) ? "Confirm Withdrawal" : (parseFloat(amount) + PLATFORM_FEE) > balance ? "Insufficient Balance" : "Review Withdrawal"}
         </button>
       </div>
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="absolute inset-0 z-[80] bg-black/40 flex flex-col justify-end animate-in fade-in duration-300 pointer-events-auto">
+          <div className="bg-white rounded-t-[32px] w-full p-6 animate-in slide-in-from-bottom duration-300">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="font-black text-[20px] text-slate-800">Review Withdrawal</h3>
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                className="p-2 bg-slate-50 rounded-full text-slate-400 border-0 cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="bg-slate-50 rounded-2xl p-5 mb-6 space-y-4">
+              <div className="flex justify-between items-center">
+                <div className="flex flex-col">
+                  <span className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">To Bank Account</span>
+                  <p className="font-bold text-slate-800 text-[14px] mt-1">{selectedBank}</p>
+                  <p className="text-[12px] text-slate-500">{accountNumber}</p>
+                </div>
+                <Building2 size={24} className="text-slate-300" />
+              </div>
+
+              <div className="pt-4 border-t border-slate-200 space-y-3">
+                <div className="flex justify-between text-[13px]">
+                  <span className="text-slate-500 font-medium">Withdrawal Amount</span>
+                  <span className="text-slate-800 font-bold">{parseFloat(amount).toFixed(2)} USDC</span>
+                </div>
+                <div className="flex justify-between text-[13px]">
+                  <span className="text-slate-500 font-medium">Platform Fee</span>
+                  <span className="text-slate-800 font-bold">{PLATFORM_FEE.toFixed(2)} USDC</span>
+                </div>
+                <div className="flex justify-between text-[13px]">
+                  <span className="text-slate-500 font-medium">Network Gas</span>
+                  <span className="text-emerald-600 font-bold">Sponsored (Free)</span>
+                </div>
+                <div className="pt-2 border-t border-slate-200 flex justify-between text-[13px]">
+                  <span className="text-slate-500 font-bold">Total Deduction</span>
+                  <span className="text-slate-900 font-black">{(parseFloat(amount) + PLATFORM_FEE).toFixed(2)} USDC</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                setShowConfirmModal(false);
+                handleWithdraw();
+              }}
+              className="w-full bg-slate-900 hover:bg-slate-800 text-white py-[18px] rounded-full flex justify-between px-6 items-center transition-all shadow-xl active:scale-[0.98] border-0 cursor-pointer mb-6"
+            >
+              <div className="flex items-center gap-3">
+                <span className="font-black text-[16px]">Confirm Withdrawal</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="font-black text-[17px] tracking-tight">{(parseFloat(amount) + PLATFORM_FEE).toFixed(2)} USDC</span>
+                <div className="bg-white/20 p-1.5 rounded-full border-0">
+                  <ArrowRight size={18} strokeWidth={3} />
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

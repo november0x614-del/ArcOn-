@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   Loader2,
   Plus,
+  ArrowRight,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { useApp } from "../../contexts/AppContext";
@@ -55,6 +56,7 @@ export function BatchTransferScreen({
   const [newAmount, setNewAmount] = useState("");
   const [processingStatus, setProcessingStatus] = useState<string>("");
   const [isAddedFeedback, setIsAddedFeedback] = useState(false);
+  const [isSending, setIsSending] = useState(false);
 
   const [showQuickAddModal, setShowQuickAddModal] = useState(false);
   const [selectedQuickAddIds, setSelectedQuickAddIds] = useState<string[]>([]);
@@ -108,9 +110,32 @@ export function BatchTransferScreen({
     setRecipients((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const PLATFORM_FEE = platformConfig
-    ? parseFloat(platformConfig.withdrawFee || "0.25")
-    : 0.25;
+  // Dynamic Fee Calculation
+  // Formula: BATCH_BASE_FEE + (BATCH_PER_RECIPIENT_FEE * (total_recipients - 1))
+  const getBatchFees = () => {
+    if (recipients.length === 0) return { base: 0, incremental: 0, total: 0 };
+    
+    // Parse values from platformConfig
+    const baseFee = platformConfig?.batchBaseFee 
+      ? parseFloat(platformConfig.batchBaseFee.replace(/[^0-9.]/g, '')) || 0.15
+      : 0.15;
+      
+    const incrementalFee = platformConfig?.batchPerRecipientFee
+      ? parseFloat(platformConfig.batchPerRecipientFee.replace(/[^0-9.]/g, '')) || 0.02
+      : 0.02;
+    
+    const incrementalTotal = incrementalFee * (recipients.length - 1);
+    
+    return {
+      base: baseFee,
+      incremental: incrementalFee,
+      incrementalTotal: incrementalTotal,
+      total: baseFee + incrementalTotal
+    };
+  };
+
+  const fees = getBatchFees();
+  const PLATFORM_FEE = fees.total;
   const NETWORK_GAS = platformConfig?.gasSubsidyEnabled ? 0.0 : 0.05;
 
   const totalPayout = recipients.reduce(
@@ -119,9 +144,10 @@ export function BatchTransferScreen({
   );
 
   const totalRequired = totalPayout + PLATFORM_FEE + NETWORK_GAS;
+  const hasEnoughBalance = recipients.length > 0 && balance >= totalRequired;
 
   const startProcessing = () => {
-    if (totalRequired > balance) {
+    if (!hasEnoughBalance) {
       displayToast(
         "Insufficient balance for this batch transfer including fees.",
       );
@@ -133,6 +159,7 @@ export function BatchTransferScreen({
   const [actualTxId, setActualTxId] = useState<string>("");
 
   const executeBatch = async () => {
+    setIsSending(true);
     setMultiSendStep("processing");
     setProcessingStatus("Packaging transaction inputs...");
 
@@ -174,6 +201,8 @@ export function BatchTransferScreen({
       }
       displayToast(errorMessage || "Batch transfer failed.");
       setMultiSendStep("form");
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -432,10 +461,18 @@ export function BatchTransferScreen({
 
               <button
                 onClick={startProcessing}
-                disabled={recipients.length === 0}
-                className="w-full h-16 bg-[#0B192C] text-white rounded-[22px] font-bold text-[16px] shadow-lg shadow-slate-200 active:scale-[0.97] transition-all disabled:opacity-30 disabled:shadow-none mb-10 border-0 cursor-pointer flex items-center justify-center"
+                disabled={recipients.length === 0 || !hasEnoughBalance}
+                className={`w-full h-16 rounded-[22px] font-bold text-[16px] active:scale-[0.97] transition-all mb-10 border-0 cursor-pointer flex items-center justify-center shadow-lg
+                  ${
+                    recipients.length === 0
+                      ? "bg-dash-100 text-slate-400 opacity-30 shadow-none cursor-not-allowed"
+                      : !hasEnoughBalance
+                        ? "bg-red-50 text-red-500 border border-red-100 cursor-not-allowed"
+                        : "bg-[#0B192C] text-white shadow-slate-200 hover:bg-slate-800"
+                  }
+                `}
               >
-                Review Batch Send
+                {recipients.length > 0 && !hasEnoughBalance ? "Insufficient Balance" : "Review Batch Send"}
               </button>
             </motion.div>
           )}
@@ -517,23 +554,36 @@ export function BatchTransferScreen({
                       Platform Fee
                       <div
                         className="w-3.5 h-3.5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-[8px] font-black cursor-help"
-                        title="Application distribution fee"
+                        title={`Base: ${fees.base.toFixed(2)} + ${fees.incremental.toFixed(2)} per extra recipient`}
                       >
                         i
                       </div>
                     </span>
-                    <span className="font-mono font-bold text-slate-800">
-                      {PLATFORM_FEE.toFixed(2)} USDC
-                    </span>
+                    <div className="flex flex-col items-end">
+                      <span className="font-mono font-bold text-slate-800">
+                        {PLATFORM_FEE.toFixed(2)} USDC
+                      </span>
+                      {recipients.length > 1 && (
+                        <span className="text-[9px] text-slate-400 font-medium">
+                          ({fees.base.toFixed(2)} + {fees.incrementalTotal.toFixed(2)})
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-[13px] text-slate-500 font-bold">
-                      Network Gas
-                    </span>
-                    <span className="font-mono font-bold text-slate-800">
-                      {NETWORK_GAS.toFixed(2)} USDC
-                    </span>
-                  </div>
+                    <div className="flex justify-between items-center mt-3">
+                      <span className="text-[13px] text-slate-500 font-bold">
+                        Network Gas {platformConfig?.gasSubsidyEnabled && "(Sponsored)"}
+                      </span>
+                      {platformConfig?.gasSubsidyEnabled ? (
+                        <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md w-fit">
+                          Free
+                        </span>
+                      ) : (
+                        <span className="font-mono font-bold text-slate-800">
+                          {NETWORK_GAS.toFixed(2)} USDC
+                        </span>
+                      )}
+                    </div>
 
                   <div className="pt-4 mt-2 border-t-2 border-dashed border-slate-100 flex justify-between items-center">
                     <span className="text-[15px] text-slate-900 font-black">
@@ -548,10 +598,28 @@ export function BatchTransferScreen({
 
               <div className="flex flex-col gap-4">
                 <button
+                  disabled={isSending}
                   onClick={executeBatch}
-                  className="w-full h-16 bg-[#0B192C] text-white rounded-[22px] font-bold text-[16px] shadow-lg shadow-slate-200 active:scale-[0.97] transition-all border-0 cursor-pointer flex items-center justify-center"
+                  className="w-full bg-slate-900 hover:bg-slate-800 text-white py-[16px] rounded-full flex justify-between px-6 items-center transition-all shadow-[0_4px_14px_rgba(15,23,42,0.3)] active:scale-[0.98] border-0 cursor-pointer"
                 >
-                  Confirm & Execute
+                  <div className="flex items-center gap-3">
+                    {isSending ? (
+                      <div className="w-5 h-5 border-[2.5px] border-white/20 border-t-white rounded-full animate-spin"></div>
+                    ) : null}
+                    <span className="font-bold text-[15px]">
+                      {isSending ? "Processing..." : "Confirm & Execute"}
+                    </span>
+                  </div>
+                  {!isSending && (
+                    <div className="flex items-center gap-3">
+                      <span className="font-extrabold text-[16px] tracking-tight">
+                        {totalRequired.toFixed(2)} USDC
+                      </span>
+                      <div className="bg-white/20 p-1.5 rounded-full border-0 flex items-center justify-center shadow-inner">
+                        <ArrowRight size={18} strokeWidth={3} />
+                      </div>
+                    </div>
+                  )}
                 </button>
                 <button
                   onClick={() => setMultiSendStep("form")}

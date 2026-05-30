@@ -8,6 +8,7 @@ import {
   AlertCircle,
   Globe,
   X,
+  ArrowRight,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { useApp } from "../../contexts/AppContext";
@@ -50,9 +51,15 @@ const NETWORKS = [
 ];
 
 export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
-  const { balance, displayToast, registeredUser, startSyncPolling } = useApp();
+  const { balance, displayToast, registeredUser, startSyncPolling, platformConfig } = useApp();
   const [step, setStep] = useState<"form" | "processing" | "success">("form");
   const mode = "outbound"; // Forced to outbound for now
+
+  // Dynamic fee calculation
+  const bridgeFee = platformConfig?.bridgeFee 
+    ? parseFloat(platformConfig.bridgeFee.replace(/[^0-9.]/g, '')) || 0.1
+    : 0.1;
+
   const [processingPhase, setProcessingPhase] = useState<
     "broadcasting" | "attesting" | "claiming"
   >("broadcasting");
@@ -60,29 +67,19 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
   const [destinationAddress, setDestinationAddress] = useState("");
   const fromNetwork = NETWORKS[0]; // Default From: Arc Default
   const [toNetwork, setToNetwork] = useState(NETWORKS[1]); // Default To: Ethereum
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showNetworkSelect, setShowNetworkSelect] = useState<
     "from" | "to" | null
   >(null);
   const [showPending, setShowPending] = useState(false);
 
-  const handleBridge = async () => {
-    const numAmount = parseFloat(amount);
-    if (!amount || isNaN(numAmount) || numAmount <= 0) {
-      displayToast("Please enter a valid amount.");
-      return;
-    }
-    const totalWithFee = numAmount + 0.1;
-    if (mode === "outbound" && totalWithFee > balance) {
-      displayToast(
-        `Insufficient USDC balance. Need ${totalWithFee.toFixed(2)} USDC (includes 0.10 Platform Fee).`,
-      );
-      return;
-    }
-    if (!destinationAddress.trim()) {
-      displayToast("Please connect or enter a destination wallet address.");
-      return;
-    }
+  const numAmount = parseFloat(amount) || 0;
+  const hasEnoughBalance = numAmount > 0 && (numAmount + bridgeFee) <= balance;
+  const isInvalid = !amount || numAmount <= 0 || !destinationAddress;
 
+  const handleBridge = async () => {
+    if (isInvalid || !hasEnoughBalance) return;
+    
     setStep("processing");
     setProcessingPhase("broadcasting");
 
@@ -421,7 +418,7 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
               <div className="flex justify-between items-center">
                 <span className="text-[13px] text-slate-500">Platform Fee</span>
                 <span className="text-[13px] font-bold text-slate-800">
-                  0.10 USDC
+                  {bridgeFee.toFixed(2)} USDC
                 </span>
               </div>
               <div className="flex justify-between items-center">
@@ -471,20 +468,100 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
         {/* Action Footer */}
         <div className="mt-auto pt-4 pb-4 w-full">
           <button
-            onClick={handleBridge}
-            className={`w-full bg-slate-900 text-white py-4 rounded-2xl font-bold text-[15px] shadow-[0_8px_20px_-8px_rgba(15,23,42,0.4)] hover:bg-slate-800 transition-all active:scale-[0.98] border-0 cursor-pointer flex items-center justify-center gap-2 ${
-              !amount ||
-              parseFloat(amount) <= 0 ||
-              parseFloat(amount) > balance ||
-              !destinationAddress
-                ? "opacity-50 cursor-not-allowed"
-                : ""
-            }`}
+            onClick={() => setShowConfirmModal(true)}
+            disabled={isInvalid || !hasEnoughBalance}
+            className={`w-full py-4 rounded-2xl font-bold text-[15px] shadow-sm transition-all active:scale-[0.98] border-0 cursor-pointer flex items-center justify-center gap-2 
+              ${
+                isInvalid
+                  ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                  : !hasEnoughBalance
+                    ? "bg-red-50 text-red-500 border border-red-100 cursor-not-allowed"
+                    : "bg-slate-900 text-white shadow-[0_8px_20px_-8px_rgba(15,23,42,0.4)] hover:bg-slate-800"
+              }
+            `}
           >
-            Initiate Bridge
+            {!amount || numAmount === 0 ? "Initiate Bridge" : !hasEnoughBalance ? "Insufficient Balance" : "Review Bridge"}
           </button>
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="absolute inset-0 z-[80] bg-black/40 flex flex-col justify-end animate-in fade-in duration-300 pointer-events-auto">
+          <div className="bg-white rounded-t-[32px] w-full p-6 animate-in slide-in-from-bottom duration-300">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="font-black text-[20px] text-slate-800">Bridge Review</h3>
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                className="p-2 bg-slate-50 rounded-full text-slate-400 border-0 cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="bg-slate-50 rounded-2xl p-5 mb-6 space-y-4">
+              <div className="flex justify-between items-center">
+                <div className="flex flex-col">
+                  <span className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">Source</span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className={`w-5 h-5 ${fromNetwork.color} rounded flex items-center justify-center text-white`}>
+                      {fromNetwork.icon}
+                    </div>
+                    <span className="font-bold text-slate-800 text-[14px]">{fromNetwork.name}</span>
+                  </div>
+                </div>
+                <ArrowRight size={16} className="text-slate-300 mt-4" />
+                <div className="flex flex-col text-right">
+                  <span className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">Destination</span>
+                  <div className="flex items-center gap-2 mt-1 justify-end">
+                    <span className="font-bold text-slate-800 text-[14px]">{toNetwork.name}</span>
+                    <div className={`w-5 h-5 ${toNetwork.color} rounded flex items-center justify-center text-white`}>
+                      {toNetwork.icon}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-slate-200 flex flex-col gap-3">
+                <div className="flex justify-between text-[13px]">
+                  <span className="text-slate-500 font-medium">Bridging Amount</span>
+                  <span className="text-slate-800 font-bold">{numAmount.toFixed(2)} USDC</span>
+                </div>
+                <div className="flex justify-between text-[13px]">
+                  <span className="text-slate-500 font-medium">Platform Fee</span>
+                  <span className="text-slate-800 font-bold">{bridgeFee.toFixed(2)} USDC</span>
+                </div>
+                <div className="flex justify-between text-[13px]">
+                  <span className="text-slate-500 font-medium">Network Gas</span>
+                  <span className="text-emerald-600 font-bold">Sponsored (Free)</span>
+                </div>
+                <div className="pt-2 border-t border-slate-200 flex justify-between text-[13px]">
+                  <span className="text-slate-500 font-bold">Total Settlement</span>
+                  <span className="text-slate-900 font-black">{(numAmount + bridgeFee).toFixed(2)} USDC</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                setShowConfirmModal(false);
+                handleBridge();
+              }}
+              className="w-full bg-slate-900 hover:bg-slate-800 text-white py-[18px] rounded-full flex justify-between px-6 items-center transition-all shadow-xl active:scale-[0.98] border-0 cursor-pointer mb-6"
+            >
+              <div className="flex items-center gap-3">
+                <span className="font-black text-[16px]">Confirm & Bridge</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="font-black text-[17px] tracking-tight">{(numAmount + bridgeFee).toFixed(2)} USDC</span>
+                <div className="bg-white/20 p-1.5 rounded-full border-0">
+                  <ArrowRight size={18} strokeWidth={3} />
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Network Select Modal */}
       {showNetworkSelect && (

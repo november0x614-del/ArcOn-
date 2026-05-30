@@ -361,7 +361,14 @@ export const useStore = create<AppState>()((set) => ({
   network: "ARC TESTNET",
   setNetwork: (net) => set({ network: net }),
   platformConfig: null,
-  setPlatformConfig: (config) => set({ platformConfig: config }),
+  setPlatformConfig: (config) => {
+    set({ platformConfig: config });
+    if (config) {
+      try {
+        localStorage.setItem("arc_platform_config", JSON.stringify(config));
+      } catch (e) {}
+    }
+  },
   fetchPlatformConfig: async () => {
     // Try localStorage first
     try {

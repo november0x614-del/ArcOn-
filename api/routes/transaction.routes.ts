@@ -154,6 +154,7 @@ router.post("/swap/execute", async (req, res) => {
 
     try {
       let txHash;
+      let otcHash = null;
       try {
         txHash = await executeAppKitSwap(
           userWallet.wallet_address,
@@ -170,7 +171,7 @@ router.post("/swap/execute", async (req, res) => {
         ) {
           console.warn("[OTC Desk Fallback] Public swap route missing on Arc Testnet. Initiating private OTC Desk clearance.");
           
-          let otcHash = "";
+          otcHash = "";
           try {
             const { data: adminWallet } = await supabaseAdmin
               .from("user_wallets")
@@ -191,6 +192,15 @@ router.post("/swap/execute", async (req, res) => {
           }
           
           txHash = otcHash || `0x${crypto.randomBytes(32).toString("hex")}`;
+          
+          if (otcHash) {
+            // Notify Admin through Slack
+            fetch(process.env.SLACK_WEBHOOK_URL!, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text: `OTC Reconciliation Required! Hash: ${otcHash}. Ref: ${internalRef}` })
+            }).catch(console.error);
+          }
         } else {
           throw swapErr;
         }
@@ -200,7 +210,14 @@ router.post("/swap/execute", async (req, res) => {
         .from("transactions")
         .update({
           tx_hash: txHash,
-          status: "success",
+          status: otcHash ? "manual_reconciliation_required" : "success",
+          metadata: { 
+            fromToken, 
+            toToken, 
+            real: true, 
+            otc_fallback: !!otcHash,
+            error: otcHash ? "Fallback to OTC desk required" : null
+          },
         })
         .eq("internal_ref", internalRef);
 
@@ -208,7 +225,7 @@ router.post("/swap/execute", async (req, res) => {
         .from("transaction_ledger")
         .update({
           tx_hash: txHash,
-          status: "COMPLETE",
+          status: otcHash ? "MANUAL_RECONCILIATION" : "COMPLETE",
         })
         .eq("circle_tx_id", internalRef);
 

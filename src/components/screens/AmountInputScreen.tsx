@@ -22,12 +22,18 @@ export function AmountInputScreen({
   onBack,
   onNext,
 }: AmountInputScreenProps) {
-  const { registeredUser, balance, allBalances, transferAmount, transferMemo } =
+  const { registeredUser, balance, allBalances, transferAmount, transferMemo, platformConfig } =
     useStore();
   const { getFeeEstimate } = useArc();
   const [amount, setAmount] = useState(
     transferAmount && transferAmount !== "0" ? transferAmount : "",
   );
+  
+  // Extract configuration values
+  const minTransfer = parseFloat(platformConfig?.minTransferAmount || "1");
+  const platformFee = platformConfig?.withdrawFee ? (parseFloat(platformConfig.withdrawFee.replace(/[^0-9.]/g, '')) || 0) : 0;
+  const dailyLimit = parseFloat(platformConfig?.dailyTransferLimit || "5000");
+
   const [memo, setMemo] = useState(transferMemo || "");
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSourceSelect, setShowSourceSelect] = useState(false);
@@ -65,8 +71,9 @@ export function AmountInputScreen({
   const actualUSDC = usdcData ? parseFloat(usdcData.amount) : 0;
 
   // Total needed (including platform fee)
-  const totalRequired = numericAmount + 0.1;
+  const totalRequired = numericAmount + platformFee;
   const hasEnough = actualUSDC >= totalRequired;
+  const isWithinLimit = numericAmount <= dailyLimit;
 
   return (
     <div className="w-full h-full bg-white relative flex flex-col z-50">
@@ -128,13 +135,18 @@ export function AmountInputScreen({
           </div>
 
           <div className="flex items-center justify-between mt-2 pt-3 border-t border-slate-100">
-            <span className="text-[12px] text-slate-500 font-medium">
-              USDC Balance: {actualUSDC.toFixed(2)} USDC
-            </span>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[11px] text-slate-500 font-medium">
+                Balance: {actualUSDC.toFixed(2)} USDC
+              </span>
+              <span className={`text-[10px] ${numericAmount > dailyLimit ? "text-red-500 font-bold" : "text-slate-400 font-medium"}`}>
+                Limit: {dailyLimit.toFixed(2)} USDC
+              </span>
+            </div>
             <button
               onClick={() =>
                 setAmount(
-                  actualUSDC >= 0.1 ? (actualUSDC - 0.1).toFixed(2) : "0",
+                  actualUSDC >= platformFee ? (actualUSDC - platformFee).toFixed(2) : "0",
                 )
               }
               className="text-[11px] font-bold bg-slate-200 text-slate-700 px-2.5 py-1 rounded-md hover:bg-slate-300 transition-colors cursor-pointer border-none"
@@ -185,16 +197,20 @@ export function AmountInputScreen({
         <div className="mt-8">
           <button
             onClick={() => setShowConfirm(true)}
-            disabled={!amount || numericAmount < 1 || !hasEnough}
-            className={`w-full py-4 rounded-full font-bold text-[15px] transition-all flex items-center justify-center gap-2
+            disabled={!amount || numericAmount < minTransfer || !hasEnough || !isWithinLimit}
+            className={`w-full py-4 rounded-full font-bold text-[15px] transition-all flex items-center justify-center gap-2 border-[1.5px]
               ${
-                amount && numericAmount >= 1 && hasEnough
-                  ? "bg-slate-900 text-white shadow-lg hover:bg-slate-800 active:scale-[0.98]"
-                  : "bg-slate-100 text-slate-400 shadow-none cursor-not-allowed"
+                !amount || numericAmount < minTransfer
+                  ? "bg-slate-100 text-slate-400 border-transparent shadow-none cursor-not-allowed"
+                  : !hasEnough
+                    ? "bg-red-50 text-red-500 border-red-100 shadow-none cursor-not-allowed"
+                    : numericAmount > dailyLimit
+                      ? "bg-amber-50 text-amber-600 border-amber-100 cursor-not-allowed shrink-0"
+                      : "bg-slate-900 text-white border-transparent shadow-lg hover:bg-slate-800 active:scale-[0.98]"
               }
             `}
           >
-            Review Transfer
+            {numericAmount > dailyLimit ? "Over Limit" : !hasEnough ? "Insufficient Balance" : "Review Transfer"}
           </button>
         </div>
       </div>
@@ -259,7 +275,7 @@ export function AmountInputScreen({
                         Platform Fee
                       </span>
                       <span className="text-slate-900 font-bold text-[14px]">
-                        0.10 USDC
+                        {platformFee.toFixed(2)} USDC
                       </span>
                     </div>
                     <div className="flex justify-between items-center mt-1">
@@ -267,7 +283,7 @@ export function AmountInputScreen({
                         <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>{" "}
                         Network Gas (Sponsored)
                       </span>
-                      <span className="text-emerald-600 font-bold text-[12px]">
+                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md w-fit">
                         Free
                       </span>
                     </div>
@@ -308,34 +324,31 @@ export function AmountInputScreen({
                 disabled={isSending}
                 onClick={async () => {
                   setIsSending(true);
-                  if (selectedSource.isArc && numericAmount > 100) {
-                    // Bio verification handler space
-                  }
                   await onNext(amount, memo);
                   setIsSending(false);
                 }}
-                className={`w-full text-white py-[14px] rounded-full flex justify-between px-6 items-center transition-all ${selectedSource.isArc ? "bg-slate-900 hover:bg-slate-800 shadow-[0_4px_14px_rgba(63,162,246,0.4)]" : "bg-slate-900 hover:bg-slate-800 shadow-lg"} ${isSending ? "opacity-90" : ""}`}
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white py-[16px] rounded-full flex justify-between px-6 items-center transition-all shadow-[0_4px_14px_rgba(15,23,42,0.3)] active:scale-[0.98] border-0 cursor-pointer"
               >
-                <span className="font-bold text-[15px]">
-                  {isSending ? "Initiating Transfer..." : "Continue Transfer"}
-                </span>
-                <div className="flex items-center gap-2">
-                  {!isSending && (
-                    <>
-                      <span className="font-bold text-[16px]">
-                        {selectedSource.isArc
-                          ? `${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(numericAmount)} USDC`
-                          : `Rp ${new Intl.NumberFormat("id-ID").format(numericAmount + (numericAmount >= 100000 ? 0 : 6500))}`}
-                      </span>
-                      <div className="bg-white/20 p-1 rounded-full flex shrink-0 border-0">
-                        <ArrowRight size={16} strokeWidth={3} />
-                      </div>
-                    </>
-                  )}
-                  {isSending && (
+                <div className="flex items-center gap-3">
+                  {isSending ? (
                     <div className="w-5 h-5 border-[2.5px] border-white/20 border-t-white rounded-full animate-spin"></div>
-                  )}
+                  ) : null}
+                  <span className="font-bold text-[15px]">
+                    {isSending ? "Initiating Transfer..." : "Continue Transfer"}
+                  </span>
                 </div>
+                {!isSending && (
+                  <div className="flex items-center gap-3">
+                    <span className="font-extrabold text-[16px] tracking-tight">
+                      {selectedSource.isArc
+                        ? `${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(numericAmount)} USDC`
+                        : `Rp ${new Intl.NumberFormat("id-ID").format(numericAmount + (numericAmount >= 100000 ? 0 : 6500))}`}
+                    </span>
+                    <div className="bg-white/20 p-1.5 rounded-full border-0 flex items-center justify-center shadow-inner">
+                      <ArrowRight size={18} strokeWidth={3} />
+                    </div>
+                  </div>
+                )}
               </button>
             </div>
           </div>

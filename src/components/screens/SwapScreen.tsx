@@ -8,6 +8,7 @@ import {
   Zap,
   Search,
   X,
+  ArrowRight,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useStore } from "../../store/useStore";
@@ -52,6 +53,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
   const [txHash, setTxHash] = useState("");
   const [slippage, setSlippage] = useState<string>("0.5");
   const [showDetails, setShowDetails] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [swapError, setSwapError] = useState<{
     title: string;
     message: string;
@@ -112,6 +114,28 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
     }
   }, [fromAmount, exchangeRate, fromToken, toToken]);
 
+  const numFromAmount = parseFloat(fromAmount) || 0;
+  const fromTokenBalance = getTokenBalance(fromToken?.symbol || "");
+  const usdcBalance = getTokenBalance("USDC");
+
+  // Dynamic fee calculation for button label and validation
+  const swapFeePercent = platformConfig?.swapFee
+    ? parseFloat(platformConfig.swapFee.replace(/[^0-9.]/g, "")) || 0.1
+    : 0.1;
+
+  // Estimation: Platform fee based on volume (minimum 0.1 USDC baseline)
+  const estimatedPlatformFee = Math.max(0.1, numFromAmount * (swapFeePercent / 100));
+
+  const hasEnoughTokenA = numFromAmount > 0 && numFromAmount <= fromTokenBalance;
+  const isUsdcSource = fromToken?.symbol === "USDC";
+
+  // Balance Check logic
+  const hasEnoughBalance = isUsdcSource
+    ? numFromAmount + estimatedPlatformFee <= usdcBalance
+    : hasEnoughTokenA && usdcBalance >= 0.1;
+
+  const isInvalid = !fromAmount || numFromAmount === 0 || fromToken?.symbol === toToken?.symbol;
+
   const handleSwap = async () => {
     if (!registeredUser?.supabaseUid) return;
 
@@ -122,17 +146,19 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
       return;
     }
 
-    const PLATFORM_FEE_PERCENT = platformConfig
-      ? parseFloat(platformConfig.swapFee || "0.1")
+    const swapFee = platformConfig?.swapFee
+      ? parseFloat(platformConfig.swapFee.replace(/[^0-9.]/g, '')) || 0.1
       : 0.1;
+    
     const usdcBalance = getTokenBalance("USDC");
-    const requiredMinUsdc = 0.1; // Basic check for platform fee context
+    // We assume a minimum USDC balance is needed to cover the platform fee context (at least 0.1 USDC)
+    const requiredMinUsdc = 0.1; 
 
     if (usdcBalance < requiredMinUsdc) {
       useStore
         .getState()
         .displayToast(
-          `Insufficient USDC balance for Platform Fee (~${PLATFORM_FEE_PERCENT}% of nominal).`,
+          `Insufficient USDC balance for Platform Fee (${swapFee}% of volume).`,
         );
       return;
     }
@@ -502,7 +528,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
               <div className="flex justify-between items-center mt-1">
                 <span className="text-[12px] text-slate-500">Platform Fee</span>
                 <span className="text-[12px] font-mono text-slate-700 font-bold">
-                  {platformConfig ? platformConfig.swapFee : "0.1"}%
+                  {platformConfig?.swapFee?.includes('%') ? platformConfig.swapFee : `${parseFloat(platformConfig?.swapFee?.replace(/[^0-9.]/g, '') || "0.1")}%`}
                 </span>
               </div>
               <div className="flex justify-between items-center mt-1">
@@ -521,26 +547,17 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
 
         <div className="mt-auto pb-4">
           <button
-            disabled={
-              !fromAmount ||
-              parseFloat(fromAmount) === 0 ||
-              isSwapping ||
-              parseFloat(fromAmount) >
-                getTokenBalance(fromToken?.symbol || "") ||
-              fromToken?.symbol === toToken?.symbol
-            }
-            onClick={handleSwap}
+            disabled={isInvalid || isSwapping || !hasEnoughBalance}
+            onClick={() => setShowConfirmModal(true)}
             className={`w-full font-bold py-4 rounded-full transition-all flex items-center justify-center gap-3 text-[15px] active:scale-95
               ${
-                !fromAmount ||
-                parseFloat(fromAmount) === 0 ||
-                parseFloat(fromAmount) >
-                  getTokenBalance(fromToken?.symbol || "") ||
-                fromToken?.symbol === toToken?.symbol
+                isInvalid
                   ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                  : !isSwapping
-                    ? "bg-slate-900 text-white shadow-lg hover:bg-slate-800"
-                    : "bg-slate-800 text-white shadow-xl scale-[0.98]"
+                  : !hasEnoughBalance
+                    ? "bg-red-50 text-red-500 border border-red-100 cursor-not-allowed"
+                    : !isSwapping
+                      ? "bg-slate-900 text-white shadow-lg hover:bg-slate-800"
+                      : "bg-slate-800 text-white shadow-xl scale-[0.98]"
               }`}
           >
             {isSwapping ? (
@@ -550,8 +567,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
               </>
             ) : fromToken?.symbol === toToken?.symbol ? (
               "Invalid Pair"
-            ) : parseFloat(fromAmount) >
-              getTokenBalance(fromToken?.symbol || "") ? (
+            ) : !hasEnoughBalance ? (
               "Insufficient Balance"
             ) : (
               "Review Swap"
@@ -559,6 +575,76 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
           </button>
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="absolute inset-0 z-[80] bg-black/40 flex flex-col justify-end animate-in fade-in duration-300">
+          <div className="bg-white rounded-t-[32px] w-full p-6 animate-in slide-in-from-bottom duration-300">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="font-black text-[20px] text-slate-800">Review Swap</h3>
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                className="p-2 bg-slate-50 rounded-full text-slate-400 border-0 cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="bg-slate-50 rounded-2xl p-4 mb-6 space-y-4">
+              <div className="flex justify-between items-center">
+                <div className="flex flex-col">
+                  <span className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">You Pay</span>
+                  <span className="font-black text-[18px] text-slate-800">{fromAmount} {fromToken?.symbol}</span>
+                </div>
+                <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-sm border border-slate-100">
+                  <ArrowRight size={14} className="text-slate-400" />
+                </div>
+                <div className="flex flex-col text-right">
+                  <span className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">You Get</span>
+                  <span className="font-black text-[18px] text-emerald-600">~{toAmount} {toToken?.symbol}</span>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-slate-200 space-y-2">
+                <div className="flex justify-between text-[13px]">
+                  <span className="text-slate-500 font-medium">Exchange Rate</span>
+                  <span className="text-slate-800 font-bold">1 {fromToken?.symbol} = {exchangeRate} {toToken?.symbol}</span>
+                </div>
+                <div className="flex justify-between text-[13px]">
+                  <span className="text-slate-500 font-medium">Platform Fee</span>
+                  <span className="text-slate-800 font-bold">{estimatedPlatformFee.toFixed(2)} USDC</span>
+                </div>
+                <div className="flex justify-between text-[13px]">
+                  <span className="text-slate-500 font-medium">Network Gas</span>
+                  <span className="text-emerald-600 font-bold underline decoration-emerald-200 underline-offset-2">Sponsored (Free)</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              disabled={isSwapping}
+              onClick={() => {
+                setShowConfirmModal(false);
+                handleSwap();
+              }}
+              className="w-full bg-slate-900 hover:bg-slate-800 text-white py-[18px] rounded-full flex justify-between px-6 items-center transition-all shadow-xl active:scale-[0.98] border-0 cursor-pointer mb-4"
+            >
+              <div className="flex items-center gap-3">
+                <span className="font-black text-[16px]">Confirm Swap</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="font-black text-[17px] tracking-tight">{fromAmount} {fromToken?.symbol}</span>
+                <div className="bg-white/20 p-1.5 rounded-full border-0">
+                  <ArrowRight size={18} strokeWidth={3} />
+                </div>
+              </div>
+            </button>
+            <p className="text-center text-[12px] text-slate-400 font-medium mb-2">
+              Processing on Arc Testnet via Circle SDK
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Token Selector Modal */}
       {showTokenSelector && (

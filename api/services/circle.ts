@@ -688,3 +688,50 @@ export async function autoSweepWallets(
   }
   return results;
 }
+
+export async function manualSweepAdminWallet(
+  supabaseAdmin: any,
+  amount: number,
+  treasuryAddress: string
+) {
+  const adminId = "00000000-0000-0000-0000-000000000000";
+  const { data: adminWallet } = await supabaseAdmin
+    .from("user_wallets")
+    .select("wallet_id, wallet_address")
+    .eq("id", adminId)
+    .single();
+
+  if (!adminWallet?.wallet_id) throw new Error("Admin wallet not localizable");
+
+  const client = getCircleClientInstance();
+  const idempotencyKey = crypto.randomUUID();
+
+  const txParams: any = {
+    idempotencyKey,
+    walletId: adminWallet.wallet_id,
+    destinationAddress: treasuryAddress,
+    amount: [amount.toFixed(6)],
+    tokenId: ARC_USDC_TOKEN_ID,
+    fee: { type: "level", config: { feeLevel: "MEDIUM" } },
+  };
+
+  const response = await client.createTransaction(txParams);
+  const circleTxId = response.data?.id;
+
+  if (circleTxId) {
+    await supabaseAdmin.from("transactions").insert({
+      user_id: adminId,
+      amount: `-${amount.toFixed(2)}`,
+      type: "treasury_sweep",
+      status: "pending",
+      internal_ref: circleTxId,
+      metadata: {
+        description: `Manual Treasury Sweep to ${treasuryAddress}`,
+        real: true,
+        destinationAddress: treasuryAddress,
+      },
+    });
+  }
+
+  return response.data;
+}
