@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { apiFetch } from "../../lib/api";
 import { Wallet, RefreshCw, CircleDollarSign, ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
 
 export function TreasuryMonitoringTab() {
@@ -15,8 +16,8 @@ export function TreasuryMonitoringTab() {
     setError(null);
     try {
       const [treasuryRes, statsRes] = await Promise.all([
-        fetch("/api/admin/otc/treasury-balance"),
-        fetch("/api/admin/stats")
+        apiFetch("/api/admin/otc/treasury-balance"),
+        apiFetch("/api/admin/stats")
       ]);
       
       if (treasuryRes.ok) setData(await treasuryRes.json());
@@ -40,9 +41,9 @@ export function TreasuryMonitoringTab() {
     setSuccess(null);
     
     try {
-      const res = await fetch("/api/admin/treasury/sweep", {
+      const res = await apiFetch("/api/admin/treasury/sweep", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-admin-secret": "123456" }, // Replace with proper secret if needed
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amount: sweepAmount })
       });
       

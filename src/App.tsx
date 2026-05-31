@@ -6,6 +6,7 @@ import { useStore } from "./store/useStore";
 import { supabase } from "./lib/supabaseClient";
 import { ViewRouter } from "./components/router/ViewRouter";
 import { ArcProvider } from "./contexts/ArcContext";
+import { apiFetch } from "./lib/api";
 
 export default function App() {
   const [isLoggingIn, setIsLoggingIn] = React.useState(false);
@@ -38,7 +39,7 @@ export default function App() {
 
         // 1. Initial check for existing wallet
         try {
-          const response = await fetch(`/api/debug-wallet/${user.id}`);
+          const response = await apiFetch(`/api/debug-wallet/${user.id}`);
           if (response.ok) {
             walletInfo = await response.json();
           }
@@ -69,7 +70,7 @@ export default function App() {
             console.log(
               "Starting auto-provisioning for interrupted registration...",
             );
-            const createRes = await fetch("/api/wallets/create", {
+            const createRes = await apiFetch("/api/wallets/create", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ userId: user.id }),
@@ -105,6 +106,21 @@ export default function App() {
           localStorage.setItem("arc_wallet_address", walletInfo.wallet_address);
           localStorage.setItem("arc_user_id", user.id);
 
+          // Get Role from 'profiles' table
+          let dbRole: "user" | "admin" | "super_admin" = "user";
+          try {
+            const { data: profileData } = await supabase
+              .from("profiles")
+              .select("role")
+              .eq("id", user.id)
+              .single();
+            if (profileData?.role) {
+              dbRole = profileData.role as "user" | "admin" | "super_admin";
+            }
+          } catch (e) {
+            console.error("Failed to fetch RBAC role", e);
+          }
+
           setRegisteredUser({
             username:
               user.user_metadata?.full_name ||
@@ -115,6 +131,7 @@ export default function App() {
             walletId: walletInfo.wallet_id,
             walletAddress: walletInfo.wallet_address,
             supabaseUid: user.id,
+            role: dbRole,
             registrationDate: user.created_at ? new Date(user.created_at).toLocaleDateString("id-ID") : "N/A",
           });
 

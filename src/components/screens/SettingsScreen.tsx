@@ -5,6 +5,7 @@ import {
   Mail,
   Settings,
   Shield,
+  ShieldCheck,
   Fingerprint,
   FileText,
   BadgeDollarSign,

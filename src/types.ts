@@ -37,7 +37,9 @@ export type ViewState =
   | "arcbird"
   | "withdraw"
   | "bridge"
+  | "mintNFT"
   | "batchTransfer"
+  | "backupCenter"
   | "adminDashboard";
 
 export interface ShortcutItem {
@@ -63,6 +65,7 @@ export interface UserIdentity {
   walletId?: string;
   walletAddress?: string;
   supabaseUid?: string;
+  role?: "user" | "admin" | "super_admin";
   uidTheme?: UIDCardTheme;
 }
 

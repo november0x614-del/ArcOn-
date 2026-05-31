@@ -6,6 +6,7 @@ import React, {
   useCallback,
 } from "react";
 import { createPublicClient, http, formatUnits } from "viem";
+import { apiFetch } from "../lib/api";
 
 interface FeeEstimate {
   maxFeePerGas: bigint;
@@ -21,6 +22,14 @@ interface ArcContextType {
   rpcUrl: string;
   refreshBalance: () => Promise<void>;
   getFeeEstimate: (gasLimit?: bigint) => Promise<FeeEstimate | null>;
+  executeArcTransaction: (params: {
+    type: string;
+    metadata: {
+      name: string;
+      description: string;
+      image: string;
+    };
+  }) => Promise<{ success: boolean; txHash?: string }>;
 }
 
 const ARC_TESTNET_CONFIG = {
@@ -144,6 +153,55 @@ export const ArcProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [address, refreshBalance]);
 
+  const executeArcTransaction = useCallback(async (params: {
+    type: string;
+    metadata: {
+      name: string;
+      description: string;
+      image: string;
+    };
+  }) => {
+    try {
+      const savedUserId = localStorage.getItem("arc_user_id");
+      const savedAddress = localStorage.getItem("arc_wallet_address");
+      if (!savedUserId || !savedAddress) {
+        throw new Error("Local wallet credentials not found.");
+      }
+
+      console.log("[ArcContext] Initiating executeArcTransaction backend call:", params);
+      const response = await apiFetch("/api/nft/mint", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: savedUserId,
+          walletAddress: savedAddress,
+          name: params.metadata.name,
+          description: params.metadata.description,
+          image: params.metadata.image,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Failed to mint NFT");
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        txHash: data.txHash,
+        txId: data.txId,
+      };
+    } catch (err: any) {
+      console.error("[ArcContext] executeArcTransaction failed:", err);
+      return {
+        success: false,
+      };
+    }
+  }, []);
+
   const value = {
     balance,
     address,
@@ -151,6 +209,7 @@ export const ArcProvider: React.FC<{ children: React.ReactNode }> = ({
     rpcUrl: ARC_TESTNET_CONFIG.rpcUrl,
     refreshBalance,
     getFeeEstimate,
+    executeArcTransaction,
   };
 
   return <ArcContext.Provider value={value}>{children}</ArcContext.Provider>;

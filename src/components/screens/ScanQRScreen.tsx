@@ -69,10 +69,23 @@ export function ScanQRScreen({ onBack, onScanResult }: ScanQRScreenProps) {
     // Simple validation for EVM/Arc Address (0x followed by 40 hex chars)
     const ethAddressRegex = /^0x[a-fA-F0-9]{40}$/;
     let walletAddress = text.trim();
+    let queryAmount: string | null = null;
+
+    if (walletAddress.includes("?")) {
+      try {
+        const queryStr = walletAddress.split("?")[1];
+        const params = new URLSearchParams(queryStr);
+        queryAmount = params.get("amount");
+      } catch (err) {
+        console.error("Failed to parse QR query string", err);
+      }
+    }
 
     // Handle possible URI scheme like arc:0x... or ethereum:0x...
     if (walletAddress.includes(":")) {
       walletAddress = walletAddress.split(":")[1].split("?")[0];
+    } else if (walletAddress.includes("?")) {
+      walletAddress = walletAddress.split("?")[0];
     }
 
     if (ethAddressRegex.test(walletAddress)) {
@@ -92,6 +105,7 @@ export function ScanQRScreen({ onBack, onScanResult }: ScanQRScreenProps) {
               account: walletAddress, // Used by AmountInputScreen
               network: "Arc Testnet",
               initials: "QR",
+              suggestedAmount: queryAmount,
             } as any);
           })
           .catch((e) => {
@@ -106,6 +120,7 @@ export function ScanQRScreen({ onBack, onScanResult }: ScanQRScreenProps) {
               account: walletAddress,
               network: "Arc Testnet",
               initials: "QR",
+              suggestedAmount: queryAmount,
             } as any);
           });
       }

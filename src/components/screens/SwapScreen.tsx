@@ -184,11 +184,13 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
       setTxHash(result.txId);
       setIsSwapping(false);
       setSwapFinished(true);
+      setShowConfirmModal(false);
       queryClient.invalidateQueries({ queryKey: ["balances"] });
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
     } catch (error: any) {
       console.error(error);
       setIsSwapping(false);
+      setShowConfirmModal(false);
       
       const errMsg = error.message || "";
       if (
@@ -290,10 +292,10 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
             </div>
 
             <button
-              onClick={onBack}
+              onClick={() => setSwapFinished(false)}
               className="w-full bg-slate-900 text-white font-bold py-4 rounded-xl hover:bg-slate-800 transition-colors shadow-lg active:scale-95"
             >
-              Done
+              Return to Swap
             </button>
           </div>
         </div>
@@ -462,8 +464,8 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
               <Zap size={14} className="text-yellow-500" />1{" "}
               {fromToken?.symbol || ""} ={" "}
               {fromToken?.symbol === "USDC" && toToken?.symbol === "ARC"
-                ? exchangeRate
-                : (1 / (exchangeRate || 1)).toFixed(4)}{" "}
+                ? (typeof exchangeRate === 'number' ? Number(exchangeRate.toFixed(6)) : exchangeRate)
+                : (typeof exchangeRate === 'number' && exchangeRate !== 0 ? Number((1 / exchangeRate).toFixed(6)) : "0")}{" "}
               {toToken?.symbol || ""}
             </span>
           </div>
@@ -608,7 +610,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
               <div className="pt-4 border-t border-slate-200 space-y-2">
                 <div className="flex justify-between text-[13px]">
                   <span className="text-slate-500 font-medium">Exchange Rate</span>
-                  <span className="text-slate-800 font-bold">1 {fromToken?.symbol} = {exchangeRate} {toToken?.symbol}</span>
+                  <span className="text-slate-800 font-bold">1 {fromToken?.symbol} = {typeof exchangeRate === 'number' ? Number(exchangeRate.toFixed(6)) : exchangeRate} {toToken?.symbol}</span>
                 </div>
                 <div className="flex justify-between text-[13px]">
                   <span className="text-slate-500 font-medium">Platform Fee</span>
@@ -623,25 +625,34 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
 
             <button
               disabled={isSwapping}
-              onClick={() => {
-                setShowConfirmModal(false);
-                handleSwap();
+              onClick={async () => {
+                await handleSwap();
               }}
-              className="w-full bg-slate-900 hover:bg-slate-800 text-white py-[18px] rounded-full flex justify-between px-6 items-center transition-all shadow-xl active:scale-[0.98] border-0 cursor-pointer mb-4"
+              className={`w-full text-white py-[18px] rounded-full flex justify-between px-6 items-center transition-all duration-300 shadow-xl border-0 mb-4 ${
+                isSwapping 
+                  ? "bg-[#0B1527] cursor-not-allowed cursor-wait" 
+                  : "bg-slate-900 hover:bg-slate-800 active:scale-[0.98] cursor-pointer"
+              }`}
             >
               <div className="flex items-center gap-3">
-                <span className="font-black text-[16px]">Confirm Swap</span>
+                {isSwapping ? (
+                  <>
+                    <div className="w-5 h-5 border-[2.5px] border-white/20 border-t-white rounded-full animate-spin"></div>
+                    <span className="font-bold text-[16px] tracking-wide">Initiating Swap...</span>
+                  </>
+                ) : (
+                  <span className="font-black text-[16px]">Confirm Swap</span>
+                )}
               </div>
               <div className="flex items-center gap-3">
                 <span className="font-black text-[17px] tracking-tight">{fromAmount} {fromToken?.symbol}</span>
-                <div className="bg-white/20 p-1.5 rounded-full border-0">
-                  <ArrowRight size={18} strokeWidth={3} />
-                </div>
+                {!isSwapping && (
+                  <div className="bg-white/20 w-8 h-8 rounded-full border-0 flex items-center justify-center">
+                    <ArrowRight size={18} strokeWidth={3} className="text-white" />
+                  </div>
+                )}
               </div>
             </button>
-            <p className="text-center text-[12px] text-slate-400 font-medium mb-2">
-              Processing on Arc Testnet via Circle SDK
-            </p>
           </div>
         </div>
       )}

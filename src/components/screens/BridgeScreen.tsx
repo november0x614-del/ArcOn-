@@ -250,10 +250,14 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
           </div>
         </div>
         <button
-          onClick={onSuccess}
+          onClick={() => {
+            setAmount("");
+            setDestinationAddress("");
+            setStep("form");
+          }}
           className="w-full bg-slate-900 text-white py-4.5 rounded-2xl font-black text-[16px] shadow-xl hover:shadow-2xl transition-all active:scale-[0.98] cursor-pointer border-0"
         >
-          Return to Dashboard
+          Return to Bridge
         </button>
       </div>
     );

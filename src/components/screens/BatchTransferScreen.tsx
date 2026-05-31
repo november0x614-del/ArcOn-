@@ -160,7 +160,6 @@ export function BatchTransferScreen({
 
   const executeBatch = async () => {
     setIsSending(true);
-    setMultiSendStep("processing");
     setProcessingStatus("Packaging transaction inputs...");
 
     try {
@@ -226,13 +225,10 @@ export function BatchTransferScreen({
       {/* Progress Indicator */}
       <div className="w-full bg-white border-b border-slate-100 px-5 py-3 flex gap-2">
         <div
-          className={`h-1.5 flex-1 rounded-full ${multiSendStep === "form" ? "bg-slate-900" : "bg-slate-900"}`}
+          className={`h-1.5 flex-1 rounded-full ${multiSendStep === "form" || multiSendStep === "confirm" || multiSendStep === "processing" || multiSendStep === "success" ? "bg-slate-900" : "bg-slate-100"}`}
         ></div>
         <div
           className={`h-1.5 flex-1 rounded-full ${multiSendStep === "confirm" || multiSendStep === "processing" || multiSendStep === "success" ? "bg-slate-900" : "bg-slate-100"}`}
-        ></div>
-        <div
-          className={`h-1.5 flex-1 rounded-full ${multiSendStep === "processing" || multiSendStep === "success" ? "bg-slate-900" : "bg-slate-100"}`}
         ></div>
         <div
           className={`h-1.5 flex-1 rounded-full ${multiSendStep === "success" ? "bg-slate-900" : "bg-slate-100"}`}
@@ -600,26 +596,32 @@ export function BatchTransferScreen({
                 <button
                   disabled={isSending}
                   onClick={executeBatch}
-                  className="w-full bg-slate-900 hover:bg-slate-800 text-white py-[16px] rounded-full flex justify-between px-6 items-center transition-all shadow-[0_4px_14px_rgba(15,23,42,0.3)] active:scale-[0.98] border-0 cursor-pointer"
+                  className={`w-full text-white py-[18px] rounded-full flex justify-between px-6 items-center shadow-[0_4px_14px_rgba(15,23,42,0.3)] border-0 transition-all duration-300 ${
+                    isSending 
+                      ? "bg-[#0B1527] cursor-not-allowed cursor-wait" 
+                      : "bg-slate-900 hover:bg-slate-800 active:scale-[0.98] cursor-pointer"
+                  }`}
                 >
                   <div className="flex items-center gap-3">
                     {isSending ? (
-                      <div className="w-5 h-5 border-[2.5px] border-white/20 border-t-white rounded-full animate-spin"></div>
-                    ) : null}
-                    <span className="font-bold text-[15px]">
-                      {isSending ? "Processing..." : "Confirm & Execute"}
-                    </span>
+                      <>
+                        <div className="w-5 h-5 border-[2.5px] border-white/20 border-t-white rounded-full animate-spin"></div>
+                        <span className="font-bold text-[15px] tracking-wide">Broadcasting Atomic Batch...</span>
+                      </>
+                    ) : (
+                      <span className="font-bold text-[15px]">Confirm & Execute</span>
+                    )}
                   </div>
-                  {!isSending && (
-                    <div className="flex items-center gap-3">
-                      <span className="font-extrabold text-[16px] tracking-tight">
-                        {totalRequired.toFixed(2)} USDC
-                      </span>
-                      <div className="bg-white/20 p-1.5 rounded-full border-0 flex items-center justify-center shadow-inner">
-                        <ArrowRight size={18} strokeWidth={3} />
+                  <div className="flex items-center gap-3">
+                    <span className="font-extrabold text-[16px] tracking-tight">
+                      {totalRequired.toFixed(2)} USDC
+                    </span>
+                    {!isSending && (
+                      <div className="bg-white/20 w-8 h-8 rounded-full border-0 flex items-center justify-center shadow-inner">
+                        <ArrowRight size={18} strokeWidth={3} className="text-white" />
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </button>
                 <button
                   onClick={() => setMultiSendStep("form")}

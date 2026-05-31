@@ -19,6 +19,13 @@ export const defaultSelectedShortcuts: ShortcutItem[] = [
     color: "text-slate-800",
   },
   {
+    id: "15",
+    icon: "Hexagon",
+    label: "Mint NFT",
+    color: "text-purple-600",
+    badge: "NEW",
+  },
+  {
     id: "13",
     icon: "Landmark",
     label: "Withdraw",
@@ -26,8 +33,8 @@ export const defaultSelectedShortcuts: ShortcutItem[] = [
   },
   {
     id: "14",
-    icon: "Layers",
-    label: "Bridge USDC",
+    icon: "Landmark",
+    label: "ATM",
     color: "text-indigo-600",
     badge: "NEW",
   },

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { motion } from "motion/react";
 import {
   ArrowLeft,
   Send,
@@ -22,6 +23,7 @@ import {
   Trash2,
   X,
   Settings2,
+  Hexagon,
 } from "lucide-react";
 import { useApp } from "../../contexts/AppContext";
 import { UIDCard } from "../common/UIDCard";
@@ -51,7 +53,21 @@ export function AccountDetailScreen({
   onTransactionClick,
   userName = "ALEXANDER D",
 }: AccountDetailScreenProps) {
-  const [activeTab, setActiveTab] = useState<"history" | "token">("history");
+  const [activeTab, setActiveTab] = useState<"history" | "asset">("history");
+  const [assetSubTab, setAssetSubTab] = useState<"tokens" | "nfts">("tokens");
+  const [mintedNfts, setMintedNfts] = useState<any[]>([]);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("minted_nfts");
+      if (stored) {
+        setMintedNfts(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.error("Failed to load minted NFTs in AccountDetailScreen:", e);
+    }
+  }, [activeTab, assetSubTab]);
+
   const [showUID, setShowUID] = useState(false);
   const {
     transactions,
@@ -316,16 +332,16 @@ export function AccountDetailScreen({
         <div className="px-6 pt-6 pb-2 shrink-0 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <div
-              className={`flex flex-col items-center border-b-[2.5px] pb-1.5 px-1 cursor-pointer transition-colors ${activeTab === "token" ? "border-slate-900" : "border-transparent"}`}
+              className={`flex flex-col items-center border-b-[2.5px] pb-1.5 px-1 cursor-pointer transition-colors ${activeTab === "asset" ? "border-slate-900" : "border-transparent"}`}
               onClick={() => {
-                setActiveTab("token");
+                setActiveTab("asset");
                 setIsManageMode(false);
               }}
             >
               <h3
-                className={`font-bold text-[14px] ${activeTab === "token" ? "text-slate-800" : "text-slate-400"}`}
+                className={`font-bold text-[14px] ${activeTab === "asset" ? "text-slate-800" : "text-slate-400"}`}
               >
-                Tokens
+                Assets
               </h3>
             </div>
             <div
@@ -343,7 +359,7 @@ export function AccountDetailScreen({
             </div>
           </div>
           <div className="flex items-center gap-4">
-            {activeTab === "token" && (
+            {activeTab === "asset" && assetSubTab === "tokens" && (
               <button
                 onClick={() => setIsManageMode(!isManageMode)}
                 className={`p-2 rounded-full transition-all active:scale-90 ${isManageMode ? "bg-red-50 text-red-500" : "text-slate-900 bg-slate-100/50"}`}
@@ -443,170 +459,265 @@ export function AccountDetailScreen({
               </div>
             </div>
           </>
-        )}
-
-        {activeTab === "token" && (
-          <div className="flex-1 overflow-y-auto px-5 py-5 pb-24 bg-slate-50/50">
-            <div className="bg-white rounded-[24px] border border-slate-200/50 shadow-[0_4px_24px_rgba(0,0,0,0.02)] overflow-hidden">
-              {/* USDC Token Row */}
-              <div className="p-4 flex justify-between items-center hover:bg-slate-50/75 transition-colors cursor-pointer border-b border-slate-100">
-                <div className="flex items-center gap-4">
-                  <TokenIcon
-                    contractAddress="0x3600000000000000000000000000000000000000"
-                    symbol="USDC"
-                    className="w-12 h-12"
-                    color="bg-blue-100"
-                  />
-                  <div className="flex flex-col text-left">
-                    <span className="font-bold text-slate-800 text-[15px] leading-tight">
-                      USD Coin
-                    </span>
-                    <span className="text-[12px] text-slate-500 mt-0.5">
-                      USDC • Stablecoin
-                    </span>
-                  </div>
-                </div>
-                <div className="flex flex-col items-end">
-                  <span className="font-bold text-[16px] text-slate-800 font-mono">
-                    {showBalance
-                      ? (balance || 0) === 0
-                        ? "0"
-                        : (balance || 0).toLocaleString("en-US", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })
-                      : "••••"}
-                  </span>
-                  <span className="text-[12px] text-slate-400 font-medium tracking-wide">
-                    {showBalance
-                      ? (balance || 0) === 0
-                        ? "0"
-                        : `~$${(balance || 0).toLocaleString("en-US", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}`
-                      : "••••"}
-                  </span>
-                </div>
-              </div>
-
-              {/* Imported Tokens List */}
-              {importedTokens.map((token) => (
-                <div
-                  key={token.symbol}
-                  className="p-4 flex justify-between items-center hover:bg-slate-50/75 transition-colors cursor-pointer border-b border-slate-100 relative overflow-hidden"
-                >
-                  <div className="flex items-center gap-4">
-                    <TokenIcon
-                      contractAddress={token.contractAddress}
-                      symbol={token.symbol}
-                      className="w-11 h-11"
-                      color={token.color || "bg-slate-800"}
-                    />
-                    <div className="flex flex-col text-left max-w-[150px] sm:max-w-[200px]">
-                      <span className="font-bold text-slate-800 text-[15px] leading-tight">
-                        {token.name || token.symbol}
-                      </span>
-                      <div className="text-[12px] text-slate-500 mt-0.5">
-                        {token.symbol} •{" "}
-                        {[
-                          "USDC",
-                          "EURC",
-                          "USDT",
-                          "PYUSD",
-                          "USDE",
-                          "DAI",
-                        ].includes(token.symbol.toUpperCase())
-                          ? "Stablecoin"
-                          : token.symbol.toUpperCase().includes("BTC") ||
-                              token.symbol.toUpperCase().includes("ETH")
-                            ? "Wrapped Token"
-                            : "Utility Token"}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="flex flex-col items-end">
-                      <span className="font-bold text-[15.5px] text-slate-800 font-mono">
-                        {showBalance
-                          ? (() => {
-                              const amt =
-                                liveCustomBalances[
-                                  token.contractAddress?.toLowerCase().trim() ||
-                                    ""
-                                ] !== undefined
-                                  ? liveCustomBalances[
-                                      token.contractAddress
-                                        ?.toLowerCase()
-                                        .trim() || ""
-                                    ]
-                                  : token.balance || 0;
-                              return amt === 0
-                                ? "0"
-                                : amt.toLocaleString("en-US", {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits:
-                                      token.decimals > 6 ? 4 : 2,
-                                  });
-                            })()
-                          : "••••"}
-                      </span>
-                      <span className="text-[11.5px] text-slate-400 font-medium tracking-wide">
-                        {showBalance
-                          ? (() => {
-                              const amt =
-                                liveCustomBalances[
-                                  token.contractAddress?.toLowerCase().trim() ||
-                                    ""
-                                ] !== undefined
-                                  ? liveCustomBalances[
-                                      token.contractAddress
-                                        ?.toLowerCase()
-                                        .trim() || ""
-                                    ]
-                                  : token.balance || 0;
-                              return amt === 0
-                                ? "0"
-                                : `~$` +
-                                    (
-                                      amt * (token.usdPrice || 1.0)
-                                    ).toLocaleString("en-US", {
-                                      minimumFractionDigits: 2,
-                                      maximumFractionDigits: 2,
-                                    });
-                            })()
-                          : "••••"}
-                      </span>
-                    </div>
-                    {isManageMode && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (window.confirm(`Remove ${token.symbol}?`)) {
-                            removeToken(token.symbol);
-                            displayToast(`${token.symbol} removed`);
-                          }
-                        }}
-                        className="ml-3 p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors cursor-pointer animate-in zoom-in-50 duration-200 shadow-sm"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-
-              {/* Sleek Flat Add Token Row */}
+        )}        {activeTab === "asset" && (
+          <div className="flex-1 overflow-y-auto px-5 py-5 pb-24 bg-slate-50/50 flex flex-col gap-5">
+            {/* Minimalist Sub-tabs Selection */}
+            <div className="flex gap-1.5 p-1 bg-slate-200/60 rounded-2xl w-full select-none shrink-0 border border-slate-100">
               <button
-                onClick={() => {
-                  setShowImportModal(true);
-                }}
-                className="w-full py-4 text-slate-500 hover:text-slate-600 hover:bg-slate-50/75 transition-colors flex items-center justify-center gap-2 font-bold text-[13.5px] outline-none cursor-pointer border-t border-slate-100 bg-transparent rounded-b-[24px]"
+                onClick={() => setAssetSubTab("tokens")}
+                className={`flex-1 py-3 text-[11px] font-black uppercase tracking-wider rounded-xl transition-all border-0 cursor-pointer ${
+                  assetSubTab === "tokens"
+                    ? "bg-white text-slate-800 shadow-sm"
+                    : "bg-transparent text-slate-400 hover:text-slate-600"
+                }`}
               >
-                <Plus size={16} />
-                <span>Import Token</span>
+                Token List
+              </button>
+              <button
+                onClick={() => setAssetSubTab("nfts")}
+                className={`flex-1 py-3 text-[11px] font-black uppercase tracking-wider rounded-xl transition-all border-0 cursor-pointer ${
+                  assetSubTab === "nfts"
+                    ? "bg-white text-slate-800 shadow-sm"
+                    : "bg-transparent text-slate-400 hover:text-slate-600"
+                }`}
+              >
+                NFT List
               </button>
             </div>
+
+            {assetSubTab === "tokens" ? (
+              <div className="bg-white rounded-[24px] border border-slate-200/50 shadow-[0_4px_24px_rgba(0,0,0,0.02)] overflow-hidden">
+                {/* USDC Token Row */}
+                <div className="p-4 flex justify-between items-center hover:bg-slate-50/75 transition-colors cursor-pointer border-b border-slate-100">
+                  <div className="flex items-center gap-4">
+                    <TokenIcon
+                      contractAddress="0x3600000000000000000000000000000000000000"
+                      symbol="USDC"
+                      className="w-12 h-12"
+                      color="bg-blue-100"
+                    />
+                    <div className="flex flex-col text-left">
+                      <span className="font-bold text-slate-800 text-[15px] leading-tight">
+                        USD Coin
+                      </span>
+                      <span className="text-[12px] text-slate-500 mt-0.5">
+                        USDC • Stablecoin
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="font-bold text-[16px] text-slate-800 font-mono">
+                      {showBalance
+                        ? (balance || 0) === 0
+                          ? "0"
+                          : (balance || 0).toLocaleString("en-US", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })
+                        : "••••"}
+                    </span>
+                    <span className="text-[12px] text-slate-400 font-medium tracking-wide">
+                      {showBalance
+                        ? (balance || 0) === 0
+                          ? "0"
+                          : `~$${(balance || 0).toLocaleString("en-US", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}`
+                        : "••••"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Imported Tokens List */}
+                {importedTokens.map((token) => (
+                  <div
+                    key={token.symbol}
+                    className="p-4 flex justify-between items-center hover:bg-slate-50/75 transition-colors cursor-pointer border-b border-slate-100 relative overflow-hidden"
+                  >
+                    <div className="flex items-center gap-4">
+                      <TokenIcon
+                        contractAddress={token.contractAddress}
+                        symbol={token.symbol}
+                        className="w-11 h-11"
+                        color={token.color || "bg-slate-800"}
+                      />
+                      <div className="flex flex-col text-left max-w-[150px] sm:max-w-[200px]">
+                        <span className="font-bold text-slate-800 text-[15px] leading-tight">
+                          {token.name || token.symbol}
+                        </span>
+                        <div className="text-[12px] text-slate-500 mt-0.5">
+                          {token.symbol} •{" "}
+                          {[
+                            "USDC",
+                            "EURC",
+                            "USDT",
+                            "PYUSD",
+                            "USDE",
+                            "DAI",
+                          ].includes(token.symbol.toUpperCase())
+                            ? "Stablecoin"
+                            : token.symbol.toUpperCase().includes("BTC") ||
+                                token.symbol.toUpperCase().includes("ETH")
+                              ? "Wrapped Token"
+                              : "Utility Token"}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="flex flex-col items-end">
+                        <span className="font-bold text-[15.5px] text-slate-800 font-mono">
+                          {showBalance
+                            ? (() => {
+                                const amt =
+                                  liveCustomBalances[
+                                    token.contractAddress?.toLowerCase().trim() ||
+                                      ""
+                                  ] !== undefined
+                                    ? liveCustomBalances[
+                                        token.contractAddress
+                                          ?.toLowerCase()
+                                          .trim() || ""
+                                      ]
+                                    : token.balance || 0;
+                                return amt === 0
+                                  ? "0"
+                                  : amt.toLocaleString("en-US", {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits:
+                                        token.decimals > 6 ? 4 : 2,
+                                    });
+                              })()
+                            : "••••"}
+                        </span>
+                        <span className="text-[11.5px] text-slate-400 font-medium tracking-wide">
+                          {showBalance
+                            ? (() => {
+                                const amt =
+                                  liveCustomBalances[
+                                    token.contractAddress?.toLowerCase().trim() ||
+                                      ""
+                                  ] !== undefined
+                                    ? liveCustomBalances[
+                                        token.contractAddress
+                                          ?.toLowerCase()
+                                          .trim() || ""
+                                      ]
+                                    : token.balance || 0;
+                                return amt === 0
+                                  ? "0"
+                                  : `~$` +
+                                      (
+                                        amt * (token.usdPrice || 1.0)
+                                      ).toLocaleString("en-US", {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      });
+                              })()
+                            : "••••"}
+                        </span>
+                      </div>
+                      {isManageMode && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm(`Remove ${token.symbol}?`)) {
+                              removeToken(token.symbol);
+                              displayToast(`${token.symbol} removed`);
+                            }
+                          }}
+                          className="ml-3 p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors cursor-pointer animate-in zoom-in-50 duration-200 shadow-sm"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Sleek Flat Add Token Row */}
+                <button
+                  onClick={() => {
+                    setShowImportModal(true);
+                  }}
+                  className="w-full py-4 text-slate-500 hover:text-slate-600 hover:bg-slate-50/75 transition-colors flex items-center justify-center gap-2 font-bold text-[13.5px] outline-none cursor-pointer border-t border-slate-100 bg-transparent rounded-b-[24px]"
+                >
+                  <Plus size={16} />
+                  <span>Import Token</span>
+                </button>
+              </div>
+            ) : (
+              /* NFT List Panel */
+              <div className="grid grid-cols-2 gap-4 pb-12 w-full">
+                {[
+                  ...mintedNfts,
+                  {
+                    id: "0xgenesisnftpass777",
+                    name: "Arc Genesis Pass #459",
+                    description: "Elite membership Pass",
+                    image: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=300&auto=format&fit=crop",
+                    txHash: "0x89eeef21db0f17a81df101239"
+                  },
+                  {
+                    id: "0xpioneersstable666",
+                    name: "StablePioneer Diamond",
+                    description: "Lounge Stablecoin Master",
+                    image: "https://images.unsplash.com/photo-1644024541215-68e83fdf0840?q=80&w=300&auto=format&fit=crop",
+                    txHash: "0x12a9efb8b2e59df6f15777aa"
+                  }
+                ].map((nft, idx) => (
+                  <motion.div
+                    key={nft.id + idx}
+                    whileHover={{ 
+                      scale: 1.03, 
+                      boxShadow: "0 10px 25px -5px rgba(15, 23, 42, 0.08)",
+                      borderColor: "rgba(15, 23, 42, 0.15)"
+                    }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                    className="bg-white rounded-3xl border border-slate-200/50 overflow-hidden shadow-sm flex flex-col group cursor-pointer"
+                  >
+                    <div className="h-32 w-full bg-slate-50 relative overflow-hidden">
+                      <img
+                        src={nft.image}
+                        alt={nft.name}
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                      <div className="absolute top-2 right-2 bg-slate-900/80 backdrop-blur-sm text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-white/20">
+                        Arc
+                      </div>
+                    </div>
+                    <div className="p-3.5 flex flex-col text-left">
+                      <span className="font-bold text-[13px] text-slate-800 truncate leading-snug">
+                        {nft.name}
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-medium truncate mt-0.5">
+                        {nft.description}
+                      </span>
+                      <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                        <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">
+                          ID
+                        </span>
+                        <a
+                          href={nft.txHash && nft.txHash.startsWith("0x") && !nft.txHash.startsWith("0xgenesis") && !nft.txHash.startsWith("0xpioneer") ? `https://testnet.arcscan.app/tx/${nft.txHash}` : undefined}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[10px] font-bold text-slate-400 hover:text-slate-600 truncate max-w-[80px]"
+                          onClick={(e) => {
+                            if (!nft.txHash || !nft.txHash.startsWith("0x") || nft.txHash.startsWith("0xgenesis") || nft.txHash.startsWith("0xpioneer")) {
+                              e.preventDefault();
+                            }
+                          }}
+                        >
+                          {nft.id ? `#${nft.id.slice(2, 6).toUpperCase()}` : "Verified"}
+                        </a>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

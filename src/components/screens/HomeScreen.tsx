@@ -264,7 +264,7 @@ export const HomeScreen = React.memo(
         if (label === "Withdraw") {
           return platformConfig.withdrawEnabled !== false;
         }
-        if (label === "Bridge USDC") {
+        if (label === "ATM") {
           return platformConfig.bridgeEnabled !== false;
         }
         if (label === "Staking Pool") {
@@ -497,12 +497,14 @@ export const HomeScreen = React.memo(
                     )}
                 </AnimatePresence>
 
-                <button
-                  onClick={() => onNavigate("otherAccounts")}
-                  className="w-full text-center text-slate-800 text-[12px] font-bold mt-1 py-1.5 hover:bg-slate-100 rounded-lg transition-colors flex justify-center items-center gap-1.5 opacity-90 border-0 bg-transparent"
-                >
-                  Other Personal Savings & Checking <PlusCircleIcon size={14} />
-                </button>
+                <div className="mt-1 px-1">
+                  <button
+                    onClick={() => onNavigate("otherAccounts")}
+                    className="w-full text-center text-slate-800 text-[12px] font-bold py-1.5 hover:bg-slate-100 rounded-lg transition-colors flex justify-center items-center gap-1.5 opacity-90 border-0 bg-transparent"
+                  >
+                    Other Personal Savings & Checking <PlusCircleIcon size={14} />
+                  </button>
+                </div>
               </section>
 
               {/* Favorite Transactions Section */}
@@ -558,8 +560,10 @@ export const HomeScreen = React.memo(
                           if (item.label === "Staking Pool")
                             onNavigate("stablestake");
                           if (item.label === "Withdraw") onNavigate("withdraw");
-                          if (item.label === "Bridge USDC")
+                          if (item.label === "ATM")
                             onNavigate("bridge");
+                          if (item.label === "Mint NFT")
+                            onNavigate("mintNFT");
                           if (item.label === "Security & Limits")
                             onNavigate("settings");
                           if (item.label === "Transaction History")
@@ -569,8 +573,7 @@ export const HomeScreen = React.memo(
                     ))}
                 </div>
 
-                {registeredUser?.email ===
-                  (import.meta.env.VITE_ADMIN_EMAIL || "admin@admin.com") && (
+                {(registeredUser?.role === "super_admin" || registeredUser?.role === "admin") && (
                   <div
                     className="mt-6 bg-gradient-to-r from-slate-800 to-slate-900 py-3 px-4 rounded-xl flex items-center justify-between gap-3 border border-slate-700 relative cursor-pointer hover:bg-slate-700 transition-colors shadow-sm"
                     onClick={() => onNavigate("adminDashboard")}
@@ -607,7 +610,7 @@ export const HomeScreen = React.memo(
                       </div>
                       <div className="flex flex-col text-left">
                         <span className="text-[13px] font-bold text-slate-800">
-                          Ask AI Assistant
+                          Lounge Assistant
                         </span>
                         <span className="text-[11.5px] text-slate-500">
                           Help you manage your wallet
@@ -699,9 +702,14 @@ export const HomeScreen = React.memo(
                 platformConfig.stableStakeEnabled !== false) && (
                 <section className="bg-white rounded-[24px] p-5 shadow-sm mb-4 lg:mb-0 mx-4 lg:mx-0 text-left">
                   <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-[17px] font-bold text-slate-800 tracking-tight font-sans">
-                      External DApps
-                    </h2>
+                    <div className="flex flex-col">
+                      <h2 className="text-[17px] font-bold text-slate-800 tracking-tight font-sans">
+                        External DApps
+                      </h2>
+                      <p className="text-[10px] text-slate-400 mt-0.5 leading-tight max-w-[200px]">
+                        Connect to decentralized applications on the Arc Network securely.
+                      </p>
+                    </div>
                     <button className="text-slate-400 hover:text-slate-600 transition-colors bg-transparent border-0 p-1">
                       <Search size={18} strokeWidth={2.5} />
                     </button>
@@ -860,7 +868,7 @@ export const HomeScreen = React.memo(
                 platformConfig.faucetEnabled !== false) && (
                 <section className="bg-white rounded-[24px] p-5 shadow-sm mx-4 lg:mx-0 mb-8 lg:mb-0">
                   <h2 className="text-[17px] font-bold text-slate-800 tracking-tight mb-4 text-left">
-                    Developer Services
+                    Services
                   </h2>
                   <div
                     className={`grid ${!platformConfig || (platformConfig.merchantEnabled !== false && platformConfig.faucetEnabled !== false) ? "grid-cols-2" : "grid-cols-1"} gap-3`}
@@ -868,8 +876,8 @@ export const HomeScreen = React.memo(
                     {(!platformConfig ||
                       platformConfig.merchantEnabled !== false) && (
                       <ProductCard
-                        title="Merchant"
-                        desc="On-chain USDC integration."
+                        title="Merchant Dashboard"
+                        desc="Manage your stock"
                         icon={<Box size={20} className="text-slate-600" />}
                         onClick={() => onNavigate("merchant")}
                       />
@@ -912,7 +920,7 @@ export const HomeScreen = React.memo(
             <NavItem icon={<Home size={22} />} label="Home" active />
             <NavItem
               icon={<Mail size={22} />}
-              label="Messages"
+              label="Inbox"
               onClick={() => onNavigate("inbox")}
               badge={
                 unreadCount > 0 ? (
@@ -958,68 +966,79 @@ export const HomeScreen = React.memo(
         {/* Deposit/Withdraw Initial Modal */}
 
         {/* Manage Token Markets Modal */}
-        {showManageMarketModal && (
-          <div className="absolute inset-0 z-[200] flex items-center justify-center p-4 animate-in fade-in duration-200">
-            <div
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
-              onClick={() => setShowManageMarketModal(false)}
-            ></div>
-            <div className="bg-white rounded-[32px] p-6 w-full max-w-[340px] relative z-10 animate-in slide-in-from-bottom-8 duration-300 shadow-2xl flex flex-col">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="font-black text-[18px] text-slate-800">
-                  Manage Markets
-                </h3>
+        <AnimatePresence>
+          {showManageMarketModal && (
+            <div className="absolute inset-0 z-[200] flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+                onClick={() => setShowManageMarketModal(false)}
+              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 15 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 15 }}
+                transition={{ type: "spring", duration: 0.4, bounce: 0.2 }}
+                className="bg-white rounded-[32px] p-6 w-full max-w-[340px] relative z-10 shadow-2xl flex flex-col"
+              >
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="font-black text-[18px] text-slate-800">
+                    Manage Markets
+                  </h3>
+                  <button
+                    onClick={() => setShowManageMarketModal(false)}
+                    className="w-8 h-8 flex items-center justify-center bg-slate-100 rounded-full text-slate-500 hover:text-red-500 transition-colors border-0 pointer-events-auto cursor-pointer"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <p className="text-xs text-slate-500 mb-6 leading-relaxed">
+                  Select the tokens you want to display on the live market feed
+                  home page.
+                </p>
+
+                <div className="flex flex-col gap-3 max-h-[300px] overflow-y-auto pr-1 scrollbar-hide">
+                  {marketTokens.map((token) => (
+                    <div
+                      key={token.code}
+                      className="flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100/50 rounded-2xl cursor-pointer transition-all active:scale-[0.98] group border border-slate-100"
+                      onClick={() => toggleTokenVisibility(token.code)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm font-black text-slate-800 text-xs border border-blue-50">
+                          {token.code.slice(0, 2)}
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-bold text-[14px] text-slate-800 leading-none mb-1">
+                            {token.code}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            {token.name}
+                          </span>
+                        </div>
+                      </div>
+                      <div
+                        className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${visibleTokenCodes.includes(token.code) ? "bg-slate-900 text-white shadow-lg shadow-blue-200" : "bg-white border-2 border-slate-200 text-transparent"}`}
+                      >
+                        <Check size={14} strokeWidth={4} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
                 <button
                   onClick={() => setShowManageMarketModal(false)}
-                  className="w-8 h-8 flex items-center justify-center bg-slate-100 rounded-full text-slate-500 hover:text-red-500 transition-colors border-0"
+                  className="w-full bg-slate-900 text-white font-black py-4 rounded-2xl text-[14px] transition-all hover:bg-slate-800 active:scale-[0.95] mt-8 shadow-xl shadow-slate-900/10 cursor-pointer border-0"
                 >
-                  <X size={18} />
+                  Save Configuration
                 </button>
-              </div>
-
-              <p className="text-xs text-slate-500 mb-6 leading-relaxed">
-                Select the tokens you want to display on the live market feed
-                home page.
-              </p>
-
-              <div className="flex flex-col gap-3 max-h-[300px] overflow-y-auto pr-1 scrollbar-hide">
-                {marketTokens.map((token) => (
-                  <div
-                    key={token.code}
-                    className="flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100/50 rounded-2xl cursor-pointer transition-all active:scale-[0.98] group border border-slate-100"
-                    onClick={() => toggleTokenVisibility(token.code)}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm font-black text-slate-800 text-xs border border-blue-50">
-                        {token.code.slice(0, 2)}
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="font-bold text-[14px] text-slate-800 leading-none mb-1">
-                          {token.code}
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-medium">
-                          {token.name}
-                        </span>
-                      </div>
-                    </div>
-                    <div
-                      className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${visibleTokenCodes.includes(token.code) ? "bg-slate-900 text-white shadow-lg shadow-blue-200" : "bg-white border-2 border-slate-200 text-transparent"}`}
-                    >
-                      <Check size={14} strokeWidth={4} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <button
-                onClick={() => setShowManageMarketModal(false)}
-                className="w-full bg-slate-900 text-white font-black py-4 rounded-2xl text-[14px] transition-all hover:bg-[#328fdc] active:scale-[0.95] mt-8 shadow-xl shadow-blue-500/20"
-              >
-                Save Configuration
-              </button>
+              </motion.div>
             </div>
-          </div>
-        )}
+          )}
+        </AnimatePresence>
       </div>
     );
   },

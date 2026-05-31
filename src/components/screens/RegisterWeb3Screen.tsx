@@ -8,6 +8,7 @@ import {
   Check,
 } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
+import { apiFetch } from "../../lib/api";
 
 interface RegisterWeb3ScreenProps {
   onBack: () => void;
@@ -57,7 +58,7 @@ export function RegisterWeb3Screen({
     verifiedUsername: string,
   ) => {
     try {
-      const response = await fetch("/api/wallets/create", {
+      const response = await apiFetch("/api/wallets/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId }),
@@ -152,7 +153,7 @@ export function RegisterWeb3Screen({
     try {
       // Pre-flight Cleanup is still useful here to prevent duplicate registration deadlocks
       try {
-        await fetch("/api/auth/cleanup-unconfirmed", {
+        await apiFetch("/api/auth/cleanup-unconfirmed", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, username }),

@@ -22,6 +22,18 @@ process.on("unhandledRejection", (reason, promise) => {
 const app = express();
 app.set("trust proxy", 1); // Enable if you're behind a reverse proxy (Heroku, AWS, Nginx, or Google Cloud Run)
 
+// Enforce Global CORS headers for clean Web3 operations and iframe previews
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+  
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 // Rate Limiting Configuration
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes window
@@ -38,6 +50,7 @@ app.use(apiLimiter); // Apply rate limiter globally for API endpoints
 // For Circle's raw webhook, we use a custom verify callback in express.json() to capture the exact raw body Buffer on req.rawBody
 app.use(
   express.json({
+    limit: "50mb",
     verify: (req: any, _res, buf) => {
       req.rawBody = buf;
     },
@@ -61,6 +74,20 @@ app.use("/", miscRoutes);
 
 app.use("/api", ecommerceRoutes);
 app.use("/", ecommerceRoutes);
+
+// Global Error Handler for JSON APIs
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (err instanceof Error) {
+    if ((err as any).type === "entity.too.large") {
+      return res.status(413).json({ error: "Payload too large. Gambar atau data yang diunggah terlalu besar." });
+    }
+    console.error("[Global API Error]", err.message);
+    if (!res.headersSent) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
+  next(err);
+});
 
 // Export Express App
 export default app;

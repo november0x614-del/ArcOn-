@@ -176,7 +176,7 @@ router.post("/swap/execute", async (req, res) => {
             const { data: adminWallet } = await supabaseAdmin
               .from("user_wallets")
               .select("wallet_address")
-              .eq("id", "00000000-0000-0000-0000-000000000000")
+              .eq("id", "11111111-1111-1111-1111-111111111111")
               .single();
               
             if (adminWallet?.wallet_address && fromToken?.symbol === "USDC") {
@@ -443,7 +443,7 @@ router.post("/withdraw/execute", async (req, res) => {
       const { data: treasuryWallet } = await supabaseAdmin
         .from("user_wallets")
         .select("wallet_address")
-        .eq("id", "00000000-0000-0000-0000-000000000000")
+        .eq("id", "11111111-1111-1111-1111-111111111111")
         .single();
       treasuryAddress = treasuryWallet?.wallet_address;
     }
@@ -790,6 +790,104 @@ router.post("/bridge/inbound/claim", async (req, res) => {
   } catch (error: any) {
     console.error("Inbound Bridge Claim error:", error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+router.post("/nft/mint", async (req, res) => {
+  try {
+    const { userId, walletAddress, name, description, image } = req.body;
+    if (await isUserBlocked(userId)) {
+      return res.status(403).json({
+        error: "Your account has been disabled. Transaction suspended.",
+      });
+    }
+
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data: adminWallet } = await supabaseAdmin
+      .from("user_wallets")
+      .select("wallet_id, wallet_address")
+      .eq("id", "11111111-1111-1111-1111-111111111111")
+      .single();
+
+    if (!adminWallet || !adminWallet.wallet_id) {
+      return res.status(500).json({ 
+        error: "Platform Admin Minter Wallet (11111111-1111-1111-1111-111111111111) belum dikonfigurasi di user_wallets." 
+      });
+    }
+
+    const platformConfig = getPlatformConfigs();
+    const nftContractAddress = platformConfig.nftContractAddress || process.env.NFT_CONTRACT_ADDRESS || "0x582531CBA2D68a9F0F4E83b38466e3bfCDbaab51";
+    const formattedTokenUri = `ipfs://QmZX${crypto.randomBytes(16).toString("hex")}`;
+    const idempotencyKey = crypto.randomUUID();
+
+    console.log(`[NFT Mint] Initiating ERC-721 mintTo on contract ${nftContractAddress} for user ${walletAddress}`);
+    
+    const client = getCircleClientInstance();
+    const response = await client.createContractExecutionTransaction({
+      idempotencyKey,
+      walletId: adminWallet.wallet_id,
+      abiFunctionSignature: "mintTo(address,string)",
+      abiParameters: [
+        walletAddress,
+        formattedTokenUri
+      ],
+      contractAddress: nftContractAddress,
+      fee: { type: "level", config: { feeLevel: "MEDIUM" } }
+    });
+
+    const responseData = response.data as any;
+    const circleTxId = responseData?.id;
+    const txHash = responseData?.transaction?.txHash || null;
+
+    if (!circleTxId) {
+      throw new Error("Gagal mendapatkan ID Transaksi dari Circle API");
+    }
+
+    await supabaseAdmin.from("transactions").insert({
+      user_id: userId,
+      amount: "0",
+      type: "mint_nft",
+      status: "pending",
+      internal_ref: circleTxId,
+      tx_hash: txHash,
+      metadata: {
+        description: `Mint NFT: ${name}`,
+        name,
+        descriptionText: description,
+        image,
+        real: true,
+        isAsync: true,
+        nftContractAddress,
+        tokenUri: formattedTokenUri
+      }
+    });
+
+    await supabaseAdmin.from("transaction_ledger").insert({
+      user_id: userId,
+      tx_type: "MINT_NFT",
+      amount: "0",
+      destination_address: nftContractAddress,
+      circle_tx_id: circleTxId,
+      tx_hash: txHash,
+      status: "PENDING",
+      metadata: {
+        name,
+        description,
+        tokenUri: formattedTokenUri
+      }
+    });
+
+    res.status(202).json({ 
+      success: true, 
+      message: "NFT Mint execution queued via Circle",
+      txId: circleTxId, 
+      txHash: txHash,
+      status: "pending"
+    });
+
+  } catch (error: any) {
+    console.error("[NFT Mint Engine] Error executing contract mint:", error);
+    res.status(500).json({ error: error.message || "Gagal mencetak NFT pada Arc Testnet." });
   }
 });
 

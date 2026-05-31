@@ -1,7 +1,7 @@
 import express from "express";
 import crypto from "crypto";
 import { getSupabaseAdmin } from "../config/supabase";
-import { executeTransaction } from "../services/circle";
+import { executeTransaction, executeReleaseEscrow } from "../services/circle";
 
 const router = express.Router();
 
@@ -17,13 +17,15 @@ router.post("/ecommerce/checkout", async (req, res) => {
     const { buyerId, productId, amount, memo, sellerAddress = DEFAULT_SELLER_ADDRESS } = req.body;
     const supabaseAdmin = getSupabaseAdmin();
 
+    const amountValue = Number(amount);
+
     // Pastikan Treasury wallet tersedia
     let treasuryAddress = process.env.PLATFORM_TREASURY_ADDRESS;
     if (!treasuryAddress) {
       const { data: treasuryWallet } = await supabaseAdmin
         .from("user_wallets")
         .select("wallet_address")
-        .eq("id", "00000000-0000-0000-0000-000000000000")
+        .eq("id", "11111111-1111-1111-1111-111111111111")
         .single();
       treasuryAddress = treasuryWallet?.wallet_address;
     }
@@ -42,7 +44,7 @@ router.post("/ecommerce/checkout", async (req, res) => {
         seller_address: sellerAddress,
         product_id: parseInt(productId),
         product_name: memo, // We passed product_name as memo in frontend
-        amount: amount,
+        amount: amountValue,
         status: "PENDING_ESCROW",
         memo: orderMemo // Added for webhook matching
       })
@@ -59,7 +61,7 @@ router.post("/ecommerce/checkout", async (req, res) => {
     const result = await executeTransaction(
       supabaseAdmin,
       buyerId,
-      amount,
+      amountValue,
       treasuryAddress,
       "checkout", // tag 
       {
@@ -90,45 +92,41 @@ router.post("/ecommerce/checkout", async (req, res) => {
   }
 });
 
+import { requireRole } from "../middleware/requireRole";
+
 /**
  * 2. Release Escrow & Split Payment
  */
-router.post("/ecommerce/release-escrow", async (req, res) => {
+router.post("/ecommerce/release-escrow", requireRole(["super_admin", "admin"]), async (req, res) => {
   try {
     const { sellerAddress, totalAmount, orderId } = req.body;
     const supabaseAdmin = getSupabaseAdmin();
 
-    // Simulate Fee
-    const feePercent = 0.05;
     const amountFloat = parseFloat(totalAmount);
-    const sellerReceive = (amountFloat * (1 - feePercent)).toFixed(2);
-    const feeAmount = (amountFloat * feePercent).toFixed(2);
-
-    // TODO: Ideally here we would call Circle Developer-Controlled wallet to trigger a transfer from Treasury to Seller.
-
-    // Update DB status to RELEASED
-    const { error: dbError } = await supabaseAdmin
-       .from("ecommerce_orders")
-       .update({ status: "RELEASED" })
-       .eq("id", orderId);
-
-    if (dbError) {
-      console.error("Release error:", dbError);
-    }
+    
+    // Execute real transfer on Circle SDK (Treasury -> Seller)
+    const result = await executeReleaseEscrow(
+      supabaseAdmin,
+      sellerAddress,
+      amountFloat,
+      orderId
+    );
 
     res.status(200).json({
-      message: "Escrow Split Payment Success. NFT Minting execution simulated.",
+      message: "Escrow Split Payment Success. Payout executed on Arc Testnet via Circle.",
       details: {
         order_id: orderId,
-        seller_receives: `${sellerReceive} USDC`,
-        platform_fee: `${feeAmount} USDC`,
+        tx_hash: result.txId,
+        seller_receives: `${result.sellerReceive.toFixed(2)} USDC`,
+        platform_fee: `${result.platformFee.toFixed(2)} USDC`,
         seller_address: sellerAddress,
         status: "RELEASED",
-        smart_contract_execution: "SUCCESS (Simulated NFT Mint Transfer)"
+        smart_contract_execution: "SUCCESS (Real Transfer Executed)"
       }
     });
 
   } catch (error: any) {
+    console.error("Release Escrow Error:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -136,7 +134,7 @@ router.post("/ecommerce/release-escrow", async (req, res) => {
 /**
  * 3. Fetch Admin Escrow Queue
  */
-router.get("/ecommerce/admin/escrows", async (req, res) => {
+router.get("/ecommerce/admin/escrows", requireRole(["super_admin", "admin"]), async (req, res) => {
   try {
     const supabaseAdmin = getSupabaseAdmin();
     // Gunakan relasi dengan users untuk mendapatkan nama buyer if possible, here using direct query

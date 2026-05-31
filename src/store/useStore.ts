@@ -12,6 +12,8 @@ import {
   defaultAvailableShortcuts,
 } from "../components/screens/ManageFavoritesScreen";
 import { BackendClient } from "../services/api";
+import { MOCK_PRODUCTS } from "../data/mockProducts";
+import { apiFetch } from "../lib/api";
 
 export type TransactionFilter = "All" | "Received" | "Sent" | "Swaps";
 
@@ -78,6 +80,11 @@ interface AppState {
   setSourceAccount: (account: SourceAccount) => void;
   logs: string[];
   addLog: (log: string) => void;
+  products: any[];
+  setProducts: (products: any[]) => void;
+  updateProductStockAndSales: (productId: number, quantityBought: number) => void;
+  fetchPreferences: () => Promise<void>;
+  syncPreferences: () => Promise<void>;
   resetState: () => void;
 }
 
@@ -100,6 +107,7 @@ export const useStore = create<AppState>()((set) => ({
     set({ registeredUser: user });
     if (user?.supabaseUid) {
       useStore.getState().fetchImportedTokens();
+      useStore.getState().fetchPreferences();
     }
   },
 
@@ -162,7 +170,7 @@ export const useStore = create<AppState>()((set) => ({
 
     try {
       const url = `/api/transactions/${user.supabaseUid}`;
-      const response = await fetch(url);
+      const response = await apiFetch(url);
       if (!response.ok) return;
 
       const text = await response.text();
@@ -187,6 +195,15 @@ export const useStore = create<AppState>()((set) => ({
               ? "CCTP Inbound Bridge"
               : "CCTP Outbound Bridge";
 
+        const resolvedTxHash = tx.tx_hash || tx.metadata?.txHash || tx.internal_ref;
+        let generatedExplorerUrl = tx.metadata?.explorerUrl;
+        if (!generatedExplorerUrl && (tx.tx_hash || tx.metadata?.txHash)) {
+          const hashToCheck = tx.tx_hash || tx.metadata?.txHash;
+          if (hashToCheck.startsWith("0x")) {
+            generatedExplorerUrl = `https://testnet.arcscan.app/tx/${hashToCheck}`;
+          }
+        }
+        
         return {
           id: tx.id || tx.internal_ref,
           type: tx.type,
@@ -195,12 +212,8 @@ export const useStore = create<AppState>()((set) => ({
           currency: "USDC",
           timestamp: new Date(tx.created_at).toLocaleString(),
           status: tx.status,
-          txHash: tx.tx_hash || tx.metadata?.txHash || tx.internal_ref,
-          explorerUrl:
-            tx.metadata?.explorerUrl ||
-            (tx.tx_hash || tx.internal_ref
-              ? `https://testnet.arcscan.app/tx/${tx.tx_hash || tx.internal_ref}`
-              : undefined),
+          txHash: resolvedTxHash,
+          explorerUrl: generatedExplorerUrl,
           metadata: tx.metadata,
         };
       });
@@ -266,14 +279,21 @@ export const useStore = create<AppState>()((set) => ({
   setSelectedTransaction: (tx) => set({ selectedTransaction: tx }),
 
   visibleTokenCodes: ["USDC", "EURC", "USDT", "USDe", "DAI", "PYUSD", "cirBTC"],
-  setVisibleTokenCodes: (codes) => set({ visibleTokenCodes: codes }),
+  setVisibleTokenCodes: (codes) => {
+    set({ visibleTokenCodes: codes });
+    useStore.getState().syncPreferences();
+  },
   readReceiptIds: [],
-  markAsRead: (id) =>
-    set((state) => ({
-      readReceiptIds: state.readReceiptIds.includes(id)
+  markAsRead: (id) => {
+    set((state) => {
+      const nextRead = state.readReceiptIds.includes(id)
         ? state.readReceiptIds
-        : [...state.readReceiptIds, id],
-    })),
+        : [...state.readReceiptIds, id];
+      // Sync to database
+      setTimeout(() => useStore.getState().syncPreferences(), 50);
+      return { readReceiptIds: nextRead };
+    });
+  },
 
   importedTokens: [],
   importToken: async (token) => {
@@ -341,7 +361,10 @@ export const useStore = create<AppState>()((set) => ({
   },
 
   selectedShortcuts: defaultSelectedShortcuts,
-  setSelectedShortcuts: (shortcuts) => set({ selectedShortcuts: shortcuts }),
+  setSelectedShortcuts: (shortcuts) => {
+    set({ selectedShortcuts: shortcuts });
+    useStore.getState().syncPreferences();
+  },
   availableShortcuts: defaultAvailableShortcuts,
   setAvailableShortcuts: (shortcuts) => set({ availableShortcuts: shortcuts }),
   selectedContact: null,
@@ -357,9 +380,15 @@ export const useStore = create<AppState>()((set) => ({
     setTimeout(() => set({ toast: { message: "", visible: false } }), 3000);
   },
   language: "English",
-  setLanguage: (lang) => set({ language: lang }),
+  setLanguage: (lang) => {
+    set({ language: lang });
+    useStore.getState().syncPreferences();
+  },
   network: "ARC TESTNET",
-  setNetwork: (net) => set({ network: net }),
+  setNetwork: (net) => {
+    set({ network: net });
+    useStore.getState().syncPreferences();
+  },
   platformConfig: null,
   setPlatformConfig: (config) => {
     set({ platformConfig: config });
@@ -379,7 +408,7 @@ export const useStore = create<AppState>()((set) => ({
     } catch (e) {}
 
     try {
-      const res = await fetch("/api/admin/config");
+      const res = await apiFetch("/api/admin/config");
       if (res.ok) {
         const data = await res.json();
         set({ platformConfig: data });
@@ -406,6 +435,72 @@ export const useStore = create<AppState>()((set) => ({
         `[${new Date().toLocaleTimeString()}] ${log}`,
       ],
     })),
+  products: (() => {
+    try {
+      const cached = localStorage.getItem("lounge_products");
+      return cached ? JSON.parse(cached) : MOCK_PRODUCTS;
+    } catch (e) {
+      return MOCK_PRODUCTS;
+    }
+  })(),
+  setProducts: (products) => {
+    set({ products });
+    try {
+      localStorage.setItem("lounge_products", JSON.stringify(products));
+    } catch (e) {}
+  },
+  updateProductStockAndSales: (productId, quantityBought) => {
+    set((state) => {
+      const updated = state.products.map((p) => {
+        if (p.id === productId) {
+          return {
+            ...p,
+            stock: Math.max(0, p.stock - quantityBought),
+            sales: p.sales + quantityBought,
+          };
+        }
+        return p;
+      });
+      try {
+        localStorage.setItem("lounge_products", JSON.stringify(updated));
+      } catch (e) {}
+      return { products: updated };
+    });
+  },
+  fetchPreferences: async () => {
+    const user = useStore.getState().registeredUser;
+    if (!user?.supabaseUid) return;
+    try {
+      const prefs = await BackendClient.getPreferences();
+      if (prefs) {
+        set({
+          language: prefs.language || "English",
+          network: prefs.network || "ARC TESTNET",
+          readReceiptIds: prefs.readReceiptIds || [],
+          selectedShortcuts: prefs.selectedShortcuts || useStore.getState().selectedShortcuts,
+          visibleTokenCodes: prefs.visibleTokenCodes || useStore.getState().visibleTokenCodes,
+        });
+      }
+    } catch (e) {
+      console.error("Failed to fetch preferences:", e);
+    }
+  },
+  syncPreferences: async () => {
+    const state = useStore.getState();
+    const user = state.registeredUser;
+    if (!user?.supabaseUid) return;
+    try {
+      await BackendClient.updatePreferences({
+        language: state.language,
+        network: state.network,
+        readReceiptIds: state.readReceiptIds,
+        selectedShortcuts: state.selectedShortcuts,
+        visibleTokenCodes: state.visibleTokenCodes,
+      });
+    } catch (e) {
+      console.error("Failed to sync preferences:", e);
+    }
+  },
   resetState: () =>
     set({
       viewState: "splash",

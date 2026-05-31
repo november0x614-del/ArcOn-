@@ -119,10 +119,14 @@ export function WithdrawScreen({ onBack, onSuccess }: WithdrawScreenProps) {
           to {selectedBank} is being processed.
         </p>
         <button
-          onClick={onSuccess}
+          onClick={() => {
+            setAmount("");
+            setMemo("");
+            setStep("form");
+          }}
           className="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold transition-all active:scale-[0.98] border-0 cursor-pointer"
         >
-          Back to Home
+          Return to Withdraw
         </button>
       </div>
     );

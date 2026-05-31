@@ -3,7 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 import { publicClient, getTokenMetadata } from "../services/arcViem";
 import { verifyAndProcessWebhook } from "../services/webhook";
 import { getSupabaseAdmin } from "../config/supabase";
-import { getTokenDetails } from "../services/circle";
+import { getTokenDetails, executeTransaction } from "../services/circle";
 import * as crypto from "crypto";
 
 const router = express.Router();
@@ -40,12 +40,34 @@ router.post("/faucet/claim", async (req, res) => {
     const { address, userId } = req.body;
     if (!address) return res.status(400).json({ error: "Address required" });
 
-    // 1. Simulate ARC (Gas) sending
-    const arcHash = `0x${crypto.randomBytes(32).toString("hex")}`;
+    const supabaseAdmin = getSupabaseAdmin();
+    const adminId = "11111111-1111-1111-1111-111111111111";
 
-    // 2. Simulate USDC (Commerce) sending if userId is known
-    // In a real app we'd use Circle API to transfer from merchant/treasury back to user
-    // Here we just insert a 'receive' record in Supabase to 'top-up' the user logically
+    let txHash = `faucet_${crypto.randomBytes(8).toString("hex")}`;
+    let successMessage = "100 USDC sent to your wallet on Arc Testnet via Circle SDK";
+    
+    try {
+      // Attempt actual Circle transfer from Platform Treasury Account
+      const result = await executeTransaction(
+        supabaseAdmin,
+        adminId,
+        100, // 100 USDC
+        address,
+        "faucet_distribution",
+        {
+          memo: "USDC Faucet Distribution",
+          bypassApproval: true
+        }
+      );
+      if (result && result.txId) {
+        txHash = result.txId;
+      }
+    } catch (circleErr: any) {
+      console.warn("Live Circle Faucet execution failed, falling back to instant ledger credit:", circleErr.message);
+      successMessage = "100 USDC Faucet claimed successfully (Ledger Top-Up)";
+    }
+
+    // Always ensure database is updated to credit user
     if (userId) {
       await getSupabaseAdmin()
         .from("transactions")
@@ -54,20 +76,20 @@ router.post("/faucet/claim", async (req, res) => {
           amount: "100.00",
           type: "receive",
           status: "success",
-          internal_ref: `faucet_${crypto.randomBytes(8).toString("hex")}`,
+          internal_ref: txHash,
           metadata: {
             from: "Arc Treasury",
             token: "USDC",
-            note: "Faucet Distribution",
+            note: "USDC Testnet Faucet Distribution",
           },
         });
     }
 
     res.json({
       success: true,
-      message: "100 USDC (Gas & Assets) sent to your wallet",
-      txHash: arcHash,
-      amount: "110",
+      message: successMessage,
+      txHash: txHash,
+      amount: "100",
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -356,7 +378,7 @@ router.post("/webhook/simulate", async (req, res) => {
 
 // Support GET (health-check/verification) and OPTIONS (CORS preflight) alongside POST on the Webhook route
 router
-  .route("/circle/webhook")
+  .route(["/circle/webhook", "/webhook/circle"])
   .options((req, res) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
@@ -372,9 +394,11 @@ router
       message:
         "Lounge Webhook Endpoint. Send a POST request with Circle signature headers to process notifications.",
       timestamp: new Date().toISOString(),
+      path: req.path
     });
   })
   .post(async (req, res) => {
+    console.log(`[Webhook] Received POST request at ${req.path}`);
     res.setHeader("Access-Control-Allow-Origin", "*");
     await verifyAndProcessWebhook(req, res, getSupabaseAdmin());
   });

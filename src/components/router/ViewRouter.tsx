@@ -36,10 +36,12 @@ import { AmountInputScreen } from "../screens/AmountInputScreen";
 import { BatchTransferScreen } from "../screens/BatchTransferScreen";
 import { WithdrawScreen } from "../screens/WithdrawScreen";
 import { BridgeScreen } from "../screens/BridgeScreen";
+import { MintNFTScreen } from "../screens/MintNFTScreen";
 import { TransactionHistoryScreen } from "../screens/TransactionHistoryScreen";
 import { HomeScreen } from "../screens/HomeScreen";
 import { AdminDashboardScreen } from "../screens/AdminDashboardScreen";
 import { supabase } from "../../lib/supabaseClient";
+import { apiFetch } from "../../lib/api";
 import { BackendClient } from "../../services/api/index";
 import { useContacts } from "../../hooks/useContacts";
 import { ShieldAlert } from "lucide-react";
@@ -123,7 +125,7 @@ export const ViewRouter = React.memo(
       const controller = new AbortController();
       const loadConfig = async () => {
         try {
-          const res = await fetch("/api/admin/config", {
+          const res = await apiFetch("/api/admin/config", {
             signal: controller.signal,
           });
           if (res.ok) {
@@ -460,6 +462,11 @@ export const ViewRouter = React.memo(
                 onBack={() => setViewState("home")}
                 onScanResult={(contact) => {
                   setSelectedContact(contact);
+                  if ((contact as any).suggestedAmount) {
+                    setTransferAmount((contact as any).suggestedAmount);
+                  } else {
+                    setTransferAmount("");
+                  }
                   setViewState("amountInput");
                 }}
               />
@@ -593,7 +600,11 @@ export const ViewRouter = React.memo(
             ) : (
               <WithdrawScreen
                 onBack={() => setViewState("depositOptions")}
-                onSuccess={() => setViewState("home")}
+                onSuccess={() => {
+                  fetchBalance();
+                  fetchTransactions();
+                  // No navigation to home - stay in withdraw or show success state within withdraw
+                }}
               />
             ))}
 
@@ -606,7 +617,11 @@ export const ViewRouter = React.memo(
             ) : (
               <BridgeScreen
                 onBack={() => setViewState("home")}
-                onSuccess={() => setViewState("home")}
+                onSuccess={() => {
+                  fetchBalance();
+                  fetchTransactions();
+                  // Stay in feature
+                }}
               />
             ))}
 
@@ -619,6 +634,10 @@ export const ViewRouter = React.memo(
               onBack={() => setViewState("home")}
               onNavigate={setViewState}
             />
+          )}
+
+          {viewState === "mintNFT" && (
+            <MintNFTScreen onBack={() => setViewState("home")} />
           )}
 
           {viewState === "home" && (

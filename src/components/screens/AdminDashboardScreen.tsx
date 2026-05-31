@@ -23,6 +23,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { ViewState } from "../../types";
 import { useApp } from "../../contexts/AppContext";
 import { useStore } from "../../store/useStore";
+import { apiFetch } from "../../lib/api";
 import { OverviewTab } from "../admin/OverviewTab";
 import { UsersTab } from "../admin/UsersTab";
 import { TreasuryTab } from "../admin/TreasuryTab";
@@ -33,6 +34,7 @@ import { ComplianceTab } from "../admin/ComplianceTab";
 import { EcommerceAdminTab } from "../admin/EcommerceAdminTab";
 import { OtcReconciliationTab } from "../admin/OtcReconciliationTab";
 import { TreasuryMonitoringTab } from "../admin/TreasuryMonitoringTab";
+import { BackupCenterScreen } from "../screens/BackupCenterScreen";
 
 interface AdminStats {
   totalUsers: number;
@@ -48,6 +50,7 @@ interface AdminUser {
   walletId: string;
   createdAt: string;
   status: string;
+  role: string;
 }
 
 interface AdminConfig {
@@ -92,6 +95,7 @@ type TabType =
   | "ecommerce"
   | "otc"
   | "treasury"
+  | "backups"
   | "settings";
 
 export function AdminDashboardScreen({
@@ -159,7 +163,7 @@ export function AdminDashboardScreen({
 
   const fetchStats = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/stats");
+      const res = await apiFetch("/api/admin/stats");
       if (res.ok) setStats(await res.json());
     } catch (err) {
       console.error(err);
@@ -168,7 +172,7 @@ export function AdminDashboardScreen({
 
   const fetchUsers = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/users");
+      const res = await apiFetch("/api/admin/users");
       if (res.ok) setUsers(await res.json());
     } catch (err) {
       console.error(err);
@@ -177,7 +181,7 @@ export function AdminDashboardScreen({
 
   const fetchOtcTransactions = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/otc/pending");
+      const res = await apiFetch("/api/admin/otc/pending");
       if (res.ok) setOtcTransactions(await res.json());
     } catch (err) {
       console.error(err);
@@ -186,7 +190,7 @@ export function AdminDashboardScreen({
 
   const fetchTransactions = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/transactions?limit=20");
+      const res = await apiFetch("/api/admin/transactions?limit=20");
       if (res.ok) setSystemTransactions(await res.json());
     } catch (err) {
       console.error(err);
@@ -195,7 +199,7 @@ export function AdminDashboardScreen({
 
   const fetchApprovals = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/approvals");
+      const res = await apiFetch("/api/admin/approvals");
       if (res.ok) setPendingApprovals(await res.json());
     } catch (err) {
       console.error(err);
@@ -208,7 +212,7 @@ export function AdminDashboardScreen({
   ) => {
     setSaving(true);
     try {
-      const res = await fetch(`/api/admin/approvals/${txId}/decide`, {
+      const res = await apiFetch(`/api/admin/approvals/${txId}/decide`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ decision }),
@@ -235,7 +239,7 @@ export function AdminDashboardScreen({
   const fetchWalletDetails = async (userId: string) => {
     setLoadingWallet(true);
     try {
-      const res = await fetch(`/api/admin/users/${userId}/wallet`);
+      const res = await apiFetch(`/api/admin/users/${userId}/wallet`);
       if (res.ok) setSelectedUserWallet(await res.json());
     } catch (err) {
       console.error(err);
@@ -247,7 +251,7 @@ export function AdminDashboardScreen({
   const handleUpgradeWallet = async (userId: string) => {
     setActionLoading(userId);
     try {
-      const res = await fetch(`/api/admin/users/${userId}/upgrade`, {
+      const res = await apiFetch(`/api/admin/users/${userId}/upgrade`, {
         method: "POST",
       });
       if (res.ok) {
@@ -321,6 +325,39 @@ export function AdminDashboardScreen({
     }
   }, [activeTab, isAdminAuthorized]);
 
+  const handleChangeRole = async (userId: string, newRole: string): Promise<boolean> => {
+    setActionLoading(userId);
+    setError(null);
+    try {
+      const response = await apiFetch(`/api/admin/users/${userId}/role`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: newRole }),
+      });
+
+      if (response.ok) {
+        setSuccessMsg(`User role successfully changed to ${newRole}.`);
+        setTimeout(() => setSuccessMsg(null), 4000);
+        await fetchUsers();
+        
+        // Update selectedUser instance if currently viewing it
+        if (selectedUser && selectedUser.id === userId) {
+          setSelectedUser({ ...selectedUser, role: newRole });
+        }
+        return true;
+      }
+      
+      const errorData = await response.json();
+      setError(errorData.error || "Failed to update role");
+      return false;
+    } catch (err: any) {
+      setError("Auth cluster failure.");
+      return false;
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleToggleBlock = async (
     userId: string,
     isBlockedNow: boolean,
@@ -328,7 +365,7 @@ export function AdminDashboardScreen({
     setActionLoading(userId);
     setError(null);
     try {
-      const response = await fetch("/api/admin/users/block", {
+      const response = await apiFetch("/api/admin/users/block", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId, block: !isBlockedNow }),
@@ -358,7 +395,7 @@ export function AdminDashboardScreen({
     setActionLoading(userId);
     setError(null);
     try {
-      const response = await fetch(`/api/admin/users/${userId}`, {
+      const response = await apiFetch(`/api/admin/users/${userId}`, {
         method: "DELETE",
       });
       if (response.ok) {
@@ -381,7 +418,7 @@ export function AdminDashboardScreen({
     setSaving(true);
     setError(null);
     try {
-      const response = await fetch("/api/admin/config", {
+      const response = await apiFetch("/api/admin/config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...platformConfig, ...updatedFields }),
@@ -407,7 +444,7 @@ export function AdminDashboardScreen({
         type === "colors"
           ? "/api/admin/design/retheme-colors"
           : "/api/admin/design/retheme-headers";
-      const response = await fetch(endpoint, { method: "POST" });
+      const response = await apiFetch(endpoint, { method: "POST" });
       const data = await response.json();
       if (response.ok) {
         setSuccessMsg(data.message);
@@ -429,6 +466,7 @@ export function AdminDashboardScreen({
     { id: "ledger", label: "Financial Ledger", icon: Wallet },
     { id: "compliance", label: "Compliance & Sanctions", icon: ShieldOff },
     { id: "infra", label: "Infrastructure", icon: ShieldAlert },
+    { id: "backups", label: "SecOps Backup Center", icon: ShieldCheck },
     { id: "settings", label: "Global Settings", icon: Settings },
   ];
 
@@ -660,10 +698,10 @@ export function AdminDashboardScreen({
                       onResolve={async (txId: string) => {
                         setSaving(true);
                         try {
-                          const res = await fetch("/api/admin/otc/reconcile", {
+                          const res = await apiFetch("/api/admin/otc/reconcile", {
                             method: "POST",
-                            headers: { "Content-Type": "application/json", "x-admin-secret": process.env.ADMIN_SECRET || "" },
-                            body: JSON.stringify({ txId, adminId: "00000000-0000-0000-0000-000000000000" }),
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ txId, adminId: "11111111-1111-1111-1111-111111111111" }),
                           });
                           if (res.ok) {
                             setSuccessMsg("Reconciliation successful.");
@@ -692,6 +730,7 @@ export function AdminDashboardScreen({
                   )}
                   {activeTab === "compliance" && <ComplianceTab />}
                   {activeTab === "infra" && <InfrastructureTab />}
+                  {activeTab === "backups" && <BackupCenterScreen embedMode={true} />}
                   {activeTab === "settings" && (
                     <div className="space-y-8 animate-in fade-in duration-500">
                       <ConfigTab
@@ -825,6 +864,33 @@ export function AdminDashboardScreen({
                                     />{" "}
                                     System Level
                                   </div>
+                                </div>
+                              </div>
+                            </section>
+
+                            <section className="space-y-4">
+                              <h3 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest px-1">
+                                Access Role Management
+                              </h3>
+                              <div className="bg-slate-50 border border-slate-100 rounded-3xl p-4">
+                                <div className="text-[12px] font-medium text-slate-600 mb-3">
+                                  Current Role: <span className="font-bold text-slate-900 ml-1 uppercase">{selectedUser.role || "user"}</span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <button
+                                    onClick={() => handleChangeRole(selectedUser.id, "user")}
+                                    disabled={selectedUser.role === "user" || !!actionLoading || (selectedUser.id === "11111111-1111-1111-1111-111111111111")}
+                                    className={`py-2 rounded-xl text-[12px] font-bold transition-all ${selectedUser.role === "user" ? "bg-slate-800 text-white" : "bg-white text-slate-500 border border-slate-200 hover:border-slate-300"}`}
+                                  >
+                                    User
+                                  </button>
+                                  <button
+                                    onClick={() => handleChangeRole(selectedUser.id, "admin")}
+                                    disabled={selectedUser.role === "admin" || !!actionLoading || (selectedUser.id === "11111111-1111-1111-1111-111111111111")}
+                                    className={`py-2 rounded-xl text-[12px] font-bold transition-all ${selectedUser.role === "admin" ? "bg-blue-600 text-white" : "bg-white text-indigo-500 border border-indigo-100 hover:border-indigo-300"}`}
+                                  >
+                                    Admin
+                                  </button>
                                 </div>
                               </div>
                             </section>

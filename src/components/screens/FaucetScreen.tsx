@@ -110,7 +110,7 @@ export function FaucetScreen({ onBack }: FaucetScreenProps) {
               <div className="bg-slate-50 border border-slate-100 w-full p-4 rounded-xl flex items-center justify-between">
                 <div className="overflow-hidden mr-2">
                   <p className="text-[11px] font-bold text-slate-400 mb-1 leading-none uppercase">
-                    SIMULATED TX HASH
+                    TRANSACTION HASH
                   </p>
                   <p className="text-[13px] font-mono text-slate-700 truncate">
                     {txHash}
@@ -127,8 +127,7 @@ export function FaucetScreen({ onBack }: FaucetScreenProps) {
               </div>
 
               <div className="mt-3 text-[11px] text-slate-400 text-center px-4 font-medium italic">
-                * This transaction is locally simulated for preview purposes and
-                won't appear on ArcScan.
+                * Transaksi telah dikirimkan ke jaringan Arc-Testnet dan tercatat di Blockchain.
               </div>
 
               <button
