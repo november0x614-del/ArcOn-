@@ -1,6 +1,7 @@
 import * as crypto from "crypto";
 import { Request, Response } from "express";
 import { interpretCircleError } from "./circle";
+import { getCircleBaseUrl } from "./circleClient";
 
 // Public key cache
 const publicKeyCache: Record<string, { publicKey: string; algorithm: string }> =
@@ -14,8 +15,9 @@ async function getCirclePublicKey(
   }
 
   // Fetch from Circle API
+  const baseUrl = getCircleBaseUrl();
   const response = await fetch(
-    `https://api.circle.com/v1/notifications/publicKey/${keyId}`,
+    `${baseUrl}/v1/notifications/publicKey/${keyId}`,
     {
       method: "GET",
       headers: {

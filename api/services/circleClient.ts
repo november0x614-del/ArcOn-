@@ -1,6 +1,23 @@
 import { initiateDeveloperControlledWalletsClient } from "@circle-fin/developer-controlled-wallets";
 
 /**
+ * Get the circle base URL based on the environment (Sandbox vs Production).
+ */
+export const getCircleBaseUrl = (): string => {
+  const apiKey = process.env.CIRCLE_API_KEY || "";
+  const blockchain = process.env.CIRCLE_BLOCKCHAIN || "";
+  
+  if (
+    apiKey.toLowerCase().includes("sandbox") ||
+    apiKey.toLowerCase().includes("test") ||
+    blockchain.toUpperCase().includes("TESTNET")
+  ) {
+    return "https://api-sandbox.circle.com";
+  }
+  return "https://api.circle.com";
+};
+
+/**
  * Singleton-like factory for Circle Developer-Controlled Wallets Client.
  * Ensures consistent configuration across the backend services.
  */
@@ -14,9 +31,12 @@ export const getCircleClientInstance = () => {
     );
   }
 
+  const baseUrl = getCircleBaseUrl();
+
   return initiateDeveloperControlledWalletsClient({
     apiKey,
     entitySecret,
+    baseUrl,
   });
 };
 
@@ -30,7 +50,8 @@ export const circleApiFetch = async (
   const apiKey = process.env.CIRCLE_API_KEY;
   if (!apiKey) throw new Error("CIRCLE_API_KEY is required");
 
-  const url = `https://api.circle.com${endpoint}`;
+  const baseUrl = getCircleBaseUrl();
+  const url = `${baseUrl}${endpoint}`;
   const response = await fetch(url, {
     ...options,
     headers: {

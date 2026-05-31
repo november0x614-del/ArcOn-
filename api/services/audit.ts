@@ -8,12 +8,33 @@ export async function logAuditEvent(
 ) {
   const supabase = getSupabaseAdmin();
 
-  const { error } = await supabase.from("transactions").insert({
-    user_id: userId,
-    amount: "0.00",
-    type: "AUDIT_LOG",
-    status: "success",
-    description: `[AUDIT] ${action}${targetId ? ` on ${targetId}` : ""}`,
+  // Validate if userId is a valid UUID, otherwise nullify to prevent foreign key errors.
+  let cleanUserId: string | null = userId;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!userId || !uuidRegex.test(userId)) {
+    cleanUserId = null;
+  }
+
+  // Check if user exists in profiles (linked to auth.users) to prevent FK violation
+  if (cleanUserId) {
+    try {
+      const { data: userExists } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", cleanUserId)
+        .maybeSingle();
+      
+      if (!userExists) {
+        cleanUserId = null;
+      }
+    } catch {
+      cleanUserId = null;
+    }
+  }
+
+  const { error } = await supabase.from("audit_logs").insert({
+    user_id: cleanUserId,
+    action: `[AUDIT] ${action}${targetId ? ` on ${targetId}` : ""}`,
     metadata: {
       ...metadata,
       isAudit: true,
