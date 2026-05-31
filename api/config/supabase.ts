@@ -28,7 +28,7 @@ export function getSupabaseAdmin() {
 }
 
 export async function isUserBlocked(userId: string): Promise<boolean> {
-  if (!userId || userId === "11111111-1111-1111-1111-111111111111")
+  if (!userId || userId === (process.env.PLATFORM_ADMIN_UUID as string))
     return false;
   try {
     const { data } = await getSupabaseAdmin().auth.admin.getUserById(userId);

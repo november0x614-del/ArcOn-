@@ -1,7 +1,6 @@
 import express from "express";
 import compression from "compression";
 import rateLimit from "express-rate-limit";
-import { getSupabaseAdmin, isUserBlocked } from "./config/supabase.js";
 import walletRoutes from "./routes/wallet.routes.js";
 import transactionRoutes from "./routes/transaction.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
@@ -21,7 +20,9 @@ app.set("trust proxy", 1); // Enable if you're behind a reverse proxy (Heroku, A
 
 // Enforce Global CORS headers for clean Web3 operations and iframe previews
 app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  const allowed = [process.env.APP_URL];
+  const origin = req.headers.origin || "";
+  res.setHeader("Access-Control-Allow-Origin", allowed.includes(origin) ? origin : "");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
   
@@ -55,22 +56,11 @@ app.use(
 );
 
 // API Group Routing - Refactored for industry standard MVC pattern
-// We mount all routers on both '/api' and '/' root paths to prevent 405/404 errors on Vercel
-// in case Vercel's Serverless Gateway strips the '/api' prefix before passing to Express.
 app.use("/api", walletRoutes);
-app.use("/", walletRoutes);
-
 app.use("/api", transactionRoutes);
-app.use("/", transactionRoutes);
-
 app.use("/api/admin", adminRoutes);
-app.use("/admin", adminRoutes);
-
 app.use("/api", miscRoutes);
-app.use("/", miscRoutes);
-
 app.use("/api", ecommerceRoutes);
-app.use("/", ecommerceRoutes);
 
 export const config = {
   api: {

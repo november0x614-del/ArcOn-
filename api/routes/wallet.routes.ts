@@ -4,6 +4,7 @@ import { createWallet } from "../services/circle.js";
 import { fetchUnifiedBalance } from "../services/balance.js";
 import { publicClient } from "../services/arcViem.js";
 import { formatUnits } from "viem";
+import { requireRole } from "../middleware/requireRole.js";
 
 const router = express.Router();
 
@@ -47,13 +48,19 @@ router.get("/wallets/resolve/:address", async (req, res) => {
   }
 });
 
-router.post("/wallets/create", async (req, res) => {
+router.post("/wallets/create", requireRole(["user", "admin", "super_admin"]), async (req, res) => {
   try {
     const { userId } = req.body;
+    const authUserId = (req as any).user.id;
+
     console.log(`[WalletGuard] Checking if wallet exists for user ${userId}...`);
 
     if (!userId) {
       return res.status(400).json({ error: "Missing required parameter: userId" });
+    }
+
+    if (userId !== authUserId) {
+      return res.status(403).json({ error: "Access Denied: You cannot create a wallet for another user." });
     }
 
     if (process.env.SUPABASE_SERVICE_ROLE_KEY) {

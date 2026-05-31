@@ -138,15 +138,13 @@ router.use(async (req, res, next) => {
 
 router.post("/init", async (_req, res) => {
   try {
-    const adminEmail =
-      process.env.ADMIN_EMAIL ||
-      process.env.VITE_ADMIN_EMAIL ||
-      "admin@admin.com";
+    const adminEmail = process.env.ADMIN_EMAIL || process.env.VITE_ADMIN_EMAIL;
+    if (!adminEmail) throw new Error("ADMIN_EMAIL required");
     const supabase = getSupabaseAdmin();
 
     console.log(`[AdminInit] Initializing default admin: ${adminEmail}`);
 
-    const userId = "11111111-1111-1111-1111-111111111111";
+    const userId = (process.env.PLATFORM_ADMIN_UUID as string);
 
     const { data: existingWallet } = await supabase
       .from("user_wallets")
@@ -177,15 +175,13 @@ router.post("/init", async (_req, res) => {
 
 router.post("/init-force", async (_req, res) => {
   try {
-    const adminEmail =
-      process.env.ADMIN_EMAIL ||
-      process.env.VITE_ADMIN_EMAIL ||
-      "admin@admin.com";
+    const adminEmail = process.env.ADMIN_EMAIL || process.env.VITE_ADMIN_EMAIL;
+    if (!adminEmail) throw new Error("ADMIN_EMAIL required");
     const supabase = getSupabaseAdmin();
 
     console.log(`[AdminInitForce] Force re-initializing admin wallet: ${adminEmail}`);
 
-    const userId = "11111111-1111-1111-1111-111111111111";
+    const userId = (process.env.PLATFORM_ADMIN_UUID as string);
 
     // 1. Delete existing admin wallet mapping (if any)
     const { error: deleteError } = await supabase
@@ -264,7 +260,7 @@ router.post("/deploy-nft-contract", requireRole(["super_admin", "admin"]), async
     const { data: adminWallet } = await supabase
       .from("user_wallets")
       .select("wallet_id, wallet_address")
-      .eq("id", "11111111-1111-1111-1111-111111111111")
+      .eq("id", (process.env.PLATFORM_ADMIN_UUID as string))
       .single();
 
     if (!adminWallet || !adminWallet.wallet_id) {
@@ -297,7 +293,7 @@ router.post("/deploy-nft-contract", requireRole(["super_admin", "admin"]), async
 
     // Log this action to audit logs for secure monitoring
     await logAdminAction(
-      "11111111-1111-1111-1111-111111111111",
+      (process.env.PLATFORM_ADMIN_UUID as string),
       "DEPLOY_SMART_CONTRACT",
       `Deployed contract via Circle with Tx ID: ${txId}. Name: ${name || "Custom Contract"}`
     );
@@ -403,10 +399,7 @@ router.get("/users", requireRole(["super_admin", "admin"]), async (_req, res) =>
       );
     }
 
-    const adminEmail =
-      process.env.ADMIN_EMAIL ||
-      process.env.VITE_ADMIN_EMAIL ||
-      "admin@admin.com";
+    const adminEmail = process.env.ADMIN_EMAIL || process.env.VITE_ADMIN_EMAIL || "admin";
 
     const combined = (wallets || []).map((w) => {
       const profile = (profiles || []).find((p) => p.id === w.id);
@@ -420,7 +413,7 @@ router.get("/users", requireRole(["super_admin", "admin"]), async (_req, res) =>
       let email =
         authUser?.email ||
         `user_${w.wallet_address.substring(2, 6)}@testnet.com`;
-      if (w.id === "11111111-1111-1111-1111-111111111111") {
+      if (w.id === (process.env.PLATFORM_ADMIN_UUID as string)) {
         email = adminEmail;
       }
 
@@ -428,7 +421,7 @@ router.get("/users", requireRole(["super_admin", "admin"]), async (_req, res) =>
         id: w.id,
         name:
           profile?.full_name ||
-          (w.id === "11111111-1111-1111-1111-111111111111"
+          (w.id === (process.env.PLATFORM_ADMIN_UUID as string)
             ? "Platform Admin"
             : "Anonymous"),
         email: email,
@@ -491,7 +484,7 @@ router.post("/users/block", requireRole(["super_admin", "admin"]), async (req, r
   try {
     const { userId, block } = req.body;
     if (!userId) return res.status(400).json({ error: "Missing userId" });
-    if (userId === "11111111-1111-1111-1111-111111111111") {
+    if (userId === (process.env.PLATFORM_ADMIN_UUID as string)) {
       return res.status(400).json({ error: "Cannot block platform admin" });
     }
 
@@ -523,7 +516,7 @@ router.patch("/users/:userId/role", requireRole(["super_admin"]), async (req, re
       return res.status(400).json({ error: "Invalid role specified" });
     }
 
-    if (userId === "11111111-1111-1111-1111-111111111111" && role !== "super_admin") {
+    if (userId === (process.env.PLATFORM_ADMIN_UUID as string) && role !== "super_admin") {
       return res.status(400).json({ error: "Cannot downgrade platform admin" });
     }
 
@@ -545,7 +538,7 @@ router.delete("/users/:userId", requireRole(["super_admin", "admin"]), async (re
   try {
     const { userId } = req.params;
     if (!userId) return res.status(400).json({ error: "Missing userId" });
-    if (userId === "11111111-1111-1111-1111-111111111111") {
+    if (userId === (process.env.PLATFORM_ADMIN_UUID as string)) {
       return res.status(400).json({ error: "Cannot delete platform admin" });
     }
 
@@ -621,12 +614,12 @@ router.get("/stats", requireRole(["super_admin", "admin"]), async (_req, res) =>
       const { data: adminWallet } = await supabase
         .from("user_wallets")
         .select("wallet_id, wallet_address")
-        .eq("id", "11111111-1111-1111-1111-111111111111")
+        .eq("id", (process.env.PLATFORM_ADMIN_UUID as string))
         .single();
 
       if (adminWallet) {
         const balanceResult = await fetchUnifiedBalance(
-          "11111111-1111-1111-1111-111111111111",
+          (process.env.PLATFORM_ADMIN_UUID as string),
           adminWallet,
           supabase,
         );
@@ -796,7 +789,7 @@ router.post("/approvals/:txId/decide", async (req, res) => {
     const { decision } = req.body; // 'approve' | 'reject'
     const result = await decideApproval(txId, decision);
     await logAdminAction(
-      "11111111-1111-1111-1111-111111111111",
+      (process.env.PLATFORM_ADMIN_UUID as string),
       decision === "approve" ? "TREASURY_TX_APPROVED" : "TREASURY_TX_REJECTED",
       txId,
       { decision },
@@ -835,7 +828,7 @@ router.post("/compliance/blocklist", async (req, res) => {
       .insert({
         address,
         reason,
-        added_by: "11111111-1111-1111-1111-111111111111", // Admin by default for now
+        added_by: (process.env.PLATFORM_ADMIN_UUID as string), // Admin by default for now
       })
       .select()
       .single();
@@ -843,7 +836,7 @@ router.post("/compliance/blocklist", async (req, res) => {
     if (error) throw error;
 
     await logAdminAction(
-      "11111111-1111-1111-1111-111111111111",
+      (process.env.PLATFORM_ADMIN_UUID as string),
       "COMPLIANCE_ADDRESS_BLOCKED",
       address,
       { reason },
@@ -867,7 +860,7 @@ router.delete("/compliance/blocklist/:address", async (req, res) => {
     if (error) throw error;
 
     await logAdminAction(
-      "11111111-1111-1111-1111-111111111111",
+      (process.env.PLATFORM_ADMIN_UUID as string),
       "COMPLIANCE_ADDRESS_UNBLOCKED",
       address,
     );
@@ -914,7 +907,7 @@ router.post("/config/fees", async (req, res) => {
     if (error) throw error;
 
     await logAdminAction(
-      "11111111-1111-1111-1111-111111111111",
+      (process.env.PLATFORM_ADMIN_UUID as string),
       "FEE_STRATEGY_UPDATED",
       strategy,
     );
@@ -965,7 +958,7 @@ router.post("/treasury/sweep", async (req, res) => {
     );
 
     await logAdminAction(
-      "11111111-1111-1111-1111-111111111111",
+      (process.env.PLATFORM_ADMIN_UUID as string),
       "TREASURY_MANUAL_SWEEP",
       treasuryAddress,
       { amount }
@@ -1078,7 +1071,7 @@ router.post("/config/simulate-circle-webhook", async (req, res) => {
 
     // Log admin action for auditing simulation
     await logAdminAction(
-      "11111111-1111-1111-1111-111111111111",
+      (process.env.PLATFORM_ADMIN_UUID as string),
       "TRANSACTION_WEBHOOK_SIMULATED",
       internalRef,
       { status: newStatus, isFailed },

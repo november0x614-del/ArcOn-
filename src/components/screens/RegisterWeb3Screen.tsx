@@ -205,17 +205,7 @@ export function RegisterWeb3Screen({
       setSignUpData(authData);
 
       // Check if email confirmation is required by looking at session
-      let needsEmailConfirmation = false;
-      if (!authData.session) {
-        const { error: newSignInError } =
-          await supabase.auth.signInWithPassword({
-            email,
-            password,
-          });
-        if (newSignInError) {
-          needsEmailConfirmation = true;
-        }
-      }
+      const needsEmailConfirmation = !authData.session;
 
       if (needsEmailConfirmation) {
         setStep(3); // Go to OTP
@@ -245,11 +235,7 @@ export function RegisterWeb3Screen({
     }
   };
 
-  React.useEffect(() => {
-    if (step === 2) {
-      processRegistration();
-    }
-  }, [step]);
+  // `processRegistration` is now called directly from the button click
 
   return (
     <div className="w-full h-full bg-white relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
@@ -458,7 +444,10 @@ export function RegisterWeb3Screen({
                 !isPasswordValid ||
                 isCreating
               }
-              onClick={() => setStep(2)}
+              onClick={() => {
+                setStep(2);
+                processRegistration();
+              }}
               className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl transition-all shadow-[0_8px_20px_rgba(15,23,42,0.15)] flex justify-center items-center gap-2 active:scale-[0.98] border-0 disabled:opacity-50 disabled:bg-slate-300 disabled:shadow-none disabled:cursor-not-allowed text-[15px]"
             >
               {isCreating ? "Creating..." : "Create Lounge Account"}
@@ -620,13 +609,17 @@ export function RegisterWeb3Screen({
               <button
                 onClick={async () => {
                   setError(null);
-                  if (signUpData?.user?.id) {
+                  const { data: { session } } = await supabase.auth.getSession();
+                  if (session?.user?.id) {
                     await executeWalletCreation(
-                      signUpData.user.id,
-                      signUpData.session,
+                      session.user.id,
+                      session,
                       email,
                       username,
                     );
+                  } else {
+                    setError("Session expired. Please log in again.");
+                    setStep(1);
                   }
                 }}
                 className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl transition-all shadow-[0_8px_20px_rgba(15,23,42,0.2)] flex justify-center items-center gap-2 active:scale-[0.98] border-0"

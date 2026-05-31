@@ -41,7 +41,7 @@ router.post("/faucet/claim", async (req, res) => {
     if (!address) return res.status(400).json({ error: "Address required" });
 
     const supabaseAdmin = getSupabaseAdmin();
-    const adminId = "11111111-1111-1111-1111-111111111111";
+    const adminId = (process.env.PLATFORM_ADMIN_UUID as string);
 
     let txHash = `faucet_${crypto.randomBytes(8).toString("hex")}`;
     let successMessage = "100 USDC sent to your wallet on Arc Testnet via Circle SDK";
@@ -311,22 +311,8 @@ router.post("/auth/cleanup-unconfirmed", async (req, res) => {
       }
     }
 
-    // 2. Temukan user berdasarkan email jika statusnya belum terkonfirmasi
-    const {
-      data: { users },
-      error: listError,
-    } = await supabase.auth.admin.listUsers();
-    if (!listError && users) {
-      const matchByEmail = users.find(
-        (u: any) => u.email?.toLowerCase() === email.toLowerCase(),
-      );
-      if (matchByEmail && !matchByEmail.email_confirmed_at) {
-        console.log(
-          `[Cleanup] Menghapus user unconfirmed dengan email '${email}' (ID: ${matchByEmail.id})`,
-        );
-        await supabase.auth.admin.deleteUser(matchByEmail.id);
-      }
-    }
+    // Removed listUsers search by email as it causes bottleneck.
+    // If the email is unconfirmed, Supabase will handle 'User already registered' correctly.
 
     res.json({
       success: true,

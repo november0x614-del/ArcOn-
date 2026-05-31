@@ -158,55 +158,26 @@ export default function App() {
   );
 
   React.useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession();
-        if (error) {
-          // If it's an auth error specifically about session validity, just reset
-          if (
-            (error.message?.toLowerCase() || "").includes("refresh token") ||
-            error.status === 400
-          ) {
-            await supabase.auth.signOut().catch(() => {});
-            resetState();
-          } else {
-            console.warn("Auth initialization warning:", error.message);
-          }
-        } else if (session) {
-          handleUserSession(session.user);
-        }
-      } catch (err) {
-        // Absolute suppression of session check failures
-        console.debug("Silent session check failure");
-      }
-    };
-
-    checkSession();
-
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (_event === "TOKEN_REFRESHED" && !session) {
-        supabase.auth.signOut().catch(() => {});
-        resetState();
-      } else if (_event === "SIGNED_OUT") {
+      if (_event === "PASSWORD_RECOVERY") {
+        setViewState("forgotPassword");
+        return;
+      }
+      if (_event === "SIGNED_OUT" || (_event === "TOKEN_REFRESHED" && !session)) {
         resetState();
         localStorage.removeItem("arc_wallet_address");
         localStorage.removeItem("arc_user_id");
-      } else if (session) {
+        return;
+      }
+      if (session) {
         handleUserSession(session.user);
-      } else {
-        resetState();
-        localStorage.removeItem("arc_wallet_address");
-        localStorage.removeItem("arc_user_id");
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [handleUserSession, resetState]);
+  }, [handleUserSession, resetState, setViewState]);
 
   React.useEffect(() => {
     if (registeredUser?.supabaseUid) {

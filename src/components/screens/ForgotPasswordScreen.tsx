@@ -44,8 +44,9 @@ export function ForgotPasswordScreen({
     setIsLoading(true);
     setError(null);
     try {
-      const { error: resetError } =
-        await supabase.auth.resetPasswordForEmail(email);
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/?resetPassword=true`,
+      });
       if (resetError) throw resetError;
 
       setStep(2);

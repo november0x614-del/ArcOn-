@@ -2,11 +2,9 @@ import express from "express";
 import crypto from "crypto";
 import { getSupabaseAdmin } from "../config/supabase.js";
 import { executeTransaction, executeReleaseEscrow } from "../services/circle.js";
+import { requireRole } from "../middleware/requireRole.js";
 
 const router = express.Router();
-
-// Helper to handle seller address extraction (for simplicity in testnet)
-const DEFAULT_SELLER_ADDRESS = "0x75677977Cc68D7Dc3A210C01bF5Fe2dC17dc1111"; // Valid checksum EVM address
 
 /**
  * 1. Checkout Endpoint
@@ -14,7 +12,14 @@ const DEFAULT_SELLER_ADDRESS = "0x75677977Cc68D7Dc3A210C01bF5Fe2dC17dc1111"; // 
  */
 router.post("/ecommerce/checkout", async (req, res) => {
   try {
-    const { buyerId, productId, amount, memo, sellerAddress = DEFAULT_SELLER_ADDRESS } = req.body;
+    let { buyerId, productId, amount, memo, sellerAddress } = req.body;
+    const defaultSeller = process.env.DEFAULT_SELLER_ADDRESS;
+
+    if (!sellerAddress) {
+      if (!defaultSeller) return res.status(400).json({ error: "Seller address required" });
+      sellerAddress = defaultSeller;
+    }
+
     const supabaseAdmin = getSupabaseAdmin();
 
     const amountValue = Number(amount);
@@ -25,7 +30,7 @@ router.post("/ecommerce/checkout", async (req, res) => {
       const { data: treasuryWallet } = await supabaseAdmin
         .from("user_wallets")
         .select("wallet_address")
-        .eq("id", "11111111-1111-1111-1111-111111111111")
+        .eq("id", (process.env.PLATFORM_ADMIN_UUID as string))
         .single();
       treasuryAddress = treasuryWallet?.wallet_address;
     }
@@ -91,8 +96,6 @@ router.post("/ecommerce/checkout", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
-import { requireRole } from "../middleware/requireRole.js";
 
 /**
  * 2. Release Escrow & Split Payment

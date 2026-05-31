@@ -12,7 +12,6 @@ import {
   defaultAvailableShortcuts,
 } from "../components/screens/ManageFavoritesScreen";
 import { BackendClient } from "../services/api";
-import { MOCK_PRODUCTS } from "../data/mockProducts";
 import { apiFetch } from "../lib/api";
 
 export type TransactionFilter = "All" | "Received" | "Sent" | "Swaps";
@@ -447,9 +446,9 @@ export const useStore = create<AppState>()((set) => ({
   products: (() => {
     try {
       const cached = localStorage.getItem("lounge_products");
-      return cached ? JSON.parse(cached) : MOCK_PRODUCTS;
+      return cached ? JSON.parse(cached) : [];
     } catch (e) {
-      return MOCK_PRODUCTS;
+      return [];
     }
   })(),
   setProducts: (products) => {

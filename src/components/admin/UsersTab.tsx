@@ -100,7 +100,7 @@ export function UsersTab({
                   <tr
                     key={u.id}
                     onClick={() =>
-                      u.id !== "11111111-1111-1111-1111-111111111111" &&
+                      u.id !== (import.meta.env.VITE_PLATFORM_ADMIN_UUID || '') &&
                       onSelectUser(u)
                     }
                     className="hover:bg-slate-50 transition-colors group cursor-pointer"
@@ -143,7 +143,7 @@ export function UsersTab({
                       </span>
                     </td>
                     <td className="px-6 py-3.5 text-right">
-                      {u.id !== "11111111-1111-1111-1111-111111111111" ? (
+                      {u.id !== (import.meta.env.VITE_PLATFORM_ADMIN_UUID || '') ? (
                         <div className="inline-flex items-center gap-1.5 text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl font-bold text-[11px] opacity-0 group-hover:opacity-100 transition-all active:scale-95">
                           Inspect <ChevronRight size={12} />
                         </div>

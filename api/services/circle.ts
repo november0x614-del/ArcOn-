@@ -73,7 +73,7 @@ export async function createWallet(supabaseAdmin: any, userId: string) {
     const { data: adminWallet } = await supabaseAdmin
       .from("user_wallets")
       .select("wallet_set_id")
-      .eq("id", "11111111-1111-1111-1111-111111111111")
+      .eq("id", (process.env.PLATFORM_ADMIN_UUID as string))
       .single();
     if (adminWallet?.wallet_set_id) {
       walletSetId = adminWallet.wallet_set_id;
@@ -143,7 +143,7 @@ export async function batchCreateWallets(
   const { data: adminWallet } = await supabaseAdmin
     .from("user_wallets")
     .select("wallet_set_id")
-    .eq("id", "11111111-1111-1111-1111-111111111111")
+    .eq("id", (process.env.PLATFORM_ADMIN_UUID as string))
     .single();
 
   let walletSetId = adminWallet?.wallet_set_id;
@@ -299,7 +299,7 @@ export async function executeTransaction(
   if (
     !isBypass &&
     amount >= HIGH_VALUE_THRESHOLD &&
-    userId !== "11111111-1111-1111-1111-111111111111"
+    userId !== (process.env.PLATFORM_ADMIN_UUID as string)
   ) {
     // Save to database as pending_approval
     const { data: pendingTx, error: dbError } = await supabaseAdmin
@@ -519,7 +519,7 @@ export async function executeAtomicBatchTransfer(
       const { data: treasuryWallet } = await supabaseAdmin
         .from("user_wallets")
         .select("wallet_address")
-        .eq("id", "11111111-1111-1111-1111-111111111111")
+        .eq("id", (process.env.PLATFORM_ADMIN_UUID as string))
         .single();
       treasuryAddress = treasuryWallet?.wallet_address;
     }
@@ -718,7 +718,7 @@ export async function autoSweepWallets(
   const results = [];
 
   for (const wallet of userWallets) {
-    if (wallet.id === "11111111-1111-1111-1111-111111111111") continue; // Skip admin wallet
+    if (wallet.id === (process.env.PLATFORM_ADMIN_UUID as string)) continue; // Skip admin wallet
 
     // Get balance of USDC
     const balanceRaw = await getTokenBalance(
@@ -761,7 +761,7 @@ export async function manualSweepAdminWallet(
   amount: number,
   treasuryAddress: string
 ) {
-  const adminId = "11111111-1111-1111-1111-111111111111";
+  const adminId = (process.env.PLATFORM_ADMIN_UUID as string);
   const { data: adminWallet } = await supabaseAdmin
     .from("user_wallets")
     .select("wallet_id, wallet_address")
@@ -810,7 +810,7 @@ export async function executeReleaseEscrow(
   orderId: string
 ) {
   const amount = Number(rawAmount);
-  const adminId = "11111111-1111-1111-1111-111111111111";
+  const adminId = (process.env.PLATFORM_ADMIN_UUID as string);
   const { data: adminWallet } = await supabaseAdmin
     .from("user_wallets")
     .select("wallet_id, wallet_address")

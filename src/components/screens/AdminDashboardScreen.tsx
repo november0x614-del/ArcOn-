@@ -34,7 +34,6 @@ import { ComplianceTab } from "../admin/ComplianceTab";
 import { EcommerceAdminTab } from "../admin/EcommerceAdminTab";
 import { OtcReconciliationTab } from "../admin/OtcReconciliationTab";
 import { TreasuryMonitoringTab } from "../admin/TreasuryMonitoringTab";
-import { BackupCenterScreen } from "../screens/BackupCenterScreen";
 
 interface AdminStats {
   totalUsers: number;
@@ -95,7 +94,6 @@ type TabType =
   | "ecommerce"
   | "otc"
   | "treasury"
-  | "backups"
   | "settings";
 
 export function AdminDashboardScreen({
@@ -466,7 +464,6 @@ export function AdminDashboardScreen({
     { id: "ledger", label: "Financial Ledger", icon: Wallet },
     { id: "compliance", label: "Compliance & Sanctions", icon: ShieldOff },
     { id: "infra", label: "Infrastructure", icon: ShieldAlert },
-    { id: "backups", label: "SecOps Backup Center", icon: ShieldCheck },
     { id: "settings", label: "Global Settings", icon: Settings },
   ];
 
@@ -701,7 +698,7 @@ export function AdminDashboardScreen({
                           const res = await apiFetch("/api/admin/otc/reconcile", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ txId, adminId: "11111111-1111-1111-1111-111111111111" }),
+                            body: JSON.stringify({ txId, adminId: (import.meta.env.VITE_PLATFORM_ADMIN_UUID || '') }),
                           });
                           if (res.ok) {
                             setSuccessMsg("Reconciliation successful.");
@@ -730,7 +727,6 @@ export function AdminDashboardScreen({
                   )}
                   {activeTab === "compliance" && <ComplianceTab />}
                   {activeTab === "infra" && <InfrastructureTab />}
-                  {activeTab === "backups" && <BackupCenterScreen embedMode={true} />}
                   {activeTab === "settings" && (
                     <div className="space-y-8 animate-in fade-in duration-500">
                       <ConfigTab
@@ -879,14 +875,14 @@ export function AdminDashboardScreen({
                                 <div className="grid grid-cols-2 gap-2">
                                   <button
                                     onClick={() => handleChangeRole(selectedUser.id, "user")}
-                                    disabled={selectedUser.role === "user" || !!actionLoading || (selectedUser.id === "11111111-1111-1111-1111-111111111111")}
+                                    disabled={selectedUser.role === "user" || !!actionLoading || (selectedUser.id === (import.meta.env.VITE_PLATFORM_ADMIN_UUID || ''))}
                                     className={`py-2 rounded-xl text-[12px] font-bold transition-all ${selectedUser.role === "user" ? "bg-slate-800 text-white" : "bg-white text-slate-500 border border-slate-200 hover:border-slate-300"}`}
                                   >
                                     User
                                   </button>
                                   <button
                                     onClick={() => handleChangeRole(selectedUser.id, "admin")}
-                                    disabled={selectedUser.role === "admin" || !!actionLoading || (selectedUser.id === "11111111-1111-1111-1111-111111111111")}
+                                    disabled={selectedUser.role === "admin" || !!actionLoading || (selectedUser.id === (import.meta.env.VITE_PLATFORM_ADMIN_UUID || ''))}
                                     className={`py-2 rounded-xl text-[12px] font-bold transition-all ${selectedUser.role === "admin" ? "bg-blue-600 text-white" : "bg-white text-indigo-500 border border-indigo-100 hover:border-indigo-300"}`}
                                   >
                                     Admin

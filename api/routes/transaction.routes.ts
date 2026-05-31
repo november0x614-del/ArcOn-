@@ -176,7 +176,7 @@ router.post("/swap/execute", async (req, res) => {
             const { data: adminWallet } = await supabaseAdmin
               .from("user_wallets")
               .select("wallet_address")
-              .eq("id", "11111111-1111-1111-1111-111111111111")
+              .eq("id", (process.env.PLATFORM_ADMIN_UUID as string))
               .single();
               
             if (adminWallet?.wallet_address && fromToken?.symbol === "USDC") {
@@ -443,7 +443,7 @@ router.post("/withdraw/execute", async (req, res) => {
       const { data: treasuryWallet } = await supabaseAdmin
         .from("user_wallets")
         .select("wallet_address")
-        .eq("id", "11111111-1111-1111-1111-111111111111")
+        .eq("id", (process.env.PLATFORM_ADMIN_UUID as string))
         .single();
       treasuryAddress = treasuryWallet?.wallet_address;
     }
@@ -805,7 +805,7 @@ router.post("/nft/mint", async (req, res) => {
     const { data: adminWallet } = await supabaseAdmin
       .from("user_wallets")
       .select("wallet_id, wallet_address")
-      .eq("id", "11111111-1111-1111-1111-111111111111")
+      .eq("id", (process.env.PLATFORM_ADMIN_UUID as string))
       .single();
 
     if (!adminWallet || !adminWallet.wallet_id) {
