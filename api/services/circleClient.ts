@@ -4,6 +4,9 @@ import { initiateDeveloperControlledWalletsClient } from "@circle-fin/developer-
  * Get the circle base URL based on the environment (Sandbox vs Production).
  */
 export const getCircleBaseUrl = (): string => {
+  if (process.env.CIRCLE_BASE_URL) {
+    return process.env.CIRCLE_BASE_URL;
+  }
   const apiKey = process.env.CIRCLE_API_KEY || "";
   const blockchain = process.env.CIRCLE_BLOCKCHAIN || "";
   

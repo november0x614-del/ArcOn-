@@ -35,16 +35,17 @@ export async function fetchUnifiedBalance(
   // 1. Parallel Fetch: Circle Balance (Cloud) + Arc Native Balance (On-Chain) + Arc ERC20 USDC
   const [circleResponse, nativeWei, nativeUSDCWei] = await Promise.all([
     walletId
-      ? getCircleClientInstance()
-          .getWalletTokenBalance({ id: walletId })
+      ? Promise.resolve().then(() => getCircleClientInstance().getWalletTokenBalance({ id: walletId }))
           .catch((err) => {
-            console.warn(
-              `[CircleBalance API] getWalletTokenBalance failed for wallet ${walletId}:`,
-              err.message,
-            );
+            if (!err.message?.includes("Invalid credentials") && !err.message?.includes("are required")) {
+              console.warn(
+                `[CircleBalance API] failed for wallet ${walletId}:`,
+                err.message,
+              );
+            }
             return null;
           })
-      : null,
+      : Promise.resolve(null),
     publicClient
       .getBalance({ address: walletAddress as `0x${string}` })
       .catch((e) => {
