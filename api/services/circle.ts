@@ -325,12 +325,11 @@ export async function executeTransaction(
     if (dbError) throw dbError;
 
     await logAuditEvent(
-      supabaseAdmin,
       userId,
       "HIGH_VALUE_TX_APPROVAL_QUEUED",
+      pendingTx.id,
       {
         amount,
-        txId: pendingTx.id,
       },
     );
 
@@ -430,22 +429,38 @@ export async function executeTransaction(
   // Circle return an internal tx ID first
   const circleTxId = response.data?.id;
 
-  const { error } = await supabaseAdmin.from("transactions").insert({
-    user_id: userId,
-    amount: `-${amount.toFixed(2)}`,
-    type: type,
-    status: "pending",
-    internal_ref: circleTxId,
-    metadata: {
-      ...metadata,
-      description:
-        metadata.memo ||
-        (type === "transfer" ? `Transfer to ${validDest}` : undefined),
-      real: true,
-    },
-  });
+  let dbResult;
+  if (metadata?.existingTxId) {
+    dbResult = await supabaseAdmin
+      .from("transactions")
+      .update({
+        status: "pending",
+        internal_ref: circleTxId,
+        metadata: {
+          ...metadata,
+          description: `[Approved] ${metadata.memo || (type === "transfer" ? `Transfer to ${validDest}` : "Treasury Move")}`,
+          real: true,
+        },
+      })
+      .eq("id", metadata.existingTxId);
+  } else {
+    dbResult = await supabaseAdmin.from("transactions").insert({
+      user_id: userId,
+      amount: `-${amount.toFixed(2)}`,
+      type: type,
+      status: "pending",
+      internal_ref: circleTxId,
+      metadata: {
+        ...metadata,
+        description:
+          metadata.memo ||
+          (type === "transfer" ? `Transfer to ${validDest}` : undefined),
+        real: true,
+      },
+    });
+  }
 
-  if (error) throw error;
+  if (dbResult.error) throw dbResult.error;
 
   return {
     txId: circleTxId,

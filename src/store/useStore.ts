@@ -187,13 +187,22 @@ export const useStore = create<AppState>()((set) => ({
             : "outbound");
         const sign = direction === "inbound" ? "+" : "-";
 
-        let title = tx.type.charAt(0).toUpperCase() + tx.type.slice(1);
-        if (tx.type === "receive") title = "Inbound Transfer";
-        if (tx.type === "bridge")
+        let txType = tx.type;
+        if (tx.metadata?.real_type === "mint_nft" || tx.metadata?.sub_type === "mint_nft") {
+          txType = "mint_nft";
+        }
+
+        let title = txType.charAt(0).toUpperCase() + txType.slice(1);
+        if (txType === "mint_nft") {
+          title = `NFT Mint: ${tx.metadata?.name || "Asset"}`;
+        } else if (txType === "receive") {
+          title = "Inbound Transfer";
+        } else if (txType === "bridge") {
           title =
             direction === "inbound"
               ? "CCTP Inbound Bridge"
               : "CCTP Outbound Bridge";
+        }
 
         const resolvedTxHash = tx.tx_hash || tx.metadata?.txHash || tx.internal_ref;
         let generatedExplorerUrl = tx.metadata?.explorerUrl;
@@ -206,7 +215,7 @@ export const useStore = create<AppState>()((set) => ({
         
         return {
           id: tx.id || tx.internal_ref,
-          type: tx.type,
+          type: txType,
           title,
           amount: sign + Math.abs(rawAmount).toString(),
           currency: "USDC",

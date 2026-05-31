@@ -6,7 +6,7 @@ import { executeTransaction, executeReleaseEscrow } from "../services/circle.js"
 const router = express.Router();
 
 // Helper to handle seller address extraction (for simplicity in testnet)
-const DEFAULT_SELLER_ADDRESS = "0xMerchant";
+const DEFAULT_SELLER_ADDRESS = "0x75677977Cc68D7Dc3A210C01bF5Fe2dC17dc1111"; // Valid checksum EVM address
 
 /**
  * 1. Checkout Endpoint

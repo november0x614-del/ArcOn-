@@ -29,7 +29,7 @@ interface ArcContextType {
       description: string;
       image: string;
     };
-  }) => Promise<{ success: boolean; txHash?: string }>;
+  }) => Promise<{ success: boolean; txHash?: string; txId?: string }>;
 }
 
 const ARC_TESTNET_CONFIG = {

@@ -84,8 +84,13 @@ let platformConfigs = {
   nftContractAddress: process.env.NFT_CONTRACT_ADDRESS || "0x582531CBA2D68a9F0F4E83b38466e3bfCDbaab51",
 };
 
+let isConfigSynced = false;
+let isSyncing = false;
+
 // Internal cache sync
 async function syncConfigsFromDB() {
+  if (isConfigSynced || isSyncing) return;
+  isSyncing = true;
   try {
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
@@ -101,6 +106,7 @@ async function syncConfigsFromDB() {
 
     if (data?.value) {
       platformConfigs = { ...platformConfigs, ...data.value };
+      isConfigSynced = true;
       console.log("[SyncConfig] Successfully synced from Supabase.");
     } else {
       // First time initialization in DB if empty
@@ -109,14 +115,26 @@ async function syncConfigsFromDB() {
         { key: "PLATFORM_CONFIGS", value: platformConfigs },
         { onConflict: "key" }
       );
+      isConfigSynced = true;
     }
   } catch (err) {
     console.error("[SyncConfig] Critical failure:", err);
+  } finally {
+    isSyncing = false;
   }
 }
 
-// Initial sync
-syncConfigsFromDB();
+// Ensure first-request or admin-request sync middleware is loaded
+router.use(async (req, res, next) => {
+  try {
+    if (!isConfigSynced) {
+      await syncConfigsFromDB();
+    }
+  } catch (err) {
+    console.error("[AdminMiddleware] Config sync deferred:", err);
+  }
+  next();
+});
 
 router.post("/init", async (_req, res) => {
   try {
@@ -197,6 +215,9 @@ router.post("/init-force", async (_req, res) => {
 });
 
 export function getPlatformConfigs() {
+  if (!isConfigSynced && !isSyncing) {
+    syncConfigsFromDB().catch(err => console.error("[SyncConfig Background] Error:", err));
+  }
   return platformConfigs;
 }
 

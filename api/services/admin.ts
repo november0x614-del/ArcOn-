@@ -91,14 +91,10 @@ export async function decideApproval(
     amount,
     destination,
     tx.type,
-    { ...tx.metadata, bypassApproval: true }, // Need to modify executeTransaction to respect this
+    { ...tx.metadata, bypassApproval: true, existingTxId: txId },
   );
 
-  // 3. Update the original record (or delete it? No, keep it as the record)
-  // Actually executeTransaction creates a NEW record.
-  // We should modify executeTransaction to optionally UPDATE an existing record.
-  // But to keep it simple, we'll let it create a new record and mark this one as 'approved_and_replaced'
-
+  // 3. Update the original record (no double transaction creation in DB)
   await supabase
     .from("transactions")
     .update({

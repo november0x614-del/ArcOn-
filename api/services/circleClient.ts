@@ -1,14 +1,25 @@
 import { initiateDeveloperControlledWalletsClient } from "@circle-fin/developer-controlled-wallets";
 
 /**
+ * Safely extracts environment variables, removing wrapping quotes and trailing/leading whitespaces (common in platform migrations like Vercel).
+ */
+export const getCircleApiKey = (): string => {
+  return (process.env.CIRCLE_API_KEY || "").trim().replace(/^"|"$/g, "");
+};
+
+export const getCircleEntitySecret = (): string => {
+  return (process.env.CIRCLE_ENTITY_SECRET || "").trim().replace(/^"|"$/g, "");
+};
+
+/**
  * Get the circle base URL based on the environment (Sandbox vs Production).
  */
 export const getCircleBaseUrl = (): string => {
   if (process.env.CIRCLE_BASE_URL) {
-    return process.env.CIRCLE_BASE_URL;
+    return process.env.CIRCLE_BASE_URL.trim().replace(/^"|"$/g, "");
   }
-  const apiKey = process.env.CIRCLE_API_KEY || "";
-  const blockchain = process.env.CIRCLE_BLOCKCHAIN || "";
+  const apiKey = getCircleApiKey();
+  const blockchain = (process.env.CIRCLE_BLOCKCHAIN || "").trim().replace(/^"|"$/g, "");
   
   if (
     apiKey.toLowerCase().includes("sandbox") ||
@@ -25,8 +36,8 @@ export const getCircleBaseUrl = (): string => {
  * Ensures consistent configuration across the backend services.
  */
 export const getCircleClientInstance = () => {
-  const apiKey = process.env.CIRCLE_API_KEY;
-  const entitySecret = process.env.CIRCLE_ENTITY_SECRET;
+  const apiKey = getCircleApiKey();
+  const entitySecret = getCircleEntitySecret();
 
   if (!apiKey || !entitySecret) {
     throw new Error(
@@ -50,7 +61,7 @@ export const circleApiFetch = async (
   endpoint: string,
   options: RequestInit = {},
 ) => {
-  const apiKey = process.env.CIRCLE_API_KEY;
+  const apiKey = getCircleApiKey();
   if (!apiKey) throw new Error("CIRCLE_API_KEY is required");
 
   const baseUrl = getCircleBaseUrl();

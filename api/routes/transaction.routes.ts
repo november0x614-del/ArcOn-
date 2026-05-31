@@ -474,9 +474,8 @@ router.post("/payments/create", async (req, res) => {
     const client = getCircleClientInstance();
 
     if (parseFloat(amount) > 100) {
-      await logAuditEvent(getSupabaseAdmin(), userId, "TRANSFER_HIGH_VALUE", {
+      await logAuditEvent(userId, "TRANSFER_HIGH_VALUE", destinationAddress, {
         amount,
-        destinationAddress,
       });
     }
 
@@ -846,7 +845,7 @@ router.post("/nft/mint", async (req, res) => {
     await supabaseAdmin.from("transactions").insert({
       user_id: userId,
       amount: "0",
-      type: "mint_nft",
+      type: "payment",
       status: "pending",
       internal_ref: circleTxId,
       tx_hash: txHash,
@@ -858,7 +857,9 @@ router.post("/nft/mint", async (req, res) => {
         real: true,
         isAsync: true,
         nftContractAddress,
-        tokenUri: formattedTokenUri
+        tokenUri: formattedTokenUri,
+        real_type: "mint_nft",
+        sub_type: "mint_nft"
       }
     });
 
