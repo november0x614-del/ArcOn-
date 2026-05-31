@@ -1,5 +1,5 @@
-import { getCircleClientInstance } from "./circleClient";
-import { getSupabaseAdmin } from "../config/supabase";
+import { getCircleClientInstance } from "./circleClient.js";
+import { getSupabaseAdmin } from "../config/supabase.js";
 
 export async function getWalletDetails(walletId: string) {
   const client = getCircleClientInstance();
@@ -41,7 +41,7 @@ export async function fetchPendingApprovals() {
   return data;
 }
 
-import { executeTransaction } from "./circle";
+import { executeTransaction } from "./circle.js";
 
 export async function decideApproval(
   txId: string,

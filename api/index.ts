@@ -1,15 +1,12 @@
 import express from "express";
 import compression from "compression";
 import rateLimit from "express-rate-limit";
-import { getSupabaseAdmin, isUserBlocked } from "./config/supabase";
-import walletRoutes from "./routes/wallet.routes";
-import transactionRoutes from "./routes/transaction.routes";
-import adminRoutes from "./routes/admin.routes";
-import miscRoutes from "./routes/misc.routes";
-import ecommerceRoutes from "./routes/ecommerce.routes";
-
-// Re-export core services for server/other files that reference index
-export { getSupabaseAdmin, isUserBlocked };
+import { getSupabaseAdmin, isUserBlocked } from "./config/supabase.js";
+import walletRoutes from "./routes/wallet.routes.js";
+import transactionRoutes from "./routes/transaction.routes.js";
+import adminRoutes from "./routes/admin.routes.js";
+import miscRoutes from "./routes/misc.routes.js";
+import ecommerceRoutes from "./routes/ecommerce.routes.js";
 
 process.on("uncaughtException", (err) => {
   console.error("Unhandled Exception:", err);
@@ -74,6 +71,12 @@ app.use("/", miscRoutes);
 
 app.use("/api", ecommerceRoutes);
 app.use("/", ecommerceRoutes);
+
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
 
 // Global Error Handler for JSON APIs
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

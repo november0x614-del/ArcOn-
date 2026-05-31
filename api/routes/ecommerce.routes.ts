@@ -1,7 +1,7 @@
 import express from "express";
 import crypto from "crypto";
-import { getSupabaseAdmin } from "../config/supabase";
-import { executeTransaction, executeReleaseEscrow } from "../services/circle";
+import { getSupabaseAdmin } from "../config/supabase.js";
+import { executeTransaction, executeReleaseEscrow } from "../services/circle.js";
 
 const router = express.Router();
 
@@ -92,7 +92,7 @@ router.post("/ecommerce/checkout", async (req, res) => {
   }
 });
 
-import { requireRole } from "../middleware/requireRole";
+import { requireRole } from "../middleware/requireRole.js";
 
 /**
  * 2. Release Escrow & Split Payment

@@ -1,7 +1,7 @@
 import express from "express";
-import { getSupabaseAdmin } from "../config/supabase";
-import { requireRole } from "../middleware/requireRole";
-import { getTokenBalance, USDC_ADDRESS } from "../services/arcViem";
+import { getSupabaseAdmin } from "../config/supabase.js";
+import { requireRole } from "../middleware/requireRole.js";
+import { getTokenBalance, USDC_ADDRESS } from "../services/arcViem.js";
 import { formatUnits } from "viem";
 import {
   createWallet,
@@ -9,18 +9,18 @@ import {
   interpretCircleError,
   autoSweepWallets,
   manualSweepAdminWallet,
-} from "../services/circle";
-import { fetchUnifiedBalance } from "../services/balance";
+} from "../services/circle.js";
+import { fetchUnifiedBalance } from "../services/balance.js";
 import * as crypto from "crypto";
-import { circleApiFetch } from "../services/circleClient";
+import { circleApiFetch } from "../services/circleClient.js";
 import {
   getWalletDetails,
   upgradeWallet,
   fetchSystemTransactions,
   fetchPendingApprovals,
   decideApproval,
-} from "../services/admin";
-import { logAdminAction } from "../services/audit";
+} from "../services/admin.js";
+import { logAdminAction } from "../services/audit.js";
 
 const router = express.Router();
 

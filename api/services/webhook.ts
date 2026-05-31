@@ -1,7 +1,7 @@
 import * as crypto from "crypto";
 import { Request, Response } from "express";
-import { interpretCircleError } from "./circle";
-import { getCircleBaseUrl } from "./circleClient";
+import { interpretCircleError } from "./circle.js";
+import { getCircleBaseUrl } from "./circleClient.js";
 
 // Public key cache
 const publicKeyCache: Record<string, { publicKey: string; algorithm: string }> =

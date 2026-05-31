@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { getSupabaseAdmin } from "../config/supabase";
+import { getSupabaseAdmin } from "../config/supabase.js";
 
 /**
  * Enterprise-Grade RBAC Middleware

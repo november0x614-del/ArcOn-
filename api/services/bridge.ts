@@ -2,8 +2,8 @@ import {
   TOKEN_MESSENGER,
   USDC_ADDRESS,
   formatRecipientForCCTP,
-} from "./arcViem";
-import { getCircleClientInstance } from "./circleClient";
+} from "./arcViem.js";
+import { getCircleClientInstance } from "./circleClient.js";
 import * as crypto from "crypto";
 
 /**

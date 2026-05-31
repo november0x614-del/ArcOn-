@@ -6,13 +6,13 @@ import {
   waitForConfirmation,
   USDC_ADDRESS,
   getArcScanUrl,
-} from "./arcViem";
+} from "./arcViem.js";
 import { encodeFunctionData, parseAbi } from "viem";
-import { logAuditEvent } from "./audit";
-import { getCircleClientInstance, circleApiFetch } from "./circleClient";
+import { logAuditEvent } from "./audit.js";
+import { getCircleClientInstance, circleApiFetch } from "./circleClient.js";
 import * as crypto from "crypto";
 
-import { getSupabaseAdmin } from "../config/supabase";
+import { getSupabaseAdmin } from "../config/supabase.js";
 
 async function getGasFeeStrategy(): Promise<"SPONSORED" | "USER_PAID_USDC"> {
   try {
@@ -67,20 +67,35 @@ export async function createWallet(supabaseAdmin: any, userId: string) {
 
   const client = getCircleClientInstance();
 
-  // 1. Create Wallet Set
-  const walletSetResponse = await client.createWalletSet({
-    name: "Lounge Wallet Set",
-    idempotencyKey: crypto.randomUUID(),
-  });
+  // 1. Get existing Wallet Set from Admin or create one
+  let walletSetId = "";
+  try {
+    const { data: adminWallet } = await supabaseAdmin
+      .from("user_wallets")
+      .select("wallet_set_id")
+      .eq("id", "11111111-1111-1111-1111-111111111111")
+      .single();
+    if (adminWallet?.wallet_set_id) {
+      walletSetId = adminWallet.wallet_set_id;
+    }
+  } catch (err) {
+    console.log("Could not find admin wallet set, will create new one");
+  }
 
-  const walletSet = walletSetResponse.data?.walletSet;
-  if (!walletSet?.id) {
-    throw new Error("Wallet set creation failed: no ID returned from Circle");
+  if (!walletSetId) {
+    const walletSetResponse = await client.createWalletSet({
+      name: "Lounge Wallet Set",
+      idempotencyKey: crypto.randomUUID(),
+    });
+    walletSetId = walletSetResponse.data?.walletSet?.id || "";
+    if (!walletSetId) {
+      throw new Error("Wallet set creation failed: no ID returned from Circle");
+    }
   }
 
   // 2. Create Wallet in the Set
   const walletResponse = await client.createWallets({
-    walletSetId: walletSet.id,
+    walletSetId: walletSetId,
     blockchains: ["ARC-TESTNET"],
     count: 1,
     accountType: "SCA",
@@ -102,7 +117,7 @@ export async function createWallet(supabaseAdmin: any, userId: string) {
       id: userId,
       wallet_id: wallet.id,
       wallet_address: wallet.address,
-      wallet_set_id: walletSet.id,
+      wallet_set_id: walletSetId,
     });
     
     if (error) {
@@ -114,7 +129,7 @@ export async function createWallet(supabaseAdmin: any, userId: string) {
   return {
     walletId: wallet.id,
     address: wallet.address,
-    walletSetId: walletSet.id,
+    walletSetId: walletSetId,
   };
 }
 
