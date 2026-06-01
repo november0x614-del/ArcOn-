@@ -38,7 +38,7 @@ export function EmailScreen({ onBack }: EmailScreenProps) {
   };
 
   return (
-    <div className="w-full h-full bg-[#f8fafc] relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
+    <div className="w-full h-full bg-[#ecf5fc] relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
       {/* Header */}
       <div className="flex items-center justify-center relative py-4 shrink-0 bg-white shadow-sm z-10 w-full">
         <button
@@ -52,7 +52,7 @@ export function EmailScreen({ onBack }: EmailScreenProps) {
         </h2>
       </div>
 
-      <div className="flex flex-col flex-1 pb-24 px-4 bg-white relative w-full overflow-y-auto scrollbar-hide items-center">
+      <div className="flex flex-col flex-1 pb-24 px-4 bg-[#ecf5fc] relative w-full overflow-y-auto scrollbar-hide items-center">
         <div className="w-full max-w-[500px] flex flex-col h-full"> 
           <div className="pt-6 pb-6 text-center w-full">
             <p className="text-[14px] text-slate-600 leading-[1.6]">

@@ -29,38 +29,30 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
     setTimeout(() => setCopiedText(null), 2000);
   };
 
-  let rawHash =
+  const possibleRealHash =
     (tx?.metadata as any)?.txHash ||
     (tx as any)?.txHash ||
-    (tx as any)?.tx_hash ||
-    tx?.id ||
-    tx?.internal_ref ||
-    "0xdc78e12b7fa120021c99f018a14b9c1d";
+    (tx as any)?.tx_hash;
 
-  if (typeof rawHash === "object" && rawHash !== null) {
-    rawHash =
-      rawHash.hash || rawHash.txHash || rawHash.id || rawHash.name || "";
-  }
-
-  if (typeof rawHash === "string" && rawHash.startsWith("{")) {
-    try {
-      const parsed = JSON.parse(rawHash);
-      rawHash =
-        parsed.hash || parsed.txHash || parsed.id || parsed.name || rawHash;
-    } catch (e) {
-      // Ignore
+  const isValidBlockchainHash = (hash: any): boolean => {
+    if (!hash || typeof hash !== "string") return false;
+    const clean = hash.trim().toLowerCase();
+    if (
+      clean.includes("send_") ||
+      clean.includes("swap_") ||
+      clean.includes("bridge_") ||
+      clean.includes("stake_") ||
+      clean.includes("withdraw_") ||
+      clean.includes("pay_") ||
+      clean.includes("receive_")
+    ) {
+      return false;
     }
-  }
+    return clean.startsWith("0x") && clean.length === 66 && /^[0-9a-fA-F]+$/.test(clean.substring(2));
+  };
 
-  rawHash = String(rawHash);
-
-  const txHash = rawHash.startsWith("0x")
-    ? rawHash
-    : "0x" +
-      rawHash
-        .replace(/[^a-fA-F0-9]/g, "")
-        .padStart(64, "0")
-        .substring(0, 64);
+  const hasHash = isValidBlockchainHash(possibleRealHash);
+  const txHash = hasHash && typeof possibleRealHash === "string" ? possibleRealHash : "";
 
   const isSuccess =
     tx?.status === "success" || (tx?.status as any) === "confirmed";
@@ -323,30 +315,36 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                   <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
                     Transaction ID
                   </span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() =>
-                        window.open(
-                          tx?.metadata?.explorerUrl ||
-                            `https://testnet.arcscan.app/tx/${txHash}`,
-                          "_blank",
-                        )
-                      }
-                      className="text-[14px] font-medium text-blue-600 hover:text-blue-700 font-mono tracking-tight cursor-pointer bg-transparent border-0 p-0 text-left flex items-center transition-colors break-all"
-                      title="View on Arcscan"
-                    >
-                      {txHash.substring(0, 10)}...
-                      {txHash.substring(txHash.length - 8)}
-                      <ExternalLink size={14} className="ml-1 opacity-70" />
-                    </button>
-                    <button
-                      onClick={() => handleCopy(txHash, "TxHash")}
-                      className="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-50 transition-colors bg-transparent border-0 cursor-pointer flex items-center justify-center ml-auto"
-                      title="Copy transaction ID"
-                    >
-                      <Copy size={14} />
-                    </button>
-                  </div>
+                  {hasHash ? (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() =>
+                          window.open(
+                            tx?.metadata?.explorerUrl ||
+                              `https://testnet.arcscan.app/tx/${txHash}`,
+                            "_blank",
+                          )
+                        }
+                        className="text-[14px] font-medium text-blue-600 hover:text-blue-700 font-mono tracking-tight cursor-pointer bg-transparent border-0 p-0 text-left flex items-center transition-colors break-all"
+                        title="View on Arcscan"
+                      >
+                        {txHash.substring(0, 10)}...
+                        {txHash.substring(txHash.length - 8)}
+                        <ExternalLink size={14} className="ml-1 opacity-70" />
+                      </button>
+                      <button
+                        onClick={() => handleCopy(txHash, "TxHash")}
+                        className="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-50 transition-colors bg-transparent border-0 cursor-pointer flex items-center justify-center ml-auto"
+                        title="Copy transaction ID"
+                      >
+                        <Copy size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-[14px] font-bold text-slate-400 font-mono">
+                      -
+                    </span>
+                  )}
                 </div>
 
                 {/* Sender */}

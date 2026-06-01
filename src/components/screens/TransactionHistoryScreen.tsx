@@ -101,7 +101,7 @@ export function TransactionHistoryScreen({
   }, [transactions, searchQuery]);
 
   return (
-    <div className="w-full h-full bg-[#f8fafc] relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
+    <div className="w-full h-full bg-[#ecf5fc] relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
       {/* Header */}
       <div className="flex flex-col px-4 pt-6 pb-4 bg-slate-900 shadow-md relative z-10 w-full shrink-0">
         <div className="flex items-center justify-between mb-4">

@@ -36,7 +36,9 @@ export function AmountInputScreen({
   );
 
   // Extract configuration values
-  const minTransfer = parseFloat(platformConfig?.minTransferAmount || "1");
+  const minTransfer = platformConfig?.minTransferAmount
+    ? parseFloat(platformConfig.minTransferAmount.toString().replace(/[^0-9.]/g, "")) || 0.1
+    : 0.1;
   const platformFee = platformConfig?.withdrawFee
     ? parseFloat(platformConfig.withdrawFee.replace(/[^0-9.]/g, "")) || 0
     : 0;
@@ -74,6 +76,52 @@ export function AmountInputScreen({
 
   const numericAmount = amount ? parseFloat(amount) : 0;
 
+  // Format displayName based on contact.name
+  const displayName = React.useMemo(() => {
+    const name = contact.name || "";
+    if (name.toUpperCase().startsWith("USER_0X")) {
+      const addrHex = name.substring(5); // removes USER_
+      return addrHex.toLowerCase();
+    }
+    return name;
+  }, [contact.name]);
+
+  // Clean initials rendering to display a beautiful generic Wallet/User vector icon for numeric/hex fallback avatars
+  const isDigitOnly = /^\d+$/.test(contact.initials || "");
+  const avatarEl = React.useMemo(() => {
+    if (isDigitOnly || displayName.startsWith("0x")) {
+      return (
+        <div className="w-[64px] h-[64px] shadow-sm rounded-full bg-slate-100 flex items-center justify-center text-slate-500 mb-4 border-2 border-white shrink-0">
+          <svg className="w-7 h-7 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+          </svg>
+        </div>
+      );
+    }
+    return (
+      <div className="w-[64px] h-[64px] shadow-sm rounded-full bg-slate-900 flex items-center justify-center font-bold text-white text-[20px] shrink-0 mb-4 border-2 border-white">
+        {contact.initials}
+      </div>
+    );
+  }, [contact.initials, isDigitOnly, displayName]);
+
+  const confirmAvatarEl = React.useMemo(() => {
+    if (isDigitOnly || displayName.startsWith("0x")) {
+      return (
+        <div className="w-[46px] h-[46px] rounded-full bg-slate-100 flex items-center justify-center text-slate-500 border border-slate-200 shrink-0">
+          <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+          </svg>
+        </div>
+      );
+    }
+    return (
+      <div className="w-[46px] h-[46px] rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-750 border border-slate-100 shrink-0 text-[13px]">
+        {contact.initials}
+      </div>
+    );
+  }, [contact.initials, isDigitOnly, displayName]);
+
   // Accurate USDC Balance check for Arc Testnet
   const usdcData = allBalances.find((b) => b.token?.symbol === "USDC");
   const actualUSDC = usdcData ? parseFloat(usdcData.amount) : 0;
@@ -84,7 +132,7 @@ export function AmountInputScreen({
   const isWithinLimit = numericAmount <= dailyLimit;
 
   return (
-    <div className="w-full h-full bg-white relative flex flex-col z-50">
+    <div className="w-full h-full bg-[#ecf5fc] relative flex flex-col z-50">
       {/* Header */}
       <div className="flex justify-center bg-slate-900 shadow-md relative z-10 w-full shrink-0">
         <div className="flex items-center px-4 pt-6 pb-3 w-full max-w-[500px] justify-center relative">
@@ -98,15 +146,13 @@ export function AmountInputScreen({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto w-full pb-32 p-5 bg-[#f8fafc]">
+      <div className="flex-1 overflow-y-auto w-full pb-32 p-5 bg-[#ecf5fc]">
         <div className="w-full max-w-[500px] mx-auto flex flex-col relative w-full h-full">
           {/* Recipient Card - Updated Design */}
           <div className="bg-white rounded-[32px] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 mb-8 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-500">
-            <div className="w-[64px] h-[64px] shadow-sm rounded-full bg-slate-900 flex items-center justify-center font-bold text-white text-[22px] shrink-0 mb-4 border-4 border-slate-50">
-              {contact.initials}
-            </div>
-            <h2 className="text-slate-900 font-black text-[18px] uppercase tracking-tight leading-tight text-center">
-              {contact.name}
+            {avatarEl}
+            <h2 className={`text-slate-900 font-bold text-[18px] tracking-tight leading-tight text-center ${displayName.startsWith("0x") ? "font-mono lowercase" : "uppercase"}`}>
+              {displayName}
             </h2>
             <div className="mt-2 px-4 py-1.5 bg-slate-50 rounded-full border border-slate-100">
               <p className="text-slate-500 text-[12px] font-bold tracking-tight text-center flex items-center gap-1.5">
@@ -147,13 +193,18 @@ export function AmountInputScreen({
 
             <div className="flex items-center justify-between mt-2 pt-3 border-t border-slate-100">
               <div className="flex flex-col gap-0.5">
-                <span className="text-[11px] text-slate-500 font-medium">
+                <span className="text-[11px] text-slate-500 font-medium font-sans text-left">
                   Balance: {actualUSDC.toFixed(2)} USDC
                 </span>
                 <span
-                  className={`text-[10px] ${numericAmount > dailyLimit ? "text-red-500 font-bold" : "text-slate-400 font-medium"}`}
+                  className={`text-[10px] font-sans text-left ${amount && numericAmount < minTransfer ? "text-red-500 font-bold" : "text-slate-400 font-medium"}`}
                 >
-                  Limit: {dailyLimit.toFixed(2)} USDC
+                  Min. Transfer: {minTransfer} USDC
+                </span>
+                <span
+                  className={`text-[10px] font-sans text-left ${numericAmount > dailyLimit ? "text-red-500 font-bold" : "text-slate-400 font-medium"}`}
+                >
+                  Daily Limit: {dailyLimit.toFixed(2)} USDC
                 </span>
               </div>
               <button
@@ -235,7 +286,9 @@ export function AmountInputScreen({
                 ? "Over Limit"
                 : !hasEnough
                   ? "Insufficient Balance"
-                  : "Review Transfer"}
+                  : amount && numericAmount < minTransfer
+                    ? `Min. Transfer is ${minTransfer} USDC`
+                    : "Review Transfer"}
             </button>
           </div>
         </div>
@@ -260,12 +313,10 @@ export function AmountInputScreen({
             <div className="px-5 pb-6 overflow-y-auto pt-5 flex-1 block">
               {/* Contact Preview */}
               <div className="flex items-center gap-4 mb-8 text-left">
-                <div className="w-[46px] h-[46px] rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600 text-[15px] shrink-0">
-                  {contact.initials}
-                </div>
+                {confirmAvatarEl}
                 <div className="flex flex-col overflow-hidden gap-[2px]">
-                  <span className="font-extrabold text-[15px] text-slate-800 uppercase tracking-tight truncate">
-                    {contact.name}
+                  <span className={`font-bold text-[15px] text-slate-800 tracking-tight truncate ${displayName.startsWith("0x") ? "font-mono lowercase" : "uppercase"}`}>
+                    {displayName}
                   </span>
                   <span className="text-slate-500 text-[13px] truncate">
                     {contact.bank || contact.network} - {contact.account && contact.account.startsWith("0x") && contact.account.length > 15 ? `${contact.account.substring(0, 8)}...${contact.account.substring(contact.account.length - 6)}` : contact.account}

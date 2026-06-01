@@ -136,7 +136,7 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
     const currentPhaseIndex = phases.indexOf(processingPhase);
 
     return (
-      <div className="absolute inset-0 bg-[#f8fafc] z-[70] flex flex-col p-6 animate-in fade-in duration-300">
+      <div className="absolute inset-0 bg-[#ecf5fc] z-[70] flex flex-col p-6 animate-in fade-in duration-300">
         <div className="flex-1 flex flex-col items-center justify-center pt-10">
           <h3 className="text-[22px] font-black text-slate-900 mb-2 text-center">
             Transmitting to {toNetwork.name}
@@ -221,7 +221,7 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
 
   if (step === "success") {
     return (
-      <div className="absolute inset-0 bg-white z-[70] flex flex-col items-center justify-center p-8 text-center animate-in zoom-in-95 duration-300">
+      <div className="absolute inset-0 bg-[#ecf5fc] z-[70] flex flex-col items-center justify-center p-8 text-center animate-in zoom-in-95 duration-300">
         <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 mb-6 shadow-sm shadow-emerald-100">
           <CheckCircle2 size={40} />
         </div>
@@ -264,7 +264,7 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
   }
 
   return (
-    <div className="absolute inset-0 z-[70] bg-slate-50 flex flex-col animate-in slide-in-from-right duration-300">
+    <div className="absolute inset-0 z-[70] bg-[#ecf5fc] flex flex-col animate-in slide-in-from-right duration-300">
       {/* Header */}
       <div className="flex justify-center bg-slate-900 shadow-md relative z-10 shrink-0 w-full">
         <div className="flex items-center justify-between px-4 pt-6 pb-3 w-full max-w-[500px]">
@@ -629,19 +629,19 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
 
       {/* Pending / Recovery Screen */}
       {showPending && (
-        <div className="absolute inset-0 z-[90] bg-white flex flex-col animate-in slide-in-from-bottom duration-300">
+        <div className="absolute inset-0 z-[90] bg-[#ecf5fc] flex flex-col animate-in slide-in-from-bottom duration-300">
           <div className="flex justify-between items-center px-5 py-6 border-b border-slate-100">
             <h3 className="font-black text-[18px] text-slate-900">
               Pending Bridges
             </h3>
             <button
               onClick={() => setShowPending(false)}
-              className="p-2 bg-slate-50 rounded-full border-0 cursor-pointer"
+              className="p-2 bg-slate-50/50 rounded-full border-0 cursor-pointer"
             >
               <X size={18} className="text-slate-500" />
             </button>
           </div>
-          <div className="p-5 flex-1 overflow-y-auto bg-[#f8fafc]">
+          <div className="p-5 flex-1 overflow-y-auto bg-[#ecf5fc]">
             <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm mb-4">
               <div className="flex justify-between items-center mb-3">
                 <span className="text-[12px] font-bold text-slate-400">

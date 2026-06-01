@@ -556,68 +556,23 @@ export function EcommerceScreen({ onBack, isDesktop }: EcommerceScreenProps) {
             ) : (
               /* Real World Products Locked view */
               <div className="px-5 mt-8 pb-12 animate-in fade-in duration-300 relative z-10 text-center">
-                <div className="bg-white rounded-3xl p-7 flex flex-col items-center border border-slate-100 shadow-md text-center max-w-sm mx-auto overflow-hidden relative">
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-bl-full -z-0"></div>
+                <div className="bg-white rounded-3xl p-8 flex flex-col items-center border border-slate-100 shadow-[0_8px_30px_rgba(15,23,42,0.04)] text-center max-w-sm mx-auto overflow-hidden relative">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-slate-50 rounded-bl-full -z-0"></div>
                   
-                  <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-6 shadow-sm border border-blue-100/50 relative z-10 animate-pulse">
-                    <Lock size={26} strokeWidth={2.5} />
+                  <div className="w-16 h-16 bg-slate-50 text-slate-600 rounded-full flex items-center justify-center mb-6 shadow-sm border border-slate-100 relative z-10">
+                    <Lock size={24} strokeWidth={2.5} className="animate-pulse" />
                   </div>
                   
-                  <h3 className="font-black text-[20px] text-slate-900 tracking-tight leading-snug mb-2 relative z-10">Arc IoT Escrow Gateway</h3>
-                  <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 px-3 py-1 rounded-full mb-5 relative z-10 border border-blue-100/60">
-                    Restricted on Devnet
-                  </p>
+                  <h3 className="font-bold text-[18px] text-slate-900 tracking-tight leading-snug mb-2 relative z-10">
+                    In Development
+                  </h3>
                   
-                  <p className="text-[12.5px] text-slate-500 font-medium leading-relaxed max-w-[280px] mb-8">
-                    Sistem pelepasan aset fisik (RWA) menggunakan smart contract multi-signature yang disinkronkan dengan IoT Hardware Oracles di jaringan Arc. Modul ini terkunci hingga integrasi sensor diaktifkan secara legal.
+                  <p className="text-[13px] text-slate-500 font-medium leading-relaxed max-w-[270px] mb-2 relative z-10">
+                    Modul integrasi aset fisik (Real World Assets) sedang dalam tahap pengembangan dan akan segera diluncurkan di Arc Testnet.
                   </p>
-                  
-                  <div className="w-full text-left bg-slate-50 rounded-2xl p-4.5 border border-slate-100 shadow-inner">
-                    <div className="flex items-center gap-2 mb-3.5">
-                      <ShieldAlert size={14} className="text-slate-400" />
-                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">RWA Devnet Rules:</span>
-                    </div>
-                    <ul className="space-y-2 text-[12px] text-slate-500 font-bold">
-                      <li className="flex gap-2">
-                        <span className="text-blue-500 select-none">•</span> 
-                        <span>Hanya transaksi digital NFT yang aktif</span>
-                      </li>
-                      <li className="flex gap-2">
-                        <span className="text-blue-500 select-none">•</span> 
-                        <span>Kredit & gas dialokasikan untuk Web3 Minting</span>
-                      </li>
-                      <li className="flex gap-2">
-                        <span className="text-blue-500 select-none">•</span> 
-                        <span>Kunci Orisinalitas terenkripsi (On-chain)</span>
-                      </li>
-                    </ul>
-                  </div>
                 </div>
 
-                {/* Catalog display - frozen */}
-                <div className="mt-10 text-left">
-                  <div className="flex justify-between items-center mb-6 px-1">
-                    <div>
-                      <h4 className="font-black text-[15px] text-slate-500 tracking-tight uppercase tracking-wider">Physical Catalog (Locked)</h4>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Real-world asset integration preview</p>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 grayscale opacity-45 pointer-events-none">
-                    {products.filter(p => p.category !== "NFT").slice(0, 4).map(p => (
-                      <div key={p.id} className="bg-white rounded-2xl p-3 flex flex-col border border-slate-100 shadow-sm relative">
-                        <div className="absolute top-2.5 right-2.5 bg-slate-700/80 text-white p-1 rounded-lg">
-                          <Lock size={12} strokeWidth={3} />
-                        </div>
-                        <div className="h-32 w-full mb-3 overflow-hidden rounded-xl bg-slate-50 flex items-center justify-center">
-                           <SafeProductImage src={p.image} name={p.name} category={p.category} className="h-full w-full object-cover" />
-                        </div>
-                        <span className="font-bold text-[13px] text-slate-800 mb-0.5 leading-tight line-clamp-1">{p.name}</span>
-                        <span className="font-black text-[14px] text-slate-900">{p.price} USDC</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+
               </div>
               )}
             </div>

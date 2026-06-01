@@ -136,7 +136,7 @@ export function NewTransferScreen({
     : "??";
 
   return (
-    <div className="absolute inset-0 w-full h-full bg-slate-50 relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
+    <div className="absolute inset-0 w-full h-full bg-[#ecf5fc] relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
       {/* Header */}
       <div className="flex justify-center bg-slate-900 shadow-md relative z-10 shrink-0 w-full">
         <div className="flex items-center justify-between px-4 pt-6 pb-3 w-full max-w-[500px]">
@@ -286,7 +286,7 @@ export function NewTransferScreen({
       </div>
 
       {/* Bottom Button */}
-      <div className="absolute bottom-0 left-0 right-0 w-full z-20 flex justify-center pb-5 bg-gradient-to-t from-slate-50 to-transparent">
+      <div className="absolute bottom-0 left-0 right-0 w-full z-20 flex justify-center pb-5 bg-gradient-to-t from-[#ecf5fc] to-transparent">
         <div className="w-full max-w-[500px] px-5">
           <button
           onClick={handleContinue}

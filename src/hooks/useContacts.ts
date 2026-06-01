@@ -8,6 +8,50 @@ export function useContacts() {
   const [resolvedNames, setResolvedNames] = useState<Record<string, string>>(
     {},
   );
+  const [deletedContactIds, setDeletedContactIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    async function loadDeletedIds() {
+      try {
+        const cached = localStorage.getItem("deleted_contact_ids");
+        if (cached) {
+          setDeletedContactIds(JSON.parse(cached));
+        }
+
+        const { registeredUser } = useStore.getState();
+        if (registeredUser?.supabaseUid) {
+          const prefs = await BackendClient.getPreferences();
+          if (prefs?.deletedContactIds) {
+            setDeletedContactIds(prefs.deletedContactIds);
+            localStorage.setItem("deleted_contact_ids", JSON.stringify(prefs.deletedContactIds));
+          }
+        }
+      } catch (e) {
+        // Ignore
+      }
+    }
+    loadDeletedIds();
+  }, [transactions]);
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      try {
+        const cached = localStorage.getItem("deleted_contact_ids");
+        if (cached) {
+          setDeletedContactIds(JSON.parse(cached));
+        }
+      } catch (e) {
+        // Ignore
+      }
+    };
+    window.addEventListener("storage", handleStorageChange);
+    const interval = setInterval(handleStorageChange, 1000);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      clearInterval(interval);
+    };
+  }, []);
 
   useEffect(() => {
     async function resolveAddresses() {
@@ -115,7 +159,7 @@ export function useContacts() {
               : "?";
 
             contactMap.set(cleanAddr.toLowerCase(), {
-              id: tx.id || cleanAddr,
+              id: cleanAddr.toLowerCase(),
               letter: recipientName.trim()[0]?.toUpperCase() || "?",
               name: recipientName.startsWith("@")
                 ? recipientName
@@ -132,8 +176,13 @@ export function useContacts() {
       });
     }
 
-    return Array.from(contactMap.values());
-  }, [transactions, resolvedNames]);
+    const allGenerated = Array.from(contactMap.values());
+    const deletedSet = new Set(deletedContactIds.map(id => String(id).toLowerCase().trim()));
+    return allGenerated.filter((c) => {
+      const cId = String(c.id || c.number || "").toLowerCase().trim();
+      return !deletedSet.has(cId);
+    });
+  }, [transactions, resolvedNames, deletedContactIds]);
 
   return { realContacts };
 }

@@ -23,6 +23,37 @@ import { BridgeChain } from "@circle-fin/app-kit";
 
 const router = express.Router();
 
+async function getUserTodayTransferTotal(userId: string): Promise<number> {
+  try {
+    const supabase = getSupabaseAdmin();
+    const startOfToday = new Date();
+    startOfToday.setUTCHours(0, 0, 0, 0);
+
+    const { data, error } = await supabase
+      .from("transactions")
+      .select("amount")
+      .eq("user_id", userId)
+      .eq("type", "transfer")
+      .neq("status", "failed")
+      .gte("created_at", startOfToday.toISOString());
+
+    if (error) {
+      console.error("[LimitCheck] Failed to fetch today's transfers:", error);
+      return 0;
+    }
+
+    let total = 0;
+    for (const tx of (data || [])) {
+      const amt = Math.abs(parseFloat(tx.amount) || 0);
+      total += amt;
+    }
+    return total;
+  } catch (err) {
+    console.error("[LimitCheck] Error calculation:", err);
+    return 0;
+  }
+}
+
 router.get("/transactions/:userId", async (req, res) => {
   try {
     const supabase = getSupabaseAdmin();
@@ -119,6 +150,22 @@ router.post("/swap/execute", async (req, res) => {
           "Your account has been disabled by the system administrator. All transaction operations are suspended.",
       });
     }
+
+    const config = getPlatformConfigs();
+    if (config && config.swapEnabled === false) {
+      return res.status(403).json({
+        error: "Fitur swap saat ini dinonaktifkan oleh administrator platform.",
+      });
+    }
+
+    const amountNum = parseFloat(amount || "0");
+    const minSwap = parseFloat(config?.minSwapAmount || "0.1");
+    if (amountNum < minSwap) {
+      return res.status(400).json({
+        error: `Minimum swap amount is ${minSwap} USDC`,
+      });
+    }
+
     const supabaseAdmin = getSupabaseAdmin();
 
     const { data: userWallet } = await supabaseAdmin
@@ -133,6 +180,10 @@ router.post("/swap/execute", async (req, res) => {
 
     const internalRef = `swap_${crypto.randomBytes(8).toString("hex")}`;
 
+    const swapFeeStr = config?.swapFee || "0.15%";
+    const swapFeePercent = parseFloat(swapFeeStr.replace(/[^0-9.]/g, "")) || 0.15;
+    const calculatedFee = (amountNum * swapFeePercent) / 100;
+
     // Write to standard transactions table for UI History visibility
     await supabaseAdmin.from("transactions").insert({
       user_id: userId,
@@ -140,7 +191,14 @@ router.post("/swap/execute", async (req, res) => {
       amount: `-${amount}`,
       status: "pending",
       internal_ref: internalRef,
-      metadata: { fromToken, toToken, real: true },
+      metadata: { 
+        fromToken, 
+        toToken, 
+        real: true,
+        swapFeePercent,
+        platformFee: calculatedFee.toFixed(4),
+        gasSubsidy: !!config?.gasSubsidyEnabled,
+      },
     });
 
     await supabaseAdmin.from("transaction_ledger").insert({
@@ -266,6 +324,22 @@ router.post("/bridge/execute", async (req, res) => {
           "Your account has been disabled by the system administrator. All transaction operations are suspended.",
       });
     }
+
+    const config = getPlatformConfigs();
+    if (config && config.bridgeEnabled === false) {
+      return res.status(403).json({
+        error: "Fitur bridge saat ini dinonaktifkan oleh administrator platform.",
+      });
+    }
+
+    const amountNum = parseFloat(amount || "0");
+    const minBridge = parseFloat(config?.minBridgeAmount || "0.1");
+    if (amountNum < minBridge) {
+      return res.status(400).json({
+        error: `Minimum bridge amount is ${minBridge} USDC`,
+      });
+    }
+
     const bridgeAddress = "0x0000000000000000000000000000000000000000";
     const supabaseAdmin = getSupabaseAdmin();
     const internalRef = `bridge_${crypto.randomBytes(8).toString("hex")}`;
@@ -329,6 +403,30 @@ router.post("/transfer/execute", async (req, res) => {
           "Your account has been disabled by the system administrator. All transaction operations are suspended.",
       });
     }
+
+    const config = getPlatformConfigs();
+    if (config && config.transferEnabled === false) {
+      return res.status(403).json({
+        error: "Fitur transfer saat ini dinonaktifkan oleh administrator platform.",
+      });
+    }
+
+    const amountNum = parseFloat(amount || "0");
+    const minTransfer = parseFloat(config?.minTransferAmount || "0.1");
+    if (amountNum < minTransfer) {
+      return res.status(400).json({
+        error: `Minimum transfer amount is ${minTransfer} USDC`,
+      });
+    }
+
+    const dailyLimit = parseFloat(config?.dailyTransferLimit?.replace(/[^0-9.]/g, "") || "5000");
+    const todayTotal = await getUserTodayTransferTotal(userId);
+    if (todayTotal + amountNum > dailyLimit) {
+      return res.status(400).json({
+        error: `Batas transfer harian terlampaui. Batas harian Anda adalah ${dailyLimit} USDC. Total transfer Anda hari ini: ${todayTotal.toFixed(2)} USDC.`,
+      });
+    }
+
     const supabaseAdmin = getSupabaseAdmin();
 
     const { data: userWallet } = await supabaseAdmin
@@ -340,6 +438,9 @@ router.post("/transfer/execute", async (req, res) => {
     if (!userWallet?.wallet_address) throw new Error("Wallet not found");
 
     const internalRef = `send_${crypto.randomBytes(8).toString("hex")}`;
+
+    const fee = parseFloat(config?.withdrawFee?.replace(/[^0-9.]/g, "") || "0");
+    const sponsored = !!config?.gasSubsidyEnabled;
 
     // Add to pending queue in DB immediately (legacy for compatibility)
     await supabaseAdmin.from("transactions").insert({
@@ -354,6 +455,9 @@ router.post("/transfer/execute", async (req, res) => {
         memo,
         real: true,
         isAsync: true,
+        platformFee: fee,
+        gasSubsidy: sponsored,
+        sponsoredGas: sponsored,
       },
     });
 
@@ -434,6 +538,13 @@ router.post("/withdraw/execute", async (req, res) => {
       return res.status(403).json({
         error:
           "Your account has been disabled by the system administrator. All transaction operations are suspended.",
+      });
+    }
+
+    const config = getPlatformConfigs();
+    if (config && config.withdrawEnabled === false) {
+      return res.status(403).json({
+        error: "Fitur withdraw saat ini dinonaktifkan oleh administrator platform.",
       });
     }
     const supabaseAdmin = getSupabaseAdmin();
@@ -522,7 +633,36 @@ router.post("/payments/batch", async (req, res) => {
       });
     }
 
+    const config = getPlatformConfigs();
+    if (config && config.batchTransferEnabled === false) {
+      return res.status(403).json({
+        error: "Fitur batch transfer saat ini dinonaktifkan oleh administrator platform.",
+      });
+    }
+
     const recipientCount = Array.isArray(recipients) ? recipients.length : 0;
+    const totalAmount = Array.isArray(recipients)
+      ? recipients.reduce((sum: number, r: any) => sum + parseFloat(r.amount || "0"), 0)
+      : 0;
+
+    const minTransfer = parseFloat(config?.minTransferAmount || "0.1");
+    if (Array.isArray(recipients)) {
+      for (const r of recipients) {
+        if (parseFloat(r.amount) < minTransfer) {
+          return res.status(400).json({
+            error: `Minimum amount per recipient in batch is ${minTransfer} USDC`,
+          });
+        }
+      }
+    }
+
+    const dailyLimit = parseFloat(config?.dailyTransferLimit?.replace(/[^0-9.]/g, "") || "5000");
+    const todayTotal = await getUserTodayTransferTotal(userId);
+    if (todayTotal + totalAmount > dailyLimit) {
+      return res.status(400).json({
+        error: `Batas transfer harian terlampaui. Batas harian Anda adalah ${dailyLimit} USDC. Total transfer Anda hari ini: ${todayTotal.toFixed(2)} USDC.`,
+      });
+    }
     const feeValue = parseFloat(platformFee || "0");
 
     console.log(
@@ -578,6 +718,12 @@ router.post("/purchase/execute", async (req, res) => {
     }
 
     const config = getPlatformConfigs();
+    if (config && config.ecommerceEnabled === false) {
+      return res.status(403).json({
+        error: "Fitur e-commerce saat ini dinonaktifkan oleh administrator platform.",
+      });
+    }
+
     const useEscrow = config?.useLoungeHubEscrow === true;
     const recipientAddress = useEscrow
       ? config?.loungeHubContractAddress ||
@@ -624,6 +770,13 @@ router.post("/stake/execute", async (req, res) => {
           "Your account has been disabled by the system administrator. All transaction operations are suspended.",
       });
     }
+
+    const config = getPlatformConfigs();
+    if (config && config.stableStakeEnabled === false) {
+      return res.status(403).json({
+        error: "Fitur staking saat ini dinonaktifkan oleh administrator platform.",
+      });
+    }
     // Industrial Standard: Staking Vault Address (Example Node Validator)
     const vaultAddress = "0x5555555555555555555555555555555555555555";
 
@@ -651,6 +804,21 @@ router.post("/stake/execute", async (req, res) => {
 router.post("/bridge/cctp", async (req, res) => {
   try {
     const { userId, amount, destinationAddress, destinationDomain } = req.body;
+
+    const config = getPlatformConfigs();
+    if (config && config.bridgeEnabled === false) {
+      return res.status(403).json({
+        error: "Fitur bridge saat ini dinonaktifkan oleh administrator platform.",
+      });
+    }
+
+    const amountNum = parseFloat(amount || "0");
+    const minBridge = parseFloat(config?.minBridgeAmount || "0.1");
+    if (amountNum < minBridge) {
+      return res.status(400).json({
+        error: `Minimum bridge amount is ${minBridge} USDC`,
+      });
+    }
 
     // Convert destination domain to BridgeChain enum map
     let targetChain = BridgeChain.Ethereum_Sepolia;

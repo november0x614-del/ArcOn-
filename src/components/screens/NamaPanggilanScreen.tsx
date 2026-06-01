@@ -24,7 +24,7 @@ export function NamaPanggilanScreen({ onBack }: NamaPanggilanScreenProps) {
   };
 
   return (
-    <div className="w-full h-full bg-[#f8fafc] relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
+    <div className="w-full h-full bg-[#ecf5fc] relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
       {/* Toast Notification */}
       {showToast && (
         <div className="absolute top-4 left-4 right-4 bg-[#2b2b2b] text-white px-4 py-3 rounded-xl flex items-center z-50 animate-in fade-in slide-in-from-top-4 shadow-lg">
@@ -48,7 +48,7 @@ export function NamaPanggilanScreen({ onBack }: NamaPanggilanScreenProps) {
         <h2 className="font-bold text-[16px] text-slate-800">Nickname</h2>
       </div>
 
-      <div className="flex flex-col flex-1 pb-24 px-4 bg-white relative w-full overflow-y-auto scrollbar-hide items-center">
+      <div className="flex flex-col flex-1 pb-24 px-4 bg-[#ecf5fc] relative w-full overflow-y-auto scrollbar-hide items-center">
         <div className="w-full max-w-[500px] flex flex-col h-full"> 
           <div className="pt-6 pb-6 text-center w-full">
             <p className="text-[14px] text-slate-600 leading-[1.6]">

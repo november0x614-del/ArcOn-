@@ -91,7 +91,7 @@ export function WithdrawScreen({ onBack, onSuccess, hideBack }: WithdrawScreenPr
 
   if (step === "processing") {
     return (
-      <div className="absolute inset-0 bg-white z-[70] flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-300">
+      <div className="absolute inset-0 bg-[#ecf5fc] z-[70] flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-300">
         <Loader2 className="animate-spin text-slate-800 mb-6" size={48} />
         <h3 className="text-[20px] font-bold text-slate-800 mb-2">
           Processing Withdrawal
@@ -105,7 +105,7 @@ export function WithdrawScreen({ onBack, onSuccess, hideBack }: WithdrawScreenPr
 
   if (step === "success") {
     return (
-      <div className="absolute inset-0 bg-white z-[70] flex flex-col items-center justify-center p-8 text-center animate-in zoom-in-95 duration-300">
+      <div className="absolute inset-0 bg-[#ecf5fc] z-[70] flex flex-col items-center justify-center p-8 text-center animate-in zoom-in-95 duration-300">
         <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 mb-6">
           <CheckCircle2 size={40} />
         </div>
@@ -134,7 +134,7 @@ export function WithdrawScreen({ onBack, onSuccess, hideBack }: WithdrawScreenPr
   }
 
   return (
-    <div className="absolute inset-0 z-[70] bg-[#f8fafc] flex flex-col animate-in slide-in-from-right duration-300">
+    <div className="absolute inset-0 z-[70] bg-[#ecf5fc] flex flex-col animate-in slide-in-from-right duration-300">
       {/* Header */}
       <div className="flex justify-center bg-slate-900 shadow-md relative z-10 w-full">
         <div className="flex items-center px-4 pt-6 pb-3 w-full max-w-[500px] justify-between">

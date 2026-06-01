@@ -114,6 +114,8 @@ export const ViewRouter = React.memo(
       balance,
       fetchBalance,
       fetchTransactions,
+      transactions,
+      readReceiptIds,
     } = useApp();
 
     const { realContacts } = useContacts();
@@ -132,7 +134,6 @@ export const ViewRouter = React.memo(
     const userName = registeredUser?.username || "Account Holder";
 
     const [platformConfig, setPlatformConfig] = React.useState<any>(null);
-    const [inboxReceiptPopupTx, setInboxReceiptPopupTx] = React.useState<any | null>(null);
 
     React.useEffect(() => {
       // Only fetch config if user is at least partially logged in or already at home
@@ -204,7 +205,12 @@ export const ViewRouter = React.memo(
         "namaPanggilan",
       ].includes(viewState);
 
-    const [unreadCount] = React.useState(2);
+    const unreadCount = React.useMemo(() => {
+      if (!Array.isArray(transactions)) return 0;
+      return transactions.filter(
+        (tx) => (tx.status === "success" || tx.status === "failed") && !readReceiptIds.includes(tx.id)
+      ).length;
+    }, [transactions, readReceiptIds]);
 
     const [cartCount, setCartCount] = React.useState(() => {
       try {
@@ -273,6 +279,7 @@ export const ViewRouter = React.memo(
       "email",
       "otherAccounts",
       "manageFavorites",
+      "receipt",
     ];
 
     const isDesktopFeatureView =
@@ -296,14 +303,14 @@ export const ViewRouter = React.memo(
             <nav className="flex-1 flex flex-col gap-2">
               <button
                 onClick={() => onNavigate(isDesktop ? "transfer" : "home")}
-                className={`flex items-center gap-3 px-4 py-3.5 rounded-xl ${["home", ...desktopFeatures].includes(viewState) && !["inbox", "scanQR", "settings", "namaPanggilan", "email", "otherAccounts"].includes(viewState) ? "bg-slate-900 text-white shadow-[0_4px_12px_rgba(15,23,42,0.15)] shadow-slate-900/20" : "bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800"} font-bold transition-all text-left border-0 cursor-pointer active:scale-95`}
+                className={`flex items-center gap-3 px-4 py-3.5 rounded-xl ${(["home", ...desktopFeatures].includes(viewState) && !["inbox", "scanQR", "settings", "namaPanggilan", "email", "otherAccounts", "receipt"].includes(viewState)) || (viewState === "receipt" && receiptSource !== "inbox") ? "bg-slate-900 text-white shadow-[0_4px_12px_rgba(15,23,42,0.15)] shadow-slate-900/20" : "bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800"} font-bold transition-all text-left border-0 cursor-pointer active:scale-95`}
               >
                 <Home size={20} />
                 <span className="text-[14px]">Home</span>
               </button>
               <button
                 onClick={() => onNavigate("inbox")}
-                className={`flex items-center gap-3 px-4 py-3.5 rounded-xl ${viewState === "inbox" ? "bg-slate-900 text-white shadow-[0_4px_12px_rgba(15,23,42,0.15)] shadow-slate-900/20" : "bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800"} font-bold transition-all text-left border-0 relative cursor-pointer active:scale-95`}
+                className={`flex items-center gap-3 px-4 py-3.5 rounded-xl ${viewState === "inbox" || (viewState === "receipt" && receiptSource === "inbox") ? "bg-slate-900 text-white shadow-[0_4px_12px_rgba(15,23,42,0.15)] shadow-slate-900/20" : "bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800"} font-bold transition-all text-left border-0 relative cursor-pointer active:scale-95`}
               >
                 <Mail size={20} />
                 <span className="text-[14px]">Inbox</span>
@@ -639,7 +646,8 @@ export const ViewRouter = React.memo(
             onBack={() => setViewState("home")}
             onTransactionClick={(tx) => {
               setSelectedTransaction(tx);
-              setInboxReceiptPopupTx(tx);
+              setReceiptSource("inbox");
+              setViewState("receipt");
             }}
           />
         )}
@@ -785,7 +793,7 @@ export const ViewRouter = React.memo(
               setTransferMemo(memo);
 
               try {
-                await BackendClient.sendUnifiedBalance(
+                const result = await BackendClient.sendUnifiedBalance(
                   numAmount,
                   selectedContact.account,
                   memo,
@@ -794,8 +802,29 @@ export const ViewRouter = React.memo(
 
                 await fetchBalance();
                 await fetchTransactions();
+
+                const txData = {
+                  id: result.txId || `send_${Math.random().toString(36).substring(7)}`,
+                  amount: `-${numAmount}`,
+                  currency: "USDC",
+                  type: "transfer",
+                  status: "success",
+                  timestamp: new Date().toISOString(),
+                  metadata: {
+                    recipientName: selectedContact.name,
+                    destinationAddress: selectedContact.account,
+                    memo: memo,
+                    real: true,
+                    isAsync: true,
+                    platformFee: fee > 0 ? fee.toFixed(2) : undefined,
+                  }
+                };
+
+                setSelectedTransaction(txData as any);
+                setReceiptSource("transfer");
+                setViewState("receipt");
+
                 displayToast(`Transfer to ${selectedContact.name} initiated!`);
-                setViewState("transfer");
               } catch (error) {
                 console.error(error);
                 displayToast("Transfer failed. Please try again.");
@@ -917,19 +946,6 @@ export const ViewRouter = React.memo(
             )}
           </motion.div>
         </AnimatePresence>
-
-        {inboxReceiptPopupTx && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-10 animate-in fade-in duration-200">
-            {/* Click outside to close */}
-            <div className="absolute inset-0 z-0 cursor-pointer" onClick={() => setInboxReceiptPopupTx(null)} />
-            
-            <div className="relative bg-slate-50 w-full sm:max-w-[500px] h-[85vh] sm:h-[80vh] rounded-t-[32px] sm:rounded-[32px] overflow-hidden shadow-2xl animate-in slide-in-from-bottom sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300 flex flex-col z-10 border border-slate-100">
-              <ReceiptScreen onBack={() => {
-                setInboxReceiptPopupTx(null);
-              }} />
-            </div>
-          </div>
-        )}
       </>,
     );
   },

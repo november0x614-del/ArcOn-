@@ -54,32 +54,62 @@ function ContactItem({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // Convert default dynamic heavy user names into human-friendly, beautiful minimalist lower addresses
+  const displayName = React.useMemo(() => {
+    if (name.toUpperCase().startsWith("USER_0X")) {
+      const addrHex = name.substring(5); // removes USER_
+      return addrHex.toLowerCase();
+    }
+    return name;
+  }, [name]);
+
+  // Clean initials rendering: display a beautiful generic Wallet/User vector icon for numeric hex fallback avatars
+  const isDigitOnly = /^\d+$/.test(initials);
+  const avatarEl = React.useMemo(() => {
+    if (isDigitOnly || displayName.startsWith("0x")) {
+      return (
+        <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 border border-slate-100 shrink-0">
+          <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+          </svg>
+        </div>
+      );
+    }
+    return (
+      <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-700 border border-slate-100 shrink-0 text-[12px]">
+        {initials}
+      </div>
+    );
+  }, [initials, isDigitOnly, displayName]);
+
   return (
-    <div className="flex flex-col mb-4 bg-white relative z-10 w-full">
+    <div className="flex flex-col mb-3 bg-white rounded-2xl border border-slate-100 shadow-[0_4px_12px_rgba(15,23,42,0.02)] p-3 relative z-10 w-full hover:shadow-[0_8px_20px_rgba(15,23,42,0.04)] hover:border-slate-200 transition-all duration-300">
       <div
-        className="flex items-center gap-4 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded-xl transition-colors group"
+        className="flex items-center gap-3.5 cursor-pointer rounded-xl group"
         onClick={
           isManageContacts ? onSelectManage : isExpanded ? onSelect : onToggle
         }
       >
-        <div className="w-[46px] h-[46px] rounded-full bg-[#f8fafc] flex items-center justify-center font-bold text-slate-700 shadow-sm border border-slate-100 shrink-0 group-hover:border-slate-200 transition-colors text-[13px] relative z-20">
-          {initials}
-        </div>
+        {avatarEl}
         <span
-          className={`font-extrabold text-[14px] mt-0.5 relative z-20 ${isManageContacts ? "text-slate-400" : "text-slate-800"}`}
+          className={`font-semibold text-[13.5px] tracking-tight relative z-20 ${
+            isManageContacts
+              ? isSelected
+                ? "text-slate-900 font-bold"
+                : "text-slate-600 font-medium"
+              : "text-slate-800"
+          }`}
         >
-          {name}
+          {displayName}
         </span>
       </div>
 
       {(isExpanded || isManageContacts) && (
         <div
           onClick={isManageContacts ? onSelectManage : onSelect}
-          className={`-mx-5 px-5 mt-[-10px] pt-5 pb-3 ${isManageContacts ? "pl-[24px] bg-white border-b border-slate-50 pb-[10px]" : "pl-[74px] bg-[#f1f5f9] hover:bg-[#e2e8f0] shadow-inner"} overflow-visible ${!isManageContacts ? "cursor-pointer" : ""} transition-colors relative z-0 flex justify-between items-center ${isManageContacts ? "cursor-pointer" : ""}`}
+          className="mt-3 pt-3 border-t border-slate-100/70 flex justify-between items-center w-full cursor-pointer animate-in fade-in duration-200"
         >
-          <div
-            className={`flex items-center ${isManageContacts ? "gap-3" : ""}`}
-          >
+          <div className="flex items-center gap-2 w-full">
             {isManageContacts && (
               <div
                 className={`w-5 h-5 rounded-[4px] border-[1.5px] flex items-center justify-center shrink-0 transition-colors ${isSelected ? "bg-slate-800 border-slate-800" : "border-slate-300 bg-white"}`}
@@ -99,52 +129,48 @@ function ContactItem({
                 )}
               </div>
             )}
-            <div className="text-left w-full overflow-hidden">
-              <p
-                className={`font-bold text-[14px] ${isManageContacts ? "text-slate-600" : "text-slate-800"}`}
-              >
+            <div className="text-left w-full overflow-hidden flex flex-col">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                 {network}
-              </p>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                {isManageContacts && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onToggleFavorite?.();
-                    }}
-                    className="p-1 -ml-1 z-10 shrink-0 hover:scale-110 transition-transform active:scale-95 border-0 bg-transparent flex items-center justify-center cursor-pointer"
-                  >
-                    {isFavorite ? (
-                      <Star
-                        className="text-yellow-400 fill-yellow-400"
-                        size={16}
-                      />
-                    ) : (
-                      <Star className="text-slate-400" size={16} />
-                    )}
-                  </button>
-                )}
+              </span>
+              <div className="flex items-center gap-1.5 mt-1 w-full justify-between">
+                <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                  {!isManageContacts && isExpanded && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleFavorite?.();
+                      }}
+                      className="p-1 -ml-1 z-10 shrink-0 hover:scale-110 transition-transform active:scale-95 border-0 bg-transparent flex items-center justify-center cursor-pointer"
+                    >
+                      {isFavorite ? (
+                        <Star
+                          className="text-yellow-400 fill-yellow-400"
+                          size={15}
+                        />
+                      ) : (
+                        <Star className="text-slate-400" size={15} />
+                      )}
+                    </button>
+                  )}
+
+                  <p className="text-[12px] font-mono font-medium text-slate-500 truncate">
+                    {address}
+                  </p>
+                </div>
 
                 <button
                   type="button"
                   onClick={handleCopy}
-                  className="p-1.5 rounded hover:bg-slate-200/80 text-slate-400 hover:text-slate-700 transition-colors border-0 bg-transparent flex items-center justify-center cursor-pointer shrink-0 z-10"
+                  className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors border-0 bg-transparent flex items-center justify-center cursor-pointer shrink-0 z-10"
                   title="Copy Address"
                 >
                   {copied ? (
-                    <Check className="text-emerald-600 stroke-[3]" size={13} />
+                    <Check className="text-emerald-500 stroke-[3]" size={12} />
                   ) : (
-                    <Copy size={13} strokeWidth={2.5} />
+                    <Copy size={12} strokeWidth={2.5} />
                   )}
                 </button>
-
-                <p
-                  className={`text-[13px] font-medium tracking-wide truncate ${isManageContacts ? "text-slate-400" : "text-slate-500"}`}
-                >
-                  {address.startsWith("0x") && address.length > 15
-                    ? `${address.substring(0, 10)}...${address.substring(address.length - 8)}`
-                    : address}
-                </p>
               </div>
             </div>
           </div>
@@ -210,28 +236,36 @@ export function TransferScreen({
   }, [startSyncPolling, stopSyncPolling]);
 
   const realContacts = React.useMemo(() => {
-    return allContacts.filter((c) => !deletedContactIds.includes(c.id));
+    const deletedSet = new Set(deletedContactIds.map(id => String(id).toLowerCase().trim()));
+    return allContacts.filter((c) => {
+      const cId = String(c.id || c.number || "").toLowerCase().trim();
+      return !deletedSet.has(cId);
+    });
   }, [allContacts, deletedContactIds]);
 
-  const handleToggleFavorite = (contact: any) => {
-    setIsLoadingFavorite(true);
+  const realFavorites = React.useMemo(() => {
+    const deletedSet = new Set(deletedContactIds.map(id => String(id).toLowerCase().trim()));
+    return favorites.filter((f) => {
+      const fId = String(f.id || f.number || "").toLowerCase().trim();
+      return fId && !deletedSet.has(fId);
+    });
+  }, [favorites, deletedContactIds]);
 
-    setTimeout(() => {
-      setFavorites((prev) => {
-        const isFav = prev.some((f) => f.id === contact.id);
-        const newFavs = isFav
-          ? prev.filter((f) => f.id !== contact.id)
-          : [...prev, contact];
-        try {
-          localStorage.setItem("favorites", JSON.stringify(newFavs));
-          BackendClient.updatePreferences({ favorites: newFavs });
-        } catch (e) {
-          console.error(e);
-        }
-        return newFavs;
-      });
-      setIsLoadingFavorite(false);
-    }, 1000);
+  const handleToggleFavorite = (contact: any) => {
+    setFavorites((prev) => {
+      const contactIdClean = String(contact.id || contact.number || "").toLowerCase().trim();
+      const isFav = prev.some((f) => String(f.id || f.number || "").toLowerCase().trim() === contactIdClean);
+      const newFavs = isFav
+        ? prev.filter((f) => String(f.id || f.number || "").toLowerCase().trim() !== contactIdClean)
+        : [...prev, contact];
+      try {
+        localStorage.setItem("favorites", JSON.stringify(newFavs));
+        BackendClient.updatePreferences({ favorites: newFavs });
+      } catch (e) {
+        console.error(e);
+      }
+      return newFavs;
+    });
   };
 
   const [isManageContacts, setIsManageContacts] = useState(false);
@@ -239,7 +273,7 @@ export function TransferScreen({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   return (
-    <div className="w-full h-full bg-slate-50 relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
+    <div className="w-full h-full bg-[#ecf5fc] relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
       {/* Header */}
       <div className="flex justify-center bg-slate-900 shadow-md relative z-10 shrink-0 w-full">
         <div className="flex items-center px-4 pt-6 pb-3 w-full max-w-[500px] justify-between">
@@ -252,7 +286,9 @@ export function TransferScreen({
                 <ArrowLeft size={20} className="text-white" />
               </button>
             )}
-            <h2 className="font-bold text-[16px] text-white">TRANSFER</h2>
+            <h2 className="font-bold text-[16px] text-white tracking-wide uppercase">
+              {isManageContacts ? "Manage Accounts" : "Transfer"}
+            </h2>
           </div>
           <button
             onClick={onBatchTransfer}
@@ -269,45 +305,45 @@ export function TransferScreen({
         <div className="flex-1 overflow-y-auto w-full px-5 pb-24 scrollbar-hide">
           <div className="w-full max-w-[500px] mx-auto flex flex-col relative">
             {/* Favorites Section */}
-          <div className="mb-4">
-            {(favorites.length > 0 || isLoadingFavorite) && (
+          {!isManageContacts && (realFavorites.length > 0 || isLoadingFavorite) && (
+            <div className="mb-4 animate-in fade-in duration-300">
               <div className="flex justify-between items-end mb-4 pr-1 mt-6">
                 <h3 className="text-slate-400 font-semibold text-[15px]">
                   Favorites
                 </h3>
               </div>
-            )}
 
-            {isLoadingFavorite ? (
-              <div className="flex justify-center items-center py-6 h-[80px]">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-transparent border-t-slate-800 border-l-slate-800"></div>
-              </div>
-            ) : (
-              <div className="flex gap-4 overflow-x-auto scrollbar-hide mt-4 mb-2">
-                {favorites.map((fav) => (
-                  <div
-                    key={fav.id}
-                    className="flex flex-col items-center w-max gap-2 cursor-pointer group relative"
-                    onClick={() => {
-                      onSelectContact({
-                        name: fav.name,
-                        bank: fav.network,
-                        account: fav.number,
-                        initials: fav.initials,
-                      });
-                    }}
-                  >
-                    <div className="w-[52px] h-[52px] rounded-full flex items-center justify-center font-bold shadow-sm shrink-0 text-[14px] transition-colors bg-slate-100 border border-slate-200 text-slate-700">
-                      {fav.initials}
+              {isLoadingFavorite ? (
+                <div className="flex justify-center items-center py-6 h-[80px]">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-transparent border-t-slate-800 border-l-slate-800"></div>
+                </div>
+              ) : (
+                <div className="flex gap-4 overflow-x-auto scrollbar-hide mt-4 mb-2">
+                  {realFavorites.map((fav) => (
+                    <div
+                      key={fav.id}
+                      className="flex flex-col items-center w-max gap-2 cursor-pointer group relative active:scale-95 transition-all"
+                      onClick={() => {
+                        onSelectContact({
+                          name: fav.name,
+                          bank: fav.network,
+                          account: fav.number,
+                          initials: fav.initials,
+                        });
+                      }}
+                    >
+                      <div className="w-[52px] h-[52px] rounded-full flex items-center justify-center font-bold shadow-sm shrink-0 text-[14px] transition-colors bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200">
+                        {fav.initials}
+                      </div>
+                      <span className="text-[11px] font-semibold text-center w-16 line-clamp-2 leading-tight text-slate-800">
+                        {fav.name.split(" ")[0]}
+                      </span>
                     </div>
-                    <span className="text-[11px] font-semibold text-center w-16 line-clamp-2 leading-tight text-slate-800">
-                      {fav.name.split(" ")[0]}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Transfer List Header */}
           <div className="flex justify-between items-end mb-4 pr-1 mt-6">
@@ -336,64 +372,86 @@ export function TransferScreen({
 
           {/* Contacts */}
           <div className="flex flex-col w-full relative pb-[80px]">
-            {/* Vertical line connector */}
-            <div className="absolute left-[23px] top-8 bottom-0 w-[1px] bg-slate-100 z-0"></div>
+            {realContacts.length === 0 ? (
+              <div className="py-12 px-4 text-center flex flex-col items-center animate-in fade-in duration-300">
+                <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-3 border border-slate-100/50 shadow-sm">
+                  <UserPlus size={20} />
+                </div>
+                <p className="text-[14px] text-slate-700 font-semibold">No Contacts Found</p>
+                <p className="text-[12px] text-slate-400 mt-1 max-w-[245px] leading-relaxed">
+                  Start sending transfer transactions or create scheduled payment items to populate your ledger.
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Vertical line connector */}
+                <div className="absolute left-[23px] top-8 bottom-0 w-[1px] bg-slate-100 z-0"></div>
 
-            {realContacts.map((contact) => (
-              <ContactItem
-                key={contact.id}
-                initials={contact.initials || "??"}
-                name={contact.name}
-                network={contact.network}
-                address={contact.number}
-                isExpanded={expandedId === contact.id}
-                onToggle={() =>
-                  setExpandedId(expandedId === contact.id ? null : contact.id)
-                }
-                onSelect={() =>
-                  onSelectContact({
-                    name: contact.name,
-                    bank: contact.network,
-                    account: contact.number,
-                    initials: contact.initials,
-                  })
-                }
-                onToggleFavorite={() => handleToggleFavorite(contact)}
-                isFavorite={favorites.some((f) => f.id === contact.id)}
-                isManageContacts={isManageContacts}
-                isSelected={selectedContacts.includes(contact.id)}
-                onSelectManage={() => {
-                  setSelectedContacts((prev) =>
-                    prev.includes(contact.id)
-                      ? prev.filter((id) => id !== contact.id)
-                      : [...prev, contact.id],
-                  );
-                }}
-              />
-            ))}
+                {realContacts.map((contact) => (
+                  <ContactItem
+                    key={contact.id}
+                    initials={contact.initials || "??"}
+                    name={contact.name}
+                    network={contact.network}
+                    address={contact.number}
+                    isExpanded={expandedId === contact.id}
+                    onToggle={() =>
+                      setExpandedId(expandedId === contact.id ? null : contact.id)
+                    }
+                    onSelect={() =>
+                      onSelectContact({
+                        name: contact.name,
+                        bank: contact.network,
+                        account: contact.number,
+                        initials: contact.initials,
+                      })
+                    }
+                    onToggleFavorite={() => handleToggleFavorite(contact)}
+                    isFavorite={realFavorites.some((f) => String(f.id || f.number || "").toLowerCase().trim() === String(contact.id || contact.number || "").toLowerCase().trim())}
+                    isManageContacts={isManageContacts}
+                    isSelected={selectedContacts.includes(contact.id)}
+                    onSelectManage={() => {
+                      setSelectedContacts((prev) =>
+                        prev.includes(contact.id)
+                          ? prev.filter((id) => id !== contact.id)
+                          : [...prev, contact.id],
+                      );
+                    }}
+                  />
+                ))}
+              </>
+            )}
           </div>
           </div>
         </div>
 
         {/* Floating Action Button */}
         {!contactToDelete && (
-          <div className="absolute bottom-7 left-1/2 -translate-x-1/2 w-[calc(100%-40px)] max-w-[460px] z-20">
+          <div className="absolute bottom-7 left-1/2 -translate-x-1/2 w-[calc(100%-40px)] max-w-[460px] z-20 transition-all duration-300">
             {isManageContacts ? (
-              selectedContacts.length > 0 && (
-                <button
-                  onClick={() => setShowDeleteModal(true)}
-                  className="w-full bg-slate-900 text-white py-[14px] rounded-full font-bold text-[14px] shadow-lg hover:bg-slate-800 transition-all active:scale-[0.98]"
-                >
-                  Delete
-                </button>
-              )
+              <button
+                onClick={() => {
+                  if (selectedContacts.length > 0) {
+                    setShowDeleteModal(true);
+                  }
+                }}
+                disabled={selectedContacts.length === 0}
+                className={`w-full py-[14px] rounded-full font-bold text-[14px] shadow-lg transition-all active:scale-[0.98] duration-300 border-0 cursor-pointer flex items-center justify-center gap-2 ${
+                  selectedContacts.length > 0
+                    ? "bg-red-500 hover:bg-red-600 text-white shadow-red-200/40"
+                    : "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
+                }`}
+              >
+                {selectedContacts.length > 0
+                  ? `Delete Selected (${selectedContacts.length})`
+                  : "Select Contacts to Delete"}
+              </button>
             ) : (
               <button
                 onClick={onNewTransfer}
-                className="w-full bg-slate-900 text-white py-[14px] rounded-full font-bold text-[14px] shadow-lg flex items-center justify-center gap-2.5 hover:bg-slate-800 transition-all active:scale-[0.98]"
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white py-[14px] rounded-full font-bold text-[14px] shadow-lg flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] cursor-pointer border-0"
               >
-                <UserPlus size={18} strokeWidth={2.5} /> Transfer to New
-                Recipient
+                <UserPlus size={18} strokeWidth={2.5} /> Transfer to New Recipient
               </button>
             )}
           </div>
@@ -406,7 +464,7 @@ export function TransferScreen({
           <div className="bg-white rounded-t-[24px] w-full flex flex-col pb-8 pt-6 shadow-2xl animate-in slide-in-from-bottom duration-300 relative">
             <button
               onClick={() => setShowDeleteModal(false)}
-              className="absolute right-4 top-4 text-slate-400 p-1 hover:bg-slate-100 rounded-full transition-colors bg-transparent border-0"
+              className="absolute right-4 top-4 text-slate-400 p-1 hover:bg-slate-100 rounded-full transition-colors bg-transparent border-0 cursor-pointer"
             >
               <X size={24} strokeWidth={2} />
             </button>
@@ -416,14 +474,14 @@ export function TransferScreen({
                 !
               </div>
               <h3 className="font-bold text-[18px] text-slate-900 pt-0.5">
-                Delete this contact?
+                {selectedContacts.length > 1 ? "Delete designated contacts?" : "Delete this contact?"}
               </h3>
             </div>
             <div className="px-5 flex flex-col gap-2">
               <p className="text-slate-600 text-[14px] mb-8 font-medium leading-relaxed pr-2 text-left">
-                This contact will also be removed from Quick Pick on the
-                Homepage and login page. It will not delete your Scheduled
-                Transfers to this account.
+                {selectedContacts.length > 1
+                  ? "Selected contacts will be completely hidden from your transfer list and favorites. This action is fully reversible."
+                  : "This contact will also be removed from your Favorites list and completely hidden from your transfer history. You can still initiate manual transfers to this address anytime."}
               </p>
               <button
                 onClick={() => {
@@ -433,9 +491,11 @@ export function TransferScreen({
                   ];
                   saveDeletedContactIds(newlyDeleted);
                   setFavorites((prev) => {
-                    const newFavs = prev.filter(
-                      (f) => !selectedContacts.includes(f.id),
-                    );
+                    const selectedLower = selectedContacts.map(id => String(id).toLowerCase().trim());
+                    const newFavs = prev.filter((f) => {
+                      const fId = String(f.id || f.number || "").toLowerCase().trim();
+                      return fId && !selectedLower.includes(fId);
+                    });
                     try {
                       localStorage.setItem(
                         "favorites",
@@ -451,9 +511,15 @@ export function TransferScreen({
                   setShowDeleteModal(false);
                   setIsManageContacts(false);
                 }}
-                className="w-full bg-red-500 text-white py-4 rounded-full font-bold text-[15px] shadow-lg hover:bg-red-600 active:scale-[0.98] transition-all"
+                className="w-full bg-red-500 hover:bg-red-600 active:scale-[0.98] transition-all text-white py-4 rounded-full font-bold text-[15px] shadow-lg mb-2 cursor-pointer border-0"
               >
-                Delete
+                Delete ({selectedContacts.length})
+              </button>
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="w-full bg-transparent hover:bg-slate-100 text-slate-500 py-3 rounded-full font-bold text-[14px] transition-all active:scale-[0.98] cursor-pointer border-0 uppercase tracking-wider"
+              >
+                Cancel
               </button>
             </div>
           </div>

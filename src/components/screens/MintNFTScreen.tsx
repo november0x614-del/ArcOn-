@@ -127,15 +127,7 @@ export function MintNFTScreen({ onBack }: { onBack: () => void }) {
               exit={{ opacity: 0, y: -10 }}
               className="flex flex-col gap-6"
             >
-              <div className="bg-white rounded-[24px] p-8 shadow-sm border border-slate-100 flex flex-col items-center">
-                <div className="w-20 h-20 bg-purple-50 rounded-2xl flex items-center justify-center text-purple-600 mb-6 border border-purple-100">
-                   <Hexagon size={40} strokeWidth={2} />
-                </div>
-                <h3 className="font-black text-[20px] text-slate-800 tracking-tight text-center mb-2">Create New Asset</h3>
-                <p className="text-[13px] text-slate-500 text-center leading-relaxed mb-6">
-                  Mint a unique digital asset on the Arc Network. All NFTs are gas-optimized and settlement is instant.
-                </p>
-
+              <div className="bg-white rounded-[24px] p-6 shadow-sm border border-slate-100 flex flex-col">
                 <div className="w-full space-y-4">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Asset Name</label>

@@ -58,7 +58,7 @@ export function StablestakeScreen({ onBack }: StablestakeScreenProps) {
   };
 
   return (
-    <div className="w-full h-full bg-slate-50 relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
+    <div className="w-full h-full bg-[#ecf5fc] relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
       {/* Header */}
       <div className="flex justify-center bg-slate-900 shadow-md relative z-10 w-full shrink-0">
         <div className="flex items-center px-4 pt-6 pb-3 w-full max-w-[500px] justify-between">

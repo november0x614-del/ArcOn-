@@ -220,7 +220,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
 
   if (swapFinished) {
     return (
-      <div className="w-full h-full bg-slate-50 relative flex flex-col z-50 animate-in slide-in-from-bottom duration-300">
+      <div className="w-full h-full bg-[#ecf5fc] relative flex flex-col z-50 animate-in slide-in-from-bottom duration-300">
         <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full shrink-0 justify-between">
           <button
             onClick={onBack}
@@ -304,7 +304,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
   }
 
   return (
-    <div className="w-full h-full bg-slate-50 relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
+    <div className="w-full h-full bg-[#ecf5fc] relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
       {/* Header */}
       <div className="flex justify-center bg-slate-900 shadow-md relative z-10 w-full">
         <div className="flex items-center px-4 pt-6 pb-3 w-full max-w-[500px] justify-between">
@@ -664,7 +664,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
 
       {/* Token Selector Modal */}
       {showTokenSelector && (
-        <div className="absolute inset-0 z-[60] bg-white flex flex-col animate-in slide-in-from-bottom duration-300">
+        <div className="absolute inset-0 z-[60] bg-[#ecf5fc] flex flex-col animate-in slide-in-from-bottom duration-300">
           <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 justify-between shrink-0">
             <div className="flex items-center">
               <button

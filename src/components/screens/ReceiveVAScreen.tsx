@@ -40,7 +40,7 @@ export function ReceiveVAScreen({ onBack }: ReceiveVAScreenProps) {
   };
 
   return (
-    <div className="absolute inset-0 z-[60] bg-[#f8fafc] flex flex-col animate-in slide-in-from-right duration-300">
+    <div className="absolute inset-0 z-[60] bg-[#ecf5fc] flex flex-col animate-in slide-in-from-right duration-300">
       <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between">
         <div className="flex items-center">
           <button

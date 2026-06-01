@@ -31,6 +31,9 @@ import {
   RefreshCw,
   Box,
   Coins,
+  ChevronDown as ChevronDownIcon,
+  ChevronUp as ChevronUpIcon,
+  Plus,
 } from "lucide-react";
 
 export interface HomeScreenProps {
@@ -91,7 +94,7 @@ export const HomeScreen = React.memo(
     }
 
     const unreadCount = transactions.filter(
-      (tx) => !readReceiptIds.includes(tx.id),
+      (tx) => (tx.status === "success" || tx.status === "failed") && !readReceiptIds.includes(tx.id),
     ).length;
 
     useEffect(() => {
@@ -127,6 +130,7 @@ export const HomeScreen = React.memo(
     }, []); // Run once on mount
 
     const [activeRekeningTab, setActiveRekeningTab] = useState(0);
+    const [otherAccountsExpanded, setOtherAccountsExpanded] = useState(false);
 
     const [currentPromoIndex, setCurrentPromoIndex] = useState(0);
     const promoScrollRef = useRef<HTMLDivElement>(null);
@@ -505,12 +509,50 @@ export const HomeScreen = React.memo(
 
                 <div className="mt-1 px-1">
                   <button
-                    onClick={() => onNavigate("otherAccounts")}
-                    className="w-full text-center text-slate-800 text-[12px] font-bold py-1.5 hover:bg-slate-100 rounded-lg transition-colors flex justify-center items-center gap-1.5 opacity-90 border-0 bg-transparent"
+                    onClick={() => setOtherAccountsExpanded(!otherAccountsExpanded)}
+                    className="w-full text-center text-slate-700 hover:text-slate-900 text-[12.5px] font-bold py-2 hover:bg-slate-50/80 rounded-xl transition-all active:scale-[0.98] flex justify-center items-center gap-2 border-[1.5px] border-slate-100 bg-white shadow-sm mt-2 cursor-pointer"
                   >
-                    Other Personal Savings & Checking{" "}
-                    <PlusCircleIcon size={14} />
+                    <span>Other Personal Savings & Checking</span>
+                    {otherAccountsExpanded ? (
+                      <ChevronUpIcon size={14} className="text-slate-500 transition-transform duration-300" />
+                    ) : (
+                      <ChevronDownIcon size={14} className="text-slate-500 transition-transform duration-300" />
+                    )}
                   </button>
+
+                  <AnimatePresence>
+                    {otherAccountsExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25, ease: "easeInOut" }}
+                        className="overflow-hidden"
+                      >
+                        <div className="pt-3 pb-1 flex flex-col gap-2 animate-in fade-in duration-300">
+                          <div
+                            onClick={() => displayToast("In Development")}
+                            className="bg-white border-[1.5px] border-dashed border-slate-200 hover:border-slate-300 hover:bg-slate-50/50 rounded-2xl p-4 flex items-center justify-between transition-all cursor-pointer group active:scale-[0.99] shadow-sm"
+                          >
+                            <div className="flex items-center gap-3 text-left">
+                              <div className="w-10 h-10 rounded-xl bg-slate-50 group-hover:bg-slate-100 flex items-center justify-center text-slate-500 group-hover:text-slate-800 border-[1.5px] border-slate-100 transition-colors shrink-0">
+                                <Plus size={18} strokeWidth={2.5} />
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="font-bold text-slate-800 text-[13.5px] tracking-tight">Connect New Account</span>
+                                <span className="text-[10px] text-slate-400 mt-0.5">Link an external wallet or savings account</span>
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <span className="text-[10px] font-extrabold text-slate-700 bg-slate-50 border border-slate-100 px-2 py-0.5 rounded-md tracking-wider uppercase">
+                                ADD
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               </section>
 

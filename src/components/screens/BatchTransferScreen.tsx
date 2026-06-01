@@ -41,7 +41,7 @@ export function BatchTransferScreen({
   }, [platformConfig, fetchPlatformConfig]);
 
   const [multiSendStep, setMultiSendStep] = useState<
-    "info" | "form" | "confirm" | "processing" | "success"
+    "form" | "confirm" | "success"
   >("form");
   const [recipients, setRecipients] = useState<
     {
@@ -72,30 +72,42 @@ export function BatchTransferScreen({
     if (!newAddress || !newAmount) return;
 
     const addressList = newAddress.split(/[\s,]+/).filter(Boolean);
+    const newItems: typeof recipients = [];
+    const invalidList: string[] = [];
 
-    const newItems = addressList.map((addr, idx) => {
+    addressList.forEach((addr) => {
       const match = contacts.find(
         (c) =>
           (c.number?.toLowerCase() || "") === (addr?.toLowerCase() || "") ||
+          (c.name?.toLowerCase() || "") === (addr?.toLowerCase() || "") ||
           (c.number || "").includes(addr),
       );
       const fullAddr = match ? match.number : addr;
-      const name = match
-        ? match.name
-        : `Recipient #${recipients.length + idx + 1}`;
-      const formattedAddress =
-        fullAddr.length > 12
-          ? `${fullAddr.substring(0, 6)}...${fullAddr.substring(fullAddr.length - 4)}`
-          : fullAddr;
 
-      return {
-        id: `${fullAddr}-${Date.now()}-${Math.random()}`,
-        address: fullAddr,
-        displayAddress: formattedAddress,
-        name,
-        amount: newAmount,
-      };
+      if (!fullAddr.startsWith("0x") || fullAddr.length !== 42) {
+        invalidList.push(addr);
+      } else {
+        const name = match
+          ? match.name
+          : `Recipient #${recipients.length + newItems.length + 1}`;
+        const formattedAddress = `${fullAddr.substring(0, 6)}...${fullAddr.substring(fullAddr.length - 4)}`;
+
+        newItems.push({
+          id: `${fullAddr}-${Date.now()}-${Math.random()}`,
+          address: fullAddr,
+          displayAddress: formattedAddress,
+          name,
+          amount: newAmount,
+        });
+      }
     });
+
+    if (invalidList.length > 0) {
+      displayToast(
+        `Format alamat tidak valid untuk: ${invalidList.join(", ")}. Harus berformat 0x dengan 42 karakter.`
+      );
+      return;
+    }
 
     setRecipients((prev) => [...prev, ...newItems]);
     setNewAddress("");
@@ -206,7 +218,7 @@ export function BatchTransferScreen({
   };
 
   return (
-    <div className="w-full h-full bg-[#f8fafc] relative flex flex-col items-center overflow-hidden z-50">
+    <div className="w-full h-full bg-[#ecf5fc] relative flex flex-col items-center overflow-hidden z-50">
       {/* Header */}
       <div className="flex justify-center bg-slate-900 shadow-md relative z-10 w-full shrink-0">
         <div className="flex items-center px-4 pt-6 pb-3 w-full max-w-[500px] justify-between">
@@ -228,13 +240,13 @@ export function BatchTransferScreen({
       <div className="w-full bg-white border-b border-slate-100 flex justify-center shrink-0">
         <div className="w-full max-w-[500px] px-5 py-3 flex gap-2">
           <div
-            className={`h-1.5 flex-1 rounded-full ${multiSendStep === "form" ? "bg-slate-900" : "bg-slate-900"}`}
+            className="h-1.5 flex-1 rounded-full bg-slate-900"
           ></div>
           <div
-            className={`h-1.5 flex-1 rounded-full ${multiSendStep === "confirm" || multiSendStep === "processing" || multiSendStep === "success" ? "bg-slate-900" : "bg-slate-100"}`}
+            className={`h-1.5 flex-1 rounded-full ${multiSendStep === "confirm" || multiSendStep === "success" ? "bg-slate-900" : "bg-slate-100"}`}
           ></div>
           <div
-            className={`h-1.5 flex-1 rounded-full ${multiSendStep === "processing" || multiSendStep === "success" ? "bg-slate-900" : "bg-slate-100"}`}
+            className={`h-1.5 flex-1 rounded-full ${multiSendStep === "success" ? "bg-slate-900" : "bg-slate-100"}`}
           ></div>
         </div>
       </div>
@@ -638,33 +650,6 @@ export function BatchTransferScreen({
             </motion.div>
           )}
 
-          {/* Step 3: Processing Sequence */}
-          {multiSendStep === "processing" && (
-            <div className="py-20 flex flex-col items-center text-center">
-              <div className="relative mb-10">
-                <div className="w-24 h-24 rounded-full border-4 border-blue-50 flex items-center justify-center">
-                  <Loader2 className="animate-spin text-slate-800" size={48} />
-                </div>
-                <div className="absolute inset-0 animate-ping rounded-full border border-blue-200/50"></div>
-              </div>
-
-              <h3 className="font-black text-[22px] text-slate-900 tracking-tight">
-                On-Chain Processing
-              </h3>
-              <p className="text-[14px] text-slate-500 mt-2 max-w-[280px] leading-relaxed">
-                Verifying batch signature with Circle API and broadcasting to
-                Arc Testnet.
-              </p>
-
-              <div className="w-full bg-slate-900 text-emerald-400 font-mono text-[11px] rounded-2xl p-5 mt-10 text-left leading-relaxed shadow-2xl uppercase border border-slate-800">
-                <span className="text-slate-600 mr-2 opacity-50 font-sans tracking-widest">
-                  {">"}
-                </span>
-                {processingStatus}
-              </div>
-            </div>
-          )}
-
           {/* Step 4: Success Screen */}
           {multiSendStep === "success" && (
             <motion.div
@@ -928,18 +913,44 @@ export function BatchTransferScreen({
                 onClick={() => {
                   if (selectedQuickAddIds.length === 0) return;
 
-                  const selectedAddresses = contacts
-                    .filter((c) => selectedQuickAddIds.includes(c.id))
-                    .map((c) => c.number)
-                    .join(", ");
+                  const selectedContacts = contacts.filter((c) =>
+                    selectedQuickAddIds.includes(c.id)
+                  );
 
-                  setNewAddress((prev) =>
-                    prev ? `${prev}, ${selectedAddresses}` : selectedAddresses,
-                  );
-                  setShowQuickAddModal(false);
-                  displayToast(
-                    `Selected ${selectedQuickAddIds.length} contacts populated!`,
-                  );
+                  if (newAmount) {
+                    // Instantly add to the recipient list with the preset amount
+                    const newItems = selectedContacts.map((contact) => {
+                      const fullAddr = contact.number;
+                      const formattedAddress = `${fullAddr.substring(0, 6)}...${fullAddr.substring(fullAddr.length - 4)}`;
+
+                      return {
+                        id: `${fullAddr}-${Date.now()}-${Math.random()}`,
+                        address: fullAddr,
+                        displayAddress: formattedAddress,
+                        name: contact.name,
+                        amount: newAmount,
+                      };
+                    });
+
+                    setRecipients((prev) => [...prev, ...newItems]);
+                    setShowQuickAddModal(false);
+                    displayToast(
+                      `Berhasil menambahkan langsung ${selectedQuickAddIds.length} kontak ke daftar transfer batch!`
+                    );
+                  } else {
+                    // Fallback to populating the text area
+                    const selectedAddresses = selectedContacts
+                      .map((c) => c.number)
+                      .join(", ");
+
+                    setNewAddress((prev) =>
+                      prev ? `${prev}, ${selectedAddresses}` : selectedAddresses,
+                    );
+                    setShowQuickAddModal(false);
+                    displayToast(
+                      `Berhasil menyalin ${selectedQuickAddIds.length} alamat. Masukkan jumlah USDC untuk menambahkannya.`
+                    );
+                  }
                 }}
                 disabled={selectedQuickAddIds.length === 0}
                 className="w-full bg-slate-900 border-0 hover:bg-slate-800 disabled:opacity-45 text-white py-4 rounded-full font-bold text-[15px] shadow-lg hover:shadow-xl transition-all active:scale-[0.98] cursor-pointer"
