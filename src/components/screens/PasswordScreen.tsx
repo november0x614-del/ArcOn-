@@ -63,8 +63,8 @@ export function PasswordScreen({
       </div>
 
       {/* Bottom Area: Password Form */}
-      <div className="flex-1 px-8 pt-8 pb-10 flex flex-col bg-white">
-        <div className="flex-1 flex flex-col justify-center">
+      <div className="flex-1 px-8 pt-8 pb-10 flex flex-col bg-white items-center">
+        <div className="flex-1 flex flex-col justify-center w-full max-w-[500px]">
           <h2 className="text-[16px] font-bold text-slate-800 mb-6 text-center">
             Authentication
           </h2>
@@ -103,7 +103,7 @@ export function PasswordScreen({
                     : "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"
                 }
                 ${isLoading ? "opacity-70 cursor-not-allowed" : ""}`}
-          >
+            >
             {isLoading ? "Authenticating..." : "Login to Account"}
           </button>
 

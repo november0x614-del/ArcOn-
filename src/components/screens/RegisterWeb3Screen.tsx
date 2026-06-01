@@ -8,7 +8,6 @@ import {
   Check,
 } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
-import { apiFetch } from "../../lib/api";
 
 interface RegisterWeb3ScreenProps {
   onBack: () => void;
@@ -58,7 +57,7 @@ export function RegisterWeb3Screen({
     verifiedUsername: string,
   ) => {
     try {
-      const response = await apiFetch("/api/wallets/create", {
+      const response = await fetch("/api/wallets/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId }),
@@ -153,7 +152,7 @@ export function RegisterWeb3Screen({
     try {
       // Pre-flight Cleanup is still useful here to prevent duplicate registration deadlocks
       try {
-        await apiFetch("/api/auth/cleanup-unconfirmed", {
+        await fetch("/api/auth/cleanup-unconfirmed", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, username }),
@@ -205,7 +204,17 @@ export function RegisterWeb3Screen({
       setSignUpData(authData);
 
       // Check if email confirmation is required by looking at session
-      const needsEmailConfirmation = !authData.session;
+      let needsEmailConfirmation = false;
+      if (!authData.session) {
+        const { error: newSignInError } =
+          await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+        if (newSignInError) {
+          needsEmailConfirmation = true;
+        }
+      }
 
       if (needsEmailConfirmation) {
         setStep(3); // Go to OTP
@@ -235,233 +244,239 @@ export function RegisterWeb3Screen({
     }
   };
 
-  // `processRegistration` is now called directly from the button click
+  React.useEffect(() => {
+    if (step === 2) {
+      processRegistration();
+    }
+  }, [step]);
 
   return (
     <div className="w-full h-full bg-white relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
       {/* Header */}
-      <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between shrink-0">
-        <div className="flex items-center">
-          <button
-            onClick={onBack}
-            className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
-          >
-            <ArrowLeft size={20} className="text-white" />
-          </button>
-          <h2 className="font-bold text-[16px] text-white ml-2">
-            OPEN NEW ACCOUNT
-          </h2>
+      <div className="flex justify-center bg-slate-900 shadow-md relative z-10 w-full shrink-0">
+        <div className="flex items-center px-4 pt-6 pb-3 w-full max-w-[500px] justify-between">
+          <div className="flex items-center">
+            <button
+              onClick={onBack}
+              className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
+            >
+              <ArrowLeft size={20} className="text-white" />
+            </button>
+            <h2 className="font-bold text-[16px] text-white ml-2">
+              OPEN NEW ACCOUNT
+            </h2>
+          </div>
         </div>
       </div>
 
       {step === 1 && (
-        <div className="flex-1 p-6 flex flex-col pt-8">
-          <h3 className="text-[26px] tracking-tight font-extrabold text-slate-800 leading-tight mb-2">
-            Start Your
-            <br />
-            Easy Steps
-          </h3>
-          <p className="text-[14.5px] text-slate-500 mb-8 mt-2">
-            Enter your details to create your secure Lounge account.
-          </p>
+        <div className="flex-1 px-6 flex flex-col pt-8 items-center w-full">
+          <div className="w-full max-w-[500px] flex flex-col h-full">
+            <h3 className="text-[26px] tracking-tight font-extrabold text-slate-800 leading-tight mb-2">
+              Start Your
+              <br />
+              Easy Steps
+            </h3>
+            <p className="text-[14.5px] text-slate-500 mb-8 mt-2">
+              Enter your details to create your secure Lounge account.
+            </p>
 
-          <div className="space-y-4">
-            <div>
-              <label className="text-[13px] font-medium text-slate-700 mb-1.5 block ml-1">
-                Username
-              </label>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:ring-2 focus:ring-[#005faa]/20 focus:border-[#005faa] focus:bg-white text-[15px] font-medium text-slate-900 transition-all placeholder:text-slate-400 placeholder:font-normal"
-                placeholder="Enter Username"
-              />
-            </div>
-            <div className="relative">
-              <label className="text-[13px] font-medium text-slate-700 mb-1.5 block ml-1">
-                Email
-              </label>
-              <div className="relative">
+            <div className="space-y-4">
+              <div>
+                <label className="text-[13px] font-medium text-slate-700 mb-1.5 block ml-1">
+                  Username
+                </label>
                 <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 pr-10 outline-none focus:ring-2 focus:ring-[#005faa]/20 focus:border-[#005faa] focus:bg-white text-[15px] font-medium text-slate-900 transition-all placeholder:text-slate-400 placeholder:font-normal"
-                  placeholder="name@email.com"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:ring-2 focus:ring-[#005faa]/20 focus:border-[#005faa] focus:bg-white text-[15px] font-medium text-slate-900 transition-all placeholder:text-slate-400 placeholder:font-normal"
+                  placeholder="Enter Username"
                 />
-                {email.includes("@") && email.includes(".") && (
-                  <CheckCircle2
-                    size={18}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-green-500"
+              </div>
+              <div className="relative">
+                <label className="text-[13px] font-medium text-slate-700 mb-1.5 block ml-1">
+                  Email
+                </label>
+                <div className="relative">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 pr-10 outline-none focus:ring-2 focus:ring-[#005faa]/20 focus:border-[#005faa] focus:bg-white text-[15px] font-medium text-slate-900 transition-all placeholder:text-slate-400 placeholder:font-normal"
+                    placeholder="name@email.com"
                   />
+                  {email.includes("@") && email.includes(".") && (
+                    <CheckCircle2
+                      size={18}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-green-500"
+                    />
+                  )}
+                </div>
+              </div>
+              <div className="relative">
+                <label className="text-[13px] font-medium text-slate-700 mb-1.5 block ml-1">
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-4 pr-16 py-3.5 outline-none focus:ring-2 focus:ring-[#005faa]/20 focus:border-[#005faa] focus:bg-white text-[15px] font-medium text-slate-900 transition-all placeholder:text-slate-400 placeholder:font-normal"
+                    placeholder="••••••••"
+                  />
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center">
+                    {isPasswordValid && (
+                      <CheckCircle2
+                        size={18}
+                        className="text-green-500 mr-1 animate-in zoom-in duration-200"
+                      />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="p-2 text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Password Requirements Checklist */}
+                {password.length > 0 && (
+                  <div className="bg-slate-50 border-[1.5px] border-slate-200/60 rounded-2xl p-4.5 mt-3 space-y-2.5 animate-in slide-in-from-top-2 duration-200">
+                    <p className="text-[12px] font-bold text-slate-800 tracking-tight">
+                      PASSWORD SECURITY REQUIREMENTS:
+                    </p>
+                    <div className="grid grid-cols-1 gap-2 text-[12.5px]">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${isLongEnough ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}
+                        >
+                          <Check
+                            size={11}
+                            className={isLongEnough ? "stroke-[3]" : ""}
+                          />
+                        </div>
+                        <span
+                          className={
+                            isLongEnough
+                              ? "text-green-700 font-medium"
+                              : "text-slate-500"
+                          }
+                        >
+                          Minimal 6 karakter
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${hasLowercase ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}
+                        >
+                          <Check
+                            size={11}
+                            className={hasLowercase ? "stroke-[3]" : ""}
+                          />
+                        </div>
+                        <span
+                          className={
+                            hasLowercase
+                              ? "text-green-700 font-medium"
+                              : "text-slate-500"
+                          }
+                        >
+                          Satu huruf kecil (a-z)
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${hasUppercase ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}
+                        >
+                          <Check
+                            size={11}
+                            className={hasUppercase ? "stroke-[3]" : ""}
+                          />
+                        </div>
+                        <span
+                          className={
+                            hasUppercase
+                              ? "text-green-700 font-medium"
+                              : "text-slate-500"
+                          }
+                        >
+                          Satu huruf besar (A-Z)
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${hasDigit ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}
+                        >
+                          <Check
+                            size={11}
+                            className={hasDigit ? "stroke-[3]" : ""}
+                          />
+                        </div>
+                        <span
+                          className={
+                            hasDigit
+                              ? "text-green-700 font-medium"
+                              : "text-slate-500"
+                          }
+                        >
+                          Satu angka (0-9)
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${hasSpecial ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}
+                        >
+                          <Check
+                            size={11}
+                            className={hasSpecial ? "stroke-[3]" : ""}
+                          />
+                        </div>
+                        <span
+                          className={
+                            hasSpecial
+                              ? "text-green-700 font-medium"
+                              : "text-slate-500"
+                          }
+                        >
+                          Satu karakter spesial (cth: !, @, #, $, %, etc.)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
-            <div className="relative">
-              <label className="text-[13px] font-medium text-slate-700 mb-1.5 block ml-1">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-4 pr-16 py-3.5 outline-none focus:ring-2 focus:ring-[#005faa]/20 focus:border-[#005faa] focus:bg-white text-[15px] font-medium text-slate-900 transition-all placeholder:text-slate-400 placeholder:font-normal"
-                  placeholder="••••••••"
-                />
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center">
-                  {isPasswordValid && (
-                    <CheckCircle2
-                      size={18}
-                      className="text-green-500 mr-1 animate-in zoom-in duration-200"
-                    />
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="p-2 text-slate-400 hover:text-slate-600 transition-colors"
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-              </div>
 
-              {/* Password Requirements Checklist */}
-              {password.length > 0 && (
-                <div className="bg-slate-50 border-[1.5px] border-slate-200/60 rounded-2xl p-4.5 mt-3 space-y-2.5 animate-in slide-in-from-top-2 duration-200">
-                  <p className="text-[12px] font-bold text-slate-800 tracking-tight">
-                    PASSWORD SECURITY REQUIREMENTS:
-                  </p>
-                  <div className="grid grid-cols-1 gap-2 text-[12.5px]">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${isLongEnough ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}
-                      >
-                        <Check
-                          size={11}
-                          className={isLongEnough ? "stroke-[3]" : ""}
-                        />
-                      </div>
-                      <span
-                        className={
-                          isLongEnough
-                            ? "text-green-700 font-medium"
-                            : "text-slate-500"
-                        }
-                      >
-                        Minimal 6 karakter
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div
-                        className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${hasLowercase ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}
-                      >
-                        <Check
-                          size={11}
-                          className={hasLowercase ? "stroke-[3]" : ""}
-                        />
-                      </div>
-                      <span
-                        className={
-                          hasLowercase
-                            ? "text-green-700 font-medium"
-                            : "text-slate-500"
-                        }
-                      >
-                        Satu huruf kecil (a-z)
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div
-                        className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${hasUppercase ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}
-                      >
-                        <Check
-                          size={11}
-                          className={hasUppercase ? "stroke-[3]" : ""}
-                        />
-                      </div>
-                      <span
-                        className={
-                          hasUppercase
-                            ? "text-green-700 font-medium"
-                            : "text-slate-500"
-                        }
-                      >
-                        Satu huruf besar (A-Z)
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div
-                        className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${hasDigit ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}
-                      >
-                        <Check
-                          size={11}
-                          className={hasDigit ? "stroke-[3]" : ""}
-                        />
-                      </div>
-                      <span
-                        className={
-                          hasDigit
-                            ? "text-green-700 font-medium"
-                            : "text-slate-500"
-                        }
-                      >
-                        Satu angka (0-9)
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div
-                        className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${hasSpecial ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}
-                      >
-                        <Check
-                          size={11}
-                          className={hasSpecial ? "stroke-[3]" : ""}
-                        />
-                      </div>
-                      <span
-                        className={
-                          hasSpecial
-                            ? "text-green-700 font-medium"
-                            : "text-slate-500"
-                        }
-                      >
-                        Satu karakter spesial (cth: !, @, #, $, %, etc.)
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
+            <div className="mt-auto pt-6 pb-6 space-y-3">
+              <button
+                disabled={
+                  !username ||
+                  !email ||
+                  !password ||
+                  !isPasswordValid ||
+                  isCreating
+                }
+                onClick={() => setStep(2)}
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl transition-all shadow-[0_8px_20px_rgba(15,23,42,0.15)] flex justify-center items-center gap-2 active:scale-[0.98] border-0 disabled:opacity-50 disabled:bg-slate-300 disabled:shadow-none disabled:cursor-not-allowed text-[15px]"
+              >
+                {isCreating ? "Creating..." : "Create Lounge Account"}
+              </button>
+
+              <p className="text-[11px] text-slate-400 text-center mt-4">
+                By continuing, you agree to Lounge Terms and Security Guidelines.
+              </p>
             </div>
-          </div>
-
-          <div className="mt-auto pt-6 pb-6 space-y-3">
-            <button
-              disabled={
-                !username ||
-                !email ||
-                !password ||
-                !isPasswordValid ||
-                isCreating
-              }
-              onClick={() => {
-                setStep(2);
-                processRegistration();
-              }}
-              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl transition-all shadow-[0_8px_20px_rgba(15,23,42,0.15)] flex justify-center items-center gap-2 active:scale-[0.98] border-0 disabled:opacity-50 disabled:bg-slate-300 disabled:shadow-none disabled:cursor-not-allowed text-[15px]"
-            >
-              {isCreating ? "Creating..." : "Create Lounge Account"}
-            </button>
-
-            <p className="text-[11px] text-slate-400 text-center mt-4">
-              By continuing, you agree to Lounge Terms and Security Guidelines.
-            </p>
           </div>
         </div>
       )}
 
       {step === 2 && (
         <div className="flex-1 p-6 flex flex-col items-center justify-center text-center animate-in fade-in duration-300">
+          <div className="w-full max-w-[500px]">
           {!error ? (
             <>
               <div className="relative mb-10 mt-[-10vh] flex items-center justify-center">
@@ -524,114 +539,115 @@ export function RegisterWeb3Screen({
               </div>
             </div>
           )}
+          </div>
         </div>
       )}
 
       {step === 3 && (
-        <div className="flex-1 p-6 flex flex-col pt-12 animate-in slide-in-from-right duration-300">
-          <div className="mb-6">
-            <h3 className="text-[26px] tracking-tight font-extrabold text-slate-800 leading-tight mb-2">
-              Verify your
-              <br />
-              Email Address
-            </h3>
-            <p className="text-[14.5px] text-slate-500 mt-2">
-              We've sent a safety confirmation code to
-              <br />
-              <span className="font-bold text-slate-700">{email}</span>.
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <label className="text-[13px] font-medium text-slate-700 mb-1.5 block ml-1">
-                Security Code (OTP)
-              </label>
-              <input
-                type="text"
-                maxLength={8}
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ""))}
-                placeholder="000000"
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:ring-2 focus:ring-[#0f172a]/20 focus:border-[#0f172a] focus:bg-white text-[24px] tracking-[0.5em] text-center font-bold text-slate-900 transition-all placeholder:text-slate-300"
-              />
+        <div className="flex-1 px-6 flex flex-col pt-12 animate-in slide-in-from-right duration-300 items-center w-full">
+          <div className="w-full max-w-[500px] flex flex-col h-full">
+            <div className="mb-6">
+              <h3 className="text-[26px] tracking-tight font-extrabold text-slate-800 leading-tight mb-2">
+                Verify your
+                <br />
+                Email Address
+              </h3>
+              <p className="text-[14.5px] text-slate-500 mt-2">
+                We've sent a safety confirmation code to
+                <br />
+                <span className="font-bold text-slate-700">{email}</span>.
+              </p>
             </div>
 
-            {error && (
-              <div className="bg-red-50 border border-red-100 p-3 rounded-xl mt-2">
-                <p className="text-[13px] text-red-600 font-medium text-center">
-                  {error}
-                </p>
+            <div className="space-y-4">
+              <div>
+                <label className="text-[13px] font-medium text-slate-700 mb-1.5 block ml-1">
+                  Security Code (OTP)
+                </label>
+                <input
+                  type="text"
+                  maxLength={8}
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ""))}
+                  placeholder="000000"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:ring-2 focus:ring-[#0f172a]/20 focus:border-[#0f172a] focus:bg-white text-[24px] tracking-[0.5em] text-center font-bold text-slate-900 transition-all placeholder:text-slate-300"
+                />
               </div>
-            )}
-          </div>
 
-          <div className="mt-auto pt-6 pb-6 space-y-4">
-            <button
-              disabled={otp.length < 6 || isVerifying}
-              onClick={handleVerifyOtp}
-              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-xl transition-all shadow-[0_8px_20px_rgba(15,23,42,0.15)] flex justify-center items-center gap-2 active:scale-[0.98] border-0 disabled:opacity-50 disabled:bg-slate-300 disabled:shadow-none disabled:cursor-not-allowed text-[15px]"
-            >
-              {isVerifying ? "Creating Wallet..." : "Confirm & Complete"}
-            </button>
-            <button
-              onClick={() => onBack()}
-              className="w-full bg-transparent text-slate-500 font-bold py-4 transition-colors hover:text-slate-800 text-[14.5px]"
-            >
-              Skip & Do Later
-            </button>
+              {error && (
+                <div className="bg-red-50 border border-red-100 p-3 rounded-xl mt-2">
+                  <p className="text-[13px] text-red-600 font-medium text-center">
+                    {error}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-auto pt-6 pb-6 space-y-4">
+              <button
+                disabled={otp.length < 6 || isVerifying}
+                onClick={handleVerifyOtp}
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-xl transition-all shadow-[0_8px_20px_rgba(15,23,42,0.15)] flex justify-center items-center gap-2 active:scale-[0.98] border-0 disabled:opacity-50 disabled:bg-slate-300 disabled:shadow-none disabled:cursor-not-allowed text-[15px]"
+              >
+                {isVerifying ? "Creating Wallet..." : "Confirm & Complete"}
+              </button>
+              <button
+                onClick={() => onBack()}
+                className="w-full bg-transparent text-slate-500 font-bold py-4 transition-colors hover:text-slate-800 text-[14.5px]"
+              >
+                Skip & Do Later
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {step === 4 && (
-        <div className="flex-1 p-6 flex flex-col items-center justify-center text-center animate-in fade-in duration-300">
-          <div className="mt-[-10vh] px-4 w-full">
-            <div className="relative mb-8 mx-auto w-24 h-24 flex items-center justify-center">
-              <div className="absolute inset-0 bg-red-500/10 rounded-full animate-pulse"></div>
-              <div className="relative z-10 w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-[0_4px_16px_rgba(239,68,68,0.15)] border border-red-100">
-                <Wallet size={28} className="text-red-500" />
+        <div className="flex-1 px-6 flex flex-col items-center justify-center text-center animate-in fade-in duration-300">
+          <div className="w-full max-w-[500px]">
+            <div className="mt-[-10vh] px-4 w-full">
+              <div className="relative mb-8 mx-auto w-24 h-24 flex items-center justify-center">
+                <div className="absolute inset-0 bg-red-500/10 rounded-full animate-pulse"></div>
+                <div className="relative z-10 w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-[0_4px_16px_rgba(239,68,68,0.15)] border border-red-100">
+                  <Wallet size={28} className="text-red-500" />
+                </div>
               </div>
-            </div>
-            <h3 className="text-[22px] font-bold text-slate-900 mb-4 tracking-tight">
-              Wallet Setup Failed
-            </h3>
-            <p className="text-[14px] text-slate-500 mb-4 px-2">
-              Your account was created, but we couldn't configure your secure
-              wallet on the blockchain.
-            </p>
-            <div className="bg-red-50/80 border border-red-100/80 p-4 rounded-2xl mb-8 px-5">
-              <p className="text-[13.5px] text-red-600 font-medium text-center break-words overflow-auto max-h-[150px]">
-                {error}
+              <h3 className="text-[22px] font-bold text-slate-900 mb-4 tracking-tight">
+                Wallet Setup Failed
+              </h3>
+              <p className="text-[14px] text-slate-500 mb-4 px-2">
+                Your account was created, but we couldn't configure your secure
+                wallet on the blockchain.
               </p>
-            </div>
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={async () => {
-                  setError(null);
-                  const { data: { session } } = await supabase.auth.getSession();
-                  if (session?.user?.id) {
-                    await executeWalletCreation(
-                      session.user.id,
-                      session,
-                      email,
-                      username,
-                    );
-                  } else {
-                    setError("Session expired. Please log in again.");
-                    setStep(1);
-                  }
-                }}
-                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl transition-all shadow-[0_8px_20px_rgba(15,23,42,0.2)] flex justify-center items-center gap-2 active:scale-[0.98] border-0"
-              >
-                Retry Wallet Setup
-              </button>
-              <button
-                onClick={() => onBack()}
-                className="w-full bg-slate-50 text-slate-600 font-bold py-4 border border-slate-200 rounded-2xl hover:bg-slate-100 transition-colors active:scale-[0.98]"
-              >
-                Go to Home
-              </button>
+              <div className="bg-red-50/80 border border-red-100/80 p-4 rounded-2xl mb-8 px-5">
+                <p className="text-[13.5px] text-red-600 font-medium text-center break-words overflow-auto max-h-[150px]">
+                  {error}
+                </p>
+              </div>
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={async () => {
+                    setError(null);
+                    if (signUpData?.user?.id) {
+                      await executeWalletCreation(
+                        signUpData.user.id,
+                        signUpData.session,
+                        email,
+                        username,
+                      );
+                    }
+                  }}
+                  className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl transition-all shadow-[0_8px_20px_rgba(15,23,42,0.2)] flex justify-center items-center gap-2 active:scale-[0.98] border-0"
+                >
+                  Retry Wallet Setup
+                </button>
+                <button
+                  onClick={() => onBack()}
+                  className="w-full bg-slate-50 text-slate-600 font-bold py-4 border border-slate-200 rounded-2xl hover:bg-slate-100 transition-colors active:scale-[0.98]"
+                >
+                  Go to Home
+                </button>
+              </div>
             </div>
           </div>
         </div>

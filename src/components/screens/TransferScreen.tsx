@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, UserPlus, Users, Star, X, Settings2 } from "lucide-react";
+import { ArrowLeft, UserPlus, Users, Star, X, Settings2, Copy, Check } from "lucide-react";
 import { useApp } from "../../contexts/AppContext";
 import { useContacts } from "../../hooks/useContacts";
 import { BackendClient } from "../../services/api";
+import { useStore } from "../../store/useStore";
 
 interface TransferScreenProps {
   onBack: () => void;
   onNewTransfer: () => void;
   onSelectContact: (contact: any) => void;
   onBatchTransfer: () => void;
+  hideBack?: boolean;
 }
 
 interface ContactItemProps {
@@ -41,6 +43,17 @@ function ContactItem({
   isSelected,
   onSelectManage,
 }: ContactItemProps) {
+  const [copied, setCopied] = useState(false);
+  const displayToast = useStore((state) => state.displayToast);
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(address);
+    setCopied(true);
+    displayToast("Address copied to clipboard");
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <div className="flex flex-col mb-4 bg-white relative z-10 w-full">
       <div
@@ -92,7 +105,7 @@ function ContactItem({
               >
                 {network}
               </p>
-              <div className="flex items-center gap-2 mt-0.5">
+              <div className="flex items-center gap-1.5 mt-0.5">
                 {isManageContacts && (
                   <button
                     onClick={(e) => {
@@ -112,10 +125,25 @@ function ContactItem({
                   </button>
                 )}
 
+                <button
+                  type="button"
+                  onClick={handleCopy}
+                  className="p-1.5 rounded hover:bg-slate-200/80 text-slate-400 hover:text-slate-700 transition-colors border-0 bg-transparent flex items-center justify-center cursor-pointer shrink-0 z-10"
+                  title="Copy Address"
+                >
+                  {copied ? (
+                    <Check className="text-emerald-600 stroke-[3]" size={13} />
+                  ) : (
+                    <Copy size={13} strokeWidth={2.5} />
+                  )}
+                </button>
+
                 <p
                   className={`text-[13px] font-medium tracking-wide truncate ${isManageContacts ? "text-slate-400" : "text-slate-500"}`}
                 >
-                  {address}
+                  {address.startsWith("0x") && address.length > 15
+                    ? `${address.substring(0, 10)}...${address.substring(address.length - 8)}`
+                    : address}
                 </p>
               </div>
             </div>
@@ -131,6 +159,7 @@ export function TransferScreen({
   onNewTransfer,
   onSelectContact,
   onBatchTransfer,
+  hideBack,
 }: TransferScreenProps) {
   const { startSyncPolling, stopSyncPolling } = useApp();
   const { realContacts: allContacts } = useContacts();
@@ -212,29 +241,34 @@ export function TransferScreen({
   return (
     <div className="w-full h-full bg-slate-50 relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
       {/* Header */}
-      <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between shrink-0">
-        <div className="flex items-center">
+      <div className="flex justify-center bg-slate-900 shadow-md relative z-10 shrink-0 w-full">
+        <div className="flex items-center px-4 pt-6 pb-3 w-full max-w-[500px] justify-between">
+          <div className="flex items-center">
+            {!hideBack && (
+              <button
+                onClick={onBack}
+                className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent mr-2 flex items-center justify-center animate-in fade-in"
+              >
+                <ArrowLeft size={20} className="text-white" />
+              </button>
+            )}
+            <h2 className="font-bold text-[16px] text-white">TRANSFER</h2>
+          </div>
           <button
-            onClick={onBack}
-            className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
+            onClick={onBatchTransfer}
+            className="bg-slate-100 text-slate-700 px-3 py-1.5 rounded-full flex items-center text-[12px] font-bold gap-1.5 hover:bg-slate-200 transition-colors active:scale-95 border border-slate-200"
           >
-            <ArrowLeft size={20} className="text-white" />
+            <Users size={16} strokeWidth={2.5} /> Batch Transfer
           </button>
-          <h2 className="font-bold text-[16px] text-white ml-2">TRANSFER</h2>
         </div>
-        <button
-          onClick={onBatchTransfer}
-          className="bg-slate-100 text-slate-700 px-3 py-1.5 rounded-full flex items-center text-[12px] font-bold gap-1.5 hover:bg-slate-200 transition-colors active:scale-95 border border-slate-200"
-        >
-          <Users size={16} strokeWidth={2.5} /> Batch Transfer
-        </button>
       </div>
 
       {/* Sub Content area */}
       <div className="flex-1 w-full flex flex-col overflow-hidden relative">
         {/* Scrollable List Area */}
         <div className="flex-1 overflow-y-auto w-full px-5 pb-24 scrollbar-hide">
-          {/* Favorites Section */}
+          <div className="w-full max-w-[500px] mx-auto flex flex-col relative">
+            {/* Favorites Section */}
           <div className="mb-4">
             {(favorites.length > 0 || isLoadingFavorite) && (
               <div className="flex justify-between items-end mb-4 pr-1 mt-6">
@@ -338,11 +372,12 @@ export function TransferScreen({
               />
             ))}
           </div>
+          </div>
         </div>
 
         {/* Floating Action Button */}
         {!contactToDelete && (
-          <div className="absolute bottom-7 left-1/2 -translate-x-1/2 w-[calc(100%-40px)] z-20">
+          <div className="absolute bottom-7 left-1/2 -translate-x-1/2 w-[calc(100%-40px)] max-w-[460px] z-20">
             {isManageContacts ? (
               selectedContacts.length > 0 && (
                 <button

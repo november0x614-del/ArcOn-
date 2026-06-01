@@ -17,89 +17,93 @@ export function RegisterSuccessScreen({
   onContinue,
 }: RegisterSuccessScreenProps) {
   return (
-    <div className="w-full h-full bg-white relative flex flex-col justify-center text-center p-6 animate-in slide-in-from-right duration-300 z-50">
-      <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6 mx-auto">
-        <CheckCircle2 size={40} className="text-green-500" />
-      </div>
-      <h2 className="text-[22px] font-extrabold text-slate-800 mb-2 leading-tight">
-        Account &<br />
-        Web3 Wallet Created Successfully
-      </h2>
-      <p className="text-[14px] text-slate-500 mb-6 leading-relaxed">
-        Congratulations! Your Lounge account and Arc Web3 Wallet are now active.
-        You are ready to make transactions.
-      </p>
-
-      {!isVerified && (
-        <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl mb-6 text-left">
-          <p className="text-[13px] font-medium text-blue-800 leading-relaxed">
-            <strong className="block mb-1">Check Your Email</strong>
-            We've sent a confirmation link to your email. You must verify it
-            before you can log in.
+    <div className="w-full h-full bg-white relative flex flex-col items-center justify-center text-center p-6 animate-in slide-in-from-right duration-300 z-50">
+      <div className="w-full max-w-[500px] flex flex-col items-center h-full">
+        <div className="flex flex-col justify-center flex-1 w-full">
+          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6 mx-auto">
+            <CheckCircle2 size={40} className="text-green-500" />
+          </div>
+          <h2 className="text-[22px] font-extrabold text-slate-800 mb-2 leading-tight">
+            Account &<br />
+            Web3 Wallet Created Successfully
+          </h2>
+          <p className="text-[14px] text-slate-500 mb-6 leading-relaxed">
+            Congratulations! Your Lounge account and Arc Web3 Wallet are now active.
+            You are ready to make transactions.
           </p>
-        </div>
-      )}
 
-      <div className="bg-slate-50 border border-slate-100 rounded-2xl p-5 w-full text-left mb-6 flex flex-col gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-slate-900/5 text-slate-800 flex items-center justify-center shrink-0">
-            <User size={16} />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-slate-400 text-[11px] font-bold uppercase tracking-wider">
-              Username
-            </span>
-            <span className="font-bold text-slate-800 text-[14px]">
-              {username}
-            </span>
-          </div>
-        </div>
-
-        <div className="w-full h-[1px] bg-slate-200/50"></div>
-
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-slate-900/5 text-slate-800 flex items-center justify-center shrink-0">
-            <Mail size={16} />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-slate-400 text-[11px] font-bold uppercase tracking-wider">
-              Email
-            </span>
-            <span className="font-bold text-slate-800 text-[14px]">
-              {email}
-            </span>
-          </div>
-        </div>
-
-        <div className="w-full h-[1px] bg-slate-200/50"></div>
-
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-slate-900/5 text-slate-800 flex items-center justify-center shrink-0">
-            <Wallet size={16} />
-          </div>
-          <div className="flex flex-col w-full overflow-hidden">
-            <div className="flex justify-between items-center w-full">
-              <span className="text-slate-400 text-[11px] font-bold uppercase tracking-wider">
-                Arc Wallet Address
-              </span>
-              <span className="text-[9px] font-bold text-slate-800 bg-slate-900/5 px-1.5 py-0.5 rounded">
-                TESTNET
-              </span>
+          {!isVerified && (
+            <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl mb-6 text-left">
+              <p className="text-[13px] font-medium text-blue-800 leading-relaxed">
+                <strong className="block mb-1">Check Your Email</strong>
+                We've sent a confirmation link to your email. You must verify it
+                before you can log in.
+              </p>
             </div>
-            <span className="font-mono font-medium text-slate-800 text-[13px] truncate mt-0.5">
-              {walletAddress}
-            </span>
+          )}
+
+          <div className="bg-slate-50 border border-slate-100 rounded-2xl p-5 w-full text-left mb-6 flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-slate-900/5 text-slate-800 flex items-center justify-center shrink-0">
+                <User size={16} />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-slate-400 text-[11px] font-bold uppercase tracking-wider">
+                  Username
+                </span>
+                <span className="font-bold text-slate-800 text-[14px]">
+                  {username}
+                </span>
+              </div>
+            </div>
+
+            <div className="w-full h-[1px] bg-slate-200/50"></div>
+
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-slate-900/5 text-slate-800 flex items-center justify-center shrink-0">
+                <Mail size={16} />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-slate-400 text-[11px] font-bold uppercase tracking-wider">
+                  Email
+                </span>
+                <span className="font-bold text-slate-800 text-[14px]">
+                  {email}
+                </span>
+              </div>
+            </div>
+
+            <div className="w-full h-[1px] bg-slate-200/50"></div>
+
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-slate-900/5 text-slate-800 flex items-center justify-center shrink-0">
+                <Wallet size={16} />
+              </div>
+              <div className="flex flex-col w-full overflow-hidden">
+                <div className="flex justify-between items-center w-full">
+                  <span className="text-slate-400 text-[11px] font-bold uppercase tracking-wider">
+                    Arc Wallet Address
+                  </span>
+                  <span className="text-[9px] font-bold text-slate-800 bg-slate-900/5 px-1.5 py-0.5 rounded">
+                    TESTNET
+                  </span>
+                </div>
+                <span className="font-mono font-medium text-slate-800 text-[13px] truncate mt-0.5">
+                  {walletAddress}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="w-full mt-auto">
-        <button
-          onClick={onContinue}
-          className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl transition-all shadow-[0_8px_20px_rgba(15,23,42,0.2)] flex justify-center items-center gap-2 active:scale-[0.98] border-0"
-        >
-          Start Exploring
-        </button>
+        <div className="w-full mt-auto pb-4 pt-4">
+          <button
+            onClick={onContinue}
+            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl transition-all shadow-[0_8px_20px_rgba(15,23,42,0.2)] flex justify-center items-center gap-2 active:scale-[0.98] border-0"
+          >
+            Start Exploring
+          </button>
+        </div>
       </div>
     </div>
   );

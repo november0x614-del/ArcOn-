@@ -205,13 +205,13 @@ function ResiContent({
         <div className="relative">
           <button 
             onClick={() => setShowFilter(!showFilter)}
-            className={`w-10 h-10 rounded-full transition-all flex items-center justify-center cursor-pointer border-0 active:scale-[0.98] ${
+            className={`w-9 h-9 flex items-center justify-center rounded-full transition-all border-0 flex shrink-0 cursor-pointer ${
               showFilter || filterState.status !== "All" || filterState.type !== "All"
-                ? "bg-slate-900 text-white shadow-md" 
-                : "bg-slate-50 text-slate-500 hover:bg-slate-100"
+                ? "bg-slate-900 text-white" 
+                : "bg-white text-slate-400 hover:bg-slate-50 border border-slate-100"
             }`}
           >
-            <Filter size={16} />
+            <Filter size={16} strokeWidth={2.5}/>
           </button>
 
           <AnimatePresence>

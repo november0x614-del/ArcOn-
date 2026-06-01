@@ -12,7 +12,7 @@ import {
   defaultAvailableShortcuts,
 } from "../components/screens/ManageFavoritesScreen";
 import { BackendClient } from "../services/api";
-import { apiFetch } from "../lib/api";
+import { MOCK_PRODUCTS } from "../data/mockProducts";
 
 export type TransactionFilter = "All" | "Received" | "Sent" | "Swaps";
 
@@ -82,8 +82,6 @@ interface AppState {
   products: any[];
   setProducts: (products: any[]) => void;
   updateProductStockAndSales: (productId: number, quantityBought: number) => void;
-  fetchPreferences: () => Promise<void>;
-  syncPreferences: () => Promise<void>;
   resetState: () => void;
 }
 
@@ -106,7 +104,21 @@ export const useStore = create<AppState>()((set) => ({
     set({ registeredUser: user });
     if (user?.supabaseUid) {
       useStore.getState().fetchImportedTokens();
-      useStore.getState().fetchPreferences();
+      try {
+        const cachedReceipts = localStorage.getItem(`receipts_${user.supabaseUid}`);
+        if (cachedReceipts) {
+          set({ readReceiptIds: JSON.parse(cachedReceipts) });
+        }
+      } catch(e) {}
+      
+      try {
+        const cachedShortcuts = localStorage.getItem(`shortcuts_${user.supabaseUid}`);
+        if (cachedShortcuts) {
+          set({ selectedShortcuts: JSON.parse(cachedShortcuts) });
+        }
+      } catch(e) {}
+    } else {
+      set({ readReceiptIds: [], selectedShortcuts: defaultSelectedShortcuts });
     }
   },
 
@@ -169,7 +181,7 @@ export const useStore = create<AppState>()((set) => ({
 
     try {
       const url = `/api/transactions/${user.supabaseUid}`;
-      const response = await apiFetch(url);
+      const response = await fetch(url);
       if (!response.ok) return;
 
       const text = await response.text();
@@ -186,42 +198,28 @@ export const useStore = create<AppState>()((set) => ({
             : "outbound");
         const sign = direction === "inbound" ? "+" : "-";
 
-        let txType = tx.type;
-        if (tx.metadata?.real_type === "mint_nft" || tx.metadata?.sub_type === "mint_nft") {
-          txType = "mint_nft";
-        }
-
-        let title = txType.charAt(0).toUpperCase() + txType.slice(1);
-        if (txType === "mint_nft") {
-          title = `NFT Mint: ${tx.metadata?.name || "Asset"}`;
-        } else if (txType === "receive") {
-          title = "Inbound Transfer";
-        } else if (txType === "bridge") {
+        let title = tx.type.charAt(0).toUpperCase() + tx.type.slice(1);
+        if (tx.type === "receive") title = "Inbound Transfer";
+        if (tx.type === "bridge")
           title =
             direction === "inbound"
               ? "CCTP Inbound Bridge"
               : "CCTP Outbound Bridge";
-        }
 
-        const resolvedTxHash = tx.tx_hash || tx.metadata?.txHash || tx.internal_ref;
-        let generatedExplorerUrl = tx.metadata?.explorerUrl;
-        if (!generatedExplorerUrl && (tx.tx_hash || tx.metadata?.txHash)) {
-          const hashToCheck = tx.tx_hash || tx.metadata?.txHash;
-          if (hashToCheck.startsWith("0x")) {
-            generatedExplorerUrl = `https://testnet.arcscan.app/tx/${hashToCheck}`;
-          }
-        }
-        
         return {
           id: tx.id || tx.internal_ref,
-          type: txType,
+          type: tx.type,
           title,
           amount: sign + Math.abs(rawAmount).toString(),
           currency: "USDC",
           timestamp: new Date(tx.created_at).toLocaleString(),
           status: tx.status,
-          txHash: resolvedTxHash,
-          explorerUrl: generatedExplorerUrl,
+          txHash: tx.tx_hash || tx.metadata?.txHash || tx.internal_ref,
+          explorerUrl:
+            tx.metadata?.explorerUrl ||
+            (tx.tx_hash || tx.internal_ref
+              ? `https://testnet.arcscan.app/tx/${tx.tx_hash || tx.internal_ref}`
+              : undefined),
           metadata: tx.metadata,
         };
       });
@@ -287,21 +285,20 @@ export const useStore = create<AppState>()((set) => ({
   setSelectedTransaction: (tx) => set({ selectedTransaction: tx }),
 
   visibleTokenCodes: ["USDC", "EURC", "USDT", "USDe", "DAI", "PYUSD", "cirBTC"],
-  setVisibleTokenCodes: (codes) => {
-    set({ visibleTokenCodes: codes });
-    useStore.getState().syncPreferences();
-  },
+  setVisibleTokenCodes: (codes) => set({ visibleTokenCodes: codes }),
   readReceiptIds: [],
-  markAsRead: (id) => {
+  markAsRead: (id) =>
     set((state) => {
-      const nextRead = state.readReceiptIds.includes(id)
+      const newList = state.readReceiptIds.includes(id)
         ? state.readReceiptIds
         : [...state.readReceiptIds, id];
-      // Sync to database
-      setTimeout(() => useStore.getState().syncPreferences(), 50);
-      return { readReceiptIds: nextRead };
-    });
-  },
+      if (state.registeredUser?.supabaseUid) {
+        try {
+          localStorage.setItem(`receipts_${state.registeredUser.supabaseUid}`, JSON.stringify(newList));
+        } catch (e) {}
+      }
+      return { readReceiptIds: newList };
+    }),
 
   importedTokens: [],
   importToken: async (token) => {
@@ -369,10 +366,14 @@ export const useStore = create<AppState>()((set) => ({
   },
 
   selectedShortcuts: defaultSelectedShortcuts,
-  setSelectedShortcuts: (shortcuts) => {
-    set({ selectedShortcuts: shortcuts });
-    useStore.getState().syncPreferences();
-  },
+  setSelectedShortcuts: (shortcuts) => set((state) => {
+    if (state.registeredUser?.supabaseUid) {
+      try {
+        localStorage.setItem(`shortcuts_${state.registeredUser.supabaseUid}`, JSON.stringify(shortcuts));
+      } catch (e) {}
+    }
+    return { selectedShortcuts: shortcuts };
+  }),
   availableShortcuts: defaultAvailableShortcuts,
   setAvailableShortcuts: (shortcuts) => set({ availableShortcuts: shortcuts }),
   selectedContact: null,
@@ -388,15 +389,9 @@ export const useStore = create<AppState>()((set) => ({
     setTimeout(() => set({ toast: { message: "", visible: false } }), 3000);
   },
   language: "English",
-  setLanguage: (lang) => {
-    set({ language: lang });
-    useStore.getState().syncPreferences();
-  },
+  setLanguage: (lang) => set({ language: lang }),
   network: "ARC TESTNET",
-  setNetwork: (net) => {
-    set({ network: net });
-    useStore.getState().syncPreferences();
-  },
+  setNetwork: (net) => set({ network: net }),
   platformConfig: null,
   setPlatformConfig: (config) => {
     set({ platformConfig: config });
@@ -416,7 +411,7 @@ export const useStore = create<AppState>()((set) => ({
     } catch (e) {}
 
     try {
-      const res = await apiFetch("/api/admin/config");
+      const res = await fetch("/api/admin/config");
       if (res.ok) {
         const data = await res.json();
         set({ platformConfig: data });
@@ -446,9 +441,9 @@ export const useStore = create<AppState>()((set) => ({
   products: (() => {
     try {
       const cached = localStorage.getItem("lounge_products");
-      return cached ? JSON.parse(cached) : [];
+      return cached ? JSON.parse(cached) : MOCK_PRODUCTS;
     } catch (e) {
-      return [];
+      return MOCK_PRODUCTS;
     }
   })(),
   setProducts: (products) => {
@@ -474,40 +469,6 @@ export const useStore = create<AppState>()((set) => ({
       } catch (e) {}
       return { products: updated };
     });
-  },
-  fetchPreferences: async () => {
-    const user = useStore.getState().registeredUser;
-    if (!user?.supabaseUid) return;
-    try {
-      const prefs = await BackendClient.getPreferences();
-      if (prefs) {
-        set({
-          language: prefs.language || "English",
-          network: prefs.network || "ARC TESTNET",
-          readReceiptIds: prefs.readReceiptIds || [],
-          selectedShortcuts: prefs.selectedShortcuts || useStore.getState().selectedShortcuts,
-          visibleTokenCodes: prefs.visibleTokenCodes || useStore.getState().visibleTokenCodes,
-        });
-      }
-    } catch (e) {
-      console.error("Failed to fetch preferences:", e);
-    }
-  },
-  syncPreferences: async () => {
-    const state = useStore.getState();
-    const user = state.registeredUser;
-    if (!user?.supabaseUid) return;
-    try {
-      await BackendClient.updatePreferences({
-        language: state.language,
-        network: state.network,
-        readReceiptIds: state.readReceiptIds,
-        selectedShortcuts: state.selectedShortcuts,
-        visibleTokenCodes: state.visibleTokenCodes,
-      });
-    } catch (e) {
-      console.error("Failed to sync preferences:", e);
-    }
   },
   resetState: () =>
     set({

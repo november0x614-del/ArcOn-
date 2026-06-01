@@ -41,10 +41,20 @@ import { TransactionHistoryScreen } from "../screens/TransactionHistoryScreen";
 import { HomeScreen } from "../screens/HomeScreen";
 import { AdminDashboardScreen } from "../screens/AdminDashboardScreen";
 import { supabase } from "../../lib/supabaseClient";
-import { apiFetch } from "../../lib/api";
 import { BackendClient } from "../../services/api/index";
 import { useContacts } from "../../hooks/useContacts";
-import { ShieldAlert } from "lucide-react";
+import {
+  ShieldAlert,
+  Home,
+  Mail,
+  Scan,
+  Settings,
+  LogOut,
+  Bot,
+  ChevronRight,
+  ShoppingCart,
+  Package,
+} from "lucide-react";
 
 const slideFadeVariants: Variants = {
   initial: {
@@ -109,13 +119,20 @@ export const ViewRouter = React.memo(
     const { realContacts } = useContacts();
 
     const onNavigate = React.useCallback(
-      (view: ViewState) => setViewState(view),
+      (view: ViewState) => {
+        if (view === "home" && window.innerWidth >= 1024) {
+          setViewState("transfer");
+        } else {
+          setViewState(view);
+        }
+      },
       [setViewState],
     );
 
     const userName = registeredUser?.username || "Account Holder";
 
     const [platformConfig, setPlatformConfig] = React.useState<any>(null);
+    const [inboxReceiptPopupTx, setInboxReceiptPopupTx] = React.useState<any | null>(null);
 
     React.useEffect(() => {
       // Only fetch config if user is at least partially logged in or already at home
@@ -125,7 +142,7 @@ export const ViewRouter = React.memo(
       const controller = new AbortController();
       const loadConfig = async () => {
         try {
-          const res = await apiFetch("/api/admin/config", {
+          const res = await fetch("/api/admin/config", {
             signal: controller.signal,
           });
           if (res.ok) {
@@ -176,480 +193,744 @@ export const ViewRouter = React.memo(
       );
     };
 
-    return (
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={viewState}
-          variants={slideFadeVariants}
-          initial="initial"
-          animate="animate"
-          exit="exit"
-          className="w-full h-full flex flex-col transform-gpu will-change-transform animate-in fade-in duration-300 ease-out"
-        >
-          {viewState === "splash" && (
-            <LoginScreen
-              hasIdentity={!!registeredUser}
-              onShowToast={displayToast}
-              isLoading={isLoggingIn}
-              onLogin={async (email) => {
-                setLoginEmail(email);
-                setViewState("password");
-              }}
-              onRegister={() => setViewState("register")}
-            />
-          )}
+    const isAuthenticatedView =
+      registeredUser &&
+      ![
+        "splash",
+        "register",
+        "registerSuccess",
+        "password",
+        "forgotPassword",
+        "namaPanggilan",
+      ].includes(viewState);
 
-          {viewState === "register" && (
-            <RegisterWeb3Screen
-              onBack={() => setViewState("splash")}
-              onComplete={(data) => {
-                setRegisteredUser(data);
-                setViewState("registerSuccess");
-              }}
-            />
-          )}
+    const [unreadCount] = React.useState(2);
 
-          {viewState === "registerSuccess" && (
-            <RegisterSuccessScreen
-              username={registeredUser?.username}
-              email={registeredUser?.email}
-              isVerified={registeredUser?.isVerified}
-              walletAddress={registeredUser?.walletAddress}
-              onContinue={() => {
-                if (registeredUser?.isVerified === false) {
-                  // Direct to splash/login if not verified
-                  setViewState("splash");
-                } else {
-                  setViewState("home");
-                }
-              }}
-            />
-          )}
+    const [cartCount, setCartCount] = React.useState(() => {
+      try {
+        const cached = localStorage.getItem("lounge_cart");
+        if (cached) {
+          const cart = JSON.parse(cached);
+          return Object.values(cart).reduce((a, b) => (a as number) + (b as number), 0) as number;
+        }
+      } catch (e) {}
+      return 0;
+    });
 
-          {viewState === "password" && (
-            <PasswordScreen
-              email={loginEmail}
-              onBack={() => setViewState("splash")}
-              isLoading={isLoggingIn}
-              onLogin={async (email, password) => {
-                setIsLoggingIn(true);
+    const [ecommerceInnerView, setEcommerceInnerView] = React.useState<"list" | "detail" | "checkout" | "success">("list");
 
-                const { error } = await supabase.auth.signInWithPassword({
-                  email,
-                  password,
-                });
+    React.useEffect(() => {
+      const handleCartUpdate = (e: Event) => {
+        const customEvent = e as CustomEvent<number>;
+        setCartCount(customEvent.detail ?? 0);
+      };
+      const handleViewChange = (e: Event) => {
+        const customEvent = e as CustomEvent<"list" | "detail" | "checkout" | "success">;
+        setEcommerceInnerView(customEvent.detail);
+      };
 
-                if (error) {
-                  displayToast(error.message);
-                  setIsLoggingIn(false);
-                  return;
-                }
+      window.addEventListener("lounge-cart-updated", handleCartUpdate);
+      window.addEventListener("ecommerce-view-state-changed", handleViewChange);
+      return () => {
+        window.removeEventListener("lounge-cart-updated", handleCartUpdate);
+        window.removeEventListener("ecommerce-view-state-changed", handleViewChange);
+      };
+    }, []);
 
-                // We NO LONGER call setViewState("home") here.
-                // The central handleUserSession in App.tsx will detect the new session,
-                // verify/provision the wallet, and then navigate to "home" securely.
-                // We keep setIsLoggingIn(true) so the loading spinner stays visible
-                // until the transition happens from App.tsx.
-              }}
-              onForgotPassword={() => setViewState("forgotPassword")}
-            />
-          )}
+    const [isDesktop, setIsDesktop] = React.useState(false);
+    React.useEffect(() => {
+      const checkDesktop = () => setIsDesktop(window.innerWidth >= 1024);
+      checkDesktop();
+      window.addEventListener("resize", checkDesktop);
+      return () => window.removeEventListener("resize", checkDesktop);
+    }, []);
 
-          {viewState === "forgotPassword" && (
-            <ForgotPasswordScreen
-              onBack={() => setViewState("password")}
-              initialEmail={loginEmail}
-            />
-          )}
+    React.useEffect(() => {
+      if (viewState === "home" && isDesktop) {
+        setViewState("transfer");
+      }
+    }, [viewState, isDesktop, setViewState]);
 
-          {viewState === "settings" && (
-            <SettingsScreen
-              onBack={() => setViewState("home")}
-              onNamaPanggilan={() => setViewState("namaPanggilan")}
-              onEmail={() => setViewState("email")}
-              onShowToast={displayToast}
-            />
-          )}
+    const desktopFeatures = [
+      "transfer",
+      "newTransfer",
+      "amountInput",
+      "batchTransfer",
+      "receive",
+      "depositOptions",
+      "receiveVA",
+      "receiveQRIS",
+      "bayarVA",
+      "scanQR",
+      "swap",
+      "stablestake",
+      "bridge",
+      "mintNFT",
+      "transactionHistory",
+      "inbox",
+      "settings",
+      "namaPanggilan",
+      "email",
+      "otherAccounts",
+      "manageFavorites",
+    ];
 
-          {viewState === "namaPanggilan" && (
-            <NamaPanggilanScreen onBack={() => setViewState("settings")} />
-          )}
+    const isDesktopFeatureView =
+      isDesktop && desktopFeatures.includes(viewState);
+    const motionKey = isDesktopFeatureView ? "home" : viewState;
 
-          {viewState === "ecommerce" &&
-            (platformConfig && platformConfig.ecommerceEnabled === false ? (
-              renderLockedScreen(
-                "E-Commerce Marketplace Module",
-                "Marketplace and product purchase features are temporarily disabled by the System Administrator.",
-              )
-            ) : (
-              <EcommerceScreen onBack={() => setViewState("home")} />
-            ))}
+    const renderLayoutWrapper = (children: React.ReactNode) => {
+      if (!isAuthenticatedView) {
+        return <div className="w-full h-full flex flex-col">{children}</div>;
+      }
 
-          {viewState === "merchant" &&
-            (platformConfig && platformConfig.merchantEnabled === false ? (
-              renderLockedScreen(
-                "F&B Merchant POS Module",
-                "Digital cashier features for merchant partners are temporarily disabled for regional restrictions.",
-              )
-            ) : (
-              <MerchantScreen onBack={() => setViewState("home")} />
-            ))}
+      return (
+        <div className="flex w-full h-full bg-[#ecf5fc] text-left">
+          {/* Desktop Sidebar (lg) */}
+          <div className="hidden lg:flex w-[260px] flex-col bg-white border-r border-slate-200 shrink-0 h-full relative z-[100] p-6 text-left shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+            <div className="mb-8">
+              <h2 className="text-2xl font-black italic tracking-tight text-slate-800">
+                Lounge
+              </h2>
+            </div>
+            <nav className="flex-1 flex flex-col gap-2">
+              <button
+                onClick={() => onNavigate(isDesktop ? "transfer" : "home")}
+                className={`flex items-center gap-3 px-4 py-3.5 rounded-xl ${["home", ...desktopFeatures].includes(viewState) && !["inbox", "scanQR", "settings", "namaPanggilan", "email", "otherAccounts"].includes(viewState) ? "bg-slate-900 text-white shadow-[0_4px_12px_rgba(15,23,42,0.15)] shadow-slate-900/20" : "bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800"} font-bold transition-all text-left border-0 cursor-pointer active:scale-95`}
+              >
+                <Home size={20} />
+                <span className="text-[14px]">Home</span>
+              </button>
+              <button
+                onClick={() => onNavigate("inbox")}
+                className={`flex items-center gap-3 px-4 py-3.5 rounded-xl ${viewState === "inbox" ? "bg-slate-900 text-white shadow-[0_4px_12px_rgba(15,23,42,0.15)] shadow-slate-900/20" : "bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800"} font-bold transition-all text-left border-0 relative cursor-pointer active:scale-95`}
+              >
+                <Mail size={20} />
+                <span className="text-[14px]">Inbox</span>
+                {unreadCount > 0 && (
+                  <span className="absolute right-4 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-black border border-white leading-none">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+              {(!platformConfig || platformConfig.scanQrEnabled !== false) && (
+                <button
+                  onClick={() => onNavigate("scanQR")}
+                  className={`flex items-center gap-3 px-4 py-3.5 rounded-xl ${viewState === "scanQR" ? "bg-slate-900 text-white shadow-[0_4px_12px_rgba(15,23,42,0.15)] shadow-slate-900/20" : "bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800"} font-bold transition-all text-left border-0 relative cursor-pointer active:scale-95`}
+                >
+                  <Scan size={20} />
+                  <span className="text-[14px]">Scan QR/Pay</span>
+                </button>
+              )}
+              <button
+                onClick={() => onNavigate("settings")}
+                className={`flex items-center gap-3 px-4 py-3.5 rounded-xl ${["settings", "namaPanggilan", "email", "otherAccounts"].includes(viewState) ? "bg-slate-900 text-white shadow-[0_4px_12px_rgba(15,23,42,0.15)] shadow-slate-900/20" : "bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800"} font-bold transition-all text-left border-0 relative cursor-pointer active:scale-95`}
+              >
+                <Settings size={20} />
+                <span className="text-[14px]">Settings</span>
+              </button>
 
-          {viewState === "faucet" &&
-            (platformConfig && platformConfig.faucetEnabled === false ? (
-              renderLockedScreen(
-                "Arc Testnet Faucet Claim",
-                "Free gas token distribution is temporarily closed by the Devnet Warden.",
-              )
-            ) : (
-              <FaucetScreen onBack={() => setViewState("home")} />
-            ))}
+              <button
+                onClick={() => {
+                  onNavigate("ecommerce");
+                  setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent("ecommerce-navigate-list"));
+                  }, 50);
+                }}
+                className={`flex items-center gap-3 px-4 py-3.5 rounded-xl ${viewState === "ecommerce" ? "bg-slate-900 text-white shadow-[0_4px_12px_rgba(15,23,42,0.15)] shadow-slate-900/20" : "bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800"} font-bold transition-all text-left border-0 relative cursor-pointer active:scale-95`}
+              >
+                <Package size={20} />
+                <span className="text-[14px]">Marketplace</span>
+              </button>
 
-          {viewState === "bayarVA" &&
-            (platformConfig && platformConfig.vaEnabled === false ? (
-              renderLockedScreen(
-                "Virtual Account (VA) Payment Code",
-                "VA bill payment service is temporarily suspended by Admin.",
-              )
-            ) : (
-              <BayarVAScreen onBack={() => setViewState("home")} />
-            ))}
+              {viewState === "ecommerce" && (
+                <div className="flex flex-col gap-1 pl-4 border-l-2 border-slate-100 ml-6 my-1 animate-in slide-in-from-top-2 duration-200">
+                  <button
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent("ecommerce-navigate-list"));
+                    }}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[13px] font-bold transition-all border-0 cursor-pointer text-left ${
+                      ecommerceInnerView !== "checkout"
+                        ? "bg-slate-100 text-slate-900"
+                        : "bg-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span>All Products</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent("ecommerce-navigate-checkout"));
+                    }}
+                    className={`flex items-center justify-between px-3 py-2 rounded-lg text-[13px] font-bold transition-all border-0 cursor-pointer text-left w-full ${
+                      ecommerceInnerView === "checkout"
+                        ? "bg-slate-100 text-slate-900"
+                        : "bg-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <ShoppingCart size={14} />
+                      <span>Shopping Cart</span>
+                    </span>
+                    {cartCount > 0 && (
+                      <span className="bg-emerald-500 text-white font-black text-[9px] px-2 py-0.5 rounded-full">
+                        {cartCount}
+                      </span>
+                    )}
+                  </button>
+                </div>
+              )}
+            </nav>
 
-          {viewState === "email" && (
-            <EmailScreen onBack={() => setViewState("settings")} />
-          )}
+            <div className="mt-auto">
+              {(!platformConfig || platformConfig.aiAgentEnabled !== false) && (
+                <div className="mb-4">
+                  <div
+                    className="bg-gradient-to-r from-indigo-50 to-blue-50 py-2.5 px-4 rounded-xl flex items-center justify-between gap-3 border border-indigo-100 relative cursor-pointer hover:bg-indigo-100/50 transition-colors w-full active:scale-95"
+                    onClick={() => onNavigate("aiAgent")}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="bg-white p-1.5 rounded-lg text-slate-800 shrink-0 border border-indigo-50 shadow-sm flex items-center justify-center w-[30px] h-[30px]">
+                        <Bot size={18} />
+                      </div>
+                      <span className="text-[14px] font-bold text-slate-800">
+                        Lounge Assistant
+                      </span>
+                    </div>
+                    <div className="bg-white rounded-full p-1 shadow-sm text-slate-800 shrink-0 border border-indigo-50 flex items-center justify-center w-5 h-5">
+                      <ChevronRight size={12} />
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div className="w-full h-[1px] bg-slate-100 mb-4"></div>
+              <button
+                onClick={() => onNavigate("logout")}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-slate-50 text-slate-600 font-bold hover:bg-red-50 hover:text-red-600 transition-all border-0 cursor-pointer active:scale-95"
+              >
+                <LogOut size={18} />
+                <span className="text-[14px]">Logout</span>
+              </button>
+            </div>
+          </div>
 
-          {viewState === "otherAccounts" && (
-            <OtherAccountsScreen onBack={() => setViewState("home")} />
-          )}
+          {/* Main Content Dashboard Container */}
+          <div className="flex-1 flex justify-center h-full relative w-full items-start bg-[#ecf5fc]">
+            <div className="w-full h-full lg:max-w-[1200px] flex flex-col relative overflow-hidden bg-white lg:border-x lg:border-slate-200/50 lg:shadow-xl font-sans">
+              {children}
+            </div>
+          </div>
+        </div>
+      );
+    };
 
-          {viewState === "swap" &&
-            (platformConfig && platformConfig.swapEnabled === false ? (
-              renderLockedScreen(
-                "USDC Swap Pool Feature",
-                "Asset exchange service is temporarily frozen by Admin for liquidity balancing.",
-              )
-            ) : (
-              <SwapScreen onBack={() => setViewState("home")} />
-            ))}
+    const activeViewComponent = (
+      <>
+        {viewState === "splash" && (
+          <LoginScreen
+            hasIdentity={!!registeredUser}
+            onShowToast={displayToast}
+            isLoading={isLoggingIn}
+            onLogin={async (email) => {
+              setLoginEmail(email);
+              setViewState("password");
+            }}
+            onRegister={() => setViewState("register")}
+          />
+        )}
 
-          {viewState === "receive" && (
-            <DepositQRScreen onBack={() => setViewState("home")} />
-          )}
+        {viewState === "register" && (
+          <RegisterWeb3Screen
+            onBack={() => setViewState("splash")}
+            onComplete={(data) => {
+              setRegisteredUser(data);
+              setViewState("registerSuccess");
+            }}
+          />
+        )}
 
-          {viewState === "stablestake" &&
-            (platformConfig && platformConfig.stableStakeEnabled === false ? (
-              renderLockedScreen(
-                "Stablestake Deposit Yield",
-                "Staking pool is currently locked for native-USDC interest consolidation.",
-              )
-            ) : (
-              <StablestakeScreen onBack={() => setViewState("home")} />
-            ))}
-
-          {viewState === "depositOptions" && (
-            <DepositOptionsScreen
-              onBack={() => setViewState("home")}
-              onSelectUSDC={() => setViewState("receive")}
-              onSelectWithdraw={() => setViewState("withdraw")}
-              platformConfig={platformConfig}
-            />
-          )}
-
-          {viewState === "receiveVA" &&
-            (platformConfig && platformConfig.vaEnabled === false ? (
-              renderLockedScreen(
-                "Virtual Account (VA)",
-                "Bank Virtual Account deposits are currently out of service.",
-              )
-            ) : (
-              <ReceiveVAScreen onBack={() => setViewState("depositOptions")} />
-            ))}
-
-          {viewState === "receiveQRIS" &&
-            (platformConfig && platformConfig.qrisEnabled === false ? (
-              renderLockedScreen(
-                "Standard QRIS Deposit",
-                "QRIS payment code generation gateway is temporarily disabled by the payment processor.",
-              )
-            ) : (
-              <ReceiveQRISScreen
-                onBack={() => setViewState("depositOptions")}
-              />
-            ))}
-
-          {viewState === "logout" && (
-            <LogoutScreen
-              onBack={() => setViewState("home")}
-              onLogout={async () => {
-                await supabase.auth.signOut();
-              }}
-            />
-          )}
-
-          {viewState === "arcbird" &&
-            (platformConfig && platformConfig.arcBirdEnabled === false ? (
-              renderLockedScreen(
-                "Arc Bird Game",
-                "Arc Bird Mini-App game is currently suspended for seasonal leaderboard updates.",
-              )
-            ) : (
-              <ArcBirdScreen onBack={() => setViewState("home")} />
-            ))}
-
-          {viewState === "inbox" && (
-            <InboxScreen
-              onBack={() => setViewState("home")}
-              onTransactionClick={(tx) => {
-                setSelectedTransaction(tx);
-                setReceiptSource("inbox");
-                setViewState("receipt");
-              }}
-            />
-          )}
-
-          {viewState === "accountDetail" && (
-            <AccountDetailScreen
-              userName={userName}
-              onBack={() => setViewState("home")}
-              onTransfer={() => setViewState("transfer")}
-              onReceive={() => setViewState("receive")}
-              onTransactionClick={(tx) => {
-                setSelectedTransaction(tx);
-                setReceiptSource("accountDetail");
-                setViewState("receipt");
-              }}
-            />
-          )}
-
-          {viewState === "receipt" && (
-            <ReceiptScreen onBack={() => setViewState(receiptSource)} />
-          )}
-
-          {viewState === "manageFavorites" && (
-            <ManageFavoritesScreen
-              initialSelected={selectedShortcuts}
-              initialAvailable={availableShortcuts}
-              onBack={() => setViewState("home")}
-              onSave={(selected, available) => {
-                setSelectedShortcuts(selected);
-                setAvailableShortcuts(available);
+        {viewState === "registerSuccess" && (
+          <RegisterSuccessScreen
+            username={registeredUser?.username}
+            email={registeredUser?.email}
+            isVerified={registeredUser?.isVerified}
+            walletAddress={registeredUser?.walletAddress}
+            onContinue={() => {
+              if (registeredUser?.isVerified === false) {
+                // Direct to splash/login if not verified
+                setViewState("splash");
+              } else {
                 setViewState("home");
-                displayToast("Settings saved successfully.");
-              }}
-            />
-          )}
+              }
+            }}
+          />
+        )}
 
-          {viewState === "connectEWallet" &&
-            (platformConfig &&
-            platformConfig.eWalletConnectionEnabled === false ? (
-              renderLockedScreen(
-                "e-Wallet Integration",
-                "Local e-Wallet balance withdrawal gateway is temporarily redirected by Admin.",
-              )
-            ) : (
-              <ConnectEWalletScreen onBack={() => setViewState("home")} />
-            ))}
+        {viewState === "password" && (
+          <PasswordScreen
+            email={loginEmail}
+            onBack={() => setViewState("splash")}
+            isLoading={isLoggingIn}
+            onLogin={async (email, password) => {
+              setIsLoggingIn(true);
 
-          {viewState === "scanQR" &&
-            (platformConfig && platformConfig.scanQrEnabled === false ? (
-              renderLockedScreen(
-                "QR Code Scanner",
-                "Backend camera scanning sensor is temporarily disabled for license upgrades.",
-              )
-            ) : (
-              <ScanQRScreen
-                onBack={() => setViewState("home")}
-                onScanResult={(contact) => {
-                  setSelectedContact(contact);
-                  if ((contact as any).suggestedAmount) {
-                    setTransferAmount((contact as any).suggestedAmount);
-                  } else {
-                    setTransferAmount("");
-                  }
-                  setViewState("amountInput");
-                }}
-              />
-            ))}
+              const { error } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+              });
 
-          {viewState === "aiAgent" &&
-            (platformConfig && platformConfig.aiAgentEnabled === false ? (
-              renderLockedScreen(
-                "AI Agent Co-Pilot",
-                "Financial AI Assistant is temporarily disabled by admin for cognitive regulation adjustments.",
-              )
-            ) : (
-              <AIAgentScreen onBack={() => setViewState("home")} />
-            ))}
+              if (error) {
+                displayToast(error.message);
+                setIsLoggingIn(false);
+                return;
+              }
 
-          {viewState === "transfer" &&
-            (platformConfig && platformConfig.transferEnabled === false ? (
-              renderLockedScreen(
-                "Send Balance & Transfer",
-                "Peer-to-Peer transfers are temporarily closed due to network maintenance.",
-              )
-            ) : (
-              <TransferScreen
-                onBack={() => setViewState("home")}
-                onNewTransfer={() => setViewState("newTransfer")}
-                onSelectContact={(contact) => {
-                  setSelectedContact(contact);
-                  setViewState("amountInput");
-                }}
-                onBatchTransfer={() => setViewState("batchTransfer")}
-              />
-            ))}
+              // We NO LONGER call setViewState("home") here.
+              // The central handleUserSession in App.tsx will detect the new session,
+              // verify/provision the wallet, and then navigate to "home" securely.
+              // We keep setIsLoggingIn(true) so the loading spinner stays visible
+              // until the transition happens from App.tsx.
+            }}
+            onForgotPassword={() => setViewState("forgotPassword")}
+          />
+        )}
 
-          {viewState === "newTransfer" &&
-            (platformConfig && platformConfig.transferEnabled === false ? (
-              renderLockedScreen(
-                "Send Balance & Transfer",
-                "Peer-to-Peer transfers are temporarily closed due to network maintenance.",
-              )
-            ) : (
-              <NewTransferScreen
-                onBack={() => setViewState("transfer")}
-                onSelectContact={(contact) => {
-                  setSelectedContact(contact);
-                  setViewState("amountInput");
-                }}
-              />
-            ))}
+        {viewState === "forgotPassword" && (
+          <ForgotPasswordScreen
+            onBack={() => setViewState("password")}
+            initialEmail={loginEmail}
+          />
+        )}
 
-          {viewState === "amountInput" && selectedContact && (
-            <AmountInputScreen
-              contact={selectedContact}
-              onBack={() => setViewState("transfer")}
-              onNext={async (amount, memo) => {
-                const numAmount = parseFloat(amount);
-                
-                // Dynamic Check: Minimum Transfer
-                const minTransfer = parseFloat(platformConfig?.minTransferAmount || "1");
-                if (numAmount < minTransfer) {
-                  displayToast(`Minimum transfer amount is ${minTransfer} USDC.`);
-                  return;
-                }
+        {viewState === "settings" && (
+          <SettingsScreen
+            onBack={() => setViewState("home")}
+            onNamaPanggilan={() => setViewState("namaPanggilan")}
+            onEmail={() => setViewState("email")}
+            onShowToast={displayToast}
+          />
+        )}
 
-                // Dynamic Check: Fees
-                let fee = 0;
-                if (platformConfig?.withdrawFee) {
-                   fee = parseFloat(platformConfig.withdrawFee.replace(/[^0-9.]/g, '')) || 0;
-                }
-                
-                const totalWithFee = numAmount + fee;
-                if (totalWithFee > balance) {
-                  displayToast(
-                    `Insufficient USDC balance. Need ${totalWithFee.toFixed(2)} USDC ${fee > 0 ? `(includes ${fee.toFixed(2)} Platform Fee)` : ""}.`,
-                  );
-                  return;
-                }
+        {viewState === "namaPanggilan" && (
+          <NamaPanggilanScreen onBack={() => setViewState("settings")} />
+        )}
 
-                setTransferAmount(amount);
-                setTransferMemo(memo);
+        {viewState === "ecommerce" &&
+          (platformConfig && platformConfig.ecommerceEnabled === false ? (
+            renderLockedScreen(
+              "E-Commerce Marketplace Module",
+              "Marketplace and product purchase features are temporarily disabled by the System Administrator.",
+            )
+          ) : (
+            <EcommerceScreen onBack={() => setViewState("home")} isDesktop={isDesktop} />
+          ))}
 
-                try {
-                  await BackendClient.sendUnifiedBalance(
-                    numAmount,
-                    selectedContact.account,
-                    memo,
-                    selectedContact.name,
-                  );
+        {viewState === "merchant" &&
+          (platformConfig && platformConfig.merchantEnabled === false ? (
+            renderLockedScreen(
+              "F&B Merchant POS Module",
+              "Digital cashier features for merchant partners are temporarily disabled for regional restrictions.",
+            )
+          ) : (
+            <MerchantScreen onBack={() => setViewState("home")} />
+          ))}
 
-                  await fetchBalance();
-                  await fetchTransactions();
-                  displayToast(
-                    `Transfer to ${selectedContact.name} initiated!`,
-                  );
-                  setViewState("transfer");
-                } catch (error) {
-                  console.error(error);
-                  displayToast("Transfer failed. Please try again.");
-                }
-              }}
-            />
-          )}
+        {viewState === "faucet" &&
+          (platformConfig && platformConfig.faucetEnabled === false ? (
+            renderLockedScreen(
+              "Arc Testnet Faucet Claim",
+              "Free gas token distribution is temporarily closed by the Devnet Warden.",
+            )
+          ) : (
+            <FaucetScreen onBack={() => setViewState("home")} />
+          ))}
 
-          {viewState === "batchTransfer" &&
-            (platformConfig && platformConfig.batchTransferEnabled === false ? (
-              renderLockedScreen(
-                "Mass Transfer (Batch)",
-                "Instant multi-transfer is temporarily disabled for gas hoarding prevention.",
-              )
-            ) : (
-              <BatchTransferScreen
-                onBack={() => setViewState("transfer")}
-                onViewReceipt={(txId) => {
-                  setSelectedTransaction({
-                    internal_ref: txId,
-                    type: "batchTransfer",
-                  } as any);
-                  setReceiptSource("home");
-                  setViewState("receipt");
-                  fetchTransactions();
-                }}
-                contacts={realContacts}
-              />
-            ))}
+        {viewState === "bayarVA" &&
+          (platformConfig && platformConfig.vaEnabled === false ? (
+            renderLockedScreen(
+              "Virtual Account (VA) Payment Code",
+              "VA bill payment service is temporarily suspended by Admin.",
+            )
+          ) : (
+            <BayarVAScreen onBack={() => setViewState("home")} />
+          ))}
 
-          {viewState === "withdraw" &&
-            (platformConfig && platformConfig.withdrawEnabled === false ? (
-              renderLockedScreen(
-                "Withdraw Balance",
-                "USDC withdrawals outside the ecosystem are temporarily suspended for cash audit security.",
-              )
-            ) : (
-              <WithdrawScreen
-                onBack={() => setViewState("depositOptions")}
-                onSuccess={() => {
-                  fetchBalance();
-                  fetchTransactions();
-                  // No navigation to home - stay in withdraw or show success state within withdraw
-                }}
-              />
-            ))}
+        {viewState === "email" && (
+          <EmailScreen onBack={() => setViewState("settings")} />
+        )}
 
-          {viewState === "bridge" &&
-            (platformConfig && platformConfig.bridgeEnabled === false ? (
-              renderLockedScreen(
-                "Cross-Chain CCTP Bridge",
-                "Circle USDC burn & mint bridge is temporarily disabled.",
-              )
-            ) : (
-              <BridgeScreen
-                onBack={() => setViewState("home")}
-                onSuccess={() => {
-                  fetchBalance();
-                  fetchTransactions();
-                  // Stay in feature
-                }}
-              />
-            ))}
+        {viewState === "otherAccounts" && (
+          <OtherAccountsScreen onBack={() => setViewState("home")} />
+        )}
 
-          {viewState === "transactionHistory" && (
-            <TransactionHistoryScreen onBack={() => setViewState("home")} />
-          )}
+        {viewState === "swap" &&
+          (platformConfig && platformConfig.swapEnabled === false ? (
+            renderLockedScreen(
+              "USDC Swap Pool Feature",
+              "Asset exchange service is temporarily frozen by Admin for liquidity balancing.",
+            )
+          ) : (
+            <SwapScreen onBack={() => setViewState("home")} />
+          ))}
 
-          {viewState === "adminDashboard" && (
-            <AdminDashboardScreen
+        {viewState === "receive" && (
+          <DepositQRScreen onBack={() => setViewState("home")} />
+        )}
+
+        {viewState === "stablestake" &&
+          (platformConfig && platformConfig.stableStakeEnabled === false ? (
+            renderLockedScreen(
+              "Stablestake Deposit Yield",
+              "Staking pool is currently locked for native-USDC interest consolidation.",
+            )
+          ) : (
+            <StablestakeScreen onBack={() => setViewState("home")} />
+          ))}
+
+        {viewState === "depositOptions" && (
+          <DepositOptionsScreen
+            onBack={() => setViewState("home")}
+            onSelectUSDC={() => setViewState("receive")}
+            onSelectWithdraw={() => setViewState("withdraw")}
+            platformConfig={platformConfig}
+          />
+        )}
+
+        {viewState === "receiveVA" &&
+          (platformConfig && platformConfig.vaEnabled === false ? (
+            renderLockedScreen(
+              "Virtual Account (VA)",
+              "Bank Virtual Account deposits are currently out of service.",
+            )
+          ) : (
+            <ReceiveVAScreen onBack={() => setViewState("depositOptions")} />
+          ))}
+
+        {viewState === "receiveQRIS" &&
+          (platformConfig && platformConfig.qrisEnabled === false ? (
+            renderLockedScreen(
+              "Standard QRIS Deposit",
+              "QRIS payment code generation gateway is temporarily disabled by the payment processor.",
+            )
+          ) : (
+            <ReceiveQRISScreen onBack={() => setViewState("depositOptions")} />
+          ))}
+
+        {viewState === "logout" && (
+          <LogoutScreen
+            onBack={() => setViewState("home")}
+            onLogout={async () => {
+              await supabase.auth.signOut();
+            }}
+          />
+        )}
+
+        {viewState === "arcbird" &&
+          (platformConfig && platformConfig.arcBirdEnabled === false ? (
+            renderLockedScreen(
+              "Arc Bird Game",
+              "Arc Bird Mini-App game is currently suspended for seasonal leaderboard updates.",
+            )
+          ) : (
+            <ArcBirdScreen onBack={() => setViewState("home")} />
+          ))}
+
+        {viewState === "inbox" && (
+          <InboxScreen
+            onBack={() => setViewState("home")}
+            onTransactionClick={(tx) => {
+              setSelectedTransaction(tx);
+              setInboxReceiptPopupTx(tx);
+            }}
+          />
+        )}
+
+        {viewState === "accountDetail" && (
+          <AccountDetailScreen
+            userName={userName}
+            onBack={() => setViewState("home")}
+            onTransfer={() => setViewState("transfer")}
+            onReceive={() => setViewState("receive")}
+            onTransactionClick={(tx) => {
+              setSelectedTransaction(tx);
+              setReceiptSource("accountDetail");
+              setViewState("receipt");
+            }}
+          />
+        )}
+
+        {viewState === "receipt" && (
+          <ReceiptScreen onBack={() => setViewState(receiptSource)} />
+        )}
+
+        {viewState === "manageFavorites" && (
+          <ManageFavoritesScreen
+            initialSelected={selectedShortcuts}
+            initialAvailable={availableShortcuts}
+            onBack={() => setViewState("home")}
+            onSave={(selected, available) => {
+              setSelectedShortcuts(selected);
+              setAvailableShortcuts(available);
+              setViewState("home");
+              displayToast("Settings saved successfully.");
+            }}
+          />
+        )}
+
+        {viewState === "connectEWallet" &&
+          (platformConfig &&
+          platformConfig.eWalletConnectionEnabled === false ? (
+            renderLockedScreen(
+              "e-Wallet Integration",
+              "Local e-Wallet balance withdrawal gateway is temporarily redirected by Admin.",
+            )
+          ) : (
+            <ConnectEWalletScreen onBack={() => setViewState("home")} />
+          ))}
+
+        {viewState === "scanQR" &&
+          (platformConfig && platformConfig.scanQrEnabled === false ? (
+            renderLockedScreen(
+              "QR Code Scanner",
+              "Backend camera scanning sensor is temporarily disabled for license upgrades.",
+            )
+          ) : (
+            <ScanQRScreen
               onBack={() => setViewState("home")}
-              onNavigate={setViewState}
+              onScanResult={(contact) => {
+                setSelectedContact(contact);
+                setViewState("amountInput");
+              }}
             />
-          )}
+          ))}
 
-          {viewState === "mintNFT" && (
-            <MintNFTScreen onBack={() => setViewState("home")} />
-          )}
+        {viewState === "aiAgent" &&
+          (platformConfig && platformConfig.aiAgentEnabled === false ? (
+            renderLockedScreen(
+              "AI Agent Co-Pilot",
+              "Financial AI Assistant is temporarily disabled by admin for cognitive regulation adjustments.",
+            )
+          ) : (
+            <AIAgentScreen onBack={() => setViewState("home")} />
+          ))}
 
-          {viewState === "home" && (
-            <HomeScreen
-              userName={userName}
-              selectedShortcuts={selectedShortcuts}
-              onNavigate={onNavigate}
-              platformConfig={platformConfig}
+        {viewState === "transfer" &&
+          (platformConfig && platformConfig.transferEnabled === false ? (
+            renderLockedScreen(
+              "Send Balance & Transfer",
+              "Peer-to-Peer transfers are temporarily closed due to network maintenance.",
+            )
+          ) : (
+            <TransferScreen
+              hideBack={isDesktop}
+              onBack={() => setViewState("home")}
+              onNewTransfer={() => setViewState("newTransfer")}
+              onSelectContact={(contact) => {
+                setSelectedContact(contact);
+                setViewState("amountInput");
+              }}
+              onBatchTransfer={() => setViewState("batchTransfer")}
             />
-          )}
-        </motion.div>
-      </AnimatePresence>
+          ))}
+
+        {viewState === "newTransfer" &&
+          (platformConfig && platformConfig.transferEnabled === false ? (
+            renderLockedScreen(
+              "Send Balance & Transfer",
+              "Peer-to-Peer transfers are temporarily closed due to network maintenance.",
+            )
+          ) : (
+            <NewTransferScreen
+              onBack={() => setViewState("transfer")}
+              onSelectContact={(contact) => {
+                setSelectedContact(contact);
+                setViewState("amountInput");
+              }}
+            />
+          ))}
+
+        {viewState === "amountInput" && selectedContact && (
+          <AmountInputScreen
+            contact={selectedContact}
+            onBack={() => setViewState("transfer")}
+            onNext={async (amount, memo) => {
+              const numAmount = parseFloat(amount);
+
+              // Dynamic Check: Minimum Transfer
+              const minTransfer = parseFloat(
+                platformConfig?.minTransferAmount || "1",
+              );
+              if (numAmount < minTransfer) {
+                displayToast(`Minimum transfer amount is ${minTransfer} USDC.`);
+                return;
+              }
+
+              // Dynamic Check: Fees
+              let fee = 0;
+              if (platformConfig?.withdrawFee) {
+                fee =
+                  parseFloat(
+                    platformConfig.withdrawFee.replace(/[^0-9.]/g, ""),
+                  ) || 0;
+              }
+
+              const totalWithFee = numAmount + fee;
+              if (totalWithFee > balance) {
+                displayToast(
+                  `Insufficient USDC balance. Need ${totalWithFee.toFixed(2)} USDC ${fee > 0 ? `(includes ${fee.toFixed(2)} Platform Fee)` : ""}.`,
+                );
+                return;
+              }
+
+              setTransferAmount(amount);
+              setTransferMemo(memo);
+
+              try {
+                await BackendClient.sendUnifiedBalance(
+                  numAmount,
+                  selectedContact.account,
+                  memo,
+                  selectedContact.name,
+                );
+
+                await fetchBalance();
+                await fetchTransactions();
+                displayToast(`Transfer to ${selectedContact.name} initiated!`);
+                setViewState("transfer");
+              } catch (error) {
+                console.error(error);
+                displayToast("Transfer failed. Please try again.");
+              }
+            }}
+          />
+        )}
+
+        {viewState === "batchTransfer" &&
+          (platformConfig && platformConfig.batchTransferEnabled === false ? (
+            renderLockedScreen(
+              "Mass Transfer (Batch)",
+              "Instant multi-transfer is temporarily disabled for gas hoarding prevention.",
+            )
+          ) : (
+            <BatchTransferScreen
+              onBack={() => setViewState("transfer")}
+              onViewReceipt={(txId) => {
+                setSelectedTransaction({
+                  internal_ref: txId,
+                  type: "batchTransfer",
+                } as any);
+                setReceiptSource("home");
+                setViewState("receipt");
+                fetchTransactions();
+              }}
+              contacts={realContacts}
+            />
+          ))}
+
+        {viewState === "withdraw" &&
+          (platformConfig && platformConfig.withdrawEnabled === false ? (
+            renderLockedScreen(
+              "Withdraw Balance",
+              "USDC withdrawals outside the ecosystem are temporarily suspended for cash audit security.",
+            )
+          ) : (
+            <WithdrawScreen
+              hideBack={isDesktop}
+              onBack={() => setViewState("depositOptions")}
+              onSuccess={() => {
+                fetchBalance();
+                fetchTransactions();
+                // No navigation to home - stay in withdraw or show success state within withdraw
+              }}
+            />
+          ))}
+
+        {viewState === "bridge" &&
+          (platformConfig && platformConfig.bridgeEnabled === false ? (
+            renderLockedScreen(
+              "Cross-Chain CCTP Bridge",
+              "Circle USDC burn & mint bridge is temporarily disabled.",
+            )
+          ) : (
+            <BridgeScreen
+              onBack={() => setViewState("home")}
+              onSuccess={() => {
+                fetchBalance();
+                fetchTransactions();
+                // Stay in feature
+              }}
+            />
+          ))}
+
+        {viewState === "transactionHistory" && (
+          <TransactionHistoryScreen onBack={() => setViewState("home")} />
+        )}
+
+        {viewState === "adminDashboard" && (
+          <AdminDashboardScreen
+            onBack={() => setViewState("home")}
+            onNavigate={setViewState}
+          />
+        )}
+
+        {viewState === "mintNFT" && (
+          <MintNFTScreen onBack={() => setViewState("home")} />
+        )}
+
+        {viewState === "home" && !isDesktopFeatureView && (
+          <HomeScreen
+            userName={userName}
+            selectedShortcuts={selectedShortcuts}
+            onNavigate={onNavigate}
+            platformConfig={platformConfig}
+            activeView={viewState}
+          />
+        )}
+      </>
+    );
+
+    return renderLayoutWrapper(
+      <>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={motionKey}
+            variants={slideFadeVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="w-full h-full flex flex-col transform-gpu will-change-transform animate-in fade-in duration-300 ease-out"
+          >
+            {isDesktopFeatureView ? (
+              <HomeScreen
+                userName={userName}
+                selectedShortcuts={selectedShortcuts}
+                onNavigate={onNavigate}
+                platformConfig={platformConfig}
+                activeView={viewState}
+                desktopRightColumn={
+                  <div className="w-full h-full relative flex-1 flex flex-col font-sans">
+                    {activeViewComponent}
+                  </div>
+                }
+              />
+            ) : (
+              activeViewComponent
+            )}
+          </motion.div>
+        </AnimatePresence>
+
+        {inboxReceiptPopupTx && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-10 animate-in fade-in duration-200">
+            {/* Click outside to close */}
+            <div className="absolute inset-0 z-0 cursor-pointer" onClick={() => setInboxReceiptPopupTx(null)} />
+            
+            <div className="relative bg-slate-50 w-full sm:max-w-[500px] h-[85vh] sm:h-[80vh] rounded-t-[32px] sm:rounded-[32px] overflow-hidden shadow-2xl animate-in slide-in-from-bottom sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300 flex flex-col z-10 border border-slate-100">
+              <ReceiptScreen onBack={() => {
+                setInboxReceiptPopupTx(null);
+              }} />
+            </div>
+          </div>
+        )}
+      </>,
     );
   },
 );

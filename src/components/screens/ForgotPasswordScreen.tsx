@@ -44,9 +44,8 @@ export function ForgotPasswordScreen({
     setIsLoading(true);
     setError(null);
     try {
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/?resetPassword=true`,
-      });
+      const { error: resetError } =
+        await supabase.auth.resetPasswordForEmail(email);
       if (resetError) throw resetError;
 
       setStep(2);
@@ -141,8 +140,8 @@ export function ForgotPasswordScreen({
       </button>
 
       {/* Bottom Area: Form */}
-      <div className="flex-1 px-8 pt-8 pb-10 flex flex-col bg-white">
-        <div className="flex-1 flex flex-col">
+      <div className="flex-1 px-8 pt-8 pb-10 flex flex-col bg-white items-center">
+        <div className="flex-1 flex flex-col w-full max-w-[500px]">
           {step === 1 && (
             <div className="animate-in slide-in-from-right duration-300 flex-1 flex flex-col">
               <p className="text-[14.5px] text-slate-500 mb-8 mt-2 text-center">

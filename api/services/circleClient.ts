@@ -1,43 +1,12 @@
 import { initiateDeveloperControlledWalletsClient } from "@circle-fin/developer-controlled-wallets";
 
 /**
- * Safely extracts environment variables, removing wrapping quotes and trailing/leading whitespaces (common in platform migrations like Vercel).
- */
-export const getCircleApiKey = (): string => {
-  return (process.env.CIRCLE_API_KEY || "").trim().replace(/^"|"$/g, "");
-};
-
-export const getCircleEntitySecret = (): string => {
-  return (process.env.CIRCLE_ENTITY_SECRET || "").trim().replace(/^"|"$/g, "");
-};
-
-/**
- * Get the circle base URL based on the environment (Sandbox vs Production).
- */
-export const getCircleBaseUrl = (): string => {
-  if (process.env.CIRCLE_BASE_URL) {
-    return process.env.CIRCLE_BASE_URL.trim().replace(/^"|"$/g, "");
-  }
-  const apiKey = getCircleApiKey();
-  const blockchain = (process.env.CIRCLE_BLOCKCHAIN || "").trim().replace(/^"|"$/g, "");
-  
-  if (
-    apiKey.toLowerCase().includes("sandbox") ||
-    apiKey.toLowerCase().includes("test") ||
-    blockchain.toUpperCase().includes("TESTNET")
-  ) {
-    return "https://api-sandbox.circle.com";
-  }
-  return "https://api.circle.com";
-};
-
-/**
  * Singleton-like factory for Circle Developer-Controlled Wallets Client.
  * Ensures consistent configuration across the backend services.
  */
 export const getCircleClientInstance = () => {
-  const apiKey = getCircleApiKey();
-  const entitySecret = getCircleEntitySecret();
+  const apiKey = process.env.CIRCLE_API_KEY;
+  const entitySecret = process.env.CIRCLE_ENTITY_SECRET;
 
   if (!apiKey || !entitySecret) {
     throw new Error(
@@ -45,12 +14,9 @@ export const getCircleClientInstance = () => {
     );
   }
 
-  const baseUrl = getCircleBaseUrl();
-
   return initiateDeveloperControlledWalletsClient({
     apiKey,
     entitySecret,
-    baseUrl,
   });
 };
 
@@ -61,11 +27,10 @@ export const circleApiFetch = async (
   endpoint: string,
   options: RequestInit = {},
 ) => {
-  const apiKey = getCircleApiKey();
+  const apiKey = process.env.CIRCLE_API_KEY;
   if (!apiKey) throw new Error("CIRCLE_API_KEY is required");
 
-  const baseUrl = getCircleBaseUrl();
-  const url = `${baseUrl}${endpoint}`;
+  const url = `https://api.circle.com${endpoint}`;
   const response = await fetch(url, {
     ...options,
     headers: {

@@ -208,34 +208,39 @@ export function BatchTransferScreen({
   return (
     <div className="w-full h-full bg-[#f8fafc] relative flex flex-col items-center overflow-hidden z-50">
       {/* Header */}
-      <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between">
-        <div className="flex items-center">
-          <button
-            onClick={onBack}
-            className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
-          >
-            <ArrowLeft size={20} className="text-white" />
-          </button>
-          <h2 className="font-bold text-[16px] text-white ml-2">
-            BATCH TRANSFER
-          </h2>
+      <div className="flex justify-center bg-slate-900 shadow-md relative z-10 w-full shrink-0">
+        <div className="flex items-center px-4 pt-6 pb-3 w-full max-w-[500px] justify-between">
+          <div className="flex items-center">
+            <button
+              onClick={onBack}
+              className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
+            >
+              <ArrowLeft size={20} className="text-white" />
+            </button>
+            <h2 className="font-bold text-[16px] text-white ml-2">
+              BATCH TRANSFER
+            </h2>
+          </div>
         </div>
       </div>
 
       {/* Progress Indicator */}
-      <div className="w-full bg-white border-b border-slate-100 px-5 py-3 flex gap-2">
-        <div
-          className={`h-1.5 flex-1 rounded-full ${multiSendStep === "form" || multiSendStep === "confirm" || multiSendStep === "processing" || multiSendStep === "success" ? "bg-slate-900" : "bg-slate-100"}`}
-        ></div>
-        <div
-          className={`h-1.5 flex-1 rounded-full ${multiSendStep === "confirm" || multiSendStep === "processing" || multiSendStep === "success" ? "bg-slate-900" : "bg-slate-100"}`}
-        ></div>
-        <div
-          className={`h-1.5 flex-1 rounded-full ${multiSendStep === "success" ? "bg-slate-900" : "bg-slate-100"}`}
-        ></div>
+      <div className="w-full bg-white border-b border-slate-100 flex justify-center shrink-0">
+        <div className="w-full max-w-[500px] px-5 py-3 flex gap-2">
+          <div
+            className={`h-1.5 flex-1 rounded-full ${multiSendStep === "form" ? "bg-slate-900" : "bg-slate-900"}`}
+          ></div>
+          <div
+            className={`h-1.5 flex-1 rounded-full ${multiSendStep === "confirm" || multiSendStep === "processing" || multiSendStep === "success" ? "bg-slate-900" : "bg-slate-100"}`}
+          ></div>
+          <div
+            className={`h-1.5 flex-1 rounded-full ${multiSendStep === "processing" || multiSendStep === "success" ? "bg-slate-900" : "bg-slate-100"}`}
+          ></div>
+        </div>
       </div>
 
       <div className="flex-1 w-full flex flex-col overflow-y-auto pb-24 scrollbar-hide">
+        <div className="w-full max-w-[500px] mx-auto flex flex-col relative h-full">
         {/* Content Step Logic */}
         <div className="p-5">
           {/* Step 1: Info Screen */}
@@ -760,6 +765,7 @@ export function BatchTransferScreen({
               </div>
             </motion.div>
           )}
+        </div>
         </div>
       </div>
 

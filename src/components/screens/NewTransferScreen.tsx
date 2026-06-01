@@ -138,21 +138,24 @@ export function NewTransferScreen({
   return (
     <div className="absolute inset-0 w-full h-full bg-slate-50 relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 shrink-0">
-        <div className="flex items-center">
-          <button
-            onClick={onBack}
-            className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
-          >
-            <ArrowLeft size={20} className="text-white" />
-          </button>
-          <h2 className="font-bold text-[16px] text-white ml-2 uppercase tracking-tight">
-            New Transfer
-          </h2>
+      <div className="flex justify-center bg-slate-900 shadow-md relative z-10 shrink-0 w-full">
+        <div className="flex items-center justify-between px-4 pt-6 pb-3 w-full max-w-[500px]">
+          <div className="flex items-center">
+            <button
+              onClick={onBack}
+              className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
+            >
+              <ArrowLeft size={20} className="text-white" />
+            </button>
+            <h2 className="font-bold text-[16px] text-white ml-2 uppercase tracking-tight">
+              New Transfer
+            </h2>
+          </div>
         </div>
       </div>
 
       <div className="px-5 w-full flex-1 overflow-y-auto scrollbar-hide pb-32">
+        <div className="w-full max-w-[500px] mx-auto flex flex-col relative h-full">
         {/* Tabs */}
         <div className="flex w-full mt-6 mb-6">
           <div className="flex-1 flex justify-center items-center gap-2 border-r border-slate-200 cursor-pointer">
@@ -279,11 +282,13 @@ export function NewTransferScreen({
               </div>
             )}
         </div>
+        </div>
       </div>
 
       {/* Bottom Button */}
-      <div className="absolute bottom-0 left-0 right-0 p-5 w-full z-20">
-        <button
+      <div className="absolute bottom-0 left-0 right-0 w-full z-20 flex justify-center pb-5 bg-gradient-to-t from-slate-50 to-transparent">
+        <div className="w-full max-w-[500px] px-5">
+          <button
           onClick={handleContinue}
           disabled={
             !!addressError ||
@@ -302,6 +307,7 @@ export function NewTransferScreen({
         >
           Continue
         </button>
+        </div>
       </div>
 
       {/* Check Receiver Details Modal */}

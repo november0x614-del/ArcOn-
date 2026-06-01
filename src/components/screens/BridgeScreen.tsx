@@ -266,28 +266,31 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
   return (
     <div className="absolute inset-0 z-[70] bg-slate-50 flex flex-col animate-in slide-in-from-right duration-300">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 shrink-0">
-        <div className="flex items-center">
+      <div className="flex justify-center bg-slate-900 shadow-md relative z-10 shrink-0 w-full">
+        <div className="flex items-center justify-between px-4 pt-6 pb-3 w-full max-w-[500px]">
+          <div className="flex items-center">
+            <button
+              onClick={onBack}
+              className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
+            >
+              <ArrowLeft size={20} className="text-white" />
+            </button>
+            <h3 className="font-bold text-[16px] tracking-tight text-white ml-2">
+              CCTP BRIDGE
+            </h3>
+          </div>
           <button
-            onClick={onBack}
-            className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
+            onClick={() => setShowPending(true)}
+            className="relative flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-full text-[12px] font-bold text-white border border-white/20 hover:bg-white/20 transition-all cursor-pointer"
           >
-            <ArrowLeft size={20} className="text-white" />
+            <Loader2 size={12} className="animate-spin" />
+            Recovery
           </button>
-          <h3 className="font-bold text-[16px] tracking-tight text-white ml-2">
-            CCTP BRIDGE
-          </h3>
         </div>
-        <button
-          onClick={() => setShowPending(true)}
-          className="relative flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-full text-[12px] font-bold text-white border border-white/20 hover:bg-white/20 transition-all cursor-pointer"
-        >
-          <Loader2 size={12} className="animate-spin" />
-          Recovery
-        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-5 pt-6 pb-6 flex flex-col scrollbar-hide relative z-0">
+        <div className="w-full max-w-[500px] mx-auto flex flex-col relative w-full">
         {/* Network Selection Dashboard */}
         <div className="bg-white rounded-[24px] p-5 shadow-sm border border-slate-100 mb-4 flex flex-col gap-6 relative">
           <div className="flex flex-col gap-2">
@@ -486,6 +489,7 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
           >
             {!amount || numAmount === 0 ? "Initiate Bridge" : !hasEnoughBalance ? "Insufficient Balance" : "Review Bridge"}
           </button>
+        </div>
         </div>
       </div>
 

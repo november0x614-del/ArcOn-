@@ -1,10 +1,12 @@
 import express from "express";
 import crypto from "crypto";
-import { getSupabaseAdmin } from "../config/supabase.js";
-import { executeTransaction, executeReleaseEscrow } from "../services/circle.js";
-import { requireRole } from "../middleware/requireRole.js";
+import { getSupabaseAdmin } from "../config/supabase";
+import { executeTransaction, executeReleaseEscrow } from "../services/circle";
 
 const router = express.Router();
+
+// Helper to handle seller address extraction (for simplicity in testnet)
+const DEFAULT_SELLER_ADDRESS = "0xMerchant";
 
 /**
  * 1. Checkout Endpoint
@@ -12,17 +14,8 @@ const router = express.Router();
  */
 router.post("/ecommerce/checkout", async (req, res) => {
   try {
-    let { buyerId, productId, amount, memo, sellerAddress } = req.body;
-    const defaultSeller = process.env.DEFAULT_SELLER_ADDRESS;
-
-    if (!sellerAddress) {
-      if (!defaultSeller) return res.status(400).json({ error: "Seller address required" });
-      sellerAddress = defaultSeller;
-    }
-
+    const { buyerId, productId, amount, memo, sellerAddress = DEFAULT_SELLER_ADDRESS } = req.body;
     const supabaseAdmin = getSupabaseAdmin();
-
-    const amountValue = Number(amount);
 
     // Pastikan Treasury wallet tersedia
     let treasuryAddress = process.env.PLATFORM_TREASURY_ADDRESS;
@@ -30,7 +23,7 @@ router.post("/ecommerce/checkout", async (req, res) => {
       const { data: treasuryWallet } = await supabaseAdmin
         .from("user_wallets")
         .select("wallet_address")
-        .eq("id", (process.env.PLATFORM_ADMIN_UUID as string))
+        .eq("id", "00000000-0000-0000-0000-000000000000")
         .single();
       treasuryAddress = treasuryWallet?.wallet_address;
     }
@@ -49,7 +42,7 @@ router.post("/ecommerce/checkout", async (req, res) => {
         seller_address: sellerAddress,
         product_id: parseInt(productId),
         product_name: memo, // We passed product_name as memo in frontend
-        amount: amountValue,
+        amount: amount,
         status: "PENDING_ESCROW",
         memo: orderMemo // Added for webhook matching
       })
@@ -66,7 +59,7 @@ router.post("/ecommerce/checkout", async (req, res) => {
     const result = await executeTransaction(
       supabaseAdmin,
       buyerId,
-      amountValue,
+      amount,
       treasuryAddress,
       "checkout", // tag 
       {
@@ -100,7 +93,7 @@ router.post("/ecommerce/checkout", async (req, res) => {
 /**
  * 2. Release Escrow & Split Payment
  */
-router.post("/ecommerce/release-escrow", requireRole(["super_admin", "admin"]), async (req, res) => {
+router.post("/ecommerce/release-escrow", async (req, res) => {
   try {
     const { sellerAddress, totalAmount, orderId } = req.body;
     const supabaseAdmin = getSupabaseAdmin();
@@ -137,7 +130,7 @@ router.post("/ecommerce/release-escrow", requireRole(["super_admin", "admin"]), 
 /**
  * 3. Fetch Admin Escrow Queue
  */
-router.get("/ecommerce/admin/escrows", requireRole(["super_admin", "admin"]), async (req, res) => {
+router.get("/ecommerce/admin/escrows", async (req, res) => {
   try {
     const supabaseAdmin = getSupabaseAdmin();
     // Gunakan relasi dengan users untuk mendapatkan nama buyer if possible, here using direct query

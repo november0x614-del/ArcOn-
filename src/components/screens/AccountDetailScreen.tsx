@@ -157,8 +157,6 @@ export function AccountDetailScreen({
         return <ShoppingBag size={20} className="text-purple-500" />;
       case "swap":
         return <RefreshCw size={20} className="text-slate-600" />;
-      case "mint_nft":
-        return <Hexagon size={20} className="text-purple-600 animate-pulse" />;
       default:
         return <Receipt size={20} className="text-slate-500" />;
     }
@@ -176,8 +174,6 @@ export function AccountDetailScreen({
         return "bg-purple-50 border-purple-100";
       case "swap":
         return "bg-slate-100 border-slate-200";
-      case "mint_nft":
-        return "bg-purple-50 border-purple-150 shadow-[0_0_8px_rgba(147,51,234,0.1)]";
       default:
         return "bg-slate-50 border-slate-100";
     }
@@ -704,12 +700,12 @@ export function AccountDetailScreen({
                           ID
                         </span>
                         <a
-                          href={nft.txHash && nft.txHash.startsWith("0x") && !nft.txHash.startsWith("0xgenesis") && !nft.txHash.startsWith("0xpioneer") ? `https://testnet.arcscan.app/tx/${nft.txHash}` : undefined}
+                          href={nft.txHash && !nft.txHash.startsWith("0xgenesis") && !nft.txHash.startsWith("0xpioneer") ? `https://testnet.arcscan.app/tx/${nft.txHash}` : undefined}
                           target="_blank"
                           rel="noreferrer"
                           className="text-[10px] font-bold text-slate-400 hover:text-slate-600 truncate max-w-[80px]"
                           onClick={(e) => {
-                            if (!nft.txHash || !nft.txHash.startsWith("0x") || nft.txHash.startsWith("0xgenesis") || nft.txHash.startsWith("0xpioneer")) {
+                            if (!nft.txHash || nft.txHash.startsWith("0xgenesis") || nft.txHash.startsWith("0xpioneer")) {
                               e.preventDefault();
                             }
                           }}

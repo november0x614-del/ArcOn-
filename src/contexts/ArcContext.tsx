@@ -6,7 +6,6 @@ import React, {
   useCallback,
 } from "react";
 import { createPublicClient, http, formatUnits } from "viem";
-import { apiFetch } from "../lib/api";
 
 interface FeeEstimate {
   maxFeePerGas: bigint;
@@ -29,7 +28,7 @@ interface ArcContextType {
       description: string;
       image: string;
     };
-  }) => Promise<{ success: boolean; txHash?: string; txId?: string }>;
+  }) => Promise<{ success: boolean; txHash?: string }>;
 }
 
 const ARC_TESTNET_CONFIG = {
@@ -169,7 +168,7 @@ export const ArcProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       console.log("[ArcContext] Initiating executeArcTransaction backend call:", params);
-      const response = await apiFetch("/api/nft/mint", {
+      const response = await fetch("/api/nft/mint", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -191,8 +190,7 @@ export const ArcProvider: React.FC<{ children: React.ReactNode }> = ({
       const data = await response.json();
       return {
         success: true,
-        txHash: data.txHash,
-        txId: data.txId,
+        txHash: data.txHash || data.txId,
       };
     } catch (err: any) {
       console.error("[ArcContext] executeArcTransaction failed:", err);

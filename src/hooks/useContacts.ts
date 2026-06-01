@@ -44,16 +44,16 @@ export function useContacts() {
               newResolved[address.toLowerCase()] =
                 `@${data.username || data.name}`;
             } else {
-              // Fallback for unregistered addresses: User_0x1234...ABCD
+              // Fallback for unregistered addresses: 0x1234...abcd
               const start = address.slice(0, 6);
               const end = address.slice(-4);
-              newResolved[address.toLowerCase()] = `User_${start}...${end}`;
+              newResolved[address.toLowerCase()] = `${start}...${end}`;
             }
           } catch (e) {
-            // Fallback on error: User_0x1234...ABCD
+            // Fallback on error: 0x1234...abcd
             const start = address.slice(0, 6);
             const end = address.slice(-4);
-            newResolved[address.toLowerCase()] = `User_${start}...${end}`;
+            newResolved[address.toLowerCase()] = `${start}...${end}`;
           }
         },
       );
@@ -93,29 +93,35 @@ export function useContacts() {
             (tx.type === "payment"
               ? `Merchant ${tx.id.substring(0, 4)}`
               : recipientAddress
-                ? `User_${recipientAddress.substring(0, 6)}...${recipientAddress.substring(recipientAddress.length - 4)}`
+                ? `${recipientAddress.substring(0, 6)}...${recipientAddress.substring(recipientAddress.length - 4)}`
                 : "Unknown");
 
           if (recipientAddress && recipientName) {
             const cleanAddr = recipientAddress.trim();
-            const initials = recipientName.trim()
+            const cleanForInitials = recipientName.trim()
               ? recipientName
                   .replace(/@/g, "")
-                  .replace(/User_/g, "")
+                  .replace(/^User_/i, "")
+                  .replace(/^0x/i, "")
                   .trim()
+              : "";
+            const initials = cleanForInitials
+              ? cleanForInitials
                   .split(" ")
                   .map((n: string) => n[0])
                   .join("")
                   .substring(0, 2)
                   .toUpperCase()
-              : "??";
+              : "?";
 
             contactMap.set(cleanAddr.toLowerCase(), {
               id: tx.id || cleanAddr,
               letter: recipientName.trim()[0]?.toUpperCase() || "?",
               name: recipientName.startsWith("@")
                 ? recipientName
-                : recipientName.toUpperCase(),
+                : recipientName.startsWith("0x") || /^[0-9a-fA-F]{6}\.\.\./.test(recipientName)
+                  ? recipientName.toLowerCase() // keep address-like name in lowerCase
+                  : recipientName.toUpperCase(),
               network: "EVM (Arc Testnet)",
               number: cleanAddr,
               initials: initials,

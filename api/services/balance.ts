@@ -1,6 +1,6 @@
 import { formatUnits } from "viem";
-import { publicClient, USDC_ADDRESS, getTokenBalance } from "./arcViem.js";
-import { getCircleClientInstance } from "./circleClient.js";
+import { publicClient, USDC_ADDRESS, getTokenBalance } from "./arcViem";
+import { getCircleClientInstance } from "./circleClient";
 
 interface CacheEntry {
   data: any;
@@ -35,17 +35,16 @@ export async function fetchUnifiedBalance(
   // 1. Parallel Fetch: Circle Balance (Cloud) + Arc Native Balance (On-Chain) + Arc ERC20 USDC
   const [circleResponse, nativeWei, nativeUSDCWei] = await Promise.all([
     walletId
-      ? Promise.resolve().then(() => getCircleClientInstance().getWalletTokenBalance({ id: walletId }))
+      ? getCircleClientInstance()
+          .getWalletTokenBalance({ id: walletId })
           .catch((err) => {
-            if (!err.message?.includes("Invalid credentials") && !err.message?.includes("are required")) {
-              console.warn(
-                `[CircleBalance API] failed for wallet ${walletId}:`,
-                err.message,
-              );
-            }
+            console.warn(
+              `[CircleBalance API] getWalletTokenBalance failed for wallet ${walletId}:`,
+              err.message,
+            );
             return null;
           })
-      : Promise.resolve(null),
+      : null,
     publicClient
       .getBalance({ address: walletAddress as `0x${string}` })
       .catch((e) => {

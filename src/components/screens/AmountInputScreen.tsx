@@ -22,16 +22,24 @@ export function AmountInputScreen({
   onBack,
   onNext,
 }: AmountInputScreenProps) {
-  const { registeredUser, balance, allBalances, transferAmount, transferMemo, platformConfig } =
-    useStore();
+  const {
+    registeredUser,
+    balance,
+    allBalances,
+    transferAmount,
+    transferMemo,
+    platformConfig,
+  } = useStore();
   const { getFeeEstimate } = useArc();
   const [amount, setAmount] = useState(
     transferAmount && transferAmount !== "0" ? transferAmount : "",
   );
-  
+
   // Extract configuration values
   const minTransfer = parseFloat(platformConfig?.minTransferAmount || "1");
-  const platformFee = platformConfig?.withdrawFee ? (parseFloat(platformConfig.withdrawFee.replace(/[^0-9.]/g, '')) || 0) : 0;
+  const platformFee = platformConfig?.withdrawFee
+    ? parseFloat(platformConfig.withdrawFee.replace(/[^0-9.]/g, "")) || 0
+    : 0;
   const dailyLimit = parseFloat(platformConfig?.dailyTransferLimit || "5000");
 
   const [memo, setMemo] = useState(transferMemo || "");
@@ -78,127 +86,140 @@ export function AmountInputScreen({
   return (
     <div className="w-full h-full bg-white relative flex flex-col z-50">
       {/* Header */}
-      <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-center">
-        <button
-          onClick={onBack}
-          className="absolute left-4 p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
-        >
-          <ArrowLeft size={20} className="text-white" />
-        </button>
-        <h2 className="font-bold text-[16px] text-white">INPUT AMOUNT</h2>
+      <div className="flex justify-center bg-slate-900 shadow-md relative z-10 w-full shrink-0">
+        <div className="flex items-center px-4 pt-6 pb-3 w-full max-w-[500px] justify-center relative">
+          <button
+            onClick={onBack}
+            className="absolute left-4 p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
+          >
+            <ArrowLeft size={20} className="text-white" />
+          </button>
+          <h2 className="font-bold text-[16px] text-white">INPUT AMOUNT</h2>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto w-full pb-32 p-5 bg-[#f8fafc]">
-        {/* Recipient Card - Updated Design */}
-        <div className="bg-white rounded-[32px] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 mb-8 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-500">
-          <div className="w-[64px] h-[64px] shadow-sm rounded-full bg-slate-900 flex items-center justify-center font-bold text-white text-[22px] shrink-0 mb-4 border-4 border-slate-50">
-            {contact.initials}
-          </div>
-          <h2 className="text-slate-900 font-black text-[18px] uppercase tracking-tight leading-tight text-center">
-            {contact.name}
-          </h2>
-          <div className="mt-2 px-4 py-1.5 bg-slate-50 rounded-full border border-slate-100">
-            <p className="text-slate-500 text-[12px] font-bold tracking-tight text-center flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              {contact.bank || contact.network} - {contact.account}
-            </p>
-          </div>
-        </div>
-
-        {/* Input box */}
-        <div className="bg-white rounded-[28px] p-6 shadow-sm border border-slate-100 mb-6 relative space-y-4">
-          <label className="text-[12px] font-bold text-slate-400 uppercase tracking-wider block">
-            Transfer Amount
-          </label>
-          <div className="flex items-center justify-between pb-1 relative">
-            <input
-              type="number"
-              inputMode="decimal"
-              placeholder="0"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="text-[36px] font-black w-2/3 outline-none text-slate-800 focus:text-slate-900 bg-transparent placeholder-slate-200"
-            />
-            {amount && (
-              <button
-                onClick={() => setAmount("")}
-                className="absolute right-20 w-[24px] h-[24px] bg-slate-200 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-300 transition-colors z-20 top-1/2 -translate-y-1/2"
-              >
-                <X size={14} strokeWidth={2.5} />
-              </button>
-            )}
-            <div className="flex items-center gap-2 bg-slate-100 rounded-full py-1.5 px-3 border border-slate-200 h-9 shrink-0">
-              <span className="font-bold text-[14px] text-slate-800 tracking-tight">
-                USDC
-              </span>
+        <div className="w-full max-w-[500px] mx-auto flex flex-col relative w-full h-full">
+          {/* Recipient Card - Updated Design */}
+          <div className="bg-white rounded-[32px] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 mb-8 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-500">
+            <div className="w-[64px] h-[64px] shadow-sm rounded-full bg-slate-900 flex items-center justify-center font-bold text-white text-[22px] shrink-0 mb-4 border-4 border-slate-50">
+              {contact.initials}
+            </div>
+            <h2 className="text-slate-900 font-black text-[18px] uppercase tracking-tight leading-tight text-center">
+              {contact.name}
+            </h2>
+            <div className="mt-2 px-4 py-1.5 bg-slate-50 rounded-full border border-slate-100">
+              <p className="text-slate-500 text-[12px] font-bold tracking-tight text-center flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                {contact.bank || contact.network} - {contact.account && contact.account.startsWith("0x") && contact.account.length > 15 ? `${contact.account.substring(0, 8)}...${contact.account.substring(contact.account.length - 6)}` : contact.account}
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center justify-between mt-2 pt-3 border-t border-slate-100">
-            <div className="flex flex-col gap-0.5">
-              <span className="text-[11px] text-slate-500 font-medium">
-                Balance: {actualUSDC.toFixed(2)} USDC
-              </span>
-              <span className={`text-[10px] ${numericAmount > dailyLimit ? "text-red-500 font-bold" : "text-slate-400 font-medium"}`}>
-                Limit: {dailyLimit.toFixed(2)} USDC
-              </span>
-            </div>
-            <button
-              onClick={() =>
-                setAmount(
-                  actualUSDC >= platformFee ? (actualUSDC - platformFee).toFixed(2) : "0",
-                )
-              }
-              className="text-[11px] font-bold bg-slate-200 text-slate-700 px-2.5 py-1 rounded-md hover:bg-slate-300 transition-colors cursor-pointer border-none"
-            >
-              MAX
-            </button>
-          </div>
-        </div>
-
-        {/* Memo Input */}
-        <div className="bg-white rounded-[20px] shadow-sm border border-slate-200 mb-6 p-4">
-          {!isEditingMemo && !memo ? (
-            <button
-              onClick={() => setIsEditingMemo(true)}
-              className="flex items-center justify-center w-full gap-2 text-slate-600 font-medium text-[13px] hover:text-slate-900 transition-colors py-1 cursor-pointer border-0 bg-transparent"
-            >
-              <Edit3 size={15} className="text-slate-400" /> Add Memo (Optional)
-            </button>
-          ) : (
-            <div className="w-full flex flex-col gap-2 relative">
-              <div className="flex justify-between items-center z-10 w-full bg-white relative">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest leading-none">
-                  Memo
-                </span>
-                <button
-                  onClick={() => {
-                    setMemo("");
-                    setIsEditingMemo(false);
-                  }}
-                  className="text-slate-400 hover:text-slate-600 cursor-pointer border-0 bg-transparent inline-flex leading-none pt-0 pb-0"
-                >
-                  <X size={14} />
-                </button>
-              </div>
+          {/* Input box */}
+          <div className="bg-white rounded-[28px] p-6 shadow-sm border border-slate-100 mb-6 relative space-y-4">
+            <label className="text-[12px] font-bold text-slate-400 uppercase tracking-wider block">
+              Transfer Amount
+            </label>
+            <div className="flex items-center justify-between pb-1 relative">
               <input
-                type="text"
-                autoFocus={isEditingMemo}
-                value={memo}
-                onChange={(e) => setMemo(e.target.value)}
-                placeholder="Ex: Payment for groceries"
-                className="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl outline-none text-slate-700 text-[14px] font-medium"
+                type="number"
+                inputMode="decimal"
+                placeholder="0"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="text-[26px] font-bold tracking-tight w-2/3 outline-none text-slate-800 focus:text-slate-900 bg-transparent placeholder-slate-300"
               />
+              {amount && (
+                <button
+                  onClick={() => setAmount("")}
+                  className="absolute right-20 w-[24px] h-[24px] bg-slate-200 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-300 transition-colors z-20 top-1/2 -translate-y-1/2"
+                >
+                  <X size={14} strokeWidth={2.5} />
+                </button>
+              )}
+              <div className="flex items-center gap-2 bg-slate-100 rounded-full py-1.5 px-3 border border-slate-200 h-9 shrink-0">
+                <span className="font-bold text-[14px] text-slate-800 tracking-tight">
+                  USDC
+                </span>
+              </div>
             </div>
-          )}
-        </div>
 
-        {/* Action Button */}
-        <div className="mt-8">
-          <button
-            onClick={() => setShowConfirm(true)}
-            disabled={!amount || numericAmount < minTransfer || !hasEnough || !isWithinLimit}
-            className={`w-full py-4 rounded-full font-bold text-[15px] transition-all flex items-center justify-center gap-2 border-[1.5px]
+            <div className="flex items-center justify-between mt-2 pt-3 border-t border-slate-100">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[11px] text-slate-500 font-medium">
+                  Balance: {actualUSDC.toFixed(2)} USDC
+                </span>
+                <span
+                  className={`text-[10px] ${numericAmount > dailyLimit ? "text-red-500 font-bold" : "text-slate-400 font-medium"}`}
+                >
+                  Limit: {dailyLimit.toFixed(2)} USDC
+                </span>
+              </div>
+              <button
+                onClick={() =>
+                  setAmount(
+                    actualUSDC >= platformFee
+                      ? (actualUSDC - platformFee).toFixed(2)
+                      : "0",
+                  )
+                }
+                className="text-[11px] font-bold bg-slate-200 text-slate-700 px-2.5 py-1 rounded-md hover:bg-slate-300 transition-colors cursor-pointer border-none"
+              >
+                MAX
+              </button>
+            </div>
+          </div>
+
+          {/* Memo Input */}
+          <div className="bg-white rounded-[20px] shadow-sm border border-slate-200 mb-6 p-4">
+            {!isEditingMemo && !memo ? (
+              <button
+                onClick={() => setIsEditingMemo(true)}
+                className="flex items-center justify-center w-full gap-2 text-slate-600 font-medium text-[13px] hover:text-slate-900 transition-colors py-1 cursor-pointer border-0 bg-transparent"
+              >
+                <Edit3 size={15} className="text-slate-400" /> Add Memo
+                (Optional)
+              </button>
+            ) : (
+              <div className="w-full flex flex-col gap-2 relative">
+                <div className="flex justify-between items-center z-10 w-full bg-white relative">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest leading-none">
+                    Memo
+                  </span>
+                  <button
+                    onClick={() => {
+                      setMemo("");
+                      setIsEditingMemo(false);
+                    }}
+                    className="text-slate-400 hover:text-slate-600 cursor-pointer border-0 bg-transparent inline-flex leading-none pt-0 pb-0"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  autoFocus={isEditingMemo}
+                  value={memo}
+                  onChange={(e) => setMemo(e.target.value)}
+                  placeholder="Ex: Payment for groceries"
+                  className="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl outline-none text-slate-700 text-[14px] font-medium"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Action Button */}
+          <div className="mt-8">
+            <button
+              onClick={() => setShowConfirm(true)}
+              disabled={
+                !amount ||
+                numericAmount < minTransfer ||
+                !hasEnough ||
+                !isWithinLimit
+              }
+              className={`w-full py-4 rounded-full font-bold text-[15px] transition-all flex items-center justify-center gap-2 border-[1.5px]
               ${
                 !amount || numericAmount < minTransfer
                   ? "bg-slate-100 text-slate-400 border-transparent shadow-none cursor-not-allowed"
@@ -209,9 +230,14 @@ export function AmountInputScreen({
                       : "bg-slate-900 text-white border-transparent shadow-lg hover:bg-slate-800 active:scale-[0.98]"
               }
             `}
-          >
-            {numericAmount > dailyLimit ? "Over Limit" : !hasEnough ? "Insufficient Balance" : "Review Transfer"}
-          </button>
+            >
+              {numericAmount > dailyLimit
+                ? "Over Limit"
+                : !hasEnough
+                  ? "Insufficient Balance"
+                  : "Review Transfer"}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -242,7 +268,7 @@ export function AmountInputScreen({
                     {contact.name}
                   </span>
                   <span className="text-slate-500 text-[13px] truncate">
-                    {contact.bank || contact.network} - {contact.account}
+                    {contact.bank || contact.network} - {contact.account && contact.account.startsWith("0x") && contact.account.length > 15 ? `${contact.account.substring(0, 8)}...${contact.account.substring(contact.account.length - 6)}` : contact.account}
                   </span>
                 </div>
               </div>
@@ -394,7 +420,7 @@ export function AmountInputScreen({
                     )}
                   </div>
                   <span className="text-slate-500 text-[13px] tracking-wide font-medium text-left w-full block">
-                    {src.account}
+                    {src.account && src.account.startsWith("0x") && src.account.length > 15 ? `${src.account.substring(0, 8)}...${src.account.substring(src.account.length - 6)}` : src.account}
                   </span>
                   <span
                     className={`font-bold text-[14px] mt-2 text-left w-full block ${src.isArc ? "text-slate-800" : "text-[#008fcd]"}`}

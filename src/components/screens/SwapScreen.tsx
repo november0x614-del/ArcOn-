@@ -306,22 +306,26 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
   return (
     <div className="w-full h-full bg-slate-50 relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
       {/* Header */}
-      <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between">
-        <div className="flex items-center">
-          <button
-            onClick={onBack}
-            className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
-          >
-            <ArrowLeft size={20} className="text-white" />
-          </button>
-          <h2 className="font-bold text-[16px] text-white ml-2">SWAP</h2>
+      <div className="flex justify-center bg-slate-900 shadow-md relative z-10 w-full">
+        <div className="flex items-center px-4 pt-6 pb-3 w-full max-w-[500px] justify-between">
+          <div className="flex items-center">
+            <button
+              onClick={onBack}
+              className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
+            >
+              <ArrowLeft size={20} className="text-white" />
+            </button>
+            <h2 className="font-bold text-[16px] text-white ml-2">SWAP</h2>
+          </div>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto pb-24 p-5 flex flex-col pt-6 w-full scrollbar-hide relative">
-        {/* Swap Box Container */}
-        <div className="relative mb-6">
-          {/* From */}
+        <div className="w-full max-w-[500px] mx-auto flex flex-col relative">
+          {/* Swap Box Container */}
+          <div className="relative mb-6">
+            {/* From */}
+
           <div
             className={`bg-white p-5 rounded-[24px] shadow-sm border transition-all duration-300 relative z-10 ${isSwapping ? "border-blue-400/50 shadow-blue-100/50 opacity-80" : "border-slate-200 focus-within:border-slate-400"}`}
           >
@@ -575,6 +579,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
               "Review Swap"
             )}
           </button>
+        </div>
         </div>
       </div>
 

@@ -23,11 +23,6 @@ Anda harus memahami infrastruktur dan arsitektur proyek ini secara mendalam:
 5. Persetujuan Sebelum Implementasi: JANGAN mengimplementasikan kode atau fitur apa pun sebelum ada persetujuan yang jelas dari user. Selalu berikan rancangan dan saran yang relevan terlebih dahulu.
 6. Refactoring & Clean Code: Selalu lakukan refactoring setiap kali membuat perubahan, dan pastikan untuk MENGHAPUS _dead code_ (kode yang sudah tidak digunakan) untuk mencegah potensi tabrakan logika.
 7. Real-Only & Ready to Deploy: DILARANG menggunakan mode simulasi, mock data, sandbox bypass, dummy token, atau fallback hardcoded untuk alur-alur penting (seperti otentikasi Supabase, OTP, pembayaran Circle, dll.). Semua alur wajib diimplementasikan menggunakan live integration dan real SDK/API calls agar proyek siap dideploy langsung ke production environment. Jika ada konfigurasi yang dibutuhkan di sisi platform (seperti pengaturan auto-confirm di dashboard Supabase), jelaskan langkah konfigurasi real-nya kepada developer.
-8. Larangan Keras SQL/Database Destruktif: DILARANG KERAS memberikan atau memodifikasi file `supabase_setup.sql` dengan cara yang bersifat destruktif (seperti menyertakan perintah `DROP TABLE`, `DROP SCHEMA`, `TRUNCATE`, atau menghapus data-data yang ada). Semua modifikasi database wajib bersifat bertahap (incremental updates/schema alterations) dan mempertahankan data sensitif user.
-9. Keamanan Kritikal User & Admin:
-   - Proteksi Deletion: Wajib mempertahankan data profil pengguna yang memiliki dompet SCA aktif yang menyimpan aset, dilarang membiarkan aksi delete profil lolos jika memiliki wallet terafiliasi.
-   - Proteksi Role Escalation: Verifikasi dan cegah perubahan tingkat akses (Role Escalation) di mana pengguna biasa mencoba menaikkan status role mereka ke 'admin' atau 'super_admin' melalui manipulasi API client-side atau bypass JWT.
-   - Keamanan Webhook & Replay-Attack Protection: Selalu implementsi perlindungan replay attack dengan memverifikasi timestamp drift pada payload bertanda tangan kriptografis Circle dan membatasi pemrosesan ulang transaksi yang sudah mencapai status final (success/failed).
 
 # Format Keluaran (Output Format)
 

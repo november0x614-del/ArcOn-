@@ -54,14 +54,13 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
 
   rawHash = String(rawHash);
 
-  // We only add '0x' if it's already a clean hex string from on-chain that missed it,
-  // but if it's a UUID (e.g. from Circle internal ref), DO NOT turn it into an ETH transaction hash.
-  const isInternalUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}/i.test(rawHash);
-  let txHash = rawHash;
-  
-  if (!isInternalUUID && /^[0-9a-fA-F]{64}$/.test(rawHash)) {
-      txHash = "0x" + rawHash;
-  }
+  const txHash = rawHash.startsWith("0x")
+    ? rawHash
+    : "0x" +
+      rawHash
+        .replace(/[^a-fA-F0-9]/g, "")
+        .padStart(64, "0")
+        .substring(0, 64);
 
   const isSuccess =
     tx?.status === "success" || (tx?.status as any) === "confirmed";
@@ -326,19 +325,19 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                   </span>
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => {
-                        if (tx?.metadata?.explorerUrl) {
-                          window.open(tx?.metadata?.explorerUrl, "_blank");
-                        } else if (txHash.startsWith("0x")) {
-                          window.open(`https://testnet.arcscan.app/tx/${txHash}`, "_blank");
-                        }
-                      }}
-                      className={`text-[14px] font-medium text-blue-600 hover:text-blue-700 font-mono tracking-tight bg-transparent border-0 p-0 text-left flex items-center transition-colors break-all ${(txHash.startsWith("0x") || tx?.metadata?.explorerUrl) ? "cursor-pointer" : "cursor-default text-slate-600 hover:text-slate-600"}`}
-                      title={txHash.startsWith("0x") ? "View on Arcscan" : "Internal ID"}
+                      onClick={() =>
+                        window.open(
+                          tx?.metadata?.explorerUrl ||
+                            `https://testnet.arcscan.app/tx/${txHash}`,
+                          "_blank",
+                        )
+                      }
+                      className="text-[14px] font-medium text-blue-600 hover:text-blue-700 font-mono tracking-tight cursor-pointer bg-transparent border-0 p-0 text-left flex items-center transition-colors break-all"
+                      title="View on Arcscan"
                     >
                       {txHash.substring(0, 10)}...
-                      {txHash.substring(Math.max(0, txHash.length - 8))}
-                      {(txHash.startsWith("0x") || tx?.metadata?.explorerUrl) && <ExternalLink size={14} className="ml-1 opacity-70" />}
+                      {txHash.substring(txHash.length - 8)}
+                      <ExternalLink size={14} className="ml-1 opacity-70" />
                     </button>
                     <button
                       onClick={() => handleCopy(txHash, "TxHash")}

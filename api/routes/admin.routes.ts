@@ -1,7 +1,7 @@
 import express from "express";
-import { getSupabaseAdmin } from "../config/supabase.js";
-import { requireRole } from "../middleware/requireRole.js";
-import { getTokenBalance, USDC_ADDRESS } from "../services/arcViem.js";
+import { getSupabaseAdmin } from "../config/supabase";
+import { authenticateAdmin } from "../middleware/adminAuth";
+import { getTokenBalance, USDC_ADDRESS } from "../services/arcViem";
 import { formatUnits } from "viem";
 import {
   createWallet,
@@ -9,18 +9,17 @@ import {
   interpretCircleError,
   autoSweepWallets,
   manualSweepAdminWallet,
-} from "../services/circle.js";
-import { fetchUnifiedBalance } from "../services/balance.js";
+} from "../services/circle";
+import { fetchUnifiedBalance } from "../services/balance";
 import * as crypto from "crypto";
-import { circleApiFetch } from "../services/circleClient.js";
 import {
   getWalletDetails,
   upgradeWallet,
   fetchSystemTransactions,
   fetchPendingApprovals,
   decideApproval,
-} from "../services/admin.js";
-import { logAdminAction } from "../services/audit.js";
+} from "../services/admin";
+import { logAdminAction } from "../services/audit";
 
 const router = express.Router();
 
@@ -65,8 +64,6 @@ let platformConfigs = {
   batchTransferEnabled: true,
 
   ecommerceEnabled: true,
-  ecommerceFeePercent: "5.0",
-  ecommerceFixedFee: "0.0",
   merchantEnabled: true,
   vaEnabled: true,
   qrisEnabled: true,
@@ -81,16 +78,10 @@ let platformConfigs = {
   useLoungeHubEscrow: false,
   loungeHubContractAddress: "0x8F3Cf9D0eAcC841cA4E8D77fDeFfD15C9C0A74D4",
   treasuryWalletAddress: process.env.PLATFORM_TREASURY_ADDRESS || "0x98A16172aACc841cA4E8D77fDeFfD15C9C0A7400",
-  nftContractAddress: process.env.NFT_CONTRACT_ADDRESS || "0x582531CBA2D68a9F0F4E83b38466e3bfCDbaab51",
 };
-
-let isConfigSynced = false;
-let isSyncing = false;
 
 // Internal cache sync
 async function syncConfigsFromDB() {
-  if (isConfigSynced || isSyncing) return;
-  isSyncing = true;
   try {
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
@@ -106,7 +97,6 @@ async function syncConfigsFromDB() {
 
     if (data?.value) {
       platformConfigs = { ...platformConfigs, ...data.value };
-      isConfigSynced = true;
       console.log("[SyncConfig] Successfully synced from Supabase.");
     } else {
       // First time initialization in DB if empty
@@ -115,36 +105,26 @@ async function syncConfigsFromDB() {
         { key: "PLATFORM_CONFIGS", value: platformConfigs },
         { onConflict: "key" }
       );
-      isConfigSynced = true;
     }
   } catch (err) {
     console.error("[SyncConfig] Critical failure:", err);
-  } finally {
-    isSyncing = false;
   }
 }
 
-// Ensure first-request or admin-request sync middleware is loaded
-router.use(async (req, res, next) => {
-  try {
-    if (!isConfigSynced) {
-      await syncConfigsFromDB();
-    }
-  } catch (err) {
-    console.error("[AdminMiddleware] Config sync deferred:", err);
-  }
-  next();
-});
+// Initial sync
+syncConfigsFromDB();
 
 router.post("/init", async (_req, res) => {
   try {
-    const adminEmail = process.env.ADMIN_EMAIL || process.env.VITE_ADMIN_EMAIL;
-    if (!adminEmail) throw new Error("ADMIN_EMAIL required");
+    const adminEmail =
+      process.env.ADMIN_EMAIL ||
+      process.env.VITE_ADMIN_EMAIL ||
+      "admin@admin.com";
     const supabase = getSupabaseAdmin();
 
     console.log(`[AdminInit] Initializing default admin: ${adminEmail}`);
 
-    const userId = (process.env.PLATFORM_ADMIN_UUID as string);
+    const userId = "00000000-0000-0000-0000-000000000000";
 
     const { data: existingWallet } = await supabase
       .from("user_wallets")
@@ -173,47 +153,7 @@ router.post("/init", async (_req, res) => {
   }
 });
 
-router.post("/init-force", async (_req, res) => {
-  try {
-    const adminEmail = process.env.ADMIN_EMAIL || process.env.VITE_ADMIN_EMAIL;
-    if (!adminEmail) throw new Error("ADMIN_EMAIL required");
-    const supabase = getSupabaseAdmin();
-
-    console.log(`[AdminInitForce] Force re-initializing admin wallet: ${adminEmail}`);
-
-    const userId = (process.env.PLATFORM_ADMIN_UUID as string);
-
-    // 1. Delete existing admin wallet mapping (if any)
-    const { error: deleteError } = await supabase
-      .from("user_wallets")
-      .delete()
-      .eq("id", userId);
-
-    if (deleteError) {
-      console.error("[AdminInitForce] Failed to delete existing admin wallet:", deleteError);
-      return res.status(500).json({ 
-        error: `Gagal menghapus dompet admin lama. Pastikan fungsi/trigger prevent_wallet_deletion_or_address_change di Supabase telah di-update dengan bypass Admin ID. Error: ${deleteError.message}` 
-      });
-    }
-
-    console.log("[AdminInitForce] Creating a brand new Circle Wallet for Admin...");
-    const circleResult = await createWallet(supabase, userId);
-
-    res.json({
-      message: "Admin wallet force re-initialized successfully",
-      adminId: userId,
-      wallet: circleResult,
-    });
-  } catch (error: any) {
-    console.error("Admin Force Init Error:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
 export function getPlatformConfigs() {
-  if (!isConfigSynced && !isSyncing) {
-    syncConfigsFromDB().catch(err => console.error("[SyncConfig Background] Error:", err));
-  }
   return platformConfigs;
 }
 
@@ -222,7 +162,7 @@ router.get("/config", async (_req, res) => {
   res.json(platformConfigs);
 });
 
-router.post("/config", requireRole(["super_admin", "admin"]), async (req, res) => {
+router.post("/config", async (req, res) => {
   try {
     const newConfig = { ...platformConfigs, ...req.body };
     const supabase = getSupabaseAdmin();
@@ -248,119 +188,7 @@ router.post("/config", requireRole(["super_admin", "admin"]), async (req, res) =
   }
 });
 
-router.post("/deploy-nft-contract", requireRole(["super_admin", "admin"]), async (req, res) => {
-  try {
-    const { bytecode, abiParameters, name, symbol } = req.body;
-
-    if (!bytecode) {
-      return res.status(400).json({ error: "Bytecode is required for contract deployment." });
-    }
-
-    const supabase = getSupabaseAdmin();
-    const { data: adminWallet } = await supabase
-      .from("user_wallets")
-      .select("wallet_id, wallet_address")
-      .eq("id", (process.env.PLATFORM_ADMIN_UUID as string))
-      .single();
-
-    if (!adminWallet || !adminWallet.wallet_id) {
-      return res.status(500).json({ 
-        error: "Platform Admin Minter/Deployer Wallet (11111111-1111-1111-1111-111111111111) belum dikonfigurasi di user_wallets." 
-      });
-    }
-
-    const idempotencyKey = crypto.randomUUID();
-
-    console.log(`[Circle Deployment] Spawning contract deployment from admin wallet: ${adminWallet.wallet_address}`);
-    
-    const response = await circleApiFetch("/v1/w3s/developer/transactions/contracts/deploy", {
-      method: "POST",
-      body: JSON.stringify({
-        idempotencyKey,
-        walletId: adminWallet.wallet_id,
-        bytecode: bytecode.startsWith("0x") ? bytecode : `0x${bytecode}`,
-        abiParameters: abiParameters || [],
-        fee: { type: "level", config: { feeLevel: "MEDIUM" } }
-      })
-    });
-
-    const responseData = response?.data;
-    const txId = responseData?.id;
-
-    if (!txId) {
-      throw new Error("Circle did not return a transaction ID during contract deployment.");
-    }
-
-    // Log this action to audit logs for secure monitoring
-    await logAdminAction(
-      (process.env.PLATFORM_ADMIN_UUID as string),
-      "DEPLOY_SMART_CONTRACT",
-      `Deployed contract via Circle with Tx ID: ${txId}. Name: ${name || "Custom Contract"}`
-    );
-
-    res.json({
-      success: true,
-      message: "Smart Contract deployment initiated via Circle Web3 Services.",
-      txId,
-      state: responseData.state || "PENDING"
-    });
-
-  } catch (error: any) {
-    console.error("[Contract Deployment Error]", error);
-    res.status(500).json({ error: error.message || "Gagal menginisiasi deployment kontrak." });
-  }
-});
-
-router.get("/deploy-status/:txId", requireRole(["super_admin", "admin"]), async (req, res) => {
-  try {
-    const { txId } = req.params;
-    const result = await circleApiFetch(`/v1/w3s/developer/transactions/${txId}`);
-    
-    const transaction = result?.data?.transaction;
-    if (!transaction) {
-      return res.status(404).json({ error: "Circle transaction not found" });
-    }
-
-    const state = transaction.state;
-    const contractAddress = transaction.contractAddress;
-    const txHash = transaction.txHash;
-    const errorMessage = transaction.errorMessage || null;
-
-    // If the contract is successfully deployed, auto-save to platforms configurations
-    if (state === "COMPLETE" && contractAddress) {
-      const supabase = getSupabaseAdmin();
-      const updatedConfig = { 
-        ...platformConfigs, 
-        nftContractAddress: contractAddress 
-      };
-
-      const { error } = await supabase.from("app_settings").upsert(
-        { key: "PLATFORM_CONFIGS", value: updatedConfig },
-        { onConflict: "key" }
-      );
-
-      if (error) {
-        console.error("[DeployStatus] Failed to auto-save NFT contract address:", error);
-      } else {
-        platformConfigs = updatedConfig;
-        console.log(`[DeployStatus] Successfully auto-saved deployed NFT contract address: ${contractAddress}`);
-      }
-    }
-
-    res.json({
-      state,
-      contractAddress,
-      txHash,
-      errorMessage,
-      raw: transaction
-    });
-  } catch (error: any) {
-    console.error("[DeployStatus] Error fetching deployment status:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-router.get("/users", requireRole(["super_admin", "admin"]), async (_req, res) => {
+router.get("/users", async (_req, res) => {
   try {
     const supabase = getSupabaseAdmin();
     console.log("[AdminUsers] Starting fetch...");
@@ -377,7 +205,7 @@ router.get("/users", requireRole(["super_admin", "admin"]), async (_req, res) =>
     
     const { data: profiles, error: profilesError } = await supabase
       .from("profiles")
-      .select("id, full_name, avatar_url, role");                
+      .select("id, full_name, avatar_url");                
 
     if (profilesError) {
       console.error("[AdminUsers] Profiles fetch error:", JSON.stringify(profilesError, null, 2));
@@ -399,7 +227,10 @@ router.get("/users", requireRole(["super_admin", "admin"]), async (_req, res) =>
       );
     }
 
-    const adminEmail = process.env.ADMIN_EMAIL || process.env.VITE_ADMIN_EMAIL || "admin";
+    const adminEmail =
+      process.env.ADMIN_EMAIL ||
+      process.env.VITE_ADMIN_EMAIL ||
+      "admin@admin.com";
 
     const combined = (wallets || []).map((w) => {
       const profile = (profiles || []).find((p) => p.id === w.id);
@@ -413,7 +244,7 @@ router.get("/users", requireRole(["super_admin", "admin"]), async (_req, res) =>
       let email =
         authUser?.email ||
         `user_${w.wallet_address.substring(2, 6)}@testnet.com`;
-      if (w.id === (process.env.PLATFORM_ADMIN_UUID as string)) {
+      if (w.id === "00000000-0000-0000-0000-000000000000") {
         email = adminEmail;
       }
 
@@ -421,7 +252,7 @@ router.get("/users", requireRole(["super_admin", "admin"]), async (_req, res) =>
         id: w.id,
         name:
           profile?.full_name ||
-          (w.id === (process.env.PLATFORM_ADMIN_UUID as string)
+          (w.id === "00000000-0000-0000-0000-000000000000"
             ? "Platform Admin"
             : "Anonymous"),
         email: email,
@@ -429,7 +260,6 @@ router.get("/users", requireRole(["super_admin", "admin"]), async (_req, res) =>
         walletId: w.wallet_id,
         createdAt: w.created_at,
         status: status,
-        role: profile?.role || "user",
       };
     });
 
@@ -440,7 +270,7 @@ router.get("/users", requireRole(["super_admin", "admin"]), async (_req, res) =>
   }
 });
 
-router.get("/users/:userId/wallet", requireRole(["super_admin", "admin"]), async (req, res) => {
+router.get("/users/:userId/wallet", async (req, res) => {
   try {
     const { userId } = req.params;
     const supabase = getSupabaseAdmin();
@@ -460,7 +290,7 @@ router.get("/users/:userId/wallet", requireRole(["super_admin", "admin"]), async
   }
 });
 
-router.post("/users/:userId/upgrade", requireRole(["super_admin", "admin"]), async (req, res) => {
+router.post("/users/:userId/upgrade", async (req, res) => {
   try {
     const { userId } = req.params;
     const supabase = getSupabaseAdmin();
@@ -480,11 +310,11 @@ router.post("/users/:userId/upgrade", requireRole(["super_admin", "admin"]), asy
   }
 });
 
-router.post("/users/block", requireRole(["super_admin", "admin"]), async (req, res) => {
+router.post("/users/block", async (req, res) => {
   try {
     const { userId, block } = req.body;
     if (!userId) return res.status(400).json({ error: "Missing userId" });
-    if (userId === (process.env.PLATFORM_ADMIN_UUID as string)) {
+    if (userId === "00000000-0000-0000-0000-000000000000") {
       return res.status(400).json({ error: "Cannot block platform admin" });
     }
 
@@ -506,39 +336,11 @@ router.post("/users/block", requireRole(["super_admin", "admin"]), async (req, r
   }
 });
 
-router.patch("/users/:userId/role", requireRole(["super_admin"]), async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const { role } = req.body;
-    
-    if (!userId || !role) return res.status(400).json({ error: "Missing userId or role" });
-    if (!["user", "admin", "super_admin"].includes(role)) {
-      return res.status(400).json({ error: "Invalid role specified" });
-    }
-
-    if (userId === (process.env.PLATFORM_ADMIN_UUID as string) && role !== "super_admin") {
-      return res.status(400).json({ error: "Cannot downgrade platform admin" });
-    }
-
-    const supabase = getSupabaseAdmin();
-    const { error } = await supabase
-      .from("profiles")
-      .update({ role })
-      .eq("id", userId);
-
-    if (error) throw error;
-    res.json({ success: true, message: `Access level escalated to ${role}` });
-  } catch (error: any) {
-    console.error("Failed to update user role:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-router.delete("/users/:userId", requireRole(["super_admin", "admin"]), async (req, res) => {
+router.delete("/users/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
     if (!userId) return res.status(400).json({ error: "Missing userId" });
-    if (userId === (process.env.PLATFORM_ADMIN_UUID as string)) {
+    if (userId === "00000000-0000-0000-0000-000000000000") {
       return res.status(400).json({ error: "Cannot delete platform admin" });
     }
 
@@ -577,7 +379,7 @@ router.delete("/users/:userId", requireRole(["super_admin", "admin"]), async (re
   }
 });
 
-router.get("/stats", requireRole(["super_admin", "admin"]), async (_req, res) => {
+router.get("/stats", async (_req, res) => {
   try {
     const supabase = getSupabaseAdmin();
 
@@ -614,12 +416,12 @@ router.get("/stats", requireRole(["super_admin", "admin"]), async (_req, res) =>
       const { data: adminWallet } = await supabase
         .from("user_wallets")
         .select("wallet_id, wallet_address")
-        .eq("id", (process.env.PLATFORM_ADMIN_UUID as string))
+        .eq("id", "00000000-0000-0000-0000-000000000000")
         .single();
 
       if (adminWallet) {
         const balanceResult = await fetchUnifiedBalance(
-          (process.env.PLATFORM_ADMIN_UUID as string),
+          "00000000-0000-0000-0000-000000000000",
           adminWallet,
           supabase,
         );
@@ -646,7 +448,7 @@ router.get("/stats", requireRole(["super_admin", "admin"]), async (_req, res) =>
   }
 });
 
-router.use(requireRole(["super_admin", "admin"]));
+router.use(authenticateAdmin);
 
 router.get("/transactions", async (req, res) => {
   try {
@@ -721,27 +523,24 @@ router.post("/users/batch-wallets", async (req, res) => {
 
     let targetUsers = [];
 
-    // Selalu kueri walet yang sudah ada untuk pertahanan keamanan berlapis
-    const { data: existingWallets } = await supabase
-      .from("user_wallets")
-      .select("id");
-    const existingIds = new Set((existingWallets || []).map((w) => w.id));
-
     if (userIds && userIds.length > 0) {
       // Ambil user spesifik yang diminta
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id, full_name")
         .in("id", userIds);
-      
-      // Amankan: hanya pilih yang belum memiliki dompet sama sekali
-      targetUsers = (profiles || []).filter((p) => !existingIds.has(p.id));
+      targetUsers = profiles || [];
     } else {
       // Ambil SEMUA user yang belum memiliki entri di user_wallets
       const { data: allProfiles } = await supabase
         .from("profiles")
         .select("id, full_name");
 
+      const { data: existingWallets } = await supabase
+        .from("user_wallets")
+        .select("id");
+
+      const existingIds = new Set((existingWallets || []).map((w) => w.id));
       targetUsers = (allProfiles || []).filter((p) => !existingIds.has(p.id));
     }
 
@@ -789,7 +588,7 @@ router.post("/approvals/:txId/decide", async (req, res) => {
     const { decision } = req.body; // 'approve' | 'reject'
     const result = await decideApproval(txId, decision);
     await logAdminAction(
-      (process.env.PLATFORM_ADMIN_UUID as string),
+      "00000000-0000-0000-0000-000000000000",
       decision === "approve" ? "TREASURY_TX_APPROVED" : "TREASURY_TX_REJECTED",
       txId,
       { decision },
@@ -828,7 +627,7 @@ router.post("/compliance/blocklist", async (req, res) => {
       .insert({
         address,
         reason,
-        added_by: (process.env.PLATFORM_ADMIN_UUID as string), // Admin by default for now
+        added_by: "00000000-0000-0000-0000-000000000000", // Admin by default for now
       })
       .select()
       .single();
@@ -836,7 +635,7 @@ router.post("/compliance/blocklist", async (req, res) => {
     if (error) throw error;
 
     await logAdminAction(
-      (process.env.PLATFORM_ADMIN_UUID as string),
+      "00000000-0000-0000-0000-000000000000",
       "COMPLIANCE_ADDRESS_BLOCKED",
       address,
       { reason },
@@ -860,7 +659,7 @@ router.delete("/compliance/blocklist/:address", async (req, res) => {
     if (error) throw error;
 
     await logAdminAction(
-      (process.env.PLATFORM_ADMIN_UUID as string),
+      "00000000-0000-0000-0000-000000000000",
       "COMPLIANCE_ADDRESS_UNBLOCKED",
       address,
     );
@@ -907,7 +706,7 @@ router.post("/config/fees", async (req, res) => {
     if (error) throw error;
 
     await logAdminAction(
-      (process.env.PLATFORM_ADMIN_UUID as string),
+      "00000000-0000-0000-0000-000000000000",
       "FEE_STRATEGY_UPDATED",
       strategy,
     );
@@ -920,7 +719,9 @@ router.post("/config/fees", async (req, res) => {
 
 router.post("/wallet/auto-sweep", async (req, res) => {
   try {
-    const { threshold } = req.body;
+    const { threshold, secret } = req.body;
+    if (secret !== process.env.ADMIN_SECRET)
+      return res.status(403).json({ error: "Unauthorized" });
 
     const treasuryAddress = process.env.PLATFORM_TREASURY_ADDRESS;
     if (!treasuryAddress)
@@ -958,7 +759,7 @@ router.post("/treasury/sweep", async (req, res) => {
     );
 
     await logAdminAction(
-      (process.env.PLATFORM_ADMIN_UUID as string),
+      "00000000-0000-0000-0000-000000000000",
       "TREASURY_MANUAL_SWEEP",
       treasuryAddress,
       { amount }
@@ -1071,7 +872,7 @@ router.post("/config/simulate-circle-webhook", async (req, res) => {
 
     // Log admin action for auditing simulation
     await logAdminAction(
-      (process.env.PLATFORM_ADMIN_UUID as string),
+      "00000000-0000-0000-0000-000000000000",
       "TRANSACTION_WEBHOOK_SIMULATED",
       internalRef,
       { status: newStatus, isFailed },

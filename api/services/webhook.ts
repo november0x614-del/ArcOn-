@@ -1,7 +1,6 @@
 import * as crypto from "crypto";
 import { Request, Response } from "express";
-import { interpretCircleError } from "./circle.js";
-import { getCircleBaseUrl, getCircleApiKey } from "./circleClient.js";
+import { interpretCircleError } from "./circle";
 
 // Public key cache
 const publicKeyCache: Record<string, { publicKey: string; algorithm: string }> =
@@ -9,20 +8,18 @@ const publicKeyCache: Record<string, { publicKey: string; algorithm: string }> =
 
 async function getCirclePublicKey(
   keyId: string,
- ): Promise<{ publicKey: string; algorithm: string }> {
+): Promise<{ publicKey: string; algorithm: string }> {
   if (publicKeyCache[keyId]) {
     return publicKeyCache[keyId];
   }
 
   // Fetch from Circle API
-  const baseUrl = getCircleBaseUrl();
-  const apiKey = getCircleApiKey();
   const response = await fetch(
-    `${baseUrl}/v1/notifications/publicKey/${keyId}`,
+    `https://api.circle.com/v1/notifications/publicKey/${keyId}`,
     {
       method: "GET",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${process.env.CIRCLE_API_KEY}`,
         "Content-Type": "application/json",
       },
     },
@@ -118,22 +115,6 @@ export async function verifyAndProcessWebhook(
       payload = JSON.parse(((req as any).rawBody || "").toString("utf-8"));
     }
 
-    // MITIGASI REPLAY ATTACK: Cryptographic signature timestamp check
-    // Karena payload ditandatangani secara kriptografis oleh Circle, mengecek bidang timestamp
-    // dari payload menjamin bahwa timestamp tersebut sah & tidak mengalami manipulasi di transit.
-    const webhookTimestamp = payload.timestamp; 
-    if (webhookTimestamp) {
-      const payloadTime = new Date(webhookTimestamp).getTime();
-      const serverTime = Date.now();
-      const driftSeconds = Math.abs(serverTime - payloadTime) / 1000;
-      const MAX_ALLOWED_DRIFT_SECONDS = 300; // Toleransi waktu 5 menit (300 detik) untuk mencegah replay attack
-
-      if (driftSeconds > MAX_ALLOWED_DRIFT_SECONDS) {
-        console.error(`[Webhook Replay Shield] Deteksi deviasi waktu webhook melebihi batas toleransi: ${driftSeconds.toFixed(1)}s (Max: ${MAX_ALLOWED_DRIFT_SECONDS}s). Akses ditolak.`);
-        return res.status(401).json({ error: "Replay attack detected: webhook timestamp drift error." });
-      }
-    }
-
     const type = payload.notificationType;
     const data = payload.notification;
     console.log(`Webhook received: ${type}, transactionType: ${data?.transactionType}`);
@@ -155,10 +136,8 @@ export async function verifyAndProcessWebhook(
       // Circle marks COMPLETE when fully settled, we align with that.
       const txStatus = transfer.status || transfer.state;
       const isFailed = txStatus === "FAILED";
-      const isComplete = txStatus === "COMPLETE";
-      
       const newStatus =
-        isComplete
+        txStatus === "COMPLETE"
           ? "success"
           : isFailed
             ? "failed"
@@ -180,15 +159,9 @@ export async function verifyAndProcessWebhook(
       // First fetch the existing transaction to update its metadata
       const { data: existingTx } = await supabaseAdmin
         .from("transactions")
-        .select("id, user_id, amount, metadata, status")
+        .select("metadata")
         .eq("internal_ref", internalRef)
         .single();
-
-      // PROTEKSI REPLAY MUTATION: Mencegah update status transaksi yang sudah berhasil (success) atau gagal (failed)
-      if (existingTx && (existingTx.status === "success" || existingTx.status === "failed")) {
-        console.log(`[Webhook Security Lock] Outbound transaction ${internalRef} sudah dalam status final (${existingTx.status}). Mengabaikan pengulangan update.`);
-        return res.status(200).send("Accepted");
-      }
 
       const updatedMetadata = existingTx?.metadata
         ? {
@@ -211,18 +184,14 @@ export async function verifyAndProcessWebhook(
 
       const { error } = await supabaseAdmin
         .from("transactions")
-        .update({ 
-          status: newStatus, 
-          metadata: updatedMetadata,
-          ...(txHash && { tx_hash: txHash }) 
-        })
+        .update({ status: newStatus, metadata: updatedMetadata })
         .eq("internal_ref", internalRef);
 
       // Ledger equivalent update
       await supabaseAdmin
         .from("transaction_ledger")
         .update({
-          status: isComplete ? "COMPLETE" : isFailed ? "FAILED" : "PENDING",
+          status: newStatus === "success" ? "COMPLETE" : newStatus === "failed" ? "FAILED" : "PENDING",
           tx_hash: txHash,
         })
         .eq("circle_tx_id", internalRef);
@@ -231,37 +200,6 @@ export async function verifyAndProcessWebhook(
         console.error("Supabase update error:", error);
       } else {
         console.log(`Transaction ${internalRef} updated to ${newStatus}`);
-        
-        // Arc Hardening: Auto-Recalculate and update user balance cache in Supabase on FINALITY
-        if (isComplete && existingTx?.user_id) {
-          console.log(`[Webhook] Transaction finalized. Triggering balance sync for user ${existingTx.user_id}`);
-          try {
-             // We can fetch unified balance and store it in user_wallets.balance_usdc
-             // Note: fetchUnifiedBalance requires walletData which we can get here
-             const { data: walletData } = await supabaseAdmin
-               .from("user_wallets")
-               .select("*")
-               .eq("id", existingTx.user_id)
-               .single();
-             
-             if (walletData) {
-               const { fetchUnifiedBalance } = await import("./balance");
-               const unified = await fetchUnifiedBalance(existingTx.user_id, walletData, supabaseAdmin);
-               
-               await supabaseAdmin
-                 .from("user_wallets")
-                 .update({ 
-                   balance_usdc: unified.balance,
-                   last_synced_at: new Date().toISOString()
-                 })
-                 .eq("id", existingTx.user_id);
-               
-               console.log(`[Webhook] Balance synced for ${existingTx.user_id}: ${unified.balance} USDC`);
-             }
-          } catch (syncErr) {
-            console.error("[Webhook] Balance sync failed:", syncErr);
-          }
-        }
       }
     } else if (isInbound) {
       console.log("Processing inbound transaction:", JSON.stringify(data));
@@ -360,25 +298,6 @@ export async function verifyAndProcessWebhook(
           console.log(
             `Inbound transaction ${id} recorded for user ${walletData.id}`,
           );
-
-          // Arc Hardening: Trigger balance sync for inbound success
-          console.log(`[Webhook] Inbound transaction confirmed. Triggering balance sync for user ${walletData.id}`);
-          try {
-            const { fetchUnifiedBalance } = await import("./balance");
-            const unified = await fetchUnifiedBalance(walletData.id, walletData, supabaseAdmin);
-            
-            await supabaseAdmin
-              .from("user_wallets")
-              .update({ 
-                balance_usdc: unified.balance,
-                last_synced_at: new Date().toISOString()
-              })
-              .eq("id", walletData.id);
-            
-            console.log(`[Webhook] Inbound balance synced for ${walletData.id}: ${unified.balance} USDC`);
-          } catch (syncErr) {
-            console.error("[Webhook] Inbound balance sync failed:", syncErr);
-          }
         }
       } else {
         console.warn(`No wallet found for address: ${destinationAddress}`);

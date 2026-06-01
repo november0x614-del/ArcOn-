@@ -6,7 +6,6 @@ import { useStore } from "./store/useStore";
 import { supabase } from "./lib/supabaseClient";
 import { ViewRouter } from "./components/router/ViewRouter";
 import { ArcProvider } from "./contexts/ArcContext";
-import { apiFetch } from "./lib/api";
 
 export default function App() {
   const [isLoggingIn, setIsLoggingIn] = React.useState(false);
@@ -39,7 +38,7 @@ export default function App() {
 
         // 1. Initial check for existing wallet
         try {
-          const response = await apiFetch(`/api/debug-wallet/${user.id}`);
+          const response = await fetch(`/api/debug-wallet/${user.id}`);
           if (response.ok) {
             walletInfo = await response.json();
           }
@@ -70,7 +69,7 @@ export default function App() {
             console.log(
               "Starting auto-provisioning for interrupted registration...",
             );
-            const createRes = await apiFetch("/api/wallets/create", {
+            const createRes = await fetch("/api/wallets/create", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ userId: user.id }),
@@ -106,21 +105,6 @@ export default function App() {
           localStorage.setItem("arc_wallet_address", walletInfo.wallet_address);
           localStorage.setItem("arc_user_id", user.id);
 
-          // Get Role from 'profiles' table
-          let dbRole: "user" | "admin" | "super_admin" = "user";
-          try {
-            const { data: profileData } = await supabase
-              .from("profiles")
-              .select("role")
-              .eq("id", user.id)
-              .single();
-            if (profileData?.role) {
-              dbRole = profileData.role as "user" | "admin" | "super_admin";
-            }
-          } catch (e) {
-            console.error("Failed to fetch RBAC role", e);
-          }
-
           setRegisteredUser({
             username:
               user.user_metadata?.full_name ||
@@ -131,7 +115,6 @@ export default function App() {
             walletId: walletInfo.wallet_id,
             walletAddress: walletInfo.wallet_address,
             supabaseUid: user.id,
-            role: dbRole,
             registrationDate: user.created_at ? new Date(user.created_at).toLocaleDateString("id-ID") : "N/A",
           });
 
@@ -158,26 +141,55 @@ export default function App() {
   );
 
   React.useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession();
+        if (error) {
+          // If it's an auth error specifically about session validity, just reset
+          if (
+            (error.message?.toLowerCase() || "").includes("refresh token") ||
+            error.status === 400
+          ) {
+            await supabase.auth.signOut().catch(() => {});
+            resetState();
+          } else {
+            console.warn("Auth initialization warning:", error.message);
+          }
+        } else if (session) {
+          handleUserSession(session.user);
+        }
+      } catch (err) {
+        // Absolute suppression of session check failures
+        console.debug("Silent session check failure");
+      }
+    };
+
+    checkSession();
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (_event === "PASSWORD_RECOVERY") {
-        setViewState("forgotPassword");
-        return;
-      }
-      if (_event === "SIGNED_OUT" || (_event === "TOKEN_REFRESHED" && !session)) {
+      if (_event === "TOKEN_REFRESHED" && !session) {
+        supabase.auth.signOut().catch(() => {});
+        resetState();
+      } else if (_event === "SIGNED_OUT") {
         resetState();
         localStorage.removeItem("arc_wallet_address");
         localStorage.removeItem("arc_user_id");
-        return;
-      }
-      if (session) {
+      } else if (session) {
         handleUserSession(session.user);
+      } else {
+        resetState();
+        localStorage.removeItem("arc_wallet_address");
+        localStorage.removeItem("arc_user_id");
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [handleUserSession, resetState, setViewState]);
+  }, [handleUserSession, resetState]);
 
   React.useEffect(() => {
     if (registeredUser?.supabaseUid) {

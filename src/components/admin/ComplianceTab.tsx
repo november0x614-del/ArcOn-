@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { apiFetch } from "../../lib/api";
 import {
   ShieldOff,
   Ban,
@@ -34,7 +33,7 @@ export function ComplianceTab() {
   const fetchBlocklist = async () => {
     setLoading(true);
     try {
-      const res = await apiFetch("/api/admin/compliance/blocklist");
+      const res = await fetch("/api/admin/compliance/blocklist");
       if (res.ok) {
         setBlocklist(await res.json());
       }
@@ -57,7 +56,7 @@ export function ComplianceTab() {
     setSaving(true);
     setError(null);
     try {
-      const res = await apiFetch("/api/admin/compliance/blocklist", {
+      const res = await fetch("/api/admin/compliance/blocklist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ address: newAddress, reason: newReason }),
@@ -88,7 +87,7 @@ export function ComplianceTab() {
 
     setSaving(true);
     try {
-      const res = await apiFetch(`/api/admin/compliance/blocklist/${address}`, {
+      const res = await fetch(`/api/admin/compliance/blocklist/${address}`, {
         method: "DELETE",
       });
 

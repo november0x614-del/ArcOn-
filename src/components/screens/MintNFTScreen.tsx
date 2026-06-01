@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import Cropper from "react-easy-crop";
+import { getCroppedImg } from "../../utils/cropImage";
 import { 
   ArrowLeft, 
   Hexagon, 
@@ -9,9 +11,8 @@ import {
   Loader2,
   CheckCircle2,
   Image as ImageIcon,
-  ZoomIn,
-  ZoomOut,
-  RotateCcw
+  Check,
+  X
 } from "lucide-react";
 import { useStore } from "../../store/useStore";
 import { useArc } from "../../contexts/ArcContext";
@@ -19,131 +20,33 @@ import { useArc } from "../../contexts/ArcContext";
 export function MintNFTScreen({ onBack }: { onBack: () => void }) {
   const { displayToast, addLog } = useStore();
   const { executeArcTransaction } = useArc();
-  const [step, setStep] = useState<"input" | "minting" | "success">("input");
+  const [step, setStep] = useState<"input" | "minting" | "success" | "crop">("input");
   const [nftName, setNftName] = useState("");
   const [txHash, setTxHash] = useState("");
   const [selectedImage, setSelectedImage] = useState<string>("https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=300&auto=format&fit=crop");
   const [imageLabel, setImageLabel] = useState<string>("Default Generative Image");
-
-  // State for dragging, zooming and crop preview
-  const [finalCroppedImage, setFinalCroppedImage] = useState("");
+  
+  // Cropper states
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
+  const [tempImage, setTempImage] = useState<string>("");
 
-  const getCroppedImage = (): Promise<string> => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        // Industry standard square dimensions
-        canvas.width = 400;
-        canvas.height = 400;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          resolve(selectedImage);
-          return;
-        }
+  const onCropComplete = useCallback((croppedArea: any, croppedAreaPixels: any) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
 
-        const containerWidth = 260;
-        const containerHeight = 260;
-        
-        const imgWidth = img.naturalWidth;
-        const imgHeight = img.naturalHeight;
-        
-        const imageRatio = imgWidth / imgHeight;
-        const containerRatio = containerWidth / containerHeight;
-        let drawWidth = containerWidth;
-        let drawHeight = containerHeight;
-        let startX = 0;
-        let startY = 0;
-        
-        if (imageRatio > containerRatio) {
-          drawWidth = containerHeight * imageRatio;
-          startX = (containerWidth - drawWidth) / 2;
-        } else {
-          drawHeight = containerWidth / imageRatio;
-          startY = (containerHeight - drawHeight) / 2;
-        }
-        
-        const scaleFactor = 400 / containerWidth;
-        
-        ctx.translate(200, 200);
-        ctx.translate(offset.x * scaleFactor, offset.y * scaleFactor);
-        ctx.scale(zoom, zoom);
-        ctx.translate(-200, -200);
-        
-        ctx.drawImage(
-          img, 
-          0, 0, imgWidth, imgHeight, 
-          startX * scaleFactor, startY * scaleFactor, drawWidth * scaleFactor, drawHeight * scaleFactor
-        );
-        
-        resolve(canvas.toDataURL("image/png"));
-      };
-      img.onerror = () => {
-        resolve(selectedImage);
-      };
-      img.src = selectedImage;
-    });
-  };
-
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(true);
-    setDragStart({ x: e.clientX - offset.x, y: e.clientY - offset.y });
-  };
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isDragging) return;
-    setOffset({
-      x: e.clientX - dragStart.x,
-      y: e.clientY - dragStart.y
-    });
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (e.touches.length === 1) {
-      setIsDragging(true);
-      const touch = e.touches[0];
-      setDragStart({ x: touch.clientX - offset.x, y: touch.clientY - offset.y });
+  const handleCropSave = async () => {
+    try {
+      if (!tempImage || !croppedAreaPixels) return;
+      const croppedImage = await getCroppedImg(tempImage, croppedAreaPixels);
+      setSelectedImage(croppedImage);
+      setStep("input");
+      displayToast("Asset Image adjusted successfully!");
+    } catch (e) {
+      console.error(e);
+      displayToast("Failed to crop image.");
     }
-  };
-
-  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (!isDragging) return;
-    if (e.touches.length === 1) {
-      const touch = e.touches[0];
-      setOffset({
-        x: touch.clientX - dragStart.x,
-        y: touch.clientY - dragStart.y
-      });
-    }
-  };
-
-  const handleTouchEnd = () => {
-    setIsDragging(false);
-  };
-
-  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    // Smooth scroll zooming
-    const zoomFactor = -e.deltaY * 0.002;
-    setZoom((prevZoom) => {
-      const nextZoom = Math.min(Math.max(prevZoom + zoomFactor, 1), 3);
-      return nextZoom;
-    });
-  };
-
-  const handleResetPosition = () => {
-    setZoom(1);
-    setOffset({ x: 0, y: 0 });
-    displayToast("Cropper position reset");
   };
 
   const handleMint = async () => {
@@ -156,107 +59,44 @@ export function MintNFTScreen({ onBack }: { onBack: () => void }) {
     addLog(`Initiating NFT Mint: ${nftName}`);
 
     try {
-      // Process canvas crop in base64 on the fly
-      const croppedBase64 = await getCroppedImage();
-      setFinalCroppedImage(croppedBase64);
-
-      // Simulate real mint transaction logic on Arc Testnet using the cropped image
+      // Simulate real mint transaction logic on Arc Testnet
       const result = await executeArcTransaction({
         type: "MINT_NFT",
         metadata: {
           name: nftName,
           description: "Arc Network Native NFT",
-          image: croppedBase64
+          image: selectedImage
         }
       });
 
-      if (result.success && result.txId) {
-        // Since it's async, poll for transaction status
-        let isFinalized = false;
-        let finalTxHash = result.txHash;
-        let attempts = 0;
-        const maxAttempts = 15; // 30 seconds
-        let isSuccess = false;
+      if (result.success) {
+        const hash = result.txHash || "0x" + Math.random().toString(16).slice(2);
+        setTxHash(hash);
         
-        while (!isFinalized && attempts < maxAttempts) {
-          await new Promise(res => setTimeout(res, 2000));
-          attempts++;
-          
-          try {
-            const savedUserId = localStorage.getItem("arc_user_id");
-            const response = await fetch(`/api/transactions/${savedUserId}`);
-            if (response.ok) {
-              const txs = await response.json();
-              const mintedTx = txs.find((t: any) => t.internal_ref === result.txId);
-              
-              if (mintedTx && mintedTx.status === "success") {
-                isFinalized = true;
-                isSuccess = true;
-                const potentialHash = mintedTx.tx_hash || mintedTx.metadata?.txHash;
-                finalTxHash = (potentialHash && potentialHash.startsWith("0x")) ? potentialHash : mintedTx.tx_hash;
-                break;
-              } else if (mintedTx && mintedTx.status === "failed") {
-                isFinalized = true;
-                isSuccess = false;
-                throw new Error(mintedTx.metadata?.errorReason || "Transaction failed or reverted on chain.");
-              }
-            }
-          } catch (e) {
-            console.error("Polling error", e);
-          }
+        // Save minted NFT to localStorage
+        try {
+          const oldNfts = JSON.parse(localStorage.getItem("minted_nfts") || "[]");
+          const newNft = {
+            id: hash,
+            name: nftName,
+            description: "Arc Network Native NFT",
+            image: selectedImage,
+            timestamp: new Date().toLocaleString(),
+            txHash: hash
+          };
+          localStorage.setItem("minted_nfts", JSON.stringify([newNft, ...oldNfts]));
+        } catch (e) {
+          console.error("Failed to save minted NFT to localStorage", e);
         }
 
-        if (isSuccess && finalTxHash) {
-          setTxHash(finalTxHash);
-          
-          try {
-            let oldNfts = [];
-            try {
-              oldNfts = JSON.parse(localStorage.getItem("minted_nfts") || "[]");
-            } catch(e) {}
-            
-            const newNft = {
-              id: finalTxHash,
-              name: nftName,
-              description: "Arc Network Native NFT",
-              image: croppedBase64,
-              timestamp: new Date().toLocaleString(),
-              txHash: finalTxHash
-            };
-            
-            let nftsToSave = [newNft, ...oldNfts];
-            
-            let saved = false;
-            while (nftsToSave.length > 0 && !saved) {
-               try {
-                 localStorage.setItem("minted_nfts", JSON.stringify(nftsToSave));
-                 saved = true;
-               } catch(err) {
-                  if (nftsToSave.length > 1) {
-                     nftsToSave.pop();
-                  } else if (nftsToSave.length === 1 && nftsToSave[0].image) {
-                     nftsToSave[0].image = "";
-                  } else {
-                     break;
-                  }
-               }
-            }
-          } catch (e) {
-            console.error("Failed to save minted NFT to localStorage", e);
-          }
-
-          addLog(`NFT Minted Successfully: ${nftName}`);
-          setStep("success");
-        } else {
-          displayToast("Minting is pending or failed (Timeout). Check webhook and contract permissions.");
-          setStep("input");
-        }
+        addLog(`NFT Minted Successfully: ${nftName}`);
+        setStep("success");
       } else {
         displayToast("Minting failed. Please try again.");
         setStep("input");
       }
-    } catch (err: any) {
-      displayToast(err.message || "An error occurred during minting.");
+    } catch (err) {
+      displayToast("An error occurred during minting.");
       setStep("input");
     }
   };
@@ -264,17 +104,20 @@ export function MintNFTScreen({ onBack }: { onBack: () => void }) {
   return (
     <div className="w-full h-full bg-[#ecf5fc] relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
       {/* Header */}
-      <div className="flex items-center px-4 pt-6 pb-4 bg-slate-900 shadow-md relative z-10 w-full shrink-0">
-        <button
-          onClick={onBack}
-          className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
-        >
-          <ArrowLeft size={20} className="text-white" />
-        </button>
-        <h2 className="font-bold text-[16px] text-white ml-2 uppercase tracking-wider">Mint NFT</h2>
+      <div className="flex justify-center bg-slate-900 shadow-md relative z-10 w-full shrink-0">
+        <div className="flex items-center px-4 pt-6 pb-4 w-full max-w-[500px]">
+          <button
+            onClick={onBack}
+            className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
+          >
+            <ArrowLeft size={20} className="text-white" />
+          </button>
+          <h2 className="font-bold text-[16px] text-white ml-2 uppercase tracking-wider">Mint NFT</h2>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 flex flex-col pb-24">
+        <div className="w-full max-w-[500px] mx-auto flex flex-col relative h-full">
         <AnimatePresence mode="wait">
           {step === "input" && (
             <motion.div
@@ -323,9 +166,9 @@ export function MintNFTScreen({ onBack }: { onBack: () => void }) {
                           const reader = new FileReader();
                           reader.onloadend = () => {
                             if (reader.result) {
-                              setSelectedImage(reader.result as string);
+                              setTempImage(reader.result as string);
                               setImageLabel(file.name);
-                              displayToast("Custom Asset Image selected!");
+                              setStep("crop");
                             }
                           };
                           reader.readAsDataURL(file);
@@ -350,85 +193,19 @@ export function MintNFTScreen({ onBack }: { onBack: () => void }) {
                     </span>
                   </div>
 
-                  {/* Interactive NFT Crop & Position Editor */}
+                  {/* Live NFT Image Preview */}
                   {selectedImage && (
-                    <div className="flex flex-col gap-3 text-left w-full mt-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                      <div className="flex justify-between items-center px-1">
-                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                          Adjust Crop Preview
-                        </label>
-                        <span className="text-[10px] font-bold text-slate-400">
-                          Drag to align • Scroll/Slider to zoom
-                        </span>
-                      </div>
-                      
-                      <div 
-                        onMouseDown={handleMouseDown}
-                        onMouseMove={handleMouseMove}
-                        onMouseUp={handleMouseUp}
-                        onMouseLeave={handleMouseUp}
-                        onTouchStart={handleTouchStart}
-                        onTouchMove={handleTouchMove}
-                        onTouchEnd={handleTouchEnd}
-                        onWheel={handleWheel}
-                        className="w-full aspect-square max-w-[260px] mx-auto rounded-[24px] bg-slate-100 overflow-hidden border-2 border-slate-200 shadow-md relative group flex items-center justify-center cursor-grab active:cursor-grabbing select-none touch-none"
-                      >
-                        {/* Interactive Image Frame */}
-                        <div className="absolute inset-0 flex items-center justify-center overflow-hidden pointer-events-none">
-                          <img 
-                            src={selectedImage} 
-                            alt="NFT Crop Workspace"
-                            referrerPolicy="no-referrer"
-                            style={{
-                              transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
-                              transition: isDragging ? "none" : "transform 0.15s ease-out"
-                            }}
-                            className="w-full h-full object-cover select-none pointer-events-none origin-center"
-                          />
-                        </div>
-
-                        {/* Creative Border/Crop Grid Overlay */}
-                        <div className="absolute inset-2 border border-dashed border-white/60 rounded-[18px] pointer-events-none flex items-center justify-center">
-                          <div className="absolute top-0 bottom-0 left-1/3 right-1/3 border-l border-r border-white/20"></div>
-                          <div className="absolute left-0 right-0 top-1/3 bottom-1/3 border-t border-b border-white/20"></div>
-                        </div>
-
+                    <div className="flex flex-col gap-2 text-left w-full mt-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                      <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Image Preview (1:1 Standard)</label>
+                      <div className="w-full aspect-square rounded-2xl bg-slate-50 overflow-hidden border-2 border-slate-100/80 shadow-sm relative group flex items-center justify-center">
+                        <img 
+                          src={selectedImage} 
+                          alt="NFT Preview"
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
                         <div className="absolute top-3 right-3 bg-slate-900/85 backdrop-blur-sm text-white px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider border border-white/10 shadow-md">
-                          Adjusting Live
-                        </div>
-                      </div>
-
-                      {/* Interactive Slider & Controls Panel */}
-                      <div className="bg-slate-50 rounded-2xl p-3 border border-slate-100/80 flex flex-col gap-2.5 mt-1 max-w-[280px] mx-auto w-full">
-                        <div className="flex items-center gap-2.5">
-                          <ZoomOut size={15} className="text-slate-400" />
-                          <input 
-                            type="range"
-                            min="1"
-                            max="3"
-                            step="0.05"
-                            value={zoom}
-                            onChange={(e) => setZoom(parseFloat(e.target.value))}
-                            className="flex-1 accent-slate-900 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer"
-                          />
-                          <ZoomIn size={15} className="text-slate-400" />
-                          <span className="text-[11px] font-black text-slate-600 w-10 text-right">
-                            {zoom.toFixed(2)}x
-                          </span>
-                        </div>
-
-                        <div className="flex justify-between items-center pt-1 border-t border-slate-100">
-                          <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider">
-                            Industry standard 1:1 auto-cropped
-                          </span>
-                          <button
-                            type="button"
-                            onClick={handleResetPosition}
-                            className="py-1 px-2.5 hover:bg-slate-200/60 text-slate-500 rounded-lg transition-colors flex items-center gap-1.5 active:scale-95 border-0 bg-transparent shrink-0 text-[10px] font-black uppercase cursor-pointer"
-                          >
-                            <RotateCcw size={10} strokeWidth={2.5} />
-                            Reset
-                          </button>
+                          Live Active
                         </div>
                       </div>
                     </div>
@@ -449,6 +226,48 @@ export function MintNFTScreen({ onBack }: { onBack: () => void }) {
               >
                 Mint on Arc Network
               </button>
+            </motion.div>
+          )}
+
+          {step === "crop" && (
+            <motion.div
+              key="crop"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="fixed inset-0 bg-slate-900 z-[100] flex flex-col touch-none"
+            >
+              <div className="flex justify-between items-center px-6 pt-12 pb-4 safe-top">
+                 <h3 className="text-white font-black text-[18px] uppercase tracking-widest">Adjust Image</h3>
+                 <span className="text-slate-400 text-[11px] font-bold bg-slate-800 px-3 py-1 rounded-full">1:1 Standard</span>
+              </div>
+              <div className="flex-1 relative w-full touch-none bg-black/50">
+                <Cropper
+                  image={tempImage}
+                  crop={crop}
+                  zoom={zoom}
+                  aspect={1}
+                  onCropChange={setCrop}
+                  onCropComplete={onCropComplete}
+                  onZoomChange={setZoom}
+                  showGrid={true}
+                  objectFit="contain"
+                />
+              </div>
+              <div className="p-6 bg-slate-900 flex gap-4 pb-12 safe-bottom">
+                <button
+                  onClick={() => setStep("input")}
+                  className="flex-1 py-4 bg-slate-800 text-white font-black text-[14px] rounded-[16px] shadow-sm active:scale-95 transition-all flex justify-center items-center gap-2 border-0 cursor-pointer"
+                >
+                  <X size={18} strokeWidth={3} /> Cancel
+                </button>
+                <button
+                  onClick={handleCropSave}
+                  className="flex-1 py-4 bg-emerald-500 text-white font-black text-[14px] rounded-[16px] shadow-xl shadow-emerald-500/20 active:scale-95 transition-all flex justify-center items-center gap-2 border-0 cursor-pointer"
+                >
+                  <Check size={18} strokeWidth={3} /> Apply
+                </button>
+              </div>
             </motion.div>
           )}
 
@@ -490,9 +309,9 @@ export function MintNFTScreen({ onBack }: { onBack: () => void }) {
                     {nftName} is now live on Arc
                   </p>
 
-                  <div className="w-full aspect-square max-w-[240px] mx-auto rounded-[24px] bg-slate-50 mb-6 overflow-hidden border border-slate-200 relative group shadow-md">
+                  <div className="w-full aspect-square rounded-2xl bg-slate-50 mb-8 overflow-hidden border border-slate-100 relative group">
                     <img 
-                      src={finalCroppedImage || selectedImage} 
+                      src={selectedImage} 
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
                       alt="NFT"
                     />
@@ -530,6 +349,7 @@ export function MintNFTScreen({ onBack }: { onBack: () => void }) {
             </motion.div>
           )}
         </AnimatePresence>
+        </div>
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
-import { getCircleClientInstance } from "./circleClient.js";
-import { getSupabaseAdmin } from "../config/supabase.js";
+import { getCircleClientInstance } from "./circleClient";
+import { getSupabaseAdmin } from "../config/supabase";
 
 export async function getWalletDetails(walletId: string) {
   const client = getCircleClientInstance();
@@ -41,7 +41,7 @@ export async function fetchPendingApprovals() {
   return data;
 }
 
-import { executeTransaction } from "./circle.js";
+import { executeTransaction } from "./circle";
 
 export async function decideApproval(
   txId: string,
@@ -91,10 +91,14 @@ export async function decideApproval(
     amount,
     destination,
     tx.type,
-    { ...tx.metadata, bypassApproval: true, existingTxId: txId },
+    { ...tx.metadata, bypassApproval: true }, // Need to modify executeTransaction to respect this
   );
 
-  // 3. Update the original record (no double transaction creation in DB)
+  // 3. Update the original record (or delete it? No, keep it as the record)
+  // Actually executeTransaction creates a NEW record.
+  // We should modify executeTransaction to optionally UPDATE an existing record.
+  // But to keep it simple, we'll let it create a new record and mark this one as 'approved_and_replaced'
+
   await supabase
     .from("transactions")
     .update({

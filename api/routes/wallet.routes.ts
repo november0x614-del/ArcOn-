@@ -1,10 +1,9 @@
 import express from "express";
-import { getSupabaseAdmin } from "../config/supabase.js";
-import { createWallet } from "../services/circle.js";
-import { fetchUnifiedBalance } from "../services/balance.js";
-import { publicClient } from "../services/arcViem.js";
+import { getSupabaseAdmin } from "../config/supabase";
+import { createWallet } from "../services/circle";
+import { fetchUnifiedBalance } from "../services/balance";
+import { publicClient } from "../services/arcViem";
 import { formatUnits } from "viem";
-import { requireRole } from "../middleware/requireRole.js";
 
 const router = express.Router();
 
@@ -48,22 +47,12 @@ router.get("/wallets/resolve/:address", async (req, res) => {
   }
 });
 
-router.post("/wallets/create", requireRole(["user", "admin", "super_admin"]), async (req, res) => {
+router.post("/wallets/create", async (req, res) => {
   try {
     const { userId } = req.body;
-    const authUserId = (req as any).user.id;
+    console.log("Checking if wallet exists...");
 
-    console.log(`[WalletGuard] Checking if wallet exists for user ${userId}...`);
-
-    if (!userId) {
-      return res.status(400).json({ error: "Missing required parameter: userId" });
-    }
-
-    if (userId !== authUserId) {
-      return res.status(403).json({ error: "Access Denied: You cannot create a wallet for another user." });
-    }
-
-    if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    if (userId && process.env.SUPABASE_SERVICE_ROLE_KEY) {
       const { data: existingWallet, error: fetchError } =
         await getSupabaseAdmin()
           .from("user_wallets")
@@ -72,35 +61,25 @@ router.post("/wallets/create", requireRole(["user", "admin", "super_admin"]), as
           .single();
 
       if (fetchError && fetchError.code !== "PGRST116") {
-        console.error("[CRITICAL_DATABASE_ERROR] Supabase wallet lookup failed:", fetchError);
-        // CRITICAL PROTECTION: Abort immediately on fetch error (e.g., timeout, connection issues)
-        // to prevent false positives where we think user has no wallet and generate a duplicate.
-        return res.status(500).json({
-          error: "Database error during wallet validation. Connection problem or query failed.",
-          details: fetchError,
-          protectionTriggered: true
-        });
+        console.error("Supabase fetch error:", fetchError);
       }
 
       if (existingWallet) {
-        console.log(`[WalletGuard] Wallet already exists in database: ${existingWallet.wallet_address}. Re-using to prevent asset loss.`);
+        console.log(`Wallet already exists: ${existingWallet.wallet_address}`);
         return res.json({
           walletId: existingWallet.wallet_id,
           address: existingWallet.wallet_address,
           walletSetId: existingWallet.wallet_set_id,
         });
       }
-    } else {
-      console.warn("[WalletGuard] SUPABASE_SERVICE_ROLE_KEY not configured. Checking database bypassed. Proceeding is prohibited.");
-      return res.status(500).json({ error: "Server misconfiguration. Database service access key is missing." });
     }
 
-    console.log(`[WalletGuard] No existing wallet found for user ${userId}. Creating new SCA wallet on Arc Testnet...`);
+    console.log("Creating new wallet for Arc Testnet...");
     const result = await createWallet(getSupabaseAdmin(), userId);
-    console.log(`[WalletGuard] Wallet created successfully: ${result.address}`);
+    console.log(`Wallet created successfully: ${result.address}`);
     res.json(result);
   } catch (error: any) {
-    console.error("[WalletGuard] Circle API / Database mapping Error detail:", error);
+    console.error("Circle API Error detail:", error);
     res.status(500).json({
       error: error.message || "Failed to create wallet",
       details: error.response?.data || null,

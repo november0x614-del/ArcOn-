@@ -6,13 +6,13 @@ import {
   waitForConfirmation,
   USDC_ADDRESS,
   getArcScanUrl,
-} from "./arcViem.js";
+} from "./arcViem";
 import { encodeFunctionData, parseAbi } from "viem";
-import { logAuditEvent } from "./audit.js";
-import { getCircleClientInstance, circleApiFetch } from "./circleClient.js";
+import { logAuditEvent } from "./audit";
+import { getCircleClientInstance, circleApiFetch } from "./circleClient";
 import * as crypto from "crypto";
 
-import { getSupabaseAdmin } from "../config/supabase.js";
+import { getSupabaseAdmin } from "../config/supabase";
 
 async function getGasFeeStrategy(): Promise<"SPONSORED" | "USER_PAID_USDC"> {
   try {
@@ -43,63 +43,24 @@ export async function getTokenDetails(tokenId: string) {
 }
 
 export async function createWallet(supabaseAdmin: any, userId: string) {
-  if (userId) {
-    // CRITICAL SECURITY PRE-CHECK: Ensure no wallet exists in DB before calling Circle API
-    const { data: duplicateWallet, error: verifyError } = await supabaseAdmin
-      .from("user_wallets")
-      .select("wallet_id, wallet_address, wallet_set_id")
-      .eq("id", userId)
-      .single();
-
-    if (verifyError && verifyError.code !== "PGRST116") {
-      throw new Error(`[CRITICAL_ABORT] Aborting wallet creation due to Database check error: ${verifyError.message}`);
-    }
-
-    if (duplicateWallet) {
-      console.warn(`[CRITICAL_WARNING] createWallet called but wallet already exists for user ${userId}. Returning existing mapping.`);
-      return {
-        walletId: duplicateWallet.wallet_id,
-        address: duplicateWallet.wallet_address,
-        walletSetId: duplicateWallet.wallet_set_id,
-      };
-    }
-  }
-
   const client = getCircleClientInstance();
 
-  // 1. Get existing Wallet Set from Admin or create one
-  let walletSetId = "";
-  try {
-    const { data: adminWallet } = await supabaseAdmin
-      .from("user_wallets")
-      .select("wallet_set_id")
-      .eq("id", (process.env.PLATFORM_ADMIN_UUID as string))
-      .single();
-    if (adminWallet?.wallet_set_id) {
-      walletSetId = adminWallet.wallet_set_id;
-    }
-  } catch (err) {
-    console.log("Could not find admin wallet set, will create new one");
-  }
+  // 1. Create Wallet Set
+  const walletSetResponse = await client.createWalletSet({
+    name: "Lounge Wallet Set",
+  });
 
-  if (!walletSetId) {
-    const walletSetResponse = await client.createWalletSet({
-      name: "Lounge Wallet Set",
-      idempotencyKey: crypto.randomUUID(),
-    });
-    walletSetId = walletSetResponse.data?.walletSet?.id || "";
-    if (!walletSetId) {
-      throw new Error("Wallet set creation failed: no ID returned from Circle");
-    }
+  const walletSet = walletSetResponse.data?.walletSet;
+  if (!walletSet?.id) {
+    throw new Error("Wallet set creation failed: no ID returned from Circle");
   }
 
   // 2. Create Wallet in the Set
   const walletResponse = await client.createWallets({
-    walletSetId: walletSetId,
+    walletSetId: walletSet.id,
     blockchains: ["ARC-TESTNET"],
     count: 1,
     accountType: "SCA",
-    idempotencyKey: crypto.randomUUID(),
   });
 
   const wallet = walletResponse.data?.wallets?.[0];
@@ -111,25 +72,19 @@ export async function createWallet(supabaseAdmin: any, userId: string) {
 
   // 3. Save to Supabase if userId is provided
   if (userId) {
-    // SECURITY GUARD: Always use .insert() instead of .upsert() here to guarantee
-    // database-level exception if there is any duplicated primary key write attempt.
-    const { error } = await supabaseAdmin.from("user_wallets").insert({
+    const { error } = await supabaseAdmin.from("user_wallets").upsert({
       id: userId,
       wallet_id: wallet.id,
       wallet_address: wallet.address,
-      wallet_set_id: walletSetId,
+      wallet_set_id: walletSet.id,
     });
-    
-    if (error) {
-      console.error("[CRITICAL_DATABASE_ERROR] Failed to map new wallet in user_wallets:", error);
-      throw new Error(`[CRITICAL_ASSET_PROTECTION_ABORT] Wallet created on Circle (${wallet.address}) but database mapping failed: ${error.message}. Aborted to protect assets.`);
-    }
+    if (error) console.error("Failed mapping to Supabase:", error);
   }
 
   return {
     walletId: wallet.id,
     address: wallet.address,
-    walletSetId: walletSetId,
+    walletSetId: walletSet.id,
   };
 }
 
@@ -143,7 +98,7 @@ export async function batchCreateWallets(
   const { data: adminWallet } = await supabaseAdmin
     .from("user_wallets")
     .select("wallet_set_id")
-    .eq("id", (process.env.PLATFORM_ADMIN_UUID as string))
+    .eq("id", "00000000-0000-0000-0000-000000000000")
     .single();
 
   let walletSetId = adminWallet?.wallet_set_id;
@@ -269,13 +224,11 @@ export function interpretCircleError(reason: string, details?: string): string {
 export async function executeTransaction(
   supabaseAdmin: any,
   userId: string,
-  rawAmount: number | string,
+  amount: number,
   _destinationAddress: string,
   type: string,
   metadata: any,
 ) {
-  const amount = Number(rawAmount);
-
   const { data: walletData } = await supabaseAdmin
     .from("user_wallets")
     .select("wallet_id, wallet_address")
@@ -299,7 +252,7 @@ export async function executeTransaction(
   if (
     !isBypass &&
     amount >= HIGH_VALUE_THRESHOLD &&
-    userId !== (process.env.PLATFORM_ADMIN_UUID as string)
+    userId !== "00000000-0000-0000-0000-000000000000"
   ) {
     // Save to database as pending_approval
     const { data: pendingTx, error: dbError } = await supabaseAdmin
@@ -325,11 +278,12 @@ export async function executeTransaction(
     if (dbError) throw dbError;
 
     await logAuditEvent(
+      supabaseAdmin,
       userId,
       "HIGH_VALUE_TX_APPROVAL_QUEUED",
-      pendingTx.id,
       {
         amount,
+        txId: pendingTx.id,
       },
     );
 
@@ -429,38 +383,22 @@ export async function executeTransaction(
   // Circle return an internal tx ID first
   const circleTxId = response.data?.id;
 
-  let dbResult;
-  if (metadata?.existingTxId) {
-    dbResult = await supabaseAdmin
-      .from("transactions")
-      .update({
-        status: "pending",
-        internal_ref: circleTxId,
-        metadata: {
-          ...metadata,
-          description: `[Approved] ${metadata.memo || (type === "transfer" ? `Transfer to ${validDest}` : "Treasury Move")}`,
-          real: true,
-        },
-      })
-      .eq("id", metadata.existingTxId);
-  } else {
-    dbResult = await supabaseAdmin.from("transactions").insert({
-      user_id: userId,
-      amount: `-${amount.toFixed(2)}`,
-      type: type,
-      status: "pending",
-      internal_ref: circleTxId,
-      metadata: {
-        ...metadata,
-        description:
-          metadata.memo ||
-          (type === "transfer" ? `Transfer to ${validDest}` : undefined),
-        real: true,
-      },
-    });
-  }
+  const { error } = await supabaseAdmin.from("transactions").insert({
+    user_id: userId,
+    amount: `-${amount.toFixed(2)}`,
+    type: type,
+    status: "pending",
+    internal_ref: circleTxId,
+    metadata: {
+      ...metadata,
+      description:
+        metadata.memo ||
+        (type === "transfer" ? `Transfer to ${validDest}` : undefined),
+      real: true,
+    },
+  });
 
-  if (dbResult.error) throw dbResult.error;
+  if (error) throw error;
 
   return {
     txId: circleTxId,
@@ -519,7 +457,7 @@ export async function executeAtomicBatchTransfer(
       const { data: treasuryWallet } = await supabaseAdmin
         .from("user_wallets")
         .select("wallet_address")
-        .eq("id", (process.env.PLATFORM_ADMIN_UUID as string))
+        .eq("id", "00000000-0000-0000-0000-000000000000")
         .single();
       treasuryAddress = treasuryWallet?.wallet_address;
     }
@@ -649,7 +587,6 @@ export async function executeContractTransaction(
   abiFunctionSignature: string,
   abiParameters: any[],
   feeLevel: "LOW" | "MEDIUM" | "HIGH" = "MEDIUM",
-  amounts?: string[]
 ) {
   const { data: walletData } = await supabaseAdmin
     .from("user_wallets")
@@ -675,10 +612,6 @@ export async function executeContractTransaction(
       },
     },
   };
-  
-  if (amounts && amounts.length > 0) {
-    txParams.amounts = amounts;
-  }
 
   const response = await client.createContractExecutionTransaction(txParams);
 
@@ -718,7 +651,7 @@ export async function autoSweepWallets(
   const results = [];
 
   for (const wallet of userWallets) {
-    if (wallet.id === (process.env.PLATFORM_ADMIN_UUID as string)) continue; // Skip admin wallet
+    if (wallet.id === "00000000-0000-0000-0000-000000000000") continue; // Skip admin wallet
 
     // Get balance of USDC
     const balanceRaw = await getTokenBalance(
@@ -761,7 +694,7 @@ export async function manualSweepAdminWallet(
   amount: number,
   treasuryAddress: string
 ) {
-  const adminId = (process.env.PLATFORM_ADMIN_UUID as string);
+  const adminId = "00000000-0000-0000-0000-000000000000";
   const { data: adminWallet } = await supabaseAdmin
     .from("user_wallets")
     .select("wallet_id, wallet_address")
@@ -806,11 +739,10 @@ export async function manualSweepAdminWallet(
 export async function executeReleaseEscrow(
   supabaseAdmin: any,
   sellerAddress: string,
-  rawAmount: number | string,
+  amount: number,
   orderId: string
 ) {
-  const amount = Number(rawAmount);
-  const adminId = (process.env.PLATFORM_ADMIN_UUID as string);
+  const adminId = "00000000-0000-0000-0000-000000000000";
   const { data: adminWallet } = await supabaseAdmin
     .from("user_wallets")
     .select("wallet_id, wallet_address")

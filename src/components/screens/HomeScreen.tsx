@@ -38,6 +38,8 @@ export interface HomeScreenProps {
   selectedShortcuts: ShortcutItem[];
   onNavigate: (view: ViewState) => void;
   platformConfig?: any;
+  desktopRightColumn?: React.ReactNode;
+  activeView?: ViewState;
 }
 
 export const HomeScreen = React.memo(
@@ -46,6 +48,8 @@ export const HomeScreen = React.memo(
     selectedShortcuts,
     onNavigate,
     platformConfig,
+    desktopRightColumn,
+    activeView,
   }: HomeScreenProps) => {
     const {
       transactions,
@@ -362,11 +366,13 @@ export const HomeScreen = React.memo(
 
         {/* Scrollable Main Content */}
         <div className="flex-1 overflow-y-auto pb-[140px] pt-0 scrollbar-hide z-20 md:px-4 lg:px-6 relative">
-          <div className="flex flex-col lg:grid lg:grid-cols-12 lg:gap-6">
+          <div className="flex flex-col lg:grid lg:grid-cols-12 lg:gap-6 mt-4">
             {/* Left Column for Desktop */}
             <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-3">
-              {/* Accounts Section */}
-              <section className="bg-white rounded-[24px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] mx-4 lg:mx-0 border border-slate-50/50 mt-4">
+              {/* Wrapping Accounts & Favorites for precise height alignment with Right Column feature popup on Desktop */}
+              <div className="lg:h-[750px] lg:max-h-[85vh] flex flex-col gap-3 shrink-0">
+                {/* Accounts Section */}
+                <section className="bg-white rounded-[24px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] mx-4 lg:mx-0 border border-slate-50/50">
                 <div className="flex justify-between items-center mb-3">
                   <h2 className="text-[17px] font-bold text-slate-800 tracking-tight">
                     Accounts
@@ -502,13 +508,14 @@ export const HomeScreen = React.memo(
                     onClick={() => onNavigate("otherAccounts")}
                     className="w-full text-center text-slate-800 text-[12px] font-bold py-1.5 hover:bg-slate-100 rounded-lg transition-colors flex justify-center items-center gap-1.5 opacity-90 border-0 bg-transparent"
                   >
-                    Other Personal Savings & Checking <PlusCircleIcon size={14} />
+                    Other Personal Savings & Checking{" "}
+                    <PlusCircleIcon size={14} />
                   </button>
                 </div>
               </section>
 
               {/* Favorite Transactions Section */}
-              <section className="bg-white rounded-[24px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] mb-3 lg:mb-0 mx-4 lg:mx-0 border border-slate-50/50">
+              <section className="bg-white rounded-[24px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] mb-3 lg:mb-0 mx-4 lg:mx-0 border border-slate-50/50 lg:flex-1 lg:flex lg:flex-col justify-start">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-[17px] font-bold text-slate-800 tracking-tight">
                     Favorite Transactions
@@ -524,56 +531,63 @@ export const HomeScreen = React.memo(
                 <div className="grid grid-cols-4 gap-y-5 gap-x-2">
                   {filteredShortcuts
                     .filter((item) => item.label !== "DApp Browser")
-                    .map((item) => (
-                      <MenuIcon
-                        key={item.id}
-                        icon={item.icon}
-                        label={item.label}
-                        color={item.color}
-                        bgCircle={item.bgCircle}
-                        badge={item.badge}
-                        badgeColor={item.badgeColor}
-                        isTextIcon={item.isTextIcon}
-                        textIcon={item.textIcon}
-                        onClick={() => {
-                          if (
-                            item.label === "Transfer USDC On-chain" ||
-                            item.label === "Transfer USDC"
-                          )
-                            onNavigate("transfer");
-                          if (item.label === "Receive USDC")
-                            onNavigate("receive");
-                          if (item.label === "Request Payment")
-                            onNavigate("receive");
-                          if (item.label === "Pay with USDC")
-                            onNavigate("scanQR");
-                          if (
-                            item.label === "Native Wallet Swap" ||
-                            item.label === "Swap USDC"
-                          )
-                            onNavigate("swap");
-                          if (item.label === "Deposit/Withdraw")
-                            onNavigate("depositOptions");
-                          if (item.label === "Pay/VA") onNavigate("bayarVA");
-                          if (item.label === "DApp Browser")
-                            onNavigate("ecommerce");
-                          if (item.label === "Staking Pool")
-                            onNavigate("stablestake");
-                          if (item.label === "Withdraw") onNavigate("withdraw");
-                          if (item.label === "ATM")
-                            onNavigate("bridge");
-                          if (item.label === "Mint NFT")
-                            onNavigate("mintNFT");
-                          if (item.label === "Security & Limits")
-                            onNavigate("settings");
-                          if (item.label === "Transaction History")
-                            onNavigate("transactionHistory");
-                        }}
-                      />
-                    ))}
+                    .map((item) => {
+                      let mappedView = "";
+                      if (
+                        item.label === "Transfer USDC On-chain" ||
+                        item.label === "Transfer USDC"
+                      )
+                        mappedView = "transfer";
+                      if (
+                        item.label === "Receive USDC" ||
+                        item.label === "Request Payment"
+                      )
+                        mappedView = "receive";
+                      if (item.label === "Pay with USDC") mappedView = "scanQR";
+                      if (
+                        item.label === "Native Wallet Swap" ||
+                        item.label === "Swap USDC"
+                      )
+                        mappedView = "swap";
+                      if (item.label === "Deposit/Withdraw")
+                        mappedView = "depositOptions";
+                      if (item.label === "Pay/VA") mappedView = "bayarVA";
+                      if (item.label === "DApp Browser")
+                        mappedView = "ecommerce";
+                      if (item.label === "Staking Pool")
+                        mappedView = "stablestake";
+                      if (item.label === "Withdraw") mappedView = "withdraw";
+                      if (item.label === "ATM") mappedView = "bridge";
+                      if (item.label === "Mint NFT") mappedView = "mintNFT";
+                      if (item.label === "Security & Limits")
+                        mappedView = "settings";
+                      if (item.label === "Transaction History")
+                        mappedView = "transactionHistory";
+
+                      return (
+                        <MenuIcon
+                          key={item.id}
+                          icon={item.icon}
+                          label={item.label}
+                          color={item.color}
+                          bgCircle={item.bgCircle}
+                          badge={item.badge}
+                          badgeColor={item.badgeColor}
+                          isTextIcon={item.isTextIcon}
+                          textIcon={item.textIcon}
+                          isActive={
+                            (activeView as string) === mappedView && mappedView !== ""
+                          }
+                          onClick={() => {
+                            if (mappedView) onNavigate(mappedView as any);
+                          }}
+                        />
+                      );
+                    })}
                 </div>
 
-                {(registeredUser?.role === "super_admin" || registeredUser?.role === "admin") && (
+                {registeredUser?.email ===
+                  (import.meta.env.VITE_ADMIN_EMAIL || "admin@admin.com") && (
                   <div
                     className="mt-6 bg-gradient-to-r from-slate-800 to-slate-900 py-3 px-4 rounded-xl flex items-center justify-between gap-3 border border-slate-700 relative cursor-pointer hover:bg-slate-700 transition-colors shadow-sm"
                     onClick={() => onNavigate("adminDashboard")}
@@ -599,7 +613,7 @@ export const HomeScreen = React.memo(
                 {(!platformConfig ||
                   platformConfig.aiAgentEnabled !== false) && (
                   <div
-                    className="mt-6 bg-gradient-to-r from-indigo-50 to-blue-50 py-3 px-4 rounded-xl flex items-center justify-between gap-3 border border-indigo-100 relative cursor-pointer hover:bg-indigo-100/50 transition-colors"
+                    className="lg:hidden mt-6 bg-gradient-to-r from-indigo-50 to-blue-50 py-3 px-4 rounded-xl flex items-center justify-between gap-3 border border-indigo-100 relative cursor-pointer hover:bg-indigo-100/50 transition-colors"
                     onClick={() => onNavigate("aiAgent")}
                   >
                     {/* Tooltip triangle */}
@@ -623,6 +637,7 @@ export const HomeScreen = React.memo(
                   </div>
                 )}
               </section>
+              </div>
 
               {/* Special For You (Promo Banner) */}
               <section className="bg-white rounded-[24px] overflow-hidden shadow-sm mb-4 lg:mb-0 mx-4 lg:mx-0 pb-4 border border-x-transparent border-t-transparent border-b-slate-50 relative z-10 lg:mt-8">
@@ -690,183 +705,243 @@ export const HomeScreen = React.memo(
                   ))}
                 </div>
               </section>
+
+              {/* Moved Bottom Sections inside Left Column */}
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 relative z-10 w-full mb-8">
+                <div className="flex flex-col gap-6 w-full max-w-[500px] mx-auto lg:max-w-none">
+                  {/* Dapps */}
+                  {/* External DApps */}
+                  {(!platformConfig ||
+                    platformConfig.swapEnabled !== false ||
+                    platformConfig.arcBirdEnabled !== false ||
+                    platformConfig.stableStakeEnabled !== false) && (
+                    <section className="bg-white rounded-[24px] p-5 shadow-sm mb-4 lg:mb-0 mx-4 lg:mx-0 text-left">
+                      <div className="flex justify-between items-center mb-4">
+                        <div className="flex flex-col">
+                          <h2 className="text-[17px] font-bold text-slate-800 tracking-tight font-sans">
+                            External DApps
+                          </h2>
+                          <p className="text-[10px] text-slate-400 mt-0.5 leading-tight max-w-[200px]">
+                            Connect to decentralized applications on the Arc
+                            Network securely.
+                          </p>
+                        </div>
+                        <button className="text-slate-400 hover:text-slate-600 transition-colors bg-transparent border-0 p-1">
+                          <Search size={18} strokeWidth={2.5} />
+                        </button>
+                      </div>
+
+                      <div className="flex flex-col gap-3">
+                        {/* ArcSwap */}
+                        {(!platformConfig ||
+                          platformConfig.swapEnabled !== false) && (
+                          <div
+                            onClick={() => {
+                              // Show a toast message to simulate opening an external browser
+                              displayToast(
+                                "Opening external web browser to ArcSwap...",
+                              );
+                            }}
+                            className="flex items-center gap-3.5 p-3 rounded-2xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-all active:scale-[0.98]"
+                          >
+                            <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-white shrink-0 shadow-sm">
+                              <RefreshCw size={20} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <h4 className="font-bold text-[14px] text-slate-800 font-sans">
+                                  ArcSwap DEX
+                                </h4>
+                                <span className="text-[9px] font-semibold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded font-sans">
+                                  DEX
+                                </span>
+                              </div>
+                              <p className="text-[13px] text-slate-400 truncate mt-0.5 font-sans">
+                                Swap USDC with Arc Native Tokens
+                              </p>
+                            </div>
+                            <ChevronRight
+                              size={16}
+                              className="text-slate-400"
+                            />
+                          </div>
+                        )}
+
+                        {/* ArcBird Mini-Game */}
+                        {(!platformConfig ||
+                          platformConfig.arcBirdEnabled !== false) && (
+                          <div
+                            onClick={() => {
+                              onNavigate("arcbird");
+                            }}
+                            className="flex items-center gap-3.5 p-3 rounded-2xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-all active:scale-[0.98]"
+                          >
+                            <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-purple-500 to-indigo-600 flex items-center justify-center text-white shrink-0 shadow-sm">
+                              <Gamepad2 size={20} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <h4 className="font-bold text-[14px] text-slate-800 font-sans">
+                                  ArcBird Arcade
+                                </h4>
+                                <span className="text-[9px] font-semibold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded font-sans">
+                                  Gaming
+                                </span>
+                              </div>
+                              <p className="text-[13px] text-slate-400 truncate mt-0.5 font-sans">
+                                Tap to Jump & earn USDC rewards
+                              </p>
+                            </div>
+                            <ChevronRight
+                              size={16}
+                              className="text-slate-400"
+                            />
+                          </div>
+                        )}
+
+                        {/* StableStake Vault */}
+                        {(!platformConfig ||
+                          platformConfig.stableStakeEnabled !== false) && (
+                          <div
+                            onClick={() => {
+                              onNavigate("stablestake");
+                            }}
+                            className="flex items-center gap-3.5 p-3 rounded-2xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-all active:scale-[0.98]"
+                          >
+                            <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-500 flex items-center justify-center text-white shrink-0 shadow-sm">
+                              <ShieldCheck size={20} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <h4 className="font-bold text-[14px] text-slate-800 font-sans">
+                                  StableStake Vault
+                                </h4>
+                                <span className="text-[9px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded font-sans">
+                                  Yield & DeFi
+                                </span>
+                              </div>
+                              <p className="text-[13px] text-slate-400 truncate mt-0.5 font-sans">
+                                Stake stablecoins & earn USDC yield
+                              </p>
+                            </div>
+                            <ChevronRight
+                              size={16}
+                              className="text-slate-400"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </section>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-6 w-full max-w-[500px] mx-auto lg:max-w-none">
+                  <section className="bg-white rounded-[24px] p-5 shadow-sm mx-4 lg:mx-0 mb-4 lg:mb-0">
+                    <div className="mb-4 text-left flex justify-between items-start">
+                      <div>
+                        <h2 className="text-[17px] font-bold text-slate-800 tracking-tight">
+                          Token Markets
+                        </h2>
+                        <p className="text-xs text-slate-400 mt-1">
+                          Live data feed from pyth.network
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setShowManageMarketModal(true)}
+                        className="text-slate-800 p-2 hover:bg-slate-100 rounded-full transition-all active:scale-95 border-0 bg-transparent"
+                      >
+                        <Settings2 size={18} strokeWidth={2} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-2 mb-4 text-slate-800 font-bold text-sm bg-slate-100 px-3 py-1.5 rounded-lg w-fit">
+                      <TrendingUp size={16} /> Volume
+                    </div>
+
+                    <div className="flex flex-col gap-4">
+                      <AnimatePresence>
+                        {marketTokens
+                          .filter((t) => visibleTokenCodes.includes(t.code))
+                          .map((token) => (
+                            <motion.div
+                              key={token.code}
+                              layout
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                            >
+                              <StockRow
+                                code={token.code}
+                                name={token.name}
+                                price={formatPrice(token.price)}
+                                change={formatChange(
+                                  token.change,
+                                  token.isDown,
+                                )}
+                                percent={`${token.percent > 0 ? "+" : ""}${token.percent.toFixed(2)}%`}
+                                isDown={token.isDown}
+                              />
+                            </motion.div>
+                          ))}
+                      </AnimatePresence>
+                    </div>
+
+                    <p className="text-[10px] text-slate-400 mt-5 leading-relaxed bg-slate-50 p-2 rounded-lg text-left">
+                      Data protected by Circle Programmable Wallets infra.
+                    </p>
+                  </section>
+
+                  {/* Developer Services (Mobile Only) */}
+                  {(!platformConfig ||
+                    platformConfig.merchantEnabled !== false ||
+                    platformConfig.faucetEnabled !== false) && (
+                    <section className="bg-white rounded-[24px] p-5 shadow-sm mx-4 lg:mx-0 mb-8 lg:mb-0 lg:hidden">
+                      <h2 className="text-[17px] font-bold text-slate-800 tracking-tight mb-4 text-left">
+                        Services
+                      </h2>
+                      <div
+                        className={`grid ${!platformConfig || (platformConfig.merchantEnabled !== false && platformConfig.faucetEnabled !== false) ? "grid-cols-2" : "grid-cols-1"} gap-3`}
+                      >
+                        {(!platformConfig ||
+                          platformConfig.merchantEnabled !== false) && (
+                          <ProductCard
+                            title="Merchant Dashboard"
+                            desc="Manage your stock"
+                            icon={<Box size={20} className="text-slate-600" />}
+                            onClick={() => onNavigate("merchant")}
+                          />
+                        )}
+                        {(!platformConfig ||
+                          platformConfig.faucetEnabled !== false) && (
+                          <ProductCard
+                            title="Testnet Faucet"
+                            desc="Claim USDC Gas Token."
+                            icon={
+                              <Coins size={20} className="text-slate-600" />
+                            }
+                            onClick={() => onNavigate("faucet")}
+                          />
+                        )}
+                      </div>
+                    </section>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Right Column for Desktop */}
-            <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-4">
-              {/* Dapps */}
-              {/* External DApps */}
-              {(!platformConfig ||
-                platformConfig.swapEnabled !== false ||
-                platformConfig.arcBirdEnabled !== false ||
-                platformConfig.stableStakeEnabled !== false) && (
-                <section className="bg-white rounded-[24px] p-5 shadow-sm mb-4 lg:mb-0 mx-4 lg:mx-0 text-left">
-                  <div className="flex justify-between items-center mb-4">
-                    <div className="flex flex-col">
-                      <h2 className="text-[17px] font-bold text-slate-800 tracking-tight font-sans">
-                        External DApps
-                      </h2>
-                      <p className="text-[10px] text-slate-400 mt-0.5 leading-tight max-w-[200px]">
-                        Connect to decentralized applications on the Arc Network securely.
-                      </p>
-                    </div>
-                    <button className="text-slate-400 hover:text-slate-600 transition-colors bg-transparent border-0 p-1">
-                      <Search size={18} strokeWidth={2.5} />
-                    </button>
-                  </div>
-
-                  <div className="flex flex-col gap-3">
-                    {/* ArcSwap */}
-                    {(!platformConfig ||
-                      platformConfig.swapEnabled !== false) && (
-                      <div
-                        onClick={() => {
-                          // Show a toast message to simulate opening an external browser
-                          displayToast(
-                            "Opening external web browser to ArcSwap...",
-                          );
-                        }}
-                        className="flex items-center gap-3.5 p-3 rounded-2xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-all active:scale-[0.98]"
-                      >
-                        <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-white shrink-0 shadow-sm">
-                          <RefreshCw size={20} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <h4 className="font-bold text-[14px] text-slate-800 font-sans">
-                              ArcSwap DEX
-                            </h4>
-                            <span className="text-[9px] font-semibold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded font-sans">
-                              DEX
-                            </span>
-                          </div>
-                          <p className="text-[13px] text-slate-400 truncate mt-0.5 font-sans">
-                            Swap USDC with Arc Native Tokens
-                          </p>
-                        </div>
-                        <ChevronRight size={16} className="text-slate-400" />
-                      </div>
-                    )}
-
-                    {/* ArcBird Mini-Game */}
-                    {(!platformConfig ||
-                      platformConfig.arcBirdEnabled !== false) && (
-                      <div
-                        onClick={() => {
-                          onNavigate("arcbird");
-                        }}
-                        className="flex items-center gap-3.5 p-3 rounded-2xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-all active:scale-[0.98]"
-                      >
-                        <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-purple-500 to-indigo-600 flex items-center justify-center text-white shrink-0 shadow-sm">
-                          <Gamepad2 size={20} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <h4 className="font-bold text-[14px] text-slate-800 font-sans">
-                              ArcBird Arcade
-                            </h4>
-                            <span className="text-[9px] font-semibold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded font-sans">
-                              Gaming
-                            </span>
-                          </div>
-                          <p className="text-[13px] text-slate-400 truncate mt-0.5 font-sans">
-                            Tap to Jump & earn USDC rewards
-                          </p>
-                        </div>
-                        <ChevronRight size={16} className="text-slate-400" />
-                      </div>
-                    )}
-
-                    {/* StableStake Vault */}
-                    {(!platformConfig ||
-                      platformConfig.stableStakeEnabled !== false) && (
-                      <div
-                        onClick={() => {
-                          onNavigate("stablestake");
-                        }}
-                        className="flex items-center gap-3.5 p-3 rounded-2xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-all active:scale-[0.98]"
-                      >
-                        <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-500 flex items-center justify-center text-white shrink-0 shadow-sm">
-                          <ShieldCheck size={20} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <h4 className="font-bold text-[14px] text-slate-800 font-sans">
-                              StableStake Vault
-                            </h4>
-                            <span className="text-[9px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded font-sans">
-                              Yield & DeFi
-                            </span>
-                          </div>
-                          <p className="text-[13px] text-slate-400 truncate mt-0.5 font-sans">
-                            Stake stablecoins & earn USDC yield
-                          </p>
-                        </div>
-                        <ChevronRight size={16} className="text-slate-400" />
-                      </div>
-                    )}
-                  </div>
-                </section>
+            <div className="lg:col-span-5 xl:col-span-4 hidden lg:flex relative z-20 flex-col gap-6">
+              {desktopRightColumn && (
+                <div className="rounded-[24px] bg-white shadow-[0_8px_30px_rgb(0,0,0,0.08)] overflow-hidden border border-slate-100 h-[750px] max-h-[85vh] w-full max-w-[500px] mx-auto relative z-20 flex flex-col">
+                  {desktopRightColumn}
+                </div>
               )}
 
-              {/* Live Token Price Feed */}
-              <section className="bg-white rounded-[24px] p-5 shadow-sm mx-4 lg:mx-0 mb-4 lg:mb-0">
-                <div className="mb-4 text-left flex justify-between items-start">
-                  <div>
-                    <h2 className="text-[17px] font-bold text-slate-800 tracking-tight">
-                      Token Markets
-                    </h2>
-                    <p className="text-xs text-slate-400 mt-1">
-                      Live data feed from pyth.network
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setShowManageMarketModal(true)}
-                    className="text-slate-800 p-2 hover:bg-slate-100 rounded-full transition-all active:scale-95 border-0 bg-transparent"
-                  >
-                    <Settings2 size={18} strokeWidth={2} />
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-2 mb-4 text-slate-800 font-bold text-sm bg-slate-100 px-3 py-1.5 rounded-lg w-fit">
-                  <TrendingUp size={16} /> Volume
-                </div>
-
-                <div className="flex flex-col gap-4">
-                  <AnimatePresence>
-                    {marketTokens
-                      .filter((t) => visibleTokenCodes.includes(t.code))
-                      .map((token) => (
-                        <motion.div
-                          key={token.code}
-                          layout
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                        >
-                          <StockRow
-                            code={token.code}
-                            name={token.name}
-                            price={formatPrice(token.price)}
-                            change={formatChange(token.change, token.isDown)}
-                            percent={`${token.percent > 0 ? "+" : ""}${token.percent.toFixed(2)}%`}
-                            isDown={token.isDown}
-                          />
-                        </motion.div>
-                      ))}
-                  </AnimatePresence>
-                </div>
-
-                <p className="text-[10px] text-slate-400 mt-5 leading-relaxed bg-slate-50 p-2 rounded-lg text-left">
-                  Data protected by Circle Programmable Wallets infra.
-                </p>
-              </section>
-
-              {/* Developer Services */}
+              {/* Developer Services (Desktop Only) */}
               {(!platformConfig ||
                 platformConfig.merchantEnabled !== false ||
                 platformConfig.faucetEnabled !== false) && (
-                <section className="bg-white rounded-[24px] p-5 shadow-sm mx-4 lg:mx-0 mb-8 lg:mb-0">
+                <section className="bg-white rounded-[24px] p-5 shadow-sm w-full max-w-[500px] mx-auto hidden lg:block">
                   <h2 className="text-[17px] font-bold text-slate-800 tracking-tight mb-4 text-left">
                     Services
                   </h2>
@@ -900,7 +975,7 @@ export const HomeScreen = React.memo(
 
         {/* Aesthetic Bottom Navigation Wrapper with Cutout Notch */}
         <div
-          className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none"
+          className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none lg:hidden"
           style={{ filter: "drop-shadow(0 -5px 15px rgba(0,0,0,0.06))" }}
         >
           {/* The Masked White Nav Bar */}

@@ -1,9 +1,9 @@
 import express from "express";
 import { GoogleGenAI } from "@google/genai";
-import { publicClient, getTokenMetadata } from "../services/arcViem.js";
-import { verifyAndProcessWebhook } from "../services/webhook.js";
-import { getSupabaseAdmin } from "../config/supabase.js";
-import { getTokenDetails, executeTransaction } from "../services/circle.js";
+import { publicClient, getTokenMetadata } from "../services/arcViem";
+import { verifyAndProcessWebhook } from "../services/webhook";
+import { getSupabaseAdmin } from "../config/supabase";
+import { getTokenDetails, executeTransaction } from "../services/circle";
 import * as crypto from "crypto";
 
 const router = express.Router();
@@ -41,7 +41,7 @@ router.post("/faucet/claim", async (req, res) => {
     if (!address) return res.status(400).json({ error: "Address required" });
 
     const supabaseAdmin = getSupabaseAdmin();
-    const adminId = (process.env.PLATFORM_ADMIN_UUID as string);
+    const adminId = "00000000-0000-0000-0000-000000000000";
 
     let txHash = `faucet_${crypto.randomBytes(8).toString("hex")}`;
     let successMessage = "100 USDC sent to your wallet on Arc Testnet via Circle SDK";
@@ -311,8 +311,22 @@ router.post("/auth/cleanup-unconfirmed", async (req, res) => {
       }
     }
 
-    // Removed listUsers search by email as it causes bottleneck.
-    // If the email is unconfirmed, Supabase will handle 'User already registered' correctly.
+    // 2. Temukan user berdasarkan email jika statusnya belum terkonfirmasi
+    const {
+      data: { users },
+      error: listError,
+    } = await supabase.auth.admin.listUsers();
+    if (!listError && users) {
+      const matchByEmail = users.find(
+        (u: any) => u.email?.toLowerCase() === email.toLowerCase(),
+      );
+      if (matchByEmail && !matchByEmail.email_confirmed_at) {
+        console.log(
+          `[Cleanup] Menghapus user unconfirmed dengan email '${email}' (ID: ${matchByEmail.id})`,
+        );
+        await supabase.auth.admin.deleteUser(matchByEmail.id);
+      }
+    }
 
     res.json({
       success: true,
@@ -364,7 +378,7 @@ router.post("/webhook/simulate", async (req, res) => {
 
 // Support GET (health-check/verification) and OPTIONS (CORS preflight) alongside POST on the Webhook route
 router
-  .route(["/circle/webhook", "/webhook/circle"])
+  .route("/circle/webhook")
   .options((req, res) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
@@ -380,11 +394,9 @@ router
       message:
         "Lounge Webhook Endpoint. Send a POST request with Circle signature headers to process notifications.",
       timestamp: new Date().toISOString(),
-      path: req.path
     });
   })
   .post(async (req, res) => {
-    console.log(`[Webhook] Received POST request at ${req.path}`);
     res.setHeader("Access-Control-Allow-Origin", "*");
     await verifyAndProcessWebhook(req, res, getSupabaseAdmin());
   });

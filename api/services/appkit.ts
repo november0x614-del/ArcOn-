@@ -3,7 +3,6 @@ import {
   createCircleWalletsAdapter,
   CircleWalletsAdapter,
 } from "@circle-fin/adapter-circle-wallets";
-import { getCircleApiKey, getCircleEntitySecret } from "./circleClient.js";
 
 let appKitInstance: AppKit | null = null;
 let appKitAdapter: CircleWalletsAdapter | null = null;
@@ -26,8 +25,8 @@ export const getAppKit = () => {
   if (appKitInstance)
     return { appKit: appKitInstance, adapter: appKitAdapter! };
 
-  const apiKey = getCircleApiKey();
-  const entitySecret = getCircleEntitySecret();
+  const apiKey = process.env.CIRCLE_API_KEY;
+  const entitySecret = process.env.CIRCLE_ENTITY_SECRET;
 
   const kitKey = getValidKitKey();
 
