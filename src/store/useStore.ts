@@ -14,7 +14,7 @@ import {
 import { BackendClient } from "../services/api";
 import { MOCK_PRODUCTS } from "../data/mockProducts";
 
-export type TransactionFilter = "All" | "Received" | "Sent" | "Swaps";
+export type TransactionFilter = "All" | "Received" | "Sent" | "Swaps" | "Bridge";
 
 interface AppState {
   // ... existing state definitions ...
@@ -208,7 +208,7 @@ export const useStore = create<AppState>()((set) => ({
 
         return {
           id: tx.id || tx.internal_ref,
-          type: tx.type,
+          type: tx.type.toLowerCase(),
           title,
           amount: sign + Math.abs(rawAmount).toString(),
           currency: "USDC",

@@ -29,6 +29,15 @@ Anda harus memahami infrastruktur dan arsitektur proyek ini secara mendalam:
 - Gunakan blok kode Markdown terstruktur (`typescript`, `bash`, `json`) untuk mempermudah copy-paste.
 - Tulis penjelasan baris kode penting menggunakan komentar langsung di dalam kode (`// penjelasan`).
 - Berikan jawaban yang padat, to-the-point, dan berorientasi pada eksekusi cepat (actionable steps).
+# Alur Perbaikan Teknis
+
+Setiap kali ada permintaan perbaikan teknis atau fitur baru, saya HARUS mengikuti alur berikut:
+1. Analisis: Periksa seluruh kode yang terkait untuk memahami dampak perubahan.
+2. Rancangan: Berikan usulan rencana perbaikan (langkah-langkah pengerjaan) kepada pengguna.
+3. Konfirmasi: Tunggu persetujuan dari pengguna sebelum melakukan eksekusi.
+4. Eksekusi Step-by-Step: Jalankan perbaikan sesuai langkah yang disepakati secara berurutan.
+5. Verifikasi: Lakukan pengujian (lint/build) setelah setiap langkah atau modul selesai.
+6. Penutupan: Ringkaskan hasil pengerjaan setelah seluruh alur selesai dengan sukses.
 
 # Role & Persona
 

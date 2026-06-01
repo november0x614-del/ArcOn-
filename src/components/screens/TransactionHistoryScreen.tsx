@@ -12,6 +12,7 @@ import {
   X,
   Search,
   Layers,
+  Hexagon,
 } from "lucide-react";
 import { useApp } from "../../contexts/AppContext";
 import { ARC_TESTNET } from "../../lib/arcConfig";
@@ -46,6 +47,8 @@ export function TransactionHistoryScreen({
         return <ShoppingBag size={20} className="text-purple-500" />;
       case "swap":
         return <RefreshCw size={20} className="text-slate-600" />;
+      case "bridge":
+        return <Hexagon size={20} className="text-blue-500" />;
       default:
         return <Receipt size={20} className="text-slate-500" />;
     }
@@ -65,6 +68,8 @@ export function TransactionHistoryScreen({
         return "bg-purple-50 border-purple-100";
       case "swap":
         return "bg-slate-100 border-slate-200";
+      case "bridge":
+        return "bg-blue-50 border-blue-100";
       default:
         return "bg-slate-50 border-slate-100";
     }

@@ -142,6 +142,7 @@ export function AccountDetailScreen({
         tx.type,
       );
     if (activeFilter === "Swaps") return tx.type === "swap";
+    if (activeFilter === "Bridge") return tx.type === "bridge";
     return true;
   });
 
@@ -157,6 +158,8 @@ export function AccountDetailScreen({
         return <ShoppingBag size={20} className="text-purple-500" />;
       case "swap":
         return <RefreshCw size={20} className="text-slate-600" />;
+      case "bridge":
+        return <Hexagon size={20} className="text-blue-500" />;
       default:
         return <Receipt size={20} className="text-slate-500" />;
     }
@@ -174,6 +177,8 @@ export function AccountDetailScreen({
         return "bg-purple-50 border-purple-100";
       case "swap":
         return "bg-slate-100 border-slate-200";
+      case "bridge":
+        return "bg-blue-50 border-blue-100";
       default:
         return "bg-slate-50 border-slate-100";
     }
@@ -378,7 +383,7 @@ export function AccountDetailScreen({
           <>
             <div className="flex items-center px-4 py-3 shrink-0 justify-between">
               <div className="flex gap-4 overflow-x-auto scrollbar-hide py-1 text-[13px] text-slate-500 font-medium">
-                {(["All", "Received", "Sent", "Swaps"] as const).map(
+                {(["All", "Received", "Sent", "Swaps", "Bridge"] as const).map(
                   (filter) => (
                     <button
                       key={filter}

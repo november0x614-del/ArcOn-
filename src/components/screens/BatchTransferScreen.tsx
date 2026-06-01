@@ -872,6 +872,25 @@ export function BatchTransferScreen({
 
                     {/* Checkbox indicator */}
                     <div
+                      className={`flex items-center gap-3 ${isSelected ? "opacity-100" : "opacity-30"} hover:opacity-100 cursor-pointer`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Trigger deletion logic
+                        const confirmDelete = window.confirm(`Hapus kontak ${contact.name}?`);
+                        if (confirmDelete) {
+                          // Manually update deleted ids
+                          const cached = localStorage.getItem("deleted_contact_ids");
+                          const currentDeleted = cached ? JSON.parse(cached) : [];
+                          const newDeleted = [...currentDeleted, contact.id];
+                          localStorage.setItem("deleted_contact_ids", JSON.stringify(newDeleted));
+                          window.dispatchEvent(new Event("storage"));
+                          displayToast(`Kontak ${contact.name} berhasil dihapus.`);
+                        }
+                      }}
+                    >
+                      <Trash2 size={18} className="text-red-400" />
+                    </div>
+                    <div
                       className={`w-6 h-6 rounded-full border-[2px] flex items-center justify-center transition-all ${
                         isSelected
                           ? "bg-slate-900 border-slate-900 scale-110"

@@ -101,6 +101,8 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
     tx?.type === "batchTransfer" ||
     tx?.metadata?.isAtomicBatch === true ||
     tx?.metadata?.isBatch === true;
+  const isBridge = tx?.type === "bridge" || (tx?.metadata as any)?.type === "bridge" || (tx?.metadata as any)?.destinationDomain !== undefined;
+
 
   const formatAddrShort = (addr: string) =>
     addr ? `0x${addr.substring(2, 6)}...${addr.slice(-4)}` : "";
@@ -270,6 +272,11 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                 {isBatch && (
                   <div className="mt-2 text-[11px] font-black text-purple-600 bg-purple-50 px-3 py-1 rounded-full uppercase tracking-tighter italic border border-purple-100">
                     SCA BATCH OPTIMIZED
+                  </div>
+                )}
+                {isBridge && (
+                  <div className="mt-2 text-[11px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full uppercase tracking-tighter italic border border-blue-100">
+                    BRIDGE TRANSACTION
                   </div>
                 )}
               </div>

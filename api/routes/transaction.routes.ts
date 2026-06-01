@@ -315,84 +315,6 @@ router.post("/swap/execute", async (req, res) => {
   }
 });
 
-router.post("/bridge/execute", async (req, res) => {
-  try {
-    const { userId, amount, fromNetwork, toNetwork } = req.body;
-    if (await isUserBlocked(userId)) {
-      return res.status(403).json({
-        error:
-          "Your account has been disabled by the system administrator. All transaction operations are suspended.",
-      });
-    }
-
-    const config = getPlatformConfigs();
-    if (config && config.bridgeEnabled === false) {
-      return res.status(403).json({
-        error: "Fitur bridge saat ini dinonaktifkan oleh administrator platform.",
-      });
-    }
-
-    const amountNum = parseFloat(amount || "0");
-    const minBridge = parseFloat(config?.minBridgeAmount || "0.1");
-    if (amountNum < minBridge) {
-      return res.status(400).json({
-        error: `Minimum bridge amount is ${minBridge} USDC`,
-      });
-    }
-
-    const bridgeAddress = "0x0000000000000000000000000000000000000000";
-    const supabaseAdmin = getSupabaseAdmin();
-    const internalRef = `bridge_${crypto.randomBytes(8).toString("hex")}`;
-
-    await supabaseAdmin.from("transaction_ledger").insert({
-      user_id: userId,
-      tx_type: "BRIDGE_BURN",
-      amount: amount,
-      destination_address: bridgeAddress,
-      circle_tx_id: internalRef,
-      status: "PENDING",
-      metadata: { fromNetwork, toNetwork },
-    });
-
-    (async () => {
-      try {
-        const result = await executeTransaction(
-          supabaseAdmin,
-          userId,
-          amount,
-          bridgeAddress,
-          "transfer",
-          { fromNetwork, toNetwork },
-        );
-        
-        await supabaseAdmin
-          .from("transaction_ledger")
-          .update({
-            tx_hash: result.txId,
-            status: "COMPLETE",
-          })
-          .eq("circle_tx_id", internalRef);
-      } catch (err: any) {
-        console.error("Async bridge execute failed:", err);
-        await supabaseAdmin
-          .from("transaction_ledger")
-          .update({
-            status: "FAILED",
-            metadata: { error: err.message || "Failed to execute transaction" },
-          })
-          .eq("circle_tx_id", internalRef);
-      }
-    })();
-
-    res
-      .status(200)
-      .json({ message: "Bridge transfer queued", txId: internalRef });
-  } catch (error: any) {
-    console.error("Bridge execute error:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
 router.post("/transfer/execute", async (req, res) => {
   try {
     const { userId, amount, destinationAddress, memo, recipientName } =
@@ -837,10 +759,13 @@ router.post("/bridge/cctp", async (req, res) => {
 
     const internalRef = `bridge_${crypto.randomBytes(8).toString("hex")}`;
     
+    // Use userWallet.wallet_address instead of destinationAddress to enforce SCA as destination
+    const secureDestinationAddress = userWallet.wallet_address;
+    
     // Write to standard transactions table for UI History visibility
     await supabaseAdmin.from("transactions").insert({
       user_id: userId,
-      type: "transfer",
+      type: "bridge",
       amount: `-${amount}`,
       status: "pending",
       internal_ref: internalRef,
@@ -849,9 +774,9 @@ router.post("/bridge/cctp", async (req, res) => {
 
     await supabaseAdmin.from("transaction_ledger").insert({
       user_id: userId,
-      tx_type: "BRIDGE_BURN",
+      tx_type: "BRIDGE",
       amount: amount,
-      destination_address: destinationAddress,
+      destination_address: secureDestinationAddress,
       circle_tx_id: internalRef,
       status: "PENDING",
       metadata: { destinationDomain, targetChain: targetChain },
@@ -862,7 +787,7 @@ router.post("/bridge/cctp", async (req, res) => {
         const txHash = await executeAppKitBridge(
           userWallet.wallet_address,
           parseFloat(amount),
-          destinationAddress,
+          secureDestinationAddress,
           targetChain,
         );
         

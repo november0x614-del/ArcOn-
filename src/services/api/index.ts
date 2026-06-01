@@ -121,6 +121,11 @@ export const BackendClient = {
     destinationAddress: string,
     destinationDomain: number,
   ) {
+    if (amount <= 0) throw new Error("Invalid bridge amount");
+    if (!destinationAddress || !destinationAddress.startsWith("0x") || destinationAddress.length !== 42) {
+      throw new Error("Invalid destination address");
+    }
+
     const { registeredUser } = useStore.getState();
     if (!registeredUser?.supabaseUid) throw new Error("User not registered");
 
@@ -142,26 +147,21 @@ export const BackendClient = {
   },
 
   /**
-   * Bridges tokens between networks (General intent).
+   * Bridges tokens between networks (Unified intent).
    */
-  async bridgeToken(amount: number, fromNetwork: string, toNetwork: string) {
-    const { registeredUser } = useStore.getState();
-    if (!registeredUser?.supabaseUid) throw new Error("User not registered");
+  async bridgeToken(amount: number, destinationAddress: string, destinationDomain: number) {
+    return BackendClient.bridgeTokenCCTP(amount, destinationAddress, destinationDomain);
+  },
 
-    console.log(
-      `[Adapter] Initiating bridge: ${amount} from ${fromNetwork} to ${toNetwork}`,
-    );
-
+  /**
+   * Fetches user transactions.
+   */
+  async getTransactions(userId: string) {
     return apiRequest(
-      "/api/bridge/execute",
-      "POST",
-      {
-        userId: registeredUser.supabaseUid,
-        amount,
-        fromNetwork,
-        toNetwork,
-      },
-      "Bridge failed",
+      `/api/transactions/${userId}`,
+      "GET",
+      undefined,
+      "Failed to fetch transactions",
     );
   },
 

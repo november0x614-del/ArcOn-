@@ -64,7 +64,8 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
     "broadcasting" | "attesting" | "claiming"
   >("broadcasting");
   const [amount, setAmount] = useState("");
-  const [destinationAddress, setDestinationAddress] = useState("");
+  const [destinationAddress, setDestinationAddress] = useState(registeredUser?.walletAddress || "");
+  const [isAddressEditable, setIsAddressEditable] = useState(false);
   const fromNetwork = NETWORKS[0]; // Default From: Arc Default
   const [toNetwork, setToNetwork] = useState(NETWORKS[1]); // Default To: Ethereum
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -77,6 +78,8 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
   const hasEnoughBalance = numAmount > 0 && (numAmount + bridgeFee) <= balance;
   const isInvalid = !amount || numAmount <= 0 || !destinationAddress;
 
+  const [pendingTxId, setPendingTxId] = useState<string | null>(null);
+
   const handleBridge = async () => {
     if (isInvalid || !hasEnoughBalance) return;
     
@@ -84,52 +87,59 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
     setProcessingPhase("broadcasting");
 
     try {
+      let result;
       if (mode === "outbound") {
-        // Mock outbound bridging using Adapter CCTP
-        await BackendClient.bridgeTokenCCTP(
+        // Use the unified bridgeToken service
+        result = await BackendClient.bridgeToken(
           numAmount,
           destinationAddress,
           toNetwork.domain,
         );
-      } else {
-        // App-kit like inbound capability handling
-        // Abstracting the burn on source chain and attest claim
-        console.log(
-          `Simulating inbound bridge from ${fromNetwork.name} to Arc for ${numAmount} USDC`,
-        );
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
 
-        // Let's pretend the mock api inbound claim gives us success
-        const response = await fetch("/api/bridge/inbound/claim", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userId: registeredUser?.supabaseUid,
-            sourceTxHash: "0xMockHash" + Date.now(), // Abstracted hash
-            sourceChainRpc: "",
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error("Simulated SDK Claim failed");
-        }
+      const txId = result?.burnTxId;
+      if (txId) {
+        setPendingTxId(txId);
       }
 
       setProcessingPhase("attesting");
-      // Simulated wait for Circle Attestation seamless flow
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-
-      setProcessingPhase("claiming");
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      startSyncPolling();
-      setStep("success");
+      // UI-only phase transitions - the actual status tracking happens via polling
     } catch (error: any) {
       console.error("Bridge failed", error);
       displayToast(error.message || "Bridge execution failed");
       setStep("form");
     }
   };
+
+  // Polling Effect
+  React.useEffect(() => {
+    if (!pendingTxId) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const txs = await BackendClient.getTransactions(registeredUser?.supabaseUid!);
+        const currentTx = txs.find((t: any) => t.internal_ref === pendingTxId || t.circle_tx_id === pendingTxId);
+        
+        if (currentTx) {
+          if (currentTx.status === "COMPLETE" || currentTx.status === "success") {
+            setStep("success");
+            setPendingTxId(null);
+            clearInterval(interval);
+          } else if (currentTx.status === "FAILED" || currentTx.status === "failed") {
+            displayToast("Bridge failed on-chain.");
+            setStep("form");
+            setPendingTxId(null);
+            clearInterval(interval);
+          }
+        }
+      } catch (e) {
+        console.error("Polling error", e);
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [pendingTxId, registeredUser?.supabaseUid]);
+
 
   if (step === "processing") {
     const phases = ["broadcasting", "attesting", "claiming"];
@@ -343,31 +353,18 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
                 Destination Wallet
               </label>
               <button
-                onClick={async () => {
-                  try {
-                    const eth = (window as any).ethereum;
-                    if (eth) {
-                      const accounts = await eth.request({ method: 'eth_requestAccounts' });
-                      if (accounts && accounts[0]) {
-                        setDestinationAddress(accounts[0]);
-                      }
-                    } else {
-                      alert("Please install an external wallet like MetaMask");
-                    }
-                  } catch (e: any) {
-                    console.error(e);
-                  }
-                }}
+                onClick={() => setIsAddressEditable(!isAddressEditable)}
                 className="text-[10px] font-bold text-indigo-500 hover:text-indigo-600 bg-indigo-50 px-2 py-1.5 rounded-lg border-0 cursor-pointer flex items-center gap-1 transition-all"
               >
-                Connect External
+                {isAddressEditable ? "Lock to My Wallet" : "Edit Address"}
               </button>
             </div>
             <input
               value={destinationAddress}
               onChange={(e) => setDestinationAddress(e.target.value)}
+              disabled={!isAddressEditable}
               placeholder="0x..."
-              className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-[13px] font-mono font-medium text-slate-800 outline-none focus:border-slate-300 focus:bg-white transition-colors placeholder:text-slate-300"
+              className={`w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-[13px] font-mono font-medium text-slate-800 outline-none focus:border-slate-300 focus:bg-white transition-colors placeholder:text-slate-300 ${!isAddressEditable ? "cursor-not-allowed opacity-70" : ""}`}
             />
           </div>
         </div>
