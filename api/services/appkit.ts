@@ -42,7 +42,7 @@ const normalizeToken = (token: any) => {
 /**
  * Initializes the Server-Side App Kit using Developer Controlled Wallets.
  */
-export const getAppKit = () => {
+export const getAppKit = async () => {
   if (appKitInstance)
     return { appKit: appKitInstance, adapter: appKitAdapter! };
 
@@ -51,7 +51,8 @@ export const getAppKit = () => {
 
   const kitKey = getValidKitKey();
 
-  const walletSetId = process.env.CIRCLE_WALLET_SET_ID;
+  const { resolveWalletSetId } = await import("./circleClient");
+  const walletSetId = await resolveWalletSetId();
 
   if (!apiKey || !entitySecret || !kitKey || !walletSetId) {
     throw new Error(
@@ -84,7 +85,7 @@ export async function executeAppKitSend(
   amount: number,
   destinationAddress: string,
 ) {
-  const { appKit, adapter } = getAppKit();
+  const { appKit, adapter } = await getAppKit();
   const kitKey = getValidKitKey();
   
   const result = await appKit.send({
@@ -112,7 +113,7 @@ export async function executeAppKitBridge(
   destinationAddress: string,
   targetChain: any,
 ) {
-  const { appKit, adapter } = getAppKit();
+  const { appKit, adapter } = await getAppKit();
   const kitKey = getValidKitKey();
 
   const result = await appKit.bridge({
@@ -144,7 +145,7 @@ export async function executeAppKitSwap(
   fromToken: any,
   toToken: any,
 ) {
-  const { appKit, adapter } = getAppKit();
+  const { appKit, adapter } = await getAppKit();
   const kitKey = getValidKitKey();
 
   const result = await appKit.swap({

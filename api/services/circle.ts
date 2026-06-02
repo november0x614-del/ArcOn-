@@ -9,7 +9,7 @@ import {
 } from "./arcViem";
 import { encodeFunctionData, parseAbi } from "viem";
 import { logAuditEvent } from "./audit";
-import { getCircleClientInstance, circleApiFetch } from "./circleClient";
+import { getCircleClientInstance, circleApiFetch, resolveWalletSetId } from "./circleClient";
 import * as crypto from "crypto";
 
 import { getSupabaseAdmin } from "../config/supabase";
@@ -45,14 +45,12 @@ export async function getTokenDetails(tokenId: string) {
 export async function createWallet(supabaseAdmin: any, userId: string) {
   const client = getCircleClientInstance();
 
-  // 1. Get Wallet Set ID from Env
-  const walletSetId = process.env.CIRCLE_WALLET_SET_ID;
+  // 1. Get Wallet Set ID from Env or API
+  const walletSetId = await resolveWalletSetId();
 
   if (!walletSetId) {
     throw new Error(
-      "KETERGANTUNGAN_WALLET_SET_ID: Aplikasi tidak memiliki CIRCLE_WALLET_SET_ID di file (.env). " +
-      "Membuat Wallet Set secara dinamis di Vercel akan menyebabkan timeout. " +
-      "Silakan buat Wallet Set di konsol Circle dan masukkan ID-nya ke environment variables."
+      "KETERGANTUNGAN_WALLET_SET_ID: Gagal mendapatkan Wallet Set secara otomatis."
     );
   }
 
@@ -96,10 +94,10 @@ export async function batchCreateWallets(
   const client = getCircleClientInstance();
 
   // 1. Ensure we have a Wallet Set
-  const walletSetId = process.env.CIRCLE_WALLET_SET_ID;
+  const walletSetId = await resolveWalletSetId();
 
   if (!walletSetId) {
-    throw new Error("Batch creation requires a pre-defined CIRCLE_WALLET_SET_ID.");
+    throw new Error("Batch creation requires a Wallet Set ID.");
   }
 
   // 2. Prepare metadata (limit 200 as per Circle Docs)
