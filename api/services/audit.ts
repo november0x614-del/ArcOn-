@@ -1,4 +1,4 @@
-import { getSupabaseAdmin } from "../config/supabase";
+import { getSupabaseAdmin } from "../config/supabase.js";
 
 export async function logAuditEvent(
   userId: string,
