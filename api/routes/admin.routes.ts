@@ -159,9 +159,13 @@ export function getPlatformConfigs() {
 }
 
 router.get("/config", async (_req, res) => {
-  // Ensure we are synced (or we could just fetch from DB directly here for 100% certainty)
+  // Sync from DB to prevent stale cache in serverless environments
+  await syncConfigsFromDB();
   res.json(platformConfigs);
 });
+
+// Protect all subsequent endpoints
+router.use(authenticateAdmin);
 
 router.post("/config", async (req, res) => {
   try {
@@ -526,8 +530,6 @@ router.get("/stats", async (_req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
-router.use(authenticateAdmin);
 
 router.get("/transactions", async (req, res) => {
   try {

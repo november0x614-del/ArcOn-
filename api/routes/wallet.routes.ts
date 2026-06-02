@@ -49,23 +49,26 @@ router.get("/wallets/resolve/:address", async (req, res) => {
 
 router.post("/wallets/create", async (req, res) => {
   try {
-    const { userId } = req.body;
-    console.log("Checking if wallet exists...");
+    console.log("[CreateWallet] Started execution. Body:", req.body ? "present" : "undefined");
+    const userId = req.body?.userId;
+    console.log("[CreateWallet] userId parsed:", userId);
 
     if (userId && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.log("[CreateWallet] Checking Supabase for existing wallet...");
       const { data: existingWallet, error: fetchError } =
         await getSupabaseAdmin()
           .from("user_wallets")
           .select("*")
           .eq("id", userId)
           .single();
+      console.log("[CreateWallet] Supabase query complete.");
 
       if (fetchError && fetchError.code !== "PGRST116") {
         console.error("Supabase fetch error:", fetchError);
       }
 
       if (existingWallet) {
-        console.log(`Wallet already exists: ${existingWallet.wallet_address}`);
+        console.log(`[CreateWallet] Wallet already exists: ${existingWallet.wallet_address}`);
         return res.json({
           walletId: existingWallet.wallet_id,
           address: existingWallet.wallet_address,
@@ -74,12 +77,12 @@ router.post("/wallets/create", async (req, res) => {
       }
     }
 
-    console.log("Creating new wallet for Arc Testnet...");
+    console.log("[CreateWallet] Creating new wallet for Arc Testnet...");
     const result = await createWallet(getSupabaseAdmin(), userId);
-    console.log(`Wallet created successfully: ${result.address}`);
+    console.log(`[CreateWallet] Wallet created successfully: ${result.address}`);
     res.json(result);
   } catch (error: any) {
-    console.error("Circle API Error detail:", error);
+    console.error("[CreateWallet] Fatal API Error detail:", error);
     res.status(500).json({
       error: error.message || "Failed to create wallet",
       details: error.response?.data || null,

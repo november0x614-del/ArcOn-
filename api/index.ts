@@ -11,14 +11,6 @@ import ecommerceRoutes from "./routes/ecommerce.routes";
 // Re-export core services for server/other files that reference index
 export { getSupabaseAdmin, isUserBlocked };
 
-process.on("uncaughtException", (err) => {
-  console.error("Unhandled Exception:", err);
-});
-
-process.on("unhandledRejection", (reason, promise) => {
-  console.error("Unhandled Rejection at:", promise, "reason:", reason);
-});
-
 const app = express();
 app.set("trust proxy", 1); // Enable if you're behind a reverse proxy (Heroku, AWS, Nginx, or Google Cloud Run)
 
