@@ -1,10 +1,10 @@
-import { AppKit, BridgeChain } from "@circle-fin/app-kit";
-import {
-  createCircleWalletsAdapter,
-  CircleWalletsAdapter,
-} from "@circle-fin/adapter-circle-wallets";
+import appKitModule from "@circle-fin/app-kit";
+const { AppKit } = appKitModule;
+import circleWalletsAdapterModule from "@circle-fin/adapter-circle-wallets";
+const { createCircleWalletsAdapter } = circleWalletsAdapterModule;
+type CircleWalletsAdapter = any; // type only
 
-let appKitInstance: AppKit | null = null;
+let appKitInstance: any = null;
 let appKitAdapter: CircleWalletsAdapter | null = null;
 
 const getValidKitKey = () => {
