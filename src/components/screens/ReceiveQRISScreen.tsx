@@ -1,14 +1,21 @@
 import React, { useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { useApp } from "../../contexts/AppContext";
+import { useStore } from "../../store/useStore";
 
 interface ReceiveQRISScreenProps {
   onBack: () => void;
 }
 
 export function ReceiveQRISScreen({ onBack }: ReceiveQRISScreenProps) {
-  const { registeredUser, displayToast, fetchBalance, fetchTransactions } =
-    useApp();
+  const { fetchBalance, fetchTransactions } = useApp();
+  const { registeredUser, displayToast, activeAccountType } = useStore();
+  
+  const themeClasses = React.useMemo(() => ({
+    container: activeAccountType === "unified" ? "bg-[#f0f9f8]" : "bg-[#ecf5fc]",
+    header: activeAccountType === "unified" ? "bg-teal-900" : "bg-slate-900",
+  }), [activeAccountType]);
+
   const userName = registeredUser?.username || "Arc User";
   const [isSimulating, setIsSimulating] = useState(false);
 
@@ -41,8 +48,8 @@ export function ReceiveQRISScreen({ onBack }: ReceiveQRISScreenProps) {
   };
 
   return (
-    <div className="absolute inset-0 z-[60] bg-[#ecf5fc] flex flex-col animate-in slide-in-from-right duration-300">
-      <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between">
+    <div className={`absolute inset-0 z-[60] ${themeClasses.container} flex flex-col animate-in slide-in-from-right duration-300`}>
+      <div className={`flex items-center px-4 pt-6 pb-3 ${themeClasses.header} shadow-md relative z-10 w-full justify-between`}>
         <div className="flex items-center">
           <button
             onClick={onBack}

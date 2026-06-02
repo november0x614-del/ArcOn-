@@ -1,5 +1,6 @@
 import React from "react";
 import { ArrowUpToLine, ArrowLeft } from "lucide-react";
+import { useStore } from "../../store/useStore";
 
 interface DepositOptionsScreenProps {
   onBack: () => void;
@@ -14,13 +15,19 @@ export function DepositOptionsScreen({
   onSelectWithdraw,
   platformConfig,
 }: DepositOptionsScreenProps) {
+  const { activeAccountType } = useStore();
+  const themeClasses = React.useMemo(() => ({
+    container: activeAccountType === "unified" ? "bg-[#f0f9f8]" : "bg-[#ecf5fc]",
+    header: activeAccountType === "unified" ? "bg-teal-900" : "bg-slate-900",
+  }), [activeAccountType]);
+
   const isWithdrawEnabled =
     !platformConfig || platformConfig.withdrawEnabled !== false;
 
   return (
-    <div className="absolute inset-0 z-[60] bg-[#ecf5fc] flex flex-col animate-in slide-in-from-bottom duration-300">
+    <div className={`absolute inset-0 z-[60] ${themeClasses.container} flex flex-col animate-in slide-in-from-bottom duration-300`}>
       {/* Header */}
-      <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between">
+      <div className={`flex items-center px-4 pt-6 pb-3 ${themeClasses.header} shadow-md relative z-10 w-full justify-between`}>
         <div className="flex items-center">
           <button
             onClick={onBack}

@@ -11,6 +11,7 @@ import {
   keccak256,
   type Address,
 } from "viem";
+import { sepolia } from "viem/chains"; // Import standard Sepolia chain
 import { getSupabaseAdmin } from "../config/supabase";
 
 /**
@@ -39,6 +40,14 @@ export const publicClient = createPublicClient({
     retryCount: 3,
     retryDelay: 1000,
   }),
+});
+
+/**
+ * Public Client for reading from Sepolia Network
+ */
+export const sepoliaPublicClient = createPublicClient({
+  chain: sepolia,
+  transport: http(), // Uses default RPC
 });
 
 // CCTP Constants for Arc Testnet

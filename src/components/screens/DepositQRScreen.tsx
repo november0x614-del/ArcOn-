@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { ArrowLeft, Copy, Check, Info } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useApp } from "../../contexts/AppContext";
+import { useStore } from "../../store/useStore";
 
 interface DepositQRScreenProps {
   onBack: () => void;
@@ -9,6 +10,12 @@ interface DepositQRScreenProps {
 
 export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
   const { registeredUser } = useApp();
+  const { activeAccountType } = useStore();
+  const themeClasses = React.useMemo(() => ({
+    container: activeAccountType === "unified" ? "bg-[#f0f9f8]" : "bg-[#ecf5fc]",
+    header: activeAccountType === "unified" ? "bg-teal-900" : "bg-slate-900",
+  }), [activeAccountType]);
+
   const [copied, setCopied] = useState(false);
   const [amount, setAmount] = useState<string>("");
   const [isEditingAmount, setIsEditingAmount] = useState(false);
@@ -22,9 +29,9 @@ export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
   };
 
   return (
-    <div className="w-full h-full bg-[#ecf5fc] relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
+    <div className={`w-full h-full ${themeClasses.container} relative flex flex-col z-50 animate-in slide-in-from-right duration-300`}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full">
+      <div className={`flex items-center justify-between px-4 pt-6 pb-3 ${themeClasses.header} shadow-md relative z-10 w-full`}>
         <div className="flex items-center">
           <button
             onClick={onBack}

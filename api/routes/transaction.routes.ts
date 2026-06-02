@@ -19,6 +19,7 @@ import {
   executeAppKitBridge,
   executeAppKitSend,
 } from "../services/appkit";
+import { mintNftService } from "../services/nft.service";
 import { BridgeChain } from "@circle-fin/app-kit";
 
 const router = express.Router();
@@ -889,6 +890,11 @@ router.post("/bridge/inbound/claim", async (req, res) => {
 router.post("/nft/mint", async (req, res) => {
   try {
     const { userId, walletAddress, name, description, image } = req.body;
+
+    if (!userId || !walletAddress || !name || !description || !image) {
+      return res.status(400).json({ error: "Missing required fields for NFT minting." });
+    }
+
     if (await isUserBlocked(userId)) {
       return res.status(403).json({
         error: "Your account has been disabled. Transaction suspended.",
@@ -896,78 +902,24 @@ router.post("/nft/mint", async (req, res) => {
     }
 
     const supabaseAdmin = getSupabaseAdmin();
-    const { data: adminWallet } = await supabaseAdmin
-      .from("user_wallets")
-      .select("wallet_id, wallet_address")
-      .eq("id", "00000000-0000-0000-0000-000000000000")
-      .single();
+    const nftContractAddress = process.env.NFT_CONTRACT_ADDRESS;
 
-    if (!adminWallet || !adminWallet.wallet_id) {
-      return res.status(500).json({ 
-        error: "Platform Admin Minter Wallet (00000000-0000-0000-0000-000000000000) belum dikonfigurasi di user_wallets." 
-      });
+    if (!nftContractAddress) {
+      throw new Error("NFT_CONTRACT_ADDRESS is not configured in the environment.");
     }
 
-    const nftContractAddress = process.env.NFT_CONTRACT_ADDRESS || "0x582531CBA2D68a9F0F4E83b38466e3bfCDbaab51";
-    const formattedTokenUri = `ipfs://QmZX${crypto.randomBytes(16).toString("hex")}`;
-    const idempotencyKey = crypto.randomUUID();
-
-    console.log(`[NFT Mint] Initiating ERC-721 mintTo on contract ${nftContractAddress} for user ${walletAddress}`);
-    
-    const client = getCircleClientInstance();
-    const response = await client.createContractExecutionTransaction({
-      idempotencyKey,
-      walletId: adminWallet.wallet_id,
-      abiFunctionSignature: "mintTo(address,string)",
-      abiParameters: [
-        walletAddress,
-        formattedTokenUri
-      ],
-      contractAddress: nftContractAddress,
-      fee: { type: "level", config: { feeLevel: "MEDIUM" } }
-    });
-
-    const responseData = response.data as any;
-    const circleTxId = responseData?.id;
-    const txHash = responseData?.transaction?.txHash || "0x" + crypto.randomBytes(32).toString("hex");
-
-    await supabaseAdmin.from("transactions").insert({
-      user_id: userId,
-      amount: "0",
-      type: "mint_nft",
-      status: "success",
-      internal_ref: circleTxId || `mock_mint_${crypto.randomBytes(8).toString("hex")}`,
-      tx_hash: txHash,
-      metadata: {
-        description: `Mint NFT: ${name}`,
-        name,
-        descriptionText: description,
-        image,
-        real: true,
-        nftContractAddress,
-        tokenUri: formattedTokenUri
-      }
-    });
-
-    await supabaseAdmin.from("transaction_ledger").insert({
-      user_id: userId,
-      tx_type: "MINT_NFT",
-      amount: "0",
-      destination_address: nftContractAddress,
-      circle_tx_id: circleTxId || `mock_mint_${crypto.randomBytes(8).toString("hex")}`,
-      tx_hash: txHash,
-      status: "COMPLETE",
-      metadata: {
-        name,
-        description,
-        tokenUri: formattedTokenUri
-      }
-    });
+    const { circleTxId } = await mintNftService(
+      userId,
+      walletAddress,
+      name,
+      description,
+      image,
+      nftContractAddress
+    );
 
     res.status(200).json({ 
       success: true, 
-      txId: circleTxId || txHash, 
-      txHash: txHash 
+      txId: circleTxId
     });
 
   } catch (error: any) {

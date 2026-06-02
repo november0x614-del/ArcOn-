@@ -51,7 +51,13 @@ const NETWORKS = [
 ];
 
 export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
-  const { balance, displayToast, registeredUser, startSyncPolling, platformConfig } = useApp();
+  const { balance, displayToast, registeredUser, startSyncPolling, platformConfig, activeAccountType } = useApp();
+  const themeClasses = React.useMemo(() => ({
+    container: activeAccountType === "unified" ? "bg-[#f0f9f8]" : "bg-[#ecf5fc]",
+    header: activeAccountType === "unified" ? "bg-teal-900" : "bg-slate-900",
+    button: activeAccountType === "unified" ? "bg-teal-600 hover:bg-teal-700 shadow-teal-500/20" : "bg-slate-900 hover:bg-slate-800 shadow-slate-900/20",
+  }), [activeAccountType]);
+
   const [step, setStep] = useState<"form" | "processing" | "success">("form");
   const mode = "outbound"; // Forced to outbound for now
 
@@ -146,9 +152,9 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
     const currentPhaseIndex = phases.indexOf(processingPhase);
 
     return (
-      <div className="absolute inset-0 bg-[#ecf5fc] z-[70] flex flex-col p-6 animate-in fade-in duration-300">
+      <div className={`absolute inset-0 ${themeClasses.container} z-[70] flex flex-col p-6 animate-in fade-in duration-300`}>
         <div className="flex-1 flex flex-col items-center justify-center pt-10">
-          <h3 className="text-[22px] font-black text-slate-900 mb-2 text-center">
+          <h3 className="text-[22px] font-black text-slate-900 mb-2 text-center uppercase tracking-tight">
             Transmitting to {toNetwork.name}
           </h3>
           <p className="text-slate-500 text-[14px] text-center max-w-[280px] mb-12">
@@ -183,11 +189,11 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
                 <div key={p.id} className="flex gap-4 relative">
                   {idx !== 2 && (
                     <div
-                      className={`absolute left-4 top-8 bottom-[-24px] w-[2px] rounded-full transition-colors ${isDone ? "bg-slate-800" : "bg-slate-100"}`}
+                      className={`absolute left-4 top-8 bottom-[-24px] w-[2px] rounded-full transition-colors ${isDone ? (activeAccountType === "unified" ? "bg-teal-600" : "bg-slate-800") : "bg-slate-100"}`}
                     />
                   )}
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 z-10 transition-colors ${isDone ? "bg-slate-800 text-white" : isActive ? "bg-white border-2 border-slate-800 text-slate-800" : "bg-slate-100 text-slate-400"}`}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 z-10 transition-colors ${isDone ? (activeAccountType === "unified" ? "bg-teal-600 text-white" : "bg-slate-800 text-white") : isActive ? (activeAccountType === "unified" ? "bg-white border-2 border-teal-600 text-teal-600" : "bg-white border-2 border-slate-800 text-slate-800") : "bg-slate-100 text-slate-400"}`}
                   >
                     {isDone ? (
                       <CheckCircle2 size={16} />
@@ -231,11 +237,11 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
 
   if (step === "success") {
     return (
-      <div className="absolute inset-0 bg-[#ecf5fc] z-[70] flex flex-col items-center justify-center p-8 text-center animate-in zoom-in-95 duration-300">
+      <div className={`absolute inset-0 ${themeClasses.container} z-[70] flex flex-col items-center justify-center p-8 text-center animate-in zoom-in-95 duration-300`}>
         <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 mb-6 shadow-sm shadow-emerald-100">
           <CheckCircle2 size={40} />
         </div>
-        <h3 className="text-[24px] font-black text-slate-900 mb-2 tracking-tight">
+        <h3 className="text-[24px] font-black text-slate-900 mb-2 tracking-tight uppercase">
           Success!
         </h3>
         <p className="text-slate-500 text-[15px] mb-8 leading-relaxed">
@@ -243,10 +249,10 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
             ? `Your bridge of ${parseFloat(amount).toFixed(2)} USDC from Arc to ${toNetwork.name} has been initiated.`
             : `Your inbound deposit from ${fromNetwork.name} has been successfully claimed on Arc.`}
         </p>
-        <div className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-8 text-left">
+        <div className="w-full bg-white border border-slate-100 rounded-2xl p-4 mb-8 text-left shadow-sm">
           <div className="flex justify-between items-center mb-2">
             <span className="text-[12px] font-bold text-slate-400">Status</span>
-            <span className="text-[12px] font-bold text-emerald-600">
+            <span className="text-[12px] font-bold text-emerald-600 uppercase">
               Completed
             </span>
           </div>
@@ -254,7 +260,7 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
             <span className="text-[12px] font-bold text-slate-400">
               Network
             </span>
-            <span className="text-[12px] font-bold text-slate-800">
+            <span className="text-[12px] font-bold text-slate-800 uppercase">
               Arc Testnet
             </span>
           </div>
@@ -265,7 +271,7 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
             setDestinationAddress("");
             setStep("form");
           }}
-          className="w-full bg-slate-900 text-white py-4.5 rounded-2xl font-black text-[16px] shadow-xl hover:shadow-2xl transition-all active:scale-[0.98] cursor-pointer border-0"
+          className={`w-full ${themeClasses.button} text-white py-4.5 rounded-2xl font-black text-[16px] shadow-xl hover:shadow-2xl transition-all active:scale-[0.98] cursor-pointer border-0 uppercase tracking-widest`}
         >
           Return to Bridge
         </button>
@@ -274,9 +280,9 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
   }
 
   return (
-    <div className="absolute inset-0 z-[70] bg-[#ecf5fc] flex flex-col animate-in slide-in-from-right duration-300">
+    <div className={`absolute inset-0 z-[70] ${themeClasses.container} flex flex-col animate-in slide-in-from-right duration-300`}>
       {/* Header */}
-      <div className="flex justify-center bg-slate-900 shadow-md relative z-10 shrink-0 w-full">
+      <div className={`flex justify-center ${themeClasses.header} shadow-md relative z-10 shrink-0 w-full`}>
         <div className="flex items-center justify-between px-4 pt-6 pb-3 w-full max-w-[500px]">
           <div className="flex items-center">
             <button
@@ -285,7 +291,7 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
             >
               <ArrowLeft size={20} className="text-white" />
             </button>
-            <h3 className="font-bold text-[16px] tracking-tight text-white ml-2">
+            <h3 className="font-bold text-[16px] tracking-tight text-white ml-2 uppercase">
               CCTP BRIDGE
             </h3>
           </div>
@@ -480,7 +486,7 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
                   ? "bg-slate-100 text-slate-400 cursor-not-allowed"
                   : !hasEnoughBalance
                     ? "bg-red-50 text-red-500 border border-red-100 cursor-not-allowed"
-                    : "bg-slate-900 text-white shadow-[0_8px_20px_-8px_rgba(15,23,42,0.4)] hover:bg-slate-800"
+                    : `${themeClasses.button} text-white shadow-xl`
               }
             `}
           >
@@ -552,7 +558,7 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
                 setShowConfirmModal(false);
                 handleBridge();
               }}
-              className="w-full bg-slate-900 hover:bg-slate-800 text-white py-[18px] rounded-full flex justify-between px-6 items-center transition-all shadow-xl active:scale-[0.98] border-0 cursor-pointer mb-6"
+              className={`w-full ${themeClasses.button} text-white py-[18px] rounded-full flex justify-between px-6 items-center transition-all shadow-xl active:scale-[0.98] border-0 cursor-pointer mb-6`}
             >
               <div className="flex items-center gap-3">
                 <span className="font-black text-[16px]">Confirm & Bridge</span>
@@ -669,7 +675,7 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
                     setStep("processing");
                     setProcessingPhase("attesting");
                   }}
-                  className="w-full bg-slate-900 text-white rounded-xl py-3 font-bold text-[14px] border-0 cursor-pointer"
+                  className={`w-full ${themeClasses.button} text-white rounded-xl py-3 font-bold text-[14px] border-0 cursor-pointer shadow-md`}
                 >
                   Resume Transaction
                 </button>

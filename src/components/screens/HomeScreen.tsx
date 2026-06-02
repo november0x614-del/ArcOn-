@@ -10,6 +10,7 @@ import { StockRow } from "../common/StockRow";
 import { ProductCard } from "../common/ProductCard";
 import { NavItem } from "../common/NavItem";
 import { WalletCard } from "../common/WalletCard";
+import { UnifiedWalletCard } from "../common/UnifiedWalletCard";
 import {
   LogOut,
   Mail,
@@ -66,6 +67,8 @@ export const HomeScreen = React.memo(
       stopSyncPolling,
       isSyncing,
       lastSyncTime,
+      activeAccountType,
+      setActiveAccountType
     } = useStore(
       useShallow((state) => ({
         transactions: state.transactions,
@@ -79,6 +82,8 @@ export const HomeScreen = React.memo(
         stopSyncPolling: state.stopSyncPolling,
         isSyncing: state.isSyncing,
         lastSyncTime: state.lastSyncTime,
+        activeAccountType: state.activeAccountType,
+        setActiveAccountType: state.setActiveAccountType
       })),
     );
 
@@ -302,10 +307,18 @@ export const HomeScreen = React.memo(
       }
     }, [activeTabs, activeRekeningTab]);
 
+    const themeClasses = React.useMemo(() => ({
+      container: activeAccountType === "unified" ? "bg-[#f0f9f8]" : "bg-[#ecf5fc]",
+      header: activeAccountType === "unified" ? "bg-teal-900" : "bg-slate-900",
+      payButton: activeAccountType === "unified" ? "bg-teal-600 shadow-teal-500/25" : "bg-slate-900 shadow-slate-900/25",
+      primaryButton: activeAccountType === "unified" ? "bg-teal-600" : "bg-slate-900",
+      tabIndicator: activeAccountType === "unified" ? "bg-teal-900" : "bg-slate-900"
+    }), [activeAccountType]);
+
     return (
-      <div className="flex flex-col h-full bg-[#ecf5fc] font-sans relative overflow-hidden">
+      <div className={`flex flex-col h-full ${themeClasses.container} font-sans relative overflow-hidden`}>
         {/* Background shape that covers the top half */}
-        <div className="absolute top-0 left-0 right-0 h-[40vh] md:h-[450px] bg-slate-900 rounded-b-[40px] md:rounded-b-[50px] z-0"></div>
+        <div className={`absolute top-0 left-0 right-0 h-[40vh] md:h-[450px] ${themeClasses.header} rounded-b-[40px] md:rounded-b-[50px] z-0`}></div>
 
         {/* Top Header */}
         <header className="relative text-white px-5 md:px-8 lg:px-10 pt-4 md:pt-8 pb-3 flex justify-between items-center z-20 shrink-0">
@@ -400,7 +413,7 @@ export const HomeScreen = React.memo(
                       {activeRekeningTab === i && (
                         <motion.div
                           layoutId="activeTabIndicator"
-                          className="absolute bottom-[-1px] left-0 right-0 h-[3px] bg-slate-900 rounded-t-full z-10"
+                          className={`absolute bottom-[-1px] left-0 right-0 h-[3px] ${themeClasses.tabIndicator} rounded-t-full z-10`}
                           transition={{
                             type: "spring",
                             stiffness: 500,
@@ -414,11 +427,93 @@ export const HomeScreen = React.memo(
 
                 <AnimatePresence mode="wait">
                   {activeTabs[activeRekeningTab]?.name === "My Wallet" && (
-                    /* My Wallet Card (Visual Look) */
-                    <WalletCard
-                      userName={userName}
-                      onNavigate={() => onNavigate("accountDetail")}
-                    />
+                    <div className="flex flex-col gap-3">
+                      {activeAccountType === "native" ? (
+                        <>
+                          <WalletCard
+                            userName={userName}
+                            onNavigate={() => onNavigate("accountDetail")}
+                          />
+                          <div className="mt-1 px-1">
+                            <button
+                              onClick={() => setOtherAccountsExpanded(!otherAccountsExpanded)}
+                              className="w-full text-center text-slate-700 hover:text-slate-900 text-[12.5px] font-bold py-2 hover:bg-slate-50/80 rounded-xl transition-all active:scale-[0.98] flex justify-center items-center gap-2 border-[1.5px] border-slate-100 bg-white shadow-sm mt-2 cursor-pointer"
+                            >
+                              <span>Other Personal Savings & Checking</span>
+                              {otherAccountsExpanded ? (
+                                <ChevronUpIcon size={14} className="text-slate-500 transition-transform duration-300" />
+                              ) : (
+                                <ChevronDownIcon size={14} className="text-slate-500 transition-transform duration-300" />
+                              )}
+                            </button>
+
+                            <AnimatePresence>
+                              {otherAccountsExpanded && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: "auto", opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  transition={{ duration: 0.25, ease: "easeInOut" }}
+                                  className="overflow-hidden"
+                                >
+                                  <div className="pt-3 pb-1 flex flex-col gap-2 animate-in fade-in duration-300">
+                                    <UnifiedWalletCard
+                                      userName={userName}
+                                      onNavigate={() => {
+                                        setActiveAccountType("unified");
+                                        setOtherAccountsExpanded(false);
+                                      }}
+                                    />
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <UnifiedWalletCard
+                            userName={userName}
+                            onNavigate={() => onNavigate("unifiedBalance")}
+                          />
+                          <div className="mt-1 px-1">
+                            <button
+                              onClick={() => setOtherAccountsExpanded(!otherAccountsExpanded)}
+                              className="w-full text-center text-slate-700 hover:text-slate-900 text-[12.5px] font-bold py-2 hover:bg-slate-50/80 rounded-xl transition-all active:scale-[0.98] flex justify-center items-center gap-2 border-[1.5px] border-slate-100 bg-white shadow-sm mt-2 cursor-pointer"
+                            >
+                              <span>Other Personal Savings & Checking</span>
+                              {otherAccountsExpanded ? (
+                                <ChevronUpIcon size={14} className="text-slate-500 transition-transform duration-300" />
+                              ) : (
+                                <ChevronDownIcon size={14} className="text-slate-500 transition-transform duration-300" />
+                              )}
+                            </button>
+
+                            <AnimatePresence>
+                              {otherAccountsExpanded && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: "auto", opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  transition={{ duration: 0.25, ease: "easeInOut" }}
+                                  className="overflow-hidden"
+                                >
+                                  <div className="pt-3 pb-1 flex flex-col gap-2 animate-in fade-in duration-300">
+                                    <WalletCard
+                                      userName={userName}
+                                      onNavigate={() => {
+                                        setActiveAccountType("native");
+                                        setOtherAccountsExpanded(false);
+                                      }}
+                                    />
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   )}
 
                   {activeTabs[activeRekeningTab]?.name === "E-commerce" && (
@@ -455,105 +550,7 @@ export const HomeScreen = React.memo(
                     </motion.div>
                   )}
 
-                  {/* Real Recent Orders Section */}
-                  {activeTabs[activeRekeningTab]?.name === "My Wallet" &&
-                    transactions.filter((t) => t.type === "payment").length >
-                      0 && (
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="mt-2 mx-4 lg:mx-0 flex flex-col gap-3"
-                      >
-                        <div className="flex justify-between items-center px-1">
-                          <h3 className="text-[14px] font-bold text-slate-800">
-                            Recent Marketplace Orders
-                          </h3>
-                          <button
-                            onClick={() => onNavigate("transactionHistory")}
-                            className="text-[11px] font-bold text-blue-600"
-                          >
-                            See All
-                          </button>
-                        </div>
-                        <div className="bg-white rounded-2xl p-4 border border-slate-100 space-y-3">
-                          {transactions
-                            .filter((t) => t.type === "payment")
-                            .slice(0, 2)
-                            .map((tx) => (
-                              <div
-                                key={tx.id}
-                                className="flex justify-between items-center py-1 border-b border-slate-50 last:border-0 pb-3 last:pb-0"
-                              >
-                                <div className="flex items-center gap-3">
-                                  <div className="w-9 h-9 bg-slate-100 rounded-lg flex items-center justify-center text-slate-800">
-                                    <ShoppingBag size={18} />
-                                  </div>
-                                  <div className="text-left">
-                                    <p className="text-[13px] font-bold text-slate-900">
-                                      {tx.metadata?.recipientName || "Order"}
-                                    </p>
-                                    <p className="text-[10px] text-slate-500">
-                                      {tx.timestamp}
-                                    </p>
-                                  </div>
-                                </div>
-                                <span className="text-[13px] font-mono font-black text-slate-900">
-                                  {tx.amount} USDC
-                                </span>
-                              </div>
-                            ))}
-                        </div>
-                      </motion.div>
-                    )}
-                </AnimatePresence>
-
-                <div className="mt-1 px-1">
-                  <button
-                    onClick={() => setOtherAccountsExpanded(!otherAccountsExpanded)}
-                    className="w-full text-center text-slate-700 hover:text-slate-900 text-[12.5px] font-bold py-2 hover:bg-slate-50/80 rounded-xl transition-all active:scale-[0.98] flex justify-center items-center gap-2 border-[1.5px] border-slate-100 bg-white shadow-sm mt-2 cursor-pointer"
-                  >
-                    <span>Other Personal Savings & Checking</span>
-                    {otherAccountsExpanded ? (
-                      <ChevronUpIcon size={14} className="text-slate-500 transition-transform duration-300" />
-                    ) : (
-                      <ChevronDownIcon size={14} className="text-slate-500 transition-transform duration-300" />
-                    )}
-                  </button>
-
-                  <AnimatePresence>
-                    {otherAccountsExpanded && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.25, ease: "easeInOut" }}
-                        className="overflow-hidden"
-                      >
-                        <div className="pt-3 pb-1 flex flex-col gap-2 animate-in fade-in duration-300">
-                          <div
-                            onClick={() => displayToast("In Development")}
-                            className="bg-white border-[1.5px] border-dashed border-slate-200 hover:border-slate-300 hover:bg-slate-50/50 rounded-2xl p-4 flex items-center justify-between transition-all cursor-pointer group active:scale-[0.99] shadow-sm"
-                          >
-                            <div className="flex items-center gap-3 text-left">
-                              <div className="w-10 h-10 rounded-xl bg-slate-50 group-hover:bg-slate-100 flex items-center justify-center text-slate-500 group-hover:text-slate-800 border-[1.5px] border-slate-100 transition-colors shrink-0">
-                                <Plus size={18} strokeWidth={2.5} />
-                              </div>
-                              <div className="flex flex-col">
-                                <span className="font-bold text-slate-800 text-[13.5px] tracking-tight">Connect New Account</span>
-                                <span className="text-[10px] text-slate-400 mt-0.5">Link an external wallet or savings account</span>
-                              </div>
-                            </div>
-                            <div className="text-right shrink-0">
-                              <span className="text-[10px] font-extrabold text-slate-700 bg-slate-50 border border-slate-100 px-2 py-0.5 rounded-md tracking-wider uppercase">
-                                ADD
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
                   </AnimatePresence>
-                </div>
               </section>
 
               {/* Favorite Transactions Section */}
@@ -573,7 +570,7 @@ export const HomeScreen = React.memo(
                 <div className="grid grid-cols-4 gap-y-5 gap-x-2">
                   {filteredShortcuts
                     .filter((item) => item.label !== "DApp Browser")
-                    .map((item) => {
+                    .map((item, idx) => {
                       let mappedView = "";
                       if (
                         item.label === "Transfer USDC On-chain" ||
@@ -601,6 +598,7 @@ export const HomeScreen = React.memo(
                       if (item.label === "Withdraw") mappedView = "withdraw";
                       if (item.label === "ATM") mappedView = "bridge";
                       if (item.label === "Mint NFT") mappedView = "mintNFT";
+                      if (item.label === "Unified Balance") mappedView = "unifiedBalance";
                       if (item.label === "Security & Limits")
                         mappedView = "settings";
                       if (item.label === "Transaction History")
@@ -608,7 +606,7 @@ export const HomeScreen = React.memo(
 
                       return (
                         <MenuIcon
-                          key={item.id}
+                          key={item.id || `shortcut-${idx}`}
                           icon={item.icon}
                           label={item.label}
                           color={item.color}
@@ -1069,7 +1067,7 @@ export const HomeScreen = React.memo(
                 className="relative group cursor-pointer flex flex-col items-center justify-center active:scale-[0.98] transition-all duration-300"
                 onClick={() => onNavigate("scanQR")}
               >
-                <div className="relative w-[56px] h-[56px] bg-slate-900 rounded-full flex flex-col items-center justify-center text-white shadow-[0_8px_24px_rgba(15,23,42,0.25)] transform transition-transform duration-300 group-hover:-translate-y-1 border-2 border-white/10">
+                <div className={`relative w-[56px] h-[56px] ${themeClasses.payButton} rounded-full flex flex-col items-center justify-center text-white transform transition-transform duration-300 group-hover:-translate-y-1 border-2 border-white/10`}>
                   <Scan size={26} strokeWidth={2.2} />
                   <span className="text-[9px] font-bold mt-0.5 tracking-tight uppercase">
                     Pay

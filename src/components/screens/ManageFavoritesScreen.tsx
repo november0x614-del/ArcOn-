@@ -54,6 +54,12 @@ export const defaultAvailableShortcuts: ShortcutItem[] = [
     label: "Withdraw",
     color: "text-red-500",
   },
+  {
+    id: "unified",
+    icon: "Wallet",
+    label: "Unified Balance",
+    color: "text-blue-600",
+  },
 ];
 
 export function ManageFavoritesScreen({

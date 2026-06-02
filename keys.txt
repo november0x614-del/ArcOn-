@@ -1,0 +1,77 @@
+src/components/admin/OverviewTab.tsx:132:                      key={`cell-${index}`}
+src/components/admin/EcommerceAdminTab.tsx:103:                  <tr key={item.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/80 transition-colors">
+src/components/admin/ComplianceTab.tsx:279:                      key={item.id}
+src/components/admin/ConfigTab.tsx:386:              key={item.field}
+src/components/admin/ConfigTab.tsx:439:              key={item.field}
+src/components/admin/ConfigTab.tsx:652:              key={item.field}
+src/components/admin/UsersTab.tsx:100:                    key={u.id}
+src/components/admin/TreasuryTab.tsx:72:                key={tx.id}
+src/components/admin/TreasuryTab.tsx:158:                key={tx.id || idx}
+src/components/admin/OtcReconciliationTab.tsx:32:                key={tx.id}
+src/components/screens/SwapScreen.tsx:492:                  key={val}
+src/components/screens/SwapScreen.tsx:719:                    key={token.symbol}
+src/components/screens/AmountInputScreen.tsx:453:                  key={src.id}
+src/components/screens/EcommerceScreen.tsx:367:            key="list"
+src/components/screens/EcommerceScreen.tsx:526:                          key={p.id} 
+src/components/screens/EcommerceScreen.tsx:584:            key="detail"
+src/components/screens/EcommerceScreen.tsx:683:            key="checkout"
+src/components/screens/EcommerceScreen.tsx:714:                         <div key={id} className="rounded-3xl overflow-hidden bg-white border border-slate-100 shadow-sm p-4">
+src/components/screens/MerchantScreen.tsx:404:              key="products"
+src/components/screens/MerchantScreen.tsx:440:                    key={p.id}
+src/components/screens/MerchantScreen.tsx:511:                          <tr key={p.id} className="hover:bg-slate-50/40 transition-colors group">
+src/components/screens/MerchantScreen.tsx:592:              key="dashboard"
+src/components/screens/MerchantScreen.tsx:711:                             <tr key={sale.id} className="hover:bg-slate-50/40 transition-colors">
+src/components/screens/MerchantScreen.tsx:788:                        <div key={sale.id} className="bg-white p-4 rounded-3xl border border-slate-100 flex flex-col gap-4 shadow-sm">
+src/components/screens/MerchantScreen.tsx:832:              key="settings"
+src/components/screens/MerchantScreen.tsx:1021:                              key={nft.id || nft.txHash}
+src/components/screens/AIAgentScreen.tsx:129:            key={msg.id}
+src/components/screens/AccountDetailScreen.tsx:399:                      key={filter}
+src/components/screens/AccountDetailScreen.tsx:421:                      key={tx.id || `act-tx-${idx}`}
+src/components/screens/AccountDetailScreen.tsx:550:                    key={token.symbol}
+src/components/screens/AccountDetailScreen.tsx:685:                    key={nft.id + idx}
+src/components/screens/AccountDetailScreen.tsx:852:                        key={ptok.symbol}
+src/components/screens/ReceiptScreen.tsx:293:                        key={i}
+src/components/screens/ArcBirdScreen.tsx:97:              <div key={i} className="border-r border-blue-500/10 h-full"></div>
+src/components/screens/ArcBirdScreen.tsx:140:                  key={f.id}
+src/components/screens/ReceiveQRISScreen.tsx:75:                    key={i}
+src/components/screens/TransactionHistoryScreen.tsx:173:                <div key={date} className="space-y-3">
+src/components/screens/TransactionHistoryScreen.tsx:180:                        key={tx.id || `tx-${idx}`}
+src/components/screens/TransactionHistoryScreen.tsx:293:                            key={i}
+src/components/screens/HomeScreen.tsx:403:                      key={tab.name}
+src/components/screens/HomeScreen.tsx:522:                      key="tab-1"
+src/components/screens/HomeScreen.tsx:579:                                key={tx.id || `order-${idx}`}
+src/components/screens/HomeScreen.tsx:659:                          key={item.id || `shortcut-${idx}`}
+src/components/screens/HomeScreen.tsx:792:                      key={index}
+src/components/screens/HomeScreen.tsx:957:                              key={token.code}
+src/components/screens/HomeScreen.tsx:1171:                      key={token.code}
+src/components/screens/InboxScreen.tsx:240:                             key={s}
+src/components/screens/InboxScreen.tsx:259:                             key={t}
+src/components/screens/InboxScreen.tsx:318:              <div key={tx.id || `inbox-tx-${idx}`} className="relative">
+src/components/screens/MintNFTScreen.tsx:130:              key="input"
+src/components/screens/MintNFTScreen.tsx:232:              key="crop"
+src/components/screens/MintNFTScreen.tsx:274:              key="minting"
+src/components/screens/MintNFTScreen.tsx:295:              key="success"
+src/components/screens/BridgeScreen.tsx:189:                <div key={p.id} className="flex gap-4 relative">
+src/components/screens/BridgeScreen.tsx:603:                    key={net.id}
+src/components/screens/ConnectEWalletScreen.tsx:169:                key={wallet.id}
+src/components/screens/TransferScreen.tsx:331:                      key={fav.id}
+src/components/screens/TransferScreen.tsx:399:                    key={contact.id}
+src/components/screens/AdminDashboardScreen.tsx:457:                  key={i}
+src/components/screens/AdminDashboardScreen.tsx:470:                  key={num}
+src/components/screens/AdminDashboardScreen.tsx:536:                  key={item.id}
+src/components/screens/AdminDashboardScreen.tsx:624:                  key={activeTab}
+src/components/screens/AdminDashboardScreen.tsx:774:                          key={tab.id}
+src/components/screens/AdminDashboardScreen.tsx:791:                        key={userModalTab}
+src/components/screens/AdminDashboardScreen.tsx:1024:                                      key={i}
+src/components/screens/OtherAccountsScreen.tsx:61:              key={i}
+src/components/screens/ManageFavoritesScreen.tsx:123:                key={item.id}
+src/components/screens/ManageFavoritesScreen.tsx:166:                  key={`empty-${idx}`}
+src/components/screens/ManageFavoritesScreen.tsx:181:                key={item.id}
+src/components/screens/BatchTransferScreen.tsx:326:                    key={recipient.id}
+src/components/screens/BatchTransferScreen.tsx:518:                        key={rec.id}
+src/components/screens/BatchTransferScreen.tsx:680:                      key={rec.id}
+src/components/screens/BatchTransferScreen.tsx:843:                    key={contact.id}
+src/components/screens/UnifiedAccountDetailScreen.tsx:204:                      key={filter}
+src/components/screens/UnifiedAccountDetailScreen.tsx:226:                      key={tx.id || `uni-tx-${idx}`}
+src/components/screens/UnifiedAccountDetailScreen.tsx:371:                    key={nft.id + idx}
+src/components/router/ViewRouter.tsx:939:            key={motionKey}

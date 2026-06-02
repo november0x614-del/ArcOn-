@@ -37,6 +37,7 @@ export type ViewState =
   | "arcbird"
   | "withdraw"
   | "bridge"
+  | "unifiedBalance"
   | "mintNFT"
   | "batchTransfer"
   | "adminDashboard";
@@ -79,7 +80,8 @@ export interface Transaction {
     | "receive"
     | "bridge"
     | "stake"
-    | "batchTransfer";
+    | "batchTransfer"
+    | "mint_nft";
   title: string;
   amount: string;
   currency: string;

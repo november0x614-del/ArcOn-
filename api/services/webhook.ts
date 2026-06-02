@@ -147,6 +147,11 @@ export async function verifyAndProcessWebhook(
       const txHash =
         transfer.transactionHash || data.txHash || data.transactionHash;
 
+      // Log if this is a contract execution for debugging
+      if (type === "contractExecutions.updated") {
+        console.log(`[NFT Mint Webhook] Contract execution updated (internalRef=${internalRef}, status=${txStatus}, txHash=${txHash})`);
+      }
+
       // Extract error details if failed
       let errorMessage = null;
       if (isFailed) {

@@ -7,6 +7,7 @@ import transactionRoutes from "./routes/transaction.routes";
 import adminRoutes from "./routes/admin.routes";
 import miscRoutes from "./routes/misc.routes";
 import ecommerceRoutes from "./routes/ecommerce.routes";
+import unifiedRoutes from "./routes/unified.routes";
 
 // Re-export core services for server/other files that reference index
 export { getSupabaseAdmin, isUserBlocked };
@@ -61,6 +62,9 @@ app.use("/", miscRoutes);
 
 app.use("/api", ecommerceRoutes);
 app.use("/", ecommerceRoutes);
+
+app.use("/api/unified", unifiedRoutes);
+app.use("/unified", unifiedRoutes);
 
 // Export Express App
 export default app;

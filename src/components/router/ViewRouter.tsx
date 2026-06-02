@@ -36,6 +36,7 @@ import { AmountInputScreen } from "../screens/AmountInputScreen";
 import { BatchTransferScreen } from "../screens/BatchTransferScreen";
 import { WithdrawScreen } from "../screens/WithdrawScreen";
 import { BridgeScreen } from "../screens/BridgeScreen";
+import { UnifiedAccountDetailScreen } from "../screens/UnifiedAccountDetailScreen";
 import { MintNFTScreen } from "../screens/MintNFTScreen";
 import { TransactionHistoryScreen } from "../screens/TransactionHistoryScreen";
 import { HomeScreen } from "../screens/HomeScreen";
@@ -872,6 +873,20 @@ export const ViewRouter = React.memo(
               }}
             />
           ))}
+
+        {viewState === "unifiedBalance" && (
+          <UnifiedAccountDetailScreen 
+            userName={userName}
+            onBack={() => setViewState("home")} 
+            onTransfer={() => setViewState("transfer")}
+            onReceive={() => setViewState("receive")}
+            onTransactionClick={(tx) => {
+              setSelectedTransaction(tx);
+              setReceiptSource("unifiedBalance");
+              setViewState("receipt");
+            }}
+          />
+        )}
 
         {viewState === "bridge" &&
           (platformConfig && platformConfig.bridgeEnabled === false ? (

@@ -2,10 +2,43 @@ import express from "express";
 import { getSupabaseAdmin } from "../config/supabase";
 import { createWallet } from "../services/circle";
 import { fetchUnifiedBalance } from "../services/balance";
-import { publicClient } from "../services/arcViem";
-import { formatUnits } from "viem";
+import { sepoliaPublicClient, publicClient } from "../services/arcViem";
+import { formatUnits, parseAbi } from "viem";
 
 const router = express.Router();
+
+router.get("/balance/sepolia/:address", async (req, res) => {
+  try {
+    const { address } = req.params;
+    if (!address.startsWith("0x")) {
+      return res.status(400).json({ error: "Invalid address" });
+    }
+
+    // Sepolia USDC contract address
+    const SEPOLIA_USDC = "0x1c7D4B196Cb0C7B01d743Fbc6116a902341C7A24" as `0x${string}`;
+
+    const rawBalance = (await sepoliaPublicClient.readContract({
+      address: SEPOLIA_USDC,
+      abi: parseAbi([
+        "function balanceOf(address owner) view returns (uint256)",
+      ]),
+      functionName: "balanceOf",
+      args: [address as `0x${string}`],
+    } as any)) as bigint;
+
+    const balance = formatUnits(rawBalance, 6); // USDC uses 6 decimals
+
+    res.json({
+      address,
+      balance,
+      currency: "USDC",
+      network: "Sepolia",
+    });
+  } catch (error: any) {
+    console.error("Sepolia balance fetch error:", error);
+    res.status(500).json({ error: "Failed to fetch balance on Sepolia" });
+  }
+});
 
 router.get("/wallets/resolve/:address", async (req, res) => {
   try {

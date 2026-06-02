@@ -33,9 +33,14 @@ interface AppState {
   registeredUser: UserIdentity | null;
   setRegisteredUser: (user: UserIdentity | null) => void;
   balance: number;
+  activeAccountType: "native" | "unified";
+  setActiveAccountType: (type: "native" | "unified") => void;
   allBalances: any[];
   setBalance: (balance: number | ((prev: number) => number)) => void;
   fetchBalance: () => Promise<void>;
+  unifiedBalance: number;
+  setUnifiedBalance: (balance: number | ((prev: number) => number)) => void;
+  fetchUnifiedBalance: () => Promise<void>;
   pnlValue: number;
   setPnlValue: (value: number) => void;
   pnlPercentage: number;
@@ -124,6 +129,8 @@ export const useStore = create<AppState>()((set) => ({
 
   // Financials
   balance: 0,
+  activeAccountType: "native",
+  setActiveAccountType: (type) => set({ activeAccountType: type }),
   allBalances: [],
   setBalance: (balance) =>
     set((state) => ({
@@ -166,6 +173,25 @@ export const useStore = create<AppState>()((set) => ({
       }
     } catch (error: any) {
       // Errors handled inside apiRequest usually
+    }
+  },
+  unifiedBalance: 0,
+  setUnifiedBalance: (balance) =>
+    set((state) => ({
+      unifiedBalance:
+        typeof balance === "function"
+          ? balance(state.unifiedBalance)
+          : balance,
+    })),
+  fetchUnifiedBalance: async () => {
+    const user = useStore.getState().registeredUser;
+    if (!user?.walletAddress) return;
+    try {
+      const res = await fetch(`/api/unified/balance/${user.walletAddress}`);
+      const data = await res.json();
+      set({ unifiedBalance: data.totalConfirmedBalance || 0 });
+    } catch (err) {
+      console.error("Unified Balance fetch error", err);
     }
   },
   pnlValue: 0,
