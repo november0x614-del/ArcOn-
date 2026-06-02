@@ -1,13 +1,5 @@
 import express from "express";
 
-console.log("ENV CHECK", {
-  SUPABASE_URL: !!process.env.SUPABASE_URL,
-  VITE_SUPABASE_URL: !!process.env.VITE_SUPABASE_URL,
-  SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-  CIRCLE_API_KEY: !!process.env.CIRCLE_API_KEY,
-  CIRCLE_ENTITY_SECRET: !!process.env.CIRCLE_ENTITY_SECRET,
-});
-
 import compression from "compression";
 import rateLimit from "express-rate-limit";
 import { getSupabaseAdmin, isUserBlocked } from "./config/supabase.js";
@@ -22,6 +14,50 @@ export { getSupabaseAdmin, isUserBlocked };
 
 const app = express();
 app.set("trust proxy", 1); // Enable if you're behind a reverse proxy (Heroku, AWS, Nginx, or Google Cloud Run)
+
+app.get("/api/debug-env", (req, res) => {
+  // Dicetak pada Dashboard Logs Vercel
+  console.log("RUNTIME ENV CHECK", {
+    SUPABASE_URL: !!process.env.SUPABASE_URL,
+    VITE_SUPABASE_URL: !!process.env.VITE_SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    CIRCLE_API_KEY: !!process.env.CIRCLE_API_KEY,
+    CIRCLE_ENTITY_SECRET: !!process.env.CIRCLE_ENTITY_SECRET,
+  });
+  
+  // Dikembalikan sebagai payload ke browser
+  res.json({
+    status: "ok",
+    env_loaded: {
+      SUPABASE_URL: !!process.env.SUPABASE_URL,
+      VITE_SUPABASE_URL: !!process.env.VITE_SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      CIRCLE_API_KEY: !!process.env.CIRCLE_API_KEY,
+      CIRCLE_ENTITY_SECRET: !!process.env.CIRCLE_ENTITY_SECRET,
+    }
+  });
+});
+
+app.get("/debug-env", (req, res) => {
+  // Mount di root juga terkait config Vercel (optional fallback)
+  console.log("RUNTIME ENV CHECK", {
+    SUPABASE_URL: !!process.env.SUPABASE_URL,
+    VITE_SUPABASE_URL: !!process.env.VITE_SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    CIRCLE_API_KEY: !!process.env.CIRCLE_API_KEY,
+    CIRCLE_ENTITY_SECRET: !!process.env.CIRCLE_ENTITY_SECRET,
+  });
+  res.json({
+    status: "ok",
+    env_loaded: {
+      SUPABASE_URL: !!process.env.SUPABASE_URL,
+      VITE_SUPABASE_URL: !!process.env.VITE_SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      CIRCLE_API_KEY: !!process.env.CIRCLE_API_KEY,
+      CIRCLE_ENTITY_SECRET: !!process.env.CIRCLE_ENTITY_SECRET,
+    }
+  });
+});
 
 // Rate Limiting Configuration
 const apiLimiter = rateLimit({
