@@ -1,25 +1,24 @@
 import express from "express";
-import { getSupabaseAdmin, isUserBlocked } from "../config/supabase.js";
+import { getSupabaseAdmin, isUserBlocked } from "../config/supabase";
 import {
-  createWallet,
   executeTransaction,
   executeAtomicBatchTransfer,
   ARC_USDC_TOKEN_ID,
-} from "../services/circle.js";
+} from "../services/circle";
 import {
   initiateOutboundBridge,
   finalizeInboundBridge,
-} from "../services/bridge.js";
-import { getCircleClientInstance } from "../services/circleClient.js";
-import { logAuditEvent } from "../services/audit.js";
-import { getPlatformConfigs } from "./admin.routes.js";
+} from "../services/bridge";
+import { getCircleClientInstance } from "../services/circleClient";
+import { logAuditEvent } from "../services/audit";
+import { getPlatformConfigs } from "./admin.routes";
 import * as crypto from "crypto";
 
 import {
   executeAppKitSwap,
   executeAppKitBridge,
   executeAppKitSend,
-} from "../services/appkit.js";
+} from "../services/appkit";
 import { BridgeChain } from "@circle-fin/app-kit";
 
 const router = express.Router();
@@ -897,29 +896,16 @@ router.post("/nft/mint", async (req, res) => {
     }
 
     const supabaseAdmin = getSupabaseAdmin();
-    const adminId = "00000000-0000-0000-0000-000000000000";
-    let { data: adminWallet } = await supabaseAdmin
+    const { data: adminWallet } = await supabaseAdmin
       .from("user_wallets")
       .select("wallet_id, wallet_address")
-      .eq("id", adminId)
+      .eq("id", "00000000-0000-0000-0000-000000000000")
       .single();
 
-    // Auto-initialize Admin Wallet if missing
     if (!adminWallet || !adminWallet.wallet_id) {
-      console.log(`[NFT Mint] Admin wallet missing. Attempting auto-initialization for ${adminId}...`);
-      try {
-        const newAdminWallet = await createWallet(supabaseAdmin, adminId);
-        adminWallet = {
-          wallet_id: newAdminWallet.walletId,
-          wallet_address: newAdminWallet.address
-        };
-        console.log(`[NFT Mint] Admin wallet automatically initialized: ${adminWallet.wallet_address}`);
-      } catch (initErr: any) {
-        console.error("[NFT Mint] Critical: Failed to auto-initialize admin wallet:", initErr);
-        return res.status(500).json({ 
-          error: "Platform Admin Minter Wallet (00000000-0000-0000-0000-000000000000) belum dikonfigurasi dan gagal diinisialisasi otomatis." 
-        });
-      }
+      return res.status(500).json({ 
+        error: "Platform Admin Minter Wallet (00000000-0000-0000-0000-000000000000) belum dikonfigurasi di user_wallets." 
+      });
     }
 
     const nftContractAddress = process.env.NFT_CONTRACT_ADDRESS || "0x582531CBA2D68a9F0F4E83b38466e3bfCDbaab51";

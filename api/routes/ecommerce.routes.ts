@@ -1,7 +1,7 @@
 import express from "express";
 import crypto from "crypto";
-import { getSupabaseAdmin } from "../config/supabase.js";
-import { executeTransaction, executeReleaseEscrow, createWallet } from "../services/circle.js";
+import { getSupabaseAdmin } from "../config/supabase";
+import { executeTransaction, executeReleaseEscrow } from "../services/circle";
 
 const router = express.Router();
 
@@ -17,30 +17,19 @@ router.post("/ecommerce/checkout", async (req, res) => {
     const { buyerId, productId, amount, memo, sellerAddress = DEFAULT_SELLER_ADDRESS } = req.body;
     const supabaseAdmin = getSupabaseAdmin();
 
-    const adminId = "00000000-0000-0000-0000-000000000000";
     // Pastikan Treasury wallet tersedia
     let treasuryAddress = process.env.PLATFORM_TREASURY_ADDRESS;
     if (!treasuryAddress) {
       const { data: treasuryWallet } = await supabaseAdmin
         .from("user_wallets")
         .select("wallet_address")
-        .eq("id", adminId)
+        .eq("id", "00000000-0000-0000-0000-000000000000")
         .single();
-      
-      if (treasuryWallet?.wallet_address) {
-        treasuryAddress = treasuryWallet.wallet_address;
-      } else {
-        // Auto-initialize Admin/Treasury Wallet if missing
-        console.log(`[Ecommerce] Treasury wallet missing. Attempting auto-initialization for ${adminId}...`);
-        try {
-          const newAdminWallet = await createWallet(supabaseAdmin, adminId);
-          treasuryAddress = newAdminWallet.address;
-          console.log(`[Ecommerce] Treasury wallet automatically initialized: ${treasuryAddress}`);
-        } catch (initErr: any) {
-          console.error("[Ecommerce] Critical: Failed to auto-initialize treasury wallet:", initErr);
-          return res.status(500).json({ error: "Platform Treasury Belum Dikonfigurasi dan gagal diinisialisasi otomatis." });
-        }
-      }
+      treasuryAddress = treasuryWallet?.wallet_address;
+    }
+
+    if (!treasuryAddress) {
+      return res.status(500).json({ error: "Platform Treasury Belum Dikonfigurasi." });
     }
 
     const orderMemo = `ORDER-${productId}-${Date.now()}`;

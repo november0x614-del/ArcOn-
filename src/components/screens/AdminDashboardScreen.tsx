@@ -662,7 +662,7 @@ export function AdminDashboardScreen({
                         try {
                           const res = await fetch("/api/admin/otc/reconcile", {
                             method: "POST",
-                            headers: { "Content-Type": "application/json", "x-admin-secret": import.meta.env.VITE_ADMIN_SECRET || "" },
+                            headers: { "Content-Type": "application/json", "x-admin-secret": process.env.ADMIN_SECRET || "" },
                             body: JSON.stringify({ txId, adminId: "00000000-0000-0000-0000-000000000000" }),
                           });
                           if (res.ok) {
