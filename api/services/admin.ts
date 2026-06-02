@@ -41,7 +41,7 @@ export async function fetchPendingApprovals() {
   return data;
 }
 
-import { executeTransaction } from "./circle";
+import { executeTransaction } from "./circle.js";
 
 export async function decideApproval(
   txId: string,

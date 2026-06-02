@@ -22,12 +22,33 @@ const files = walk('./api');
 files.forEach((file) => {
   let content = fs.readFileSync(file, 'utf8');
   // Match relative imports that don't have an extension
-  content = content.replace(/(from\s+["'])(\.\.?\/[^"']+)(["'])/g, (match, prefix, p1, suffix) => {
+  // It handles: from './something' or from "../something"
+  const newContent = content.replace(/(from\s+["'])(\.\.?\/[^"']+)(["'])/g, (match, prefix, p1, suffix) => {
     if (p1.endsWith('.js') || p1.includes('.json') || p1.endsWith('.ts')) {
       return match;
     }
     return `${prefix}${p1}.js${suffix}`;
   });
-  fs.writeFileSync(file, content);
+  
+  if (content !== newContent) {
+    fs.writeFileSync(file, newContent);
+    console.log(`[Fix] Updated ${file}`);
+  }
 });
-console.log('Fixed .js imports (added extensions)');
+
+// Also check server.ts
+try {
+  let serverContent = fs.readFileSync('./server.ts', 'utf8');
+  const newServerContent = serverContent.replace(/(from\s+["'])(\.\.?\/[^"']+)(["'])/g, (match, prefix, p1, suffix) => {
+    if (p1.endsWith('.js') || p1.includes('.json') || p1.endsWith('.ts')) {
+      return match;
+    }
+    return `${prefix}${p1}.js${suffix}`;
+  });
+  if (serverContent !== newServerContent) {
+    fs.writeFileSync('./server.ts', newServerContent);
+    console.log(`[Fix] Updated server.ts`);
+  }
+} catch (e) {}
+
+console.log('Finished fixing .js imports (added extensions)');
