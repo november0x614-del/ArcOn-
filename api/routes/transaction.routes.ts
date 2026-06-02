@@ -964,6 +964,16 @@ router.post("/nft/mint", async (req, res) => {
       }
     });
 
+    await supabaseAdmin.from("user_nfts").insert({
+      user_id: userId,
+      name,
+      description,
+      image,
+      tx_hash: txHash,
+      contract_address: nftContractAddress,
+      metadata: { tokenUri: formattedTokenUri }
+    });
+
     res.status(200).json({ 
       success: true, 
       txId: circleTxId || txHash, 
@@ -973,6 +983,24 @@ router.post("/nft/mint", async (req, res) => {
   } catch (error: any) {
     console.error("[NFT Mint Engine] Error executing contract mint:", error);
     res.status(500).json({ error: error.message || "Gagal mencetak NFT pada Arc Testnet." });
+  }
+});
+
+router.get("/nfts/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data: nfts, error } = await supabaseAdmin
+      .from("user_nfts")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    res.status(200).json(nfts || []);
+  } catch (error: any) {
+    console.error("Fetch NFTs error:", error);
+    res.status(500).json({ error: error.message });
   }
 });
 

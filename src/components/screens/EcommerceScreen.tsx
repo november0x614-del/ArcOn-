@@ -89,7 +89,7 @@ export function EcommerceScreen({ onBack, isDesktop }: EcommerceScreenProps) {
     setViewState("detail");
   };
 
-  const updateQuantity = (id: number, delta: number) => {
+  const updateQuantity = (id: any, delta: number) => {
     if (delta > 0) {
       addToCart(id);
     } else if (delta < 0) {
@@ -104,7 +104,7 @@ export function EcommerceScreen({ onBack, isDesktop }: EcommerceScreenProps) {
   const getCartTotal = (): number => {
     let total = 0;
     (Object.entries(cartQuantities) as Array<[string, number]>).forEach(([id, qty]) => {
-      const p = products.find(prod => prod.id === Number(id));
+      const p = products.find(prod => String(prod.id) === String(id));
       if (p) total += Number(p.price) * qty;
     });
     return total - discount;
@@ -150,6 +150,9 @@ export function EcommerceScreen({ onBack, isDesktop }: EcommerceScreenProps) {
   };
 
   const filteredProducts = products.filter(p => {
+    // Basic filtering based on stock - hide if out of stock
+    if (p.stock <= 0) return false;
+
     const isNft = p.category === "NFT";
     const wantsNft = selectedCategoryTab === "Digital";
     if (wantsNft !== isNft) return false;
@@ -218,7 +221,7 @@ export function EcommerceScreen({ onBack, isDesktop }: EcommerceScreenProps) {
         const activeCartItems = (Object.entries(cartQuantities) as Array<[string, number]>).filter(([_, q]) => q > 0);
         if (activeCartItems.length > 0) {
           activeCartItems.forEach(([id, qty]) => {
-            updateProductStockAndSales(Number(id), qty);
+            updateProductStockAndSales(id, qty);
           });
         } else if (selectedProduct) {
           updateProductStockAndSales(selectedProduct.id, 1);
@@ -702,9 +705,9 @@ export function EcommerceScreen({ onBack, isDesktop }: EcommerceScreenProps) {
                      {(Object.entries(cartQuantities) as Array<[string, number]>).filter(([_, q]) => q > 0).length === 0 && (
                         <div className="text-center p-12 bg-white rounded-[32px] border border-dashed border-slate-200 text-slate-400 font-bold text-[14px]">Your cart is empty.</div>
                       )}
-                     {(Object.entries(cartQuantities) as Array<[string, number]>).filter(([_, q]) => q > 0).map(([id, qty]) => {
-                       const p = products.find(prod => prod.id === Number(id));
-                       if (!p) return null;
+                      {(Object.entries(cartQuantities) as Array<[string, number]>).filter(([_, q]) => q > 0).map(([id, qty]) => {
+                        const p = products.find(prod => String(prod.id) === String(id));
+                        if (!p) return null;
                        return (
                          <div key={id} className="rounded-3xl overflow-hidden bg-white border border-slate-100 shadow-sm p-4">
                             <div className="flex gap-4 items-center">

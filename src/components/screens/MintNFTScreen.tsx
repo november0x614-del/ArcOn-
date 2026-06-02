@@ -59,7 +59,7 @@ export function MintNFTScreen({ onBack }: { onBack: () => void }) {
     addLog(`Initiating NFT Mint: ${nftName}`);
 
     try {
-      // Simulate real mint transaction logic on Arc Testnet
+      // Execute real mint transaction on Arc Testnet
       const result = await executeArcTransaction({
         type: "MINT_NFT",
         metadata: {
@@ -73,19 +73,8 @@ export function MintNFTScreen({ onBack }: { onBack: () => void }) {
         const hash = result.txHash || "0x" + Math.random().toString(16).slice(2);
         setTxHash(hash);
         
-        // Save minted NFT to Store
-        try {
-          useStore.getState().addMintedNft({
-            id: hash,
-            name: nftName,
-            description: "Arc Network Native NFT",
-            image: selectedImage,
-            timestamp: new Date().toLocaleString(),
-            txHash: hash
-          });
-        } catch (e) {
-          console.error("Failed to save minted NFT to Store", e);
-        }
+        // Finalize state by fetching fresh assets from server (Server-First)
+        await useStore.getState().fetchMintedNfts();
 
         addLog(`NFT Minted Successfully: ${nftName}`);
         setStep("success");

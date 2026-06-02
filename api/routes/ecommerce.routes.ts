@@ -40,7 +40,7 @@ router.post("/ecommerce/checkout", async (req, res) => {
       .insert({
         buyer_id: buyerId,
         seller_address: sellerAddress,
-        product_id: parseInt(productId),
+        product_id: productId?.toString(),
         product_name: memo, // We passed product_name as memo in frontend
         amount: amount,
         status: "PENDING_ESCROW",

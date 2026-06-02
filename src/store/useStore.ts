@@ -6,13 +6,15 @@ import {
   Transaction,
   SourceAccount,
   ImportedToken,
+  Product,
+  MintedNFT,
 } from "../types";
 import {
   defaultSelectedShortcuts,
   defaultAvailableShortcuts,
 } from "../components/screens/ManageFavoritesScreen";
 import { BackendClient } from "../services/api";
-import { MOCK_PRODUCTS } from "../data/mockProducts";
+// MOCK_PRODUCTS removed for Server-First compliance
 
 export type TransactionFilter = "All" | "Received" | "Sent" | "Swaps" | "Bridge";
 
@@ -79,28 +81,27 @@ interface AppState {
   setSourceAccount: (account: SourceAccount) => void;
   logs: string[];
   addLog: (log: string) => void;
-  products: any[];
-  setProducts: (products: any[]) => void;
+  products: Product[];
+  setProducts: (products: Product[]) => void;
   fetchProducts: () => Promise<void>;
   saveProduct: (product: any) => Promise<void>;
   removeProduct: (productId: string | number) => Promise<void>;
-  cart: Record<number, number>;
-  setCart: (cart: Record<number, number>) => void;
-  addToCart: (productId: number) => void;
-  removeFromCart: (productId: number) => void;
+  cart: Record<string, number>;
+  setCart: (cart: Record<string, number>) => void;
+  addToCart: (productId: string | number) => void;
+  removeFromCart: (productId: string | number) => void;
   clearCart: () => void;
-  mintedNfts: any[];
-  setMintedNfts: (nfts: any[]) => void;
-  addMintedNft: (nft: any) => void;
+  updateProductStockAndSales: (productId: string | number, delta: number) => void;
+  mintedNfts: MintedNFT[];
+  fetchMintedNfts: () => Promise<void>;
   favorites: any[];
   setFavorites: (favs: any[] | ((prev: any[]) => any[])) => void;
   deletedContactIds: string[];
   setDeletedContactIds: (ids: string[] | ((prev: string[]) => string[])) => void;
   arcbirdHighscore: number;
   setArcbirdHighscore: (score: number) => void;
-  savePreferences: (updates: any) => Promise<void>;
+  savePreferences: (updates?: any) => Promise<void>;
   fetchPreferences: () => Promise<void>;
-  updateProductStockAndSales: (productId: number, quantityBought: number) => void;
   resetState: () => void;
 }
 
@@ -122,9 +123,12 @@ export const useStore = create<AppState>()((set) => ({
   setRegisteredUser: (user) => {
     set({ registeredUser: user });
     if (user?.supabaseUid) {
-      useStore.getState().fetchImportedTokens();
-      useStore.getState().fetchProducts();
-      useStore.getState().fetchPreferences();
+      const state = useStore.getState();
+      state.fetchImportedTokens();
+      state.fetchProducts();
+      state.fetchPreferences();
+      state.fetchPlatformConfig();
+      state.fetchMintedNfts();
     } else {
       set({
         readReceiptIds: [],
@@ -133,7 +137,8 @@ export const useStore = create<AppState>()((set) => ({
         favorites: [],
         deletedContactIds: [],
         arcbirdHighscore: 0,
-        products: MOCK_PRODUCTS,
+        products: [],
+        platformConfig: null,
       });
     }
   },
@@ -305,14 +310,9 @@ export const useStore = create<AppState>()((set) => ({
   readReceiptIds: [],
   markAsRead: (id) =>
     set((state) => {
-      const newList = state.readReceiptIds.includes(id)
-        ? state.readReceiptIds
-        : [...state.readReceiptIds, id];
-      if (state.registeredUser?.supabaseUid) {
-        try {
-          localStorage.setItem(`receipts_${state.registeredUser.supabaseUid}`, JSON.stringify(newList));
-        } catch (e) {}
-      }
+      if (state.readReceiptIds.includes(id)) return state;
+      const newList = [...state.readReceiptIds, id];
+      useStore.getState().savePreferences({ readReceiptIds: newList });
       return { readReceiptIds: newList };
     }),
 
@@ -382,14 +382,20 @@ export const useStore = create<AppState>()((set) => ({
   },
 
   selectedShortcuts: defaultSelectedShortcuts,
-  setSelectedShortcuts: (shortcuts) => set((state) => {
-    if (state.registeredUser?.supabaseUid) {
-      try {
-        localStorage.setItem(`shortcuts_${state.registeredUser.supabaseUid}`, JSON.stringify(shortcuts));
-      } catch (e) {}
+  setSelectedShortcuts: (shortcuts) => {
+    set({ selectedShortcuts: shortcuts });
+    useStore.getState().savePreferences({ selectedShortcuts: shortcuts });
+  },
+  fetchMintedNfts: async () => {
+    const user = useStore.getState().registeredUser;
+    if (!user?.supabaseUid) return;
+    try {
+      const nfts = await BackendClient.fetchNFTs(user.supabaseUid);
+      set({ mintedNfts: Array.isArray(nfts) ? nfts : [] });
+    } catch (e) {
+      console.error("Failed to fetch NFTs from server", e);
     }
-    return { selectedShortcuts: shortcuts };
-  }),
+  },
   availableShortcuts: defaultAvailableShortcuts,
   setAvailableShortcuts: (shortcuts) => set({ availableShortcuts: shortcuts }),
   selectedContact: null,
@@ -411,28 +417,11 @@ export const useStore = create<AppState>()((set) => ({
   platformConfig: null,
   setPlatformConfig: (config) => {
     set({ platformConfig: config });
-    if (config) {
-      try {
-        localStorage.setItem("arc_platform_config", JSON.stringify(config));
-      } catch (e) {}
-    }
   },
   fetchPlatformConfig: async () => {
-    // Try localStorage first
     try {
-      const cached = localStorage.getItem("arc_platform_config");
-      if (cached) {
-        set({ platformConfig: JSON.parse(cached) });
-      }
-    } catch (e) {}
-
-    try {
-      const res = await fetch("/api/admin/config");
-      if (res.ok) {
-        const data = await res.json();
-        set({ platformConfig: data });
-        localStorage.setItem("arc_platform_config", JSON.stringify(data));
-      }
+      const data = await BackendClient.getPlatformConfigs();
+      set({ platformConfig: data });
     } catch (e) {}
   },
   walletConnectSessions: 0,
@@ -454,20 +443,16 @@ export const useStore = create<AppState>()((set) => ({
         `[${new Date().toLocaleTimeString()}] ${log}`,
       ],
     })),
-  products: MOCK_PRODUCTS,
+  products: [],
   setProducts: (products) => {
     set({ products });
   },
   fetchProducts: async () => {
     try {
       const products = await BackendClient.getProducts();
-      if (Array.isArray(products) && products.length > 0) {
-        set({ products });
-      } else {
-        set({ products: MOCK_PRODUCTS });
-      }
+      set({ products: Array.isArray(products) ? products : [] });
     } catch (e) {
-      set({ products: MOCK_PRODUCTS });
+      set({ products: [] });
     }
   },
   saveProduct: async (product) => {
@@ -475,66 +460,84 @@ export const useStore = create<AppState>()((set) => ({
       const saved = await BackendClient.saveProduct(product);
       set((state) => ({ products: [saved, ...state.products] }));
     } catch (e) {
-      set((state) => ({ products: [product, ...state.products] }));
+      console.error("[Store] saveProduct failed:", e);
+      // Re-fetch to ensure sync with server
+      useStore.getState().fetchProducts();
     }
   },
   removeProduct: async (productId) => {
     try {
       await BackendClient.deleteProduct(productId);
       set((state) => ({
-        products: state.products.filter((p) => p.id !== productId),
+        products: state.products.filter((p) => String(p.id) !== String(productId)),
       }));
     } catch (e) {
-      set((state) => ({
-        products: state.products.filter((p) => p.id !== productId),
-      }));
+      console.error("[Store] removeProduct failed:", e);
+      useStore.getState().fetchProducts();
     }
   },
-  cart: (() => {
-    try {
-      const cached = localStorage.getItem("lounge_cart");
-      return cached ? JSON.parse(cached) : {};
-    } catch (e) {
-      return {};
-    }
-  })(),
+  cart: {},
   setCart: (cart) => {
     set({ cart });
-    localStorage.setItem("lounge_cart", JSON.stringify(cart));
+    useStore.getState().savePreferences(); // savePreferences takes state from store
   },
   addToCart: (productId) =>
     set((state) => {
+      const idStr = String(productId);
       const newCart = {
         ...state.cart,
-        [productId]: (state.cart[productId] || 0) + 1,
+        [idStr]: (state.cart[idStr] || 0) + 1,
       };
-      localStorage.setItem("lounge_cart", JSON.stringify(newCart));
+      // We rely on effects or manual save if needed, but savePreferences reads everything.
+      setTimeout(() => useStore.getState().savePreferences(), 0);
       return { cart: newCart };
     }),
   removeFromCart: (productId) =>
     set((state) => {
+      const idStr = String(productId);
       const newCart = { ...state.cart };
-      if (newCart[productId] > 1) {
-        newCart[productId] -= 1;
+      if (newCart[idStr] > 1) {
+        newCart[idStr] -= 1;
       } else {
-        delete newCart[productId];
+        delete newCart[idStr];
       }
-      localStorage.setItem("lounge_cart", JSON.stringify(newCart));
+      setTimeout(() => useStore.getState().savePreferences(), 0);
       return { cart: newCart };
     }),
   clearCart: () => {
-    localStorage.removeItem("lounge_cart");
     set({ cart: {} });
+    setTimeout(() => useStore.getState().savePreferences(), 0);
+  },
+  updateProductStockAndSales: (productId, delta) => {
+    set((state) => {
+      const idStr = String(productId);
+      const updated = state.products.map((p) => {
+        if (String(p.id) === idStr) {
+          const qty = typeof delta === "number" ? delta : 0;
+          const updatedProduct = {
+            ...p,
+            stock: Math.max(0, p.stock - qty),
+            sales: p.sales + qty,
+          };
+          // Push to backend (Sync point)
+          BackendClient.updateProduct(idStr, {
+            stock: updatedProduct.stock,
+            sales: updatedProduct.sales,
+          }).catch((err) => console.error("Stock update failed on server:", err));
+          return updatedProduct;
+        }
+        return p;
+      });
+      return { products: updated };
+    });
   },
   mintedNfts: [],
   setMintedNfts: (nfts) => {
     set({ mintedNfts: nfts });
-    useStore.getState().savePreferences({ mintedNfts: nfts });
   },
   addMintedNft: (nft) =>
     set((state) => {
       const newList = [nft, ...state.mintedNfts];
-      useStore.getState().savePreferences({ mintedNfts: newList });
       return { mintedNfts: newList };
     }),
   favorites: [],
@@ -561,10 +564,22 @@ export const useStore = create<AppState>()((set) => ({
     useStore.getState().savePreferences({ arcbirdHighscore: score });
   },
   savePreferences: async (updates) => {
-    const user = useStore.getState().registeredUser;
+    const state = useStore.getState();
+    const user = state.registeredUser;
     if (!user?.supabaseUid) return;
+    
+    // If no specific updates, collect all preference state
+    const finalUpdates = updates || {
+      favorites: state.favorites,
+      deletedContactIds: state.deletedContactIds,
+      arcbirdHighscore: state.arcbirdHighscore,
+      readReceiptIds: state.readReceiptIds,
+      selectedShortcuts: state.selectedShortcuts,
+      cart: state.cart,
+    };
+    
     try {
-      await BackendClient.updatePreferences(updates);
+      await BackendClient.updatePreferences(finalUpdates);
     } catch (e) {
       console.error("Failed to sync preferences to backend", e);
     }
@@ -580,32 +595,14 @@ export const useStore = create<AppState>()((set) => ({
           deletedContactIds: prefs.deletedContactIds || [],
           arcbirdHighscore: prefs.arcbirdHighscore || 0,
           mintedNfts: prefs.mintedNfts || [],
+          readReceiptIds: prefs.readReceiptIds || [],
+          selectedShortcuts: prefs.selectedShortcuts || defaultSelectedShortcuts,
+          cart: prefs.cart || {},
         });
       }
     } catch (e) {
       console.error("Failed to fetch preferences from backend", e);
     }
-  },
-  updateProductStockAndSales: (productId, quantityBought) => {
-    set((state) => {
-      const updated = state.products.map((p) => {
-        if (p.id === productId) {
-          const updatedProduct = {
-            ...p,
-            stock: Math.max(0, p.stock - quantityBought),
-            sales: p.sales + quantityBought,
-          };
-          // Async update backend
-          BackendClient.updateProduct(productId, {
-            stock: updatedProduct.stock,
-            sales: updatedProduct.sales,
-          }).catch(() => {});
-          return updatedProduct;
-        }
-        return p;
-      });
-      return { products: updated };
-    });
   },
   resetState: () =>
     set({

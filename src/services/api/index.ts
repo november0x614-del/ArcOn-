@@ -228,30 +228,14 @@ export const BackendClient = {
   },
 
   /**
-   * Helper to handle localStorage caching with TTL
+   * Helper to handle localStorage caching with TTL (Disabled for Server-First)
    */
   getCachedData(key: string, ttlMs: number) {
-    try {
-      const cached = localStorage.getItem(key);
-      if (!cached) return null;
-      const { data, timestamp } = JSON.parse(cached);
-      if (Date.now() - timestamp > ttlMs) {
-        localStorage.removeItem(key);
-        return null;
-      }
-      return data;
-    } catch (e) {
-      return null;
-    }
+    return null;
   },
 
   setCachedData(key: string, data: any) {
-    try {
-      localStorage.setItem(
-        key,
-        JSON.stringify({ data, timestamp: Date.now() }),
-      );
-    } catch (e) {}
+    // Disabled
   },
 
   /**
@@ -397,6 +381,10 @@ export const BackendClient = {
     return apiRequest(`/api/ecommerce/products/${productId}`, "PUT", updates);
   },
 
+  async fetchNFTs(userId: string) {
+    return apiRequest(`/api/transactions/nfts/${userId}`, "GET");
+  },
+
   async deleteProduct(productId: string | number) {
     return apiRequest(`/api/ecommerce/products/${productId}`, "DELETE");
   },
@@ -433,9 +421,24 @@ export const BackendClient = {
   },
 
   /**
-   * Returns the network configuration.
+   * Platform Configuration
    */
-  getNetworkConfig() {
-    return ARC_TESTNET;
+  async getPlatformConfigs() {
+    return apiRequest("/api/admin/config", "GET");
+  },
+
+  async savePlatformConfig(config: any) {
+    return apiRequest("/api/admin/config", "POST", config);
+  },
+
+  /**
+   * Audit Logs
+   */
+  async getAuditLogs() {
+    return apiRequest("/api/admin/transactions", "GET");
+  },
+
+  async getAdminStats() {
+    return apiRequest("/api/admin/stats", "GET");
   },
 };
