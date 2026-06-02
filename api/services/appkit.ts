@@ -51,15 +51,19 @@ export const getAppKit = () => {
 
   const kitKey = getValidKitKey();
 
-  if (!apiKey || !entitySecret || !kitKey) {
-    throw new Error("Missing Circle API keys or KIT_KEY for AppKit. Please check your (.env) secrets.");
+  const walletSetId = process.env.CIRCLE_WALLET_SET_ID;
+
+  if (!apiKey || !entitySecret || !kitKey || !walletSetId) {
+    throw new Error(
+      "Missing Circle Configurations. Ensure CIRCLE_API_KEY, CIRCLE_ENTITY_SECRET, KIT_KEY, and CIRCLE_WALLET_SET_ID are set in environment variables."
+    );
   }
 
   const adapter = createCircleWalletsAdapter({
     apiKey,
     entitySecret,
     // @ts-ignore
-    walletSetId: process.env.CIRCLE_WALLET_SET_ID || undefined,
+    walletSetId: walletSetId,
   } as any);
 
   appKitAdapter = adapter;

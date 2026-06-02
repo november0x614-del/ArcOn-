@@ -45,19 +45,20 @@ export async function getTokenDetails(tokenId: string) {
 export async function createWallet(supabaseAdmin: any, userId: string) {
   const client = getCircleClientInstance();
 
-  // 1. Create Wallet Set
-  const walletSetResponse = await client.createWalletSet({
-    name: "Lounge Wallet Set",
-  });
+  // 1. Get Wallet Set ID from Env
+  const walletSetId = process.env.CIRCLE_WALLET_SET_ID;
 
-  const walletSet = walletSetResponse.data?.walletSet;
-  if (!walletSet?.id) {
-    throw new Error("Wallet set creation failed: no ID returned from Circle");
+  if (!walletSetId) {
+    throw new Error(
+      "KETERGANTUNGAN_WALLET_SET_ID: Aplikasi tidak memiliki CIRCLE_WALLET_SET_ID di file (.env). " +
+      "Membuat Wallet Set secara dinamis di Vercel akan menyebabkan timeout. " +
+      "Silakan buat Wallet Set di konsol Circle dan masukkan ID-nya ke environment variables."
+    );
   }
 
   // 2. Create Wallet in the Set
   const walletResponse = await client.createWallets({
-    walletSetId: walletSet.id,
+    walletSetId,
     blockchains: ["ARC-TESTNET"],
     count: 1,
     accountType: "SCA",
@@ -76,7 +77,7 @@ export async function createWallet(supabaseAdmin: any, userId: string) {
       id: userId,
       wallet_id: wallet.id,
       wallet_address: wallet.address,
-      wallet_set_id: walletSet.id,
+      wallet_set_id: walletSetId,
     });
     if (error) console.error("Failed mapping to Supabase:", error);
   }
@@ -84,7 +85,7 @@ export async function createWallet(supabaseAdmin: any, userId: string) {
   return {
     walletId: wallet.id,
     address: wallet.address,
-    walletSetId: walletSet.id,
+    walletSetId: walletSetId,
   };
 }
 
@@ -95,23 +96,10 @@ export async function batchCreateWallets(
   const client = getCircleClientInstance();
 
   // 1. Ensure we have a Wallet Set
-  const { data: adminWallet } = await supabaseAdmin
-    .from("user_wallets")
-    .select("wallet_set_id")
-    .eq("id", "00000000-0000-0000-0000-000000000000")
-    .single();
-
-  let walletSetId = adminWallet?.wallet_set_id;
+  const walletSetId = process.env.CIRCLE_WALLET_SET_ID;
 
   if (!walletSetId) {
-    const walletSetResponse = await client.createWalletSet({
-      name: "Lounge Batch Wallet Set",
-    });
-    walletSetId = walletSetResponse.data?.walletSet?.id;
-  }
-
-  if (!walletSetId) {
-    throw new Error("Could not determine or create Wallet Set ID");
+    throw new Error("Batch creation requires a pre-defined CIRCLE_WALLET_SET_ID.");
   }
 
   // 2. Prepare metadata (limit 200 as per Circle Docs)
