@@ -1,5 +1,4 @@
-import circleDcWallets from "@circle-fin/developer-controlled-wallets";
-const { initiateDeveloperControlledWalletsClient } = circleDcWallets;
+import { initiateDeveloperControlledWalletsClient } from "@circle-fin/developer-controlled-wallets";
 
 /**
  * Singleton-like factory for Circle Developer-Controlled Wallets Client.
