@@ -243,7 +243,6 @@ router.post("/chat", async (req, res) => {
     const { message, history, localContext } = req.body;
 
     const ai = new GoogleGenAI({
-      apiKey: process.env.GEMINI_API_KEY,
       httpOptions: {
         headers: { "User-Agent": "aistudio-build" },
       },
