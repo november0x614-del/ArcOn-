@@ -6,13 +6,13 @@ import {
   waitForConfirmation,
   USDC_ADDRESS,
   getArcScanUrl,
-} from "./arcViem.js";
+} from "./arcViem";
 import { encodeFunctionData, parseAbi } from "viem";
-import { logAuditEvent } from "./audit.js";
-import { getCircleClientInstance, circleApiFetch } from "./circleClient.js";
+import { logAuditEvent } from "./audit";
+import { getCircleClientInstance, circleApiFetch } from "./circleClient";
 import * as crypto from "crypto";
 
-import { getSupabaseAdmin } from "../config/supabase.js";
+import { getSupabaseAdmin } from "../config/supabase";
 
 async function getGasFeeStrategy(): Promise<"SPONSORED" | "USER_PAID_USDC"> {
   try {

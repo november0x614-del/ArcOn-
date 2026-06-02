@@ -8,15 +8,36 @@ let appKitInstance: AppKit | null = null;
 let appKitAdapter: CircleWalletsAdapter | null = null;
 
 const getValidKitKey = () => {
-  let kitKey = process.env.KIT_KEY || process.env.VITE_KIT_KEY;
-  if (kitKey && kitKey.includes("KIT_KEY:") && kitKey.split("KIT_KEY:").length > 2) {
-    const parts = kitKey.split("KIT_KEY:").filter((p) => p.trim() !== "");
+  let kitKey = process.env.KIT_KEY || process.env.VITE_KIT_KEY || null;
+  if (!kitKey) return null;
+
+  // Clean up if double-pasted or contains redundant prefixes
+  // Expected format: KIT_KEY:<id>:<secret>
+  if (kitKey.includes("KIT_KEY:") && (kitKey.match(/KIT_KEY:/g) || []).length > 1) {
+    const parts = kitKey.split("KIT_KEY:").filter(p => !!p.trim());
     if (parts.length > 0) {
-      kitKey = "KIT_KEY:" + parts[0].replace(/:$/, "");
+      const segmentParts = parts[0].split(':').filter(p => !!p.trim());
+      if (segmentParts.length >= 2) {
+        return `KIT_KEY:${segmentParts[0]}:${segmentParts[1]}`;
+      }
     }
   }
   return kitKey;
 }
+
+const NATIVE_USDC_ARC = "0x3600000000000000000000000000000000000000";
+
+const normalizeToken = (token: any) => {
+  if (!token) return "USDC";
+  let addressOrSymbol = typeof token === 'object' ? (token.contractAddress || token.symbol) : token;
+  
+  if (typeof addressOrSymbol === 'string') {
+    if (addressOrSymbol.toLowerCase() === NATIVE_USDC_ARC.toLowerCase()) {
+      return "USDC";
+    }
+  }
+  return addressOrSymbol;
+};
 
 /**
  * Initializes the Server-Side App Kit using Developer Controlled Wallets.
@@ -31,14 +52,14 @@ export const getAppKit = () => {
   const kitKey = getValidKitKey();
 
   if (!apiKey || !entitySecret || !kitKey) {
-    throw new Error("Missing Circle API keys or KIT_KEY for AppKit");
+    throw new Error("Missing Circle API keys or KIT_KEY for AppKit. Please check your (.env) secrets.");
   }
 
   const adapter = createCircleWalletsAdapter({
     apiKey,
     entitySecret,
     // @ts-ignore
-    walletSetId: process.env.CIRCLE_WALLET_SET_ID || "not-set",
+    walletSetId: process.env.CIRCLE_WALLET_SET_ID || undefined,
   } as any);
 
   appKitAdapter = adapter;
@@ -70,7 +91,7 @@ export async function executeAppKitSend(
     },
     to: destinationAddress,
     amount: amount.toString(),
-    token: "USDC",
+    token: normalizeToken("USDC"),
     config: {
       kitKey: kitKey as string,
     }
@@ -102,7 +123,7 @@ export async function executeAppKitBridge(
       useForwarder: true, // Forwarder will mint implicitly if no destination adapter
     },
     amount: amount.toString(),
-    token: "USDC",
+    token: normalizeToken("USDC"),
     config: {
       kitKey: kitKey as string,
     }
@@ -129,8 +150,8 @@ export async function executeAppKitSwap(
       address: walletAddress,
     },
     amountIn: amount.toString(),
-    tokenIn: typeof fromToken === 'object' ? (fromToken.contractAddress || fromToken.symbol) : fromToken,
-    tokenOut: typeof toToken === 'object' ? (toToken.contractAddress || toToken.symbol) : toToken,
+    tokenIn: normalizeToken(fromToken),
+    tokenOut: normalizeToken(toToken),
     config: {
       kitKey: kitKey as string,
     }

@@ -1,13 +1,12 @@
 import express from "express";
 import compression from "compression";
 import rateLimit from "express-rate-limit";
-import { getSupabaseAdmin, isUserBlocked } from "./config/supabase.js";
-import walletRoutes from "./routes/wallet.routes.js";
-import transactionRoutes from "./routes/transaction.routes.js";
-import adminRoutes from "./routes/admin.routes.js";
-import miscRoutes from "./routes/misc.routes.js";
-import ecommerceRoutes from "./routes/ecommerce.routes.js";
-import debugRoutes from "./routes/debug.routes.js";
+import { getSupabaseAdmin, isUserBlocked } from "./config/supabase";
+import walletRoutes from "./routes/wallet.routes";
+import transactionRoutes from "./routes/transaction.routes";
+import adminRoutes from "./routes/admin.routes";
+import miscRoutes from "./routes/misc.routes";
+import ecommerceRoutes from "./routes/ecommerce.routes";
 
 // Re-export core services for server/other files that reference index
 export { getSupabaseAdmin, isUserBlocked };
@@ -39,7 +38,6 @@ app.use(apiLimiter); // Apply rate limiter globally for API endpoints
 // For Circle's raw webhook, we use a custom verify callback in express.json() to capture the exact raw body Buffer on req.rawBody
 app.use(
   express.json({
-    limit: "10mb",
     verify: (req: any, _res, buf) => {
       req.rawBody = buf;
     },
@@ -49,11 +47,6 @@ app.use(
 // API Group Routing - Refactored for industry standard MVC pattern
 // We mount all routers on both '/api' and '/' root paths to prevent 405/404 errors on Vercel
 // in case Vercel's Serverless Gateway strips the '/api' prefix before passing to Express.
-
-// Debug Routes (Available for environment diagnostics)
-app.use("/api", debugRoutes);
-app.use("/", debugRoutes);
-
 app.use("/api", walletRoutes);
 app.use("/", walletRoutes);
 

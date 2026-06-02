@@ -11,7 +11,7 @@ import {
   keccak256,
   type Address,
 } from "viem";
-import { getSupabaseAdmin } from "../config/supabase.js";
+import { getSupabaseAdmin } from "../config/supabase";
 
 /**
  * Arc Testnet Chain Definition

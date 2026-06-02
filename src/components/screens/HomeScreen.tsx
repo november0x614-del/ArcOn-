@@ -255,18 +255,8 @@ export const HomeScreen = React.memo(
     );
 
     const filteredShortcuts = React.useMemo(() => {
-      // Filter out unwanted items globally
-      const baseShortcuts = selectedShortcuts.filter((item) => {
-        const label = item.label.toLowerCase();
-        return (
-          label !== "unified balance" &&
-          label !== "transaction history" &&
-          label !== "dapp browser"
-        );
-      });
-
-      if (!platformConfig) return baseShortcuts;
-      return baseShortcuts.filter((item) => {
+      if (!platformConfig) return selectedShortcuts;
+      return selectedShortcuts.filter((item) => {
         const label = item.label;
         if (
           label === "Transfer USDC" ||
@@ -532,7 +522,9 @@ export const HomeScreen = React.memo(
                 </div>
 
                 <div className="grid grid-cols-4 gap-y-5 gap-x-2">
-                  {filteredShortcuts.map((item) => {
+                  {filteredShortcuts
+                    .filter((item) => item.label !== "DApp Browser" && item.label !== "Transaction History" && item.label !== "Unified balance")
+                    .map((item) => {
                       let mappedView = "";
                       if (
                         item.label === "Transfer USDC On-chain" ||
@@ -562,6 +554,8 @@ export const HomeScreen = React.memo(
                       if (item.label === "Mint NFT") mappedView = "mintNFT";
                       if (item.label === "Security & Limits")
                         mappedView = "settings";
+                      if (item.label === "Transaction History")
+                        mappedView = "transactionHistory";
 
                       return (
                         <MenuIcon
