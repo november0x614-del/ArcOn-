@@ -189,46 +189,16 @@ export function TransferScreen({
 }: TransferScreenProps) {
   const { startSyncPolling, stopSyncPolling } = useApp();
   const { realContacts: allContacts } = useContacts();
+  const { 
+    favorites, 
+    setFavorites, 
+    deletedContactIds, 
+    setDeletedContactIds 
+  } = useStore();
+
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [contactToDelete, setContactToDelete] = useState<any | null>(null);
-  const [favorites, setFavorites] = useState<any[]>([]);
   const [isLoadingFavorite, setIsLoadingFavorite] = useState(false);
-  const [deletedContactIds, setDeletedContactIds] = useState<string[]>([]);
-  const [isPreferencesLoaded, setIsPreferencesLoaded] = useState(false);
-
-  useEffect(() => {
-    async function loadPreferences() {
-      try {
-        const prefs = await BackendClient.getPreferences();
-        if (prefs) {
-          if (prefs.favorites) setFavorites(prefs.favorites);
-          if (prefs.deletedContactIds)
-            setDeletedContactIds(prefs.deletedContactIds);
-        }
-      } catch (e) {
-        // Fallback to local storage if API fails
-        try {
-          const savedFavs = localStorage.getItem("favorites");
-          if (savedFavs) setFavorites(JSON.parse(savedFavs));
-          const savedDeleted = localStorage.getItem("deleted_contact_ids");
-          if (savedDeleted) setDeletedContactIds(JSON.parse(savedDeleted));
-        } catch {}
-      } finally {
-        setIsPreferencesLoaded(true);
-      }
-    }
-    loadPreferences();
-  }, []);
-
-  const saveDeletedContactIds = async (ids: string[]) => {
-    setDeletedContactIds(ids);
-    try {
-      localStorage.setItem("deleted_contact_ids", JSON.stringify(ids));
-      await BackendClient.updatePreferences({ deletedContactIds: ids });
-    } catch (e) {
-      console.error(e);
-    }
-  };
 
   React.useEffect(() => {
     startSyncPolling();
@@ -252,20 +222,13 @@ export function TransferScreen({
   }, [favorites, deletedContactIds]);
 
   const handleToggleFavorite = (contact: any) => {
-    setFavorites((prev) => {
-      const contactIdClean = String(contact.id || contact.number || "").toLowerCase().trim();
-      const isFav = prev.some((f) => String(f.id || f.number || "").toLowerCase().trim() === contactIdClean);
-      const newFavs = isFav
-        ? prev.filter((f) => String(f.id || f.number || "").toLowerCase().trim() !== contactIdClean)
-        : [...prev, contact];
-      try {
-        localStorage.setItem("favorites", JSON.stringify(newFavs));
-        BackendClient.updatePreferences({ favorites: newFavs });
-      } catch (e) {
-        console.error(e);
-      }
-      return newFavs;
-    });
+    const contactIdClean = String(contact.id || contact.number || "").toLowerCase().trim();
+    const isFav = favorites.some((f) => String(f.id || f.number || "").toLowerCase().trim() === contactIdClean);
+    const newFavs = isFav
+      ? favorites.filter((f) => String(f.id || f.number || "").toLowerCase().trim() !== contactIdClean)
+      : [...favorites, contact];
+    
+    setFavorites(newFavs);
   };
 
   const [isManageContacts, setIsManageContacts] = useState(false);
@@ -489,22 +452,18 @@ export function TransferScreen({
                     ...deletedContactIds,
                     ...selectedContacts,
                   ];
-                  saveDeletedContactIds(newlyDeleted);
+                  setDeletedContactIds(newlyDeleted);
+
                   setFavorites((prev) => {
-                    const selectedLower = selectedContacts.map(id => String(id).toLowerCase().trim());
+                    const selectedLower = selectedContacts.map((id) =>
+                      String(id).toLowerCase().trim(),
+                    );
                     const newFavs = prev.filter((f) => {
-                      const fId = String(f.id || f.number || "").toLowerCase().trim();
+                      const fId = String(f.id || f.number || "")
+                        .toLowerCase()
+                        .trim();
                       return fId && !selectedLower.includes(fId);
                     });
-                    try {
-                      localStorage.setItem(
-                        "favorites",
-                        JSON.stringify(newFavs),
-                      );
-                      BackendClient.updatePreferences({ favorites: newFavs });
-                    } catch (e) {
-                      console.error(e);
-                    }
                     return newFavs;
                   });
                   setSelectedContacts([]);

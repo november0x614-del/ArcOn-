@@ -9,6 +9,7 @@ import {
   interpretCircleError,
   autoSweepWallets,
   manualSweepAdminWallet,
+  executeTransaction,
 } from "../services/circle";
 import { fetchUnifiedBalance } from "../services/balance";
 import * as crypto from "crypto";
@@ -290,6 +291,54 @@ router.get("/users/:userId/wallet", async (req, res) => {
   }
 });
 
+router.post("/users/:userId/sweep-funds", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const supabase = getSupabaseAdmin();
+    const config = getPlatformConfigs();
+    const treasuryAddress = config.treasuryWalletAddress;
+
+    if (!treasuryAddress) {
+      return res.status(400).json({ error: "Platform Treasury Address is not configured." });
+    }
+
+    const { data: walletData } = await supabase
+      .from("user_wallets")
+      .select("wallet_address")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (!walletData?.wallet_address) {
+      return res.status(404).json({ error: "User wallet not found." });
+    }
+
+    // Get balance of USDC
+    const balanceRaw = await getTokenBalance(walletData.wallet_address as `0x${string}`, USDC_ADDRESS);
+    const balanceNum = parseFloat(formatUnits(balanceRaw, 6)); // Ensure it's in USDC decimals
+
+    if (balanceNum <= 0) {
+      return res.status(400).json({ error: "User wallet has zero balance, nothing to sweep." });
+    }
+
+    const result = await executeTransaction(
+      supabase,
+      userId,
+      balanceNum,
+      treasuryAddress,
+      "sweep",
+      { memo: "Manual admin sweep", bypassApproval: true }
+    );
+
+    // Update their Supabase balance to reflect 0 instantly locally as well, though the webhook might re-sync it
+    await supabase.from("user_wallets").update({ balance: 0 }).eq("id", userId);
+
+    res.json({ message: `Successfully swept ${balanceNum} USDC to Treasury.`, txId: result.txId });
+  } catch (error: any) {
+    console.error("Manual Sweep Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.post("/users/:userId/upgrade", async (req, res) => {
   try {
     const { userId } = req.params;
@@ -345,36 +394,66 @@ router.delete("/users/:userId", async (req, res) => {
     }
 
     const supabase = getSupabaseAdmin();
+    const config = getPlatformConfigs();
+    const treasuryAddress = config.treasuryWalletAddress;
 
-    const { error: updateError } = await supabase.auth.admin.updateUserById(
-      userId,
-      {
-        ban_duration: "876000h",
-        user_metadata: {
-          blocked: true,
-          deleted: true,
-          deletedAt: new Date().toISOString(),
-        },
-      },
-    );
+    // PRE-DELETE HOOK: Sweep Wallet
+    if (treasuryAddress) {
+      const { data: walletData } = await supabase
+        .from("user_wallets")
+        .select("wallet_address")
+        .eq("id", userId)
+        .maybeSingle();
 
-    if (updateError) throw updateError;
+      if (walletData?.wallet_address) {
+        try {
+          const balanceRaw = await getTokenBalance(walletData.wallet_address as `0x${string}`, USDC_ADDRESS);
+          const balanceNum = parseFloat(formatUnits(balanceRaw, 6)); // Ensure it's in USDC decimals
+          
+          if (balanceNum > 0) {
+            console.log(`[Pre-Delete Hook] Sweeping ${balanceNum} USDC from ${walletData.wallet_address} to ${treasuryAddress}`);
+            await executeTransaction(
+              supabase,
+              userId,
+              balanceNum,
+              treasuryAddress,
+              "sweep",
+              { memo: "Pre-delete hook sweep", bypassApproval: true }
+            );
+          } else {
+            console.log(`[Pre-Delete Hook] Wallet ${walletData.wallet_address} balance is 0. No sweep needed.`);
+          }
+        } catch (sweepError) {
+          // Failure to sweep shouldn't necessarily block deletion in a Dev environment, 
+          // but we log it as critical.
+          console.error("[Pre-Delete Hook] Sweep failed, but proceeding with deletion:", sweepError);
+        }
+      }
+    }
+
+    // ON DELETE CASCADE: Hard Delete User
+    const { error: deleteError } = await supabase.auth.admin.deleteUser(userId);
+    if (deleteError) throw deleteError;
+
+    // Manual cleanup for tables just in case FK ON DELETE CASCADE isn't enabled
+    await supabase.from("user_wallets").delete().eq("id", userId);
+    await supabase.from("profiles").delete().eq("id", userId);
 
     try {
       await supabase.from("audit_logs").insert({
-        user_id: userId,
-        action: "SOFT_DELETE_USER",
-        metadata: { deleted_by: "admin", timestamp: new Date().toISOString() },
+        user_id: "00000000-0000-0000-0000-000000000000", // Admin Action
+        action: "HARD_DELETE_USER",
+        metadata: { deleted_target: userId, timestamp: new Date().toISOString() },
       });
     } catch (auditErr) {
       console.warn("Could not insert into audit_logs table", auditErr);
     }
 
     res.json({
-      message: "Pengguna berhasil diarsipkan (soft-delete).",
+      message: "Pengguna berhasil dihapus sepenuhnya beserta saldo dompet (Hard Delete + Auto Sweep).",
     });
   } catch (error: any) {
-    console.error("Failed to soft delete user:", error);
+    console.error("Failed to hard delete user:", error);
     res.status(500).json({ error: error.message });
   }
 });

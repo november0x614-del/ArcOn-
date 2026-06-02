@@ -12,6 +12,7 @@ import {
 import { motion } from "motion/react";
 import { useApp } from "../../contexts/AppContext";
 import { Contact } from "../../types";
+import { useStore } from "../../store/useStore";
 
 interface BatchTransferScreenProps {
   onBack: () => void;
@@ -878,12 +879,9 @@ export function BatchTransferScreen({
                         // Trigger deletion logic
                         const confirmDelete = window.confirm(`Hapus kontak ${contact.name}?`);
                         if (confirmDelete) {
-                          // Manually update deleted ids
-                          const cached = localStorage.getItem("deleted_contact_ids");
-                          const currentDeleted = cached ? JSON.parse(cached) : [];
-                          const newDeleted = [...currentDeleted, contact.id];
-                          localStorage.setItem("deleted_contact_ids", JSON.stringify(newDeleted));
-                          window.dispatchEvent(new Event("storage"));
+                          const { deletedContactIds, setDeletedContactIds } = useStore.getState();
+                          const newDeleted = [...deletedContactIds, contact.id];
+                          setDeletedContactIds(newDeleted);
                           displayToast(`Kontak ${contact.name} berhasil dihapus.`);
                         }
                       }}

@@ -48,7 +48,7 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
     "products" | "dashboard" | "settings"
   >("products");
 
-  const { products, setProducts } = useStore();
+  const { products, setProducts, mintedNfts } = useStore();
 
   const [recentSales, setRecentSales] = useState<any[]>([]);
   const [loadingSales, setLoadingSales] = useState(false);
@@ -63,28 +63,12 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
   const [newProductCategory, setNewProductCategory] = useState("Grocery");
   const [newProductImage, setNewProductImage] = useState("");
   const [newProductDesc, setNewProductDesc] = useState("");
-  const [mintedNfts, setMintedNfts] = useState<any[]>([]);
 
   // Statistics calculated from real-time database transactions
   const totalSalesCount = recentSales.length;
   const totalRevenue = recentSales.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0);
   const escrowedRevenue = recentSales.filter(s => s.status === "ESCROWED").reduce((sum, item) => sum + parseFloat(item.amount || 0), 0);
   const settledRevenue = recentSales.filter(s => s.status === "RELEASED" || s.status === "SETTLED").reduce((sum, item) => sum + parseFloat(item.amount || 0), 0);
-
-  useEffect(() => {
-    if (showAddModal) {
-      try {
-        const stored = localStorage.getItem("minted_nfts");
-        if (stored) {
-          setMintedNfts(JSON.parse(stored));
-        } else {
-          setMintedNfts([]);
-        }
-      } catch (e) {
-        console.error("Failed to load minted_nfts", e);
-      }
-    }
-  }, [showAddModal]);
 
   const handleSelectNft = (nft: any) => {
     setNewProductName(nft.name);
@@ -103,14 +87,14 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
     }
   };
 
-  const handleDeleteListing = (id: number, name: string) => {
+  const handleDeleteListing = (id: number | string, name: string) => {
     if (confirm(`Are you sure you want to remove the listing "${name}"?`)) {
-      setProducts(products.filter((p) => p.id !== id));
+      useStore.getState().removeProduct(id);
       useStore.getState().displayToast(`Successfully removed listing "${name}"`);
     }
   };
 
-  const handleAddProduct = () => {
+  const handleAddProduct = async () => {
     if (!newProductName || !newProductPrice || !newProductStock) {
       useStore.getState().displayToast("Please fill all fields!");
       return;
@@ -126,7 +110,6 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
       return;
     }
     const newProduct = {
-      id: Date.now(),
       name: newProductName,
       price: priceNum,
       stock: stockNum,
@@ -134,9 +117,11 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
       category: newProductCategory,
       sales: 0,
       desc: newProductDesc || "Fresh merchant addition sold securely on Arc Testnet.",
-      dateLabel: newProductCategory === "NFT" ? "Unique L1 NFT" : `Valid until ${new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).getDate()}/${new Date().getMonth() + 1}`
+      dateLabel: newProductCategory === "NFT" ? "Unique L1 NFT" : `Valid until ${new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).getDate()}/${new Date().getMonth() + 1}`,
+      seller_address: address
     };
-    setProducts([...products, newProduct]);
+    
+    await useStore.getState().saveProduct(newProduct);
     useStore.getState().displayToast(`Successfully listed ${newProductName}!`);
     setShowAddModal(false);
     setNewProductName("");

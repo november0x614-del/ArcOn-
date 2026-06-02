@@ -180,4 +180,80 @@ router.get("/ecommerce/merchant/sales/:sellerAddress", async (req, res) => {
   }
 });
 
+/**
+ * 5. Products Catalog Management
+ */
+router.get("/ecommerce/products", async (req, res) => {
+  try {
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data: products, error } = await supabaseAdmin
+      .from("ecommerce_products")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      if (error.code === "42P01") {
+        // Fallback for testnet if table not created
+        return res.json([]);
+      }
+      return res.status(500).json({ error: error.message });
+    }
+    res.json(products || []);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post("/ecommerce/products", async (req, res) => {
+  try {
+    const product = req.body;
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data, error } = await supabaseAdmin
+      .from("ecommerce_products")
+      .insert(product)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json(data);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.put("/ecommerce/products/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data, error } = await supabaseAdmin
+      .from("ecommerce_products")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json(data);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.delete("/ecommerce/products/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const supabaseAdmin = getSupabaseAdmin();
+    const { error } = await supabaseAdmin
+      .from("ecommerce_products")
+      .delete()
+      .eq("id", id);
+
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

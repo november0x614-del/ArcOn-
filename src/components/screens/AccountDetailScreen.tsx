@@ -55,18 +55,7 @@ export function AccountDetailScreen({
 }: AccountDetailScreenProps) {
   const [activeTab, setActiveTab] = useState<"history" | "asset">("history");
   const [assetSubTab, setAssetSubTab] = useState<"tokens" | "nfts">("tokens");
-  const [mintedNfts, setMintedNfts] = useState<any[]>([]);
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("minted_nfts");
-      if (stored) {
-        setMintedNfts(JSON.parse(stored));
-      }
-    } catch (e) {
-      console.error("Failed to load minted NFTs in AccountDetailScreen:", e);
-    }
-  }, [activeTab, assetSubTab]);
+  const { mintedNfts } = useStore();
 
   const [showUID, setShowUID] = useState(false);
   const {

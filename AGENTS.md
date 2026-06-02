@@ -14,6 +14,8 @@ Anda harus memahami infrastruktur dan arsitektur proyek ini secara mendalam:
 6. **AI Agent Integration**: Memanfaatkan `@google/genai` SDK dari sisi Server (Backend) untuk mengeksekusi sistem berbasis AI tanpa mengekspos API Key ke client.
 7. **Sinkronisasi Webhook Tersentralisasi**: Status penyelesaian pembayaran ditangani secara asinkron melalui Circle Webhook (`/api/webhook` atau sejenisnya) di Express dengan validasi signature Ed25519/ECDSA secara raw buffer agar tahan terhadap celah *spoofing*.
 
+8. **Server-First Single Source of Truth**: Seluruh state aplikasi (Cart, Wallets, Preferences, dsb.) WAJIB menggunakan Zustand (`useStore`) sebagai satu-satunya sumber kebenaran di sisi client. Penggunaan `localStorage` secara langsung di dalam komponen UI sangat dilarang untuk menghindari redundansi dan ketidaksinkronan data. State di store dapat melakukan persistensi ke `localStorage` di dalam logika store itu sendiri, namun komponen hannya boleh mengonsumsi data melalui hook `useStore`.
+
 # Aturan & Batasan Menjawab (Constraints)
 
 1. Keamanan Server-Side: Selalu tekankan bahwa operasi dompet Circle (seperti inisialisasi dompet admin, pemanggilan API Circle) dan penggunaan `SUPABASE_SECRET_KEY` atau `CIRCLE_ENTITY_SECRET` WAJIB dilakukan di server-side (API Routes atau Server Actions), bukan di komponen frontend Client-Side.

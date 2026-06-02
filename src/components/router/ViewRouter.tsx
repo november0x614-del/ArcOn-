@@ -2,6 +2,7 @@ import React from "react";
 import { motion, AnimatePresence, Variants } from "motion/react";
 import { ViewState } from "../../types";
 import { useApp } from "../../contexts/AppContext";
+import { useStore } from "../../store/useStore";
 import { LoginScreen } from "../screens/LoginScreen";
 import { RegisterWeb3Screen } from "../screens/RegisterWeb3Screen";
 import { RegisterSuccessScreen } from "../screens/RegisterSuccessScreen";
@@ -212,33 +213,21 @@ export const ViewRouter = React.memo(
       ).length;
     }, [transactions, readReceiptIds]);
 
-    const [cartCount, setCartCount] = React.useState(() => {
-      try {
-        const cached = localStorage.getItem("lounge_cart");
-        if (cached) {
-          const cart = JSON.parse(cached);
-          return Object.values(cart).reduce((a, b) => (a as number) + (b as number), 0) as number;
-        }
-      } catch (e) {}
-      return 0;
-    });
+    const { cart: cartQuantities } = useStore();
+    const cartCount = React.useMemo(() => {
+      return Object.values(cartQuantities).reduce((a, b) => (a as number) + (b as number), 0) as number;
+    }, [cartQuantities]);
 
     const [ecommerceInnerView, setEcommerceInnerView] = React.useState<"list" | "detail" | "checkout" | "success">("list");
 
     React.useEffect(() => {
-      const handleCartUpdate = (e: Event) => {
-        const customEvent = e as CustomEvent<number>;
-        setCartCount(customEvent.detail ?? 0);
-      };
       const handleViewChange = (e: Event) => {
         const customEvent = e as CustomEvent<"list" | "detail" | "checkout" | "success">;
         setEcommerceInnerView(customEvent.detail);
       };
 
-      window.addEventListener("lounge-cart-updated", handleCartUpdate);
       window.addEventListener("ecommerce-view-state-changed", handleViewChange);
       return () => {
-        window.removeEventListener("lounge-cart-updated", handleCartUpdate);
         window.removeEventListener("ecommerce-view-state-changed", handleViewChange);
       };
     }, []);
@@ -480,7 +469,7 @@ export const ViewRouter = React.memo(
             onLogin={async (email, password) => {
               setIsLoggingIn(true);
 
-              const { error } = await supabase.auth.signInWithPassword({
+              const { data, error } = await supabase.auth.signInWithPassword({
                 email,
                 password,
               });
@@ -491,11 +480,32 @@ export const ViewRouter = React.memo(
                 return;
               }
 
-              // We NO LONGER call setViewState("home") here.
-              // The central handleUserSession in App.tsx will detect the new session,
-              // verify/provision the wallet, and then navigate to "home" securely.
-              // We keep setIsLoggingIn(true) so the loading spinner stays visible
-              // until the transition happens from App.tsx.
+              // Explicitly wait for wallet info to provide immediate feedback instead of hanging on the Loading screen
+              try {
+                if (data.session?.user) {
+                  const user = data.session.user;
+                  const response = await fetch(`/api/debug-wallet/${user.id}`);
+                  if (response.ok) {
+                    const walletInfo = await response.json();
+                    
+                    // Immediate store sync for fast transition
+                    const { setRegisteredUser } = useStore.getState();
+                    setRegisteredUser({
+                      username: user.user_metadata?.full_name || user.user_metadata?.username || "Arc User",
+                      email: user.email || "",
+                      isVerified: true,
+                      walletId: walletInfo.wallet_id,
+                      walletAddress: walletInfo.wallet_address,
+                      supabaseUid: user.id
+                    });
+                  }
+                }
+              } catch (e) {
+                console.warn("Could not pre-fetch wallet during login", e);
+              }
+
+              setIsLoggingIn(false);
+              setViewState("home");
             }}
             onForgotPassword={() => setViewState("forgotPassword")}
           />

@@ -73,20 +73,18 @@ export function MintNFTScreen({ onBack }: { onBack: () => void }) {
         const hash = result.txHash || "0x" + Math.random().toString(16).slice(2);
         setTxHash(hash);
         
-        // Save minted NFT to localStorage
+        // Save minted NFT to Store
         try {
-          const oldNfts = JSON.parse(localStorage.getItem("minted_nfts") || "[]");
-          const newNft = {
+          useStore.getState().addMintedNft({
             id: hash,
             name: nftName,
             description: "Arc Network Native NFT",
             image: selectedImage,
             timestamp: new Date().toLocaleString(),
             txHash: hash
-          };
-          localStorage.setItem("minted_nfts", JSON.stringify([newNft, ...oldNfts]));
+          });
         } catch (e) {
-          console.error("Failed to save minted NFT to localStorage", e);
+          console.error("Failed to save minted NFT to Store", e);
         }
 
         addLog(`NFT Minted Successfully: ${nftName}`);

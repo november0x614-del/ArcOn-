@@ -81,6 +81,25 @@ interface AppState {
   addLog: (log: string) => void;
   products: any[];
   setProducts: (products: any[]) => void;
+  fetchProducts: () => Promise<void>;
+  saveProduct: (product: any) => Promise<void>;
+  removeProduct: (productId: string | number) => Promise<void>;
+  cart: Record<number, number>;
+  setCart: (cart: Record<number, number>) => void;
+  addToCart: (productId: number) => void;
+  removeFromCart: (productId: number) => void;
+  clearCart: () => void;
+  mintedNfts: any[];
+  setMintedNfts: (nfts: any[]) => void;
+  addMintedNft: (nft: any) => void;
+  favorites: any[];
+  setFavorites: (favs: any[] | ((prev: any[]) => any[])) => void;
+  deletedContactIds: string[];
+  setDeletedContactIds: (ids: string[] | ((prev: string[]) => string[])) => void;
+  arcbirdHighscore: number;
+  setArcbirdHighscore: (score: number) => void;
+  savePreferences: (updates: any) => Promise<void>;
+  fetchPreferences: () => Promise<void>;
   updateProductStockAndSales: (productId: number, quantityBought: number) => void;
   resetState: () => void;
 }
@@ -104,21 +123,18 @@ export const useStore = create<AppState>()((set) => ({
     set({ registeredUser: user });
     if (user?.supabaseUid) {
       useStore.getState().fetchImportedTokens();
-      try {
-        const cachedReceipts = localStorage.getItem(`receipts_${user.supabaseUid}`);
-        if (cachedReceipts) {
-          set({ readReceiptIds: JSON.parse(cachedReceipts) });
-        }
-      } catch(e) {}
-      
-      try {
-        const cachedShortcuts = localStorage.getItem(`shortcuts_${user.supabaseUid}`);
-        if (cachedShortcuts) {
-          set({ selectedShortcuts: JSON.parse(cachedShortcuts) });
-        }
-      } catch(e) {}
+      useStore.getState().fetchProducts();
+      useStore.getState().fetchPreferences();
     } else {
-      set({ readReceiptIds: [], selectedShortcuts: defaultSelectedShortcuts });
+      set({
+        readReceiptIds: [],
+        selectedShortcuts: defaultSelectedShortcuts,
+        mintedNfts: [],
+        favorites: [],
+        deletedContactIds: [],
+        arcbirdHighscore: 0,
+        products: MOCK_PRODUCTS,
+      });
     }
   },
 
@@ -438,35 +454,156 @@ export const useStore = create<AppState>()((set) => ({
         `[${new Date().toLocaleTimeString()}] ${log}`,
       ],
     })),
-  products: (() => {
-    try {
-      const cached = localStorage.getItem("lounge_products");
-      return cached ? JSON.parse(cached) : MOCK_PRODUCTS;
-    } catch (e) {
-      return MOCK_PRODUCTS;
-    }
-  })(),
+  products: MOCK_PRODUCTS,
   setProducts: (products) => {
     set({ products });
+  },
+  fetchProducts: async () => {
     try {
-      localStorage.setItem("lounge_products", JSON.stringify(products));
-    } catch (e) {}
+      const products = await BackendClient.getProducts();
+      if (Array.isArray(products) && products.length > 0) {
+        set({ products });
+      } else {
+        set({ products: MOCK_PRODUCTS });
+      }
+    } catch (e) {
+      set({ products: MOCK_PRODUCTS });
+    }
+  },
+  saveProduct: async (product) => {
+    try {
+      const saved = await BackendClient.saveProduct(product);
+      set((state) => ({ products: [saved, ...state.products] }));
+    } catch (e) {
+      set((state) => ({ products: [product, ...state.products] }));
+    }
+  },
+  removeProduct: async (productId) => {
+    try {
+      await BackendClient.deleteProduct(productId);
+      set((state) => ({
+        products: state.products.filter((p) => p.id !== productId),
+      }));
+    } catch (e) {
+      set((state) => ({
+        products: state.products.filter((p) => p.id !== productId),
+      }));
+    }
+  },
+  cart: (() => {
+    try {
+      const cached = localStorage.getItem("lounge_cart");
+      return cached ? JSON.parse(cached) : {};
+    } catch (e) {
+      return {};
+    }
+  })(),
+  setCart: (cart) => {
+    set({ cart });
+    localStorage.setItem("lounge_cart", JSON.stringify(cart));
+  },
+  addToCart: (productId) =>
+    set((state) => {
+      const newCart = {
+        ...state.cart,
+        [productId]: (state.cart[productId] || 0) + 1,
+      };
+      localStorage.setItem("lounge_cart", JSON.stringify(newCart));
+      return { cart: newCart };
+    }),
+  removeFromCart: (productId) =>
+    set((state) => {
+      const newCart = { ...state.cart };
+      if (newCart[productId] > 1) {
+        newCart[productId] -= 1;
+      } else {
+        delete newCart[productId];
+      }
+      localStorage.setItem("lounge_cart", JSON.stringify(newCart));
+      return { cart: newCart };
+    }),
+  clearCart: () => {
+    localStorage.removeItem("lounge_cart");
+    set({ cart: {} });
+  },
+  mintedNfts: [],
+  setMintedNfts: (nfts) => {
+    set({ mintedNfts: nfts });
+    useStore.getState().savePreferences({ mintedNfts: nfts });
+  },
+  addMintedNft: (nft) =>
+    set((state) => {
+      const newList = [nft, ...state.mintedNfts];
+      useStore.getState().savePreferences({ mintedNfts: newList });
+      return { mintedNfts: newList };
+    }),
+  favorites: [],
+  setFavorites: (favorites) => {
+    set((state) => {
+      const newList =
+        typeof favorites === "function" ? favorites(state.favorites) : favorites;
+      useStore.getState().savePreferences({ favorites: newList });
+      return { favorites: newList };
+    });
+  },
+  deletedContactIds: [],
+  setDeletedContactIds: (ids) => {
+    set((state) => {
+      const newList =
+        typeof ids === "function" ? ids(state.deletedContactIds) : ids;
+      useStore.getState().savePreferences({ deletedContactIds: newList });
+      return { deletedContactIds: newList };
+    });
+  },
+  arcbirdHighscore: 0,
+  setArcbirdHighscore: (score) => {
+    set({ arcbirdHighscore: score });
+    useStore.getState().savePreferences({ arcbirdHighscore: score });
+  },
+  savePreferences: async (updates) => {
+    const user = useStore.getState().registeredUser;
+    if (!user?.supabaseUid) return;
+    try {
+      await BackendClient.updatePreferences(updates);
+    } catch (e) {
+      console.error("Failed to sync preferences to backend", e);
+    }
+  },
+  fetchPreferences: async () => {
+    const user = useStore.getState().registeredUser;
+    if (!user?.supabaseUid) return;
+    try {
+      const prefs = await BackendClient.getPreferences();
+      if (prefs) {
+        set({
+          favorites: prefs.favorites || [],
+          deletedContactIds: prefs.deletedContactIds || [],
+          arcbirdHighscore: prefs.arcbirdHighscore || 0,
+          mintedNfts: prefs.mintedNfts || [],
+        });
+      }
+    } catch (e) {
+      console.error("Failed to fetch preferences from backend", e);
+    }
   },
   updateProductStockAndSales: (productId, quantityBought) => {
     set((state) => {
       const updated = state.products.map((p) => {
         if (p.id === productId) {
-          return {
+          const updatedProduct = {
             ...p,
             stock: Math.max(0, p.stock - quantityBought),
             sales: p.sales + quantityBought,
           };
+          // Async update backend
+          BackendClient.updateProduct(productId, {
+            stock: updatedProduct.stock,
+            sales: updatedProduct.sales,
+          }).catch(() => {});
+          return updatedProduct;
         }
         return p;
       });
-      try {
-        localStorage.setItem("lounge_products", JSON.stringify(updated));
-      } catch (e) {}
       return { products: updated };
     });
   },

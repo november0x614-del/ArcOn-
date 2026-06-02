@@ -376,6 +376,28 @@ export function AdminDashboardScreen({
     }
   };
 
+  const handleManualSweepUser = async (userId: string) => {
+    setActionLoading("sweep-" + userId);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/sweep-funds`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSuccessMsg(data.message || "Manual sweep initiated successfully.");
+        setTimeout(() => setSuccessMsg(null), 4500);
+        await Promise.all([fetchWalletDetails(userId), fetchTransactions()]);
+      } else {
+        setError(data.error || "Failed to sweep funds.");
+      }
+    } catch (err: any) {
+      setError("System connect error during sweep.");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleSaveConfig = async (updatedFields: Partial<AdminConfig>) => {
     if (!platformConfig) return;
     setSaving(true);
@@ -996,6 +1018,34 @@ export function AdminDashboardScreen({
                                   </button>
                                 </div>
                               )}
+
+                            <div className="p-5 bg-orange-50 border border-orange-100 rounded-3xl mt-4">
+                              <div className="flex items-center gap-4 mb-3">
+                                <div className="p-2.5 bg-orange-500 rounded-xl text-white">
+                                  <AlertCircle size={20} />
+                                </div>
+                                <div>
+                                  <div className="font-bold text-orange-900 text-[14px]">
+                                    Emergency Sweep
+                                  </div>
+                                  <div className="text-[11px] text-orange-700 font-medium leading-relaxed">
+                                    Instantly withdraw all USDC from this user to the platform Treasury. Useful if user loses access.
+                                  </div>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => handleManualSweepUser(selectedUser.id)}
+                                disabled={!!actionLoading}
+                                className="w-full py-3 bg-white text-orange-600 border border-orange-200 rounded-xl font-bold text-[13px] hover:bg-orange-50 transition-all active:scale-95 shadow-sm flex items-center justify-center gap-2"
+                              >
+                                {actionLoading === "sweep-" + selectedUser.id ? (
+                                  <RefreshCw size={16} className="animate-spin" />
+                                ) : (
+                                  <ArrowLeft size={16} />
+                                )}
+                                Sweep All Funds
+                              </button>
+                            </div>
                           </div>
                         )}
 

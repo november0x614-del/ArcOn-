@@ -383,6 +383,25 @@ export const BackendClient = {
   },
 
   /**
+   * E-commerce Products
+   */
+  async getProducts() {
+    return apiRequest("/api/ecommerce/products", "GET");
+  },
+
+  async saveProduct(product: any) {
+    return apiRequest("/api/ecommerce/products", "POST", product);
+  },
+
+  async updateProduct(productId: string | number, updates: any) {
+    return apiRequest(`/api/ecommerce/products/${productId}`, "PUT", updates);
+  },
+
+  async deleteProduct(productId: string | number) {
+    return apiRequest(`/api/ecommerce/products/${productId}`, "DELETE");
+  },
+
+  /**
    * Resolves a wallet address to a username/name with caching.
    * Cached for 24 hours.
    */

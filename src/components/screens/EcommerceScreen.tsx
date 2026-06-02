@@ -32,6 +32,10 @@ export function EcommerceScreen({ onBack, isDesktop }: EcommerceScreenProps) {
     displayToast,
     registeredUser,
     products,
+    cart: cartQuantities,
+    addToCart,
+    removeFromCart,
+    clearCart: clearCartStore,
     updateProductStockAndSales,
   } = useStore();
   
@@ -50,25 +54,15 @@ export function EcommerceScreen({ onBack, isDesktop }: EcommerceScreenProps) {
   >("idle");
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [transactionMetadata, setTransactionMetadata] = useState<any>(null);
-  
-  const [cartQuantities, setCartQuantities] = useState<{ [id: number]: number }>(() => {
-    try {
-      const cached = localStorage.getItem("lounge_cart");
-      return cached ? JSON.parse(cached) : {};
-    } catch (e) {
-      return {};
-    }
-  });
 
   // Track the view state to sync with left sidebar navigation
   useEffect(() => {
     window.dispatchEvent(new CustomEvent("ecommerce-view-state-changed", { detail: viewState }));
   }, [viewState]);
 
-  // Sync cart counter
+  // Sync cart counter event for legacy listeners
   useEffect(() => {
     try {
-      localStorage.setItem("lounge_cart", JSON.stringify(cartQuantities));
       const totalCount = Object.values(cartQuantities).reduce((a, b) => (a as number) + (b as number), 0);
       window.dispatchEvent(new CustomEvent("lounge-cart-updated", { detail: totalCount }));
     } catch (e) {}
@@ -96,10 +90,11 @@ export function EcommerceScreen({ onBack, isDesktop }: EcommerceScreenProps) {
   };
 
   const updateQuantity = (id: number, delta: number) => {
-    setCartQuantities(prev => {
-      const newQ = (prev[id] || 0) + delta;
-      return { ...prev, [id]: Math.max(0, newQ) };
-    });
+    if (delta > 0) {
+      addToCart(id);
+    } else if (delta < 0) {
+      removeFromCart(id);
+    }
   };
 
   const getCartCount = (): number => {
@@ -244,7 +239,7 @@ export function EcommerceScreen({ onBack, isDesktop }: EcommerceScreenProps) {
       });
 
       displayToast("Payment Confirmed! 🎉");
-      setCartQuantities({}); // clear cart
+      clearCartStore();
     } catch (err) {
       console.error(err);
       setIsPurchasing(false);

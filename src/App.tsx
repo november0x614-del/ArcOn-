@@ -101,10 +101,6 @@ export default function App() {
           walletInfo?.wallet_id && walletInfo?.wallet_address;
 
         if (hasValidWallet) {
-          // Sync to localStorage
-          localStorage.setItem("arc_wallet_address", walletInfo.wallet_address);
-          localStorage.setItem("arc_user_id", user.id);
-
           setRegisteredUser({
             username:
               user.user_metadata?.full_name ||
@@ -177,14 +173,10 @@ export default function App() {
         resetState();
       } else if (_event === "SIGNED_OUT") {
         resetState();
-        localStorage.removeItem("arc_wallet_address");
-        localStorage.removeItem("arc_user_id");
       } else if (session) {
         handleUserSession(session.user);
       } else {
         resetState();
-        localStorage.removeItem("arc_wallet_address");
-        localStorage.removeItem("arc_user_id");
       }
     });
 

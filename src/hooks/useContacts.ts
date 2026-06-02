@@ -4,26 +4,19 @@ import { Contact } from "../types";
 import { BackendClient } from "../services/api";
 
 export function useContacts() {
-  const { transactions } = useStore();
+  const { transactions, deletedContactIds, setDeletedContactIds } = useStore();
   const [resolvedNames, setResolvedNames] = useState<Record<string, string>>(
     {},
   );
-  const [deletedContactIds, setDeletedContactIds] = useState<string[]>([]);
 
   useEffect(() => {
     async function loadDeletedIds() {
       try {
-        const cached = localStorage.getItem("deleted_contact_ids");
-        if (cached) {
-          setDeletedContactIds(JSON.parse(cached));
-        }
-
         const { registeredUser } = useStore.getState();
         if (registeredUser?.supabaseUid) {
           const prefs = await BackendClient.getPreferences();
           if (prefs?.deletedContactIds) {
             setDeletedContactIds(prefs.deletedContactIds);
-            localStorage.setItem("deleted_contact_ids", JSON.stringify(prefs.deletedContactIds));
           }
         }
       } catch (e) {
@@ -31,27 +24,7 @@ export function useContacts() {
       }
     }
     loadDeletedIds();
-  }, [transactions]);
-
-  useEffect(() => {
-    const handleStorageChange = () => {
-      try {
-        const cached = localStorage.getItem("deleted_contact_ids");
-        if (cached) {
-          setDeletedContactIds(JSON.parse(cached));
-        }
-      } catch (e) {
-        // Ignore
-      }
-    };
-    window.addEventListener("storage", handleStorageChange);
-    const interval = setInterval(handleStorageChange, 1000);
-
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      clearInterval(interval);
-    };
-  }, []);
+  }, [transactions, setDeletedContactIds]);
 
   useEffect(() => {
     async function resolveAddresses() {
