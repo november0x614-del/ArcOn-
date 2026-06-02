@@ -1,12 +1,12 @@
 import express from "express";
 import compression from "compression";
 import rateLimit from "express-rate-limit";
-import { getSupabaseAdmin, isUserBlocked } from "./config/supabase";
-import walletRoutes from "./routes/wallet.routes";
-import transactionRoutes from "./routes/transaction.routes";
-import adminRoutes from "./routes/admin.routes";
-import miscRoutes from "./routes/misc.routes";
-import ecommerceRoutes from "./routes/ecommerce.routes";
+import { getSupabaseAdmin, isUserBlocked } from "./config/supabase.js";
+import walletRoutes from "./routes/wallet.routes.js";
+import transactionRoutes from "./routes/transaction.routes.js";
+import adminRoutes from "./routes/admin.routes.js";
+import miscRoutes from "./routes/misc.routes.js";
+import ecommerceRoutes from "./routes/ecommerce.routes.js";
 
 // Re-export core services for server/other files that reference index
 export { getSupabaseAdmin, isUserBlocked };
