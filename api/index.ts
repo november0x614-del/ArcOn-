@@ -1,4 +1,13 @@
 import express from "express";
+
+console.log("ENV CHECK", {
+  SUPABASE_URL: !!process.env.SUPABASE_URL,
+  VITE_SUPABASE_URL: !!process.env.VITE_SUPABASE_URL,
+  SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+  CIRCLE_API_KEY: !!process.env.CIRCLE_API_KEY,
+  CIRCLE_ENTITY_SECRET: !!process.env.CIRCLE_ENTITY_SECRET,
+});
+
 import compression from "compression";
 import rateLimit from "express-rate-limit";
 import { getSupabaseAdmin, isUserBlocked } from "./config/supabase.js";
