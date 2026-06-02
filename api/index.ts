@@ -7,6 +7,7 @@ import transactionRoutes from "./routes/transaction.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 import miscRoutes from "./routes/misc.routes.js";
 import ecommerceRoutes from "./routes/ecommerce.routes.js";
+import debugRoutes from "./routes/debug.routes.js";
 
 // Re-export core services for server/other files that reference index
 export { getSupabaseAdmin, isUserBlocked };
@@ -48,6 +49,11 @@ app.use(
 // API Group Routing - Refactored for industry standard MVC pattern
 // We mount all routers on both '/api' and '/' root paths to prevent 405/404 errors on Vercel
 // in case Vercel's Serverless Gateway strips the '/api' prefix before passing to Express.
+
+// Debug Routes (Available for environment diagnostics)
+app.use("/api", debugRoutes);
+app.use("/", debugRoutes);
+
 app.use("/api", walletRoutes);
 app.use("/", walletRoutes);
 
