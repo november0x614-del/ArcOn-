@@ -1,6 +1,6 @@
 import { formatUnits } from "viem";
-import { publicClient, USDC_ADDRESS, getTokenBalance } from "./arcViem.js";
-import { getCircleClientInstance } from "./circleClient.js";
+import { publicClient, USDC_ADDRESS, getTokenBalance } from "./arcViem";
+import { getCircleClientInstance } from "./circleClient";
 
 interface CacheEntry {
   data: any;

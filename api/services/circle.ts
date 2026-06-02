@@ -6,13 +6,13 @@ import {
   waitForConfirmation,
   USDC_ADDRESS,
   getArcScanUrl,
-} from "./arcViem.js";
+} from "./arcViem";
 import { encodeFunctionData, parseAbi } from "viem";
-import { logAuditEvent } from "./audit.js";
-import { getCircleClientInstance, circleApiFetch, resolveWalletSetId } from "./circleClient.js";
+import { logAuditEvent } from "./audit";
+import { getCircleClientInstance, circleApiFetch, resolveWalletSetId } from "./circleClient";
 import * as crypto from "crypto";
 
-import { getSupabaseAdmin } from "../config/supabase.js";
+import { getSupabaseAdmin } from "../config/supabase";
 
 async function getGasFeeStrategy(): Promise<"SPONSORED" | "USER_PAID_USDC"> {
   try {
@@ -43,14 +43,10 @@ export async function getTokenDetails(tokenId: string) {
 }
 
 export async function createWallet(supabaseAdmin: any, userId: string) {
-  console.log("[createWallet-Service] Executing...");
   const client = getCircleClientInstance();
-  console.log("[createWallet-Service] Circle Client Instantiated.");
 
   // 1. Get Wallet Set ID from Env or API
-  console.log("[createWallet-Service] Resolving Wallet Set ID...");
   const walletSetId = await resolveWalletSetId();
-  console.log("[createWallet-Service] Resolved Wallet Set ID:", walletSetId);
 
   if (!walletSetId) {
     throw new Error(
@@ -59,14 +55,12 @@ export async function createWallet(supabaseAdmin: any, userId: string) {
   }
 
   // 2. Create Wallet in the Set
-  console.log("[createWallet-Service] Calling circle client createWallets...");
   const walletResponse = await client.createWallets({
     walletSetId,
     blockchains: ["ARC-TESTNET"],
     count: 1,
     accountType: "SCA",
   });
-  console.log("[createWallet-Service] client.createWallets returned.");
 
   const wallet = walletResponse.data?.wallets?.[0];
   if (!wallet) {
@@ -74,11 +68,9 @@ export async function createWallet(supabaseAdmin: any, userId: string) {
       "Wallet creation failed: no wallets array returned from Circle",
     );
   }
-  console.log("[createWallet-Service] Wallet created:", wallet.address);
 
   // 3. Save to Supabase if userId is provided
   if (userId) {
-    console.log("[createWallet-Service] Upserting wallet to Supabase...");
     const { error } = await supabaseAdmin.from("user_wallets").upsert({
       id: userId,
       wallet_id: wallet.id,

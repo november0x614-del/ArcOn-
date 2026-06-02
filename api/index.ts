@@ -1,63 +1,26 @@
 import express from "express";
-
 import compression from "compression";
 import rateLimit from "express-rate-limit";
-import { getSupabaseAdmin, isUserBlocked } from "./config/supabase.js";
-import walletRoutes from "./routes/wallet.routes.js";
-import transactionRoutes from "./routes/transaction.routes.js";
-import adminRoutes from "./routes/admin.routes.js";
-import miscRoutes from "./routes/misc.routes.js";
-import ecommerceRoutes from "./routes/ecommerce.routes.js";
+import { getSupabaseAdmin, isUserBlocked } from "./config/supabase";
+import walletRoutes from "./routes/wallet.routes";
+import transactionRoutes from "./routes/transaction.routes";
+import adminRoutes from "./routes/admin.routes";
+import miscRoutes from "./routes/misc.routes";
+import ecommerceRoutes from "./routes/ecommerce.routes";
 
 // Re-export core services for server/other files that reference index
 export { getSupabaseAdmin, isUserBlocked };
 
+process.on("uncaughtException", (err) => {
+  console.error("Unhandled Exception:", err);
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled Rejection at:", promise, "reason:", reason);
+});
+
 const app = express();
 app.set("trust proxy", 1); // Enable if you're behind a reverse proxy (Heroku, AWS, Nginx, or Google Cloud Run)
-
-app.get("/api/debug-env", (req, res) => {
-  // Dicetak pada Dashboard Logs Vercel
-  console.log("RUNTIME ENV CHECK", {
-    SUPABASE_URL: !!process.env.SUPABASE_URL,
-    VITE_SUPABASE_URL: !!process.env.VITE_SUPABASE_URL,
-    SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-    CIRCLE_API_KEY: !!process.env.CIRCLE_API_KEY,
-    CIRCLE_ENTITY_SECRET: !!process.env.CIRCLE_ENTITY_SECRET,
-  });
-  
-  // Dikembalikan sebagai payload ke browser
-  res.json({
-    status: "ok",
-    env_loaded: {
-      SUPABASE_URL: !!process.env.SUPABASE_URL,
-      VITE_SUPABASE_URL: !!process.env.VITE_SUPABASE_URL,
-      SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-      CIRCLE_API_KEY: !!process.env.CIRCLE_API_KEY,
-      CIRCLE_ENTITY_SECRET: !!process.env.CIRCLE_ENTITY_SECRET,
-    }
-  });
-});
-
-app.get("/debug-env", (req, res) => {
-  // Mount di root juga terkait config Vercel (optional fallback)
-  console.log("RUNTIME ENV CHECK", {
-    SUPABASE_URL: !!process.env.SUPABASE_URL,
-    VITE_SUPABASE_URL: !!process.env.VITE_SUPABASE_URL,
-    SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-    CIRCLE_API_KEY: !!process.env.CIRCLE_API_KEY,
-    CIRCLE_ENTITY_SECRET: !!process.env.CIRCLE_ENTITY_SECRET,
-  });
-  res.json({
-    status: "ok",
-    env_loaded: {
-      SUPABASE_URL: !!process.env.SUPABASE_URL,
-      VITE_SUPABASE_URL: !!process.env.VITE_SUPABASE_URL,
-      SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-      CIRCLE_API_KEY: !!process.env.CIRCLE_API_KEY,
-      CIRCLE_ENTITY_SECRET: !!process.env.CIRCLE_ENTITY_SECRET,
-    }
-  });
-});
 
 // Rate Limiting Configuration
 const apiLimiter = rateLimit({
