@@ -103,6 +103,12 @@ export function OtherAccountsScreen({ onBack }: OtherAccountsScreenProps) {
             </div>
           ))}
 
+          <button className="w-full py-5 border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center gap-3 text-slate-400 hover:text-slate-800 hover:border-slate-900 hover:bg-slate-100 transition-all group">
+            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-slate-900 group-hover:text-white transition-colors">
+              <Plus size={24} />
+            </div>
+            <span className="text-[13px] font-bold">Connect New Account</span>
+          </button>
         </div>
       </div>
     </div>

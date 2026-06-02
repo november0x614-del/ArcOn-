@@ -67,9 +67,9 @@ export function TreasuryTab({
           </div>
 
           <div className="grid grid-cols-1 gap-4">
-            {pendingApprovals.map((tx, idx) => (
+            {pendingApprovals.map((tx) => (
               <div
-                key={tx.id || `pending-${idx}`}
+                key={tx.id}
                 className="bg-white border-2 border-amber-100 rounded-[28px] p-5 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-6"
               >
                 <div className="flex items-center gap-4">

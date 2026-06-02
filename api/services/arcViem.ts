@@ -11,8 +11,7 @@ import {
   keccak256,
   type Address,
 } from "viem";
-import { sepolia } from "viem/chains"; // Import standard Sepolia chain
-import { getSupabaseAdmin } from "../config/supabase";
+import { getSupabaseAdmin } from "../config/supabase.js";
 
 /**
  * Arc Testnet Chain Definition
@@ -23,7 +22,7 @@ export const arcTestnet = defineChain({
   nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
   rpcUrls: {
     default: {
-      http: [process.env.ARC_RPC_URL || "https://rpc.testnet.arc.network"],
+      http: [process.env.VITE_ARC_RPC_URL || "https://rpc.testnet.arc.network"],
     },
   },
   blockExplorers: {
@@ -40,14 +39,6 @@ export const publicClient = createPublicClient({
     retryCount: 3,
     retryDelay: 1000,
   }),
-});
-
-/**
- * Public Client for reading from Sepolia Network
- */
-export const sepoliaPublicClient = createPublicClient({
-  chain: sepolia,
-  transport: http(), // Uses default RPC
 });
 
 // CCTP Constants for Arc Testnet

@@ -82,13 +82,7 @@ export function AccountDetailScreen({
   } = useApp();
 
   const { data: balanceData } = useBalances();
-  const { registeredUser, activeAccountType } = useStore();
-  const themeClasses = React.useMemo(() => ({
-    container: activeAccountType === "unified" ? "bg-[#f0f9f8]" : "bg-white",
-    header: activeAccountType === "unified" ? "from-teal-700 to-teal-950" : "from-slate-800 to-slate-900",
-    accent: activeAccountType === "unified" ? "bg-teal-400/30" : "bg-blue-400/30",
-    button: activeAccountType === "unified" ? "bg-teal-600 hover:bg-teal-700 shadow-teal-500/20" : "bg-slate-900 hover:bg-slate-800 shadow-slate-900/20",
-  }), [activeAccountType]);
+  const { registeredUser } = useStore();
   const [liveCustomBalances, setLiveCustomBalances] = useState<
     Record<string, number>
   >({});
@@ -166,8 +160,6 @@ export function AccountDetailScreen({
         return <RefreshCw size={20} className="text-slate-600" />;
       case "bridge":
         return <Hexagon size={20} className="text-blue-500" />;
-      case "mint_nft":
-        return <Hexagon size={20} className="text-yellow-500" />;
       default:
         return <Receipt size={20} className="text-slate-500" />;
     }
@@ -187,8 +179,6 @@ export function AccountDetailScreen({
         return "bg-slate-100 border-slate-200";
       case "bridge":
         return "bg-blue-50 border-blue-100";
-      case "mint_nft":
-        return "bg-yellow-50 border-yellow-100";
       default:
         return "bg-slate-50 border-slate-100";
     }
@@ -307,12 +297,12 @@ export function AccountDetailScreen({
   };
 
   return (
-    <div className={`w-full h-full ${themeClasses.container} relative flex flex-col z-50 animate-in slide-in-from-right duration-300 overflow-hidden`}>
+    <div className="w-full h-full bg-white relative flex flex-col z-50 animate-in slide-in-from-right duration-300 overflow-hidden">
       {/* Top Header Section - Blue Gradient */}
-      <div className={`bg-gradient-to-b ${themeClasses.header} pt-12 pb-24 px-4 relative shrink-0 z-10 flex flex-col items-center overflow-hidden w-full`}>
+      <div className="bg-gradient-to-b from-slate-800 to-slate-900 pt-12 pb-24 px-4 relative shrink-0 z-10 flex flex-col items-center overflow-hidden w-full">
         {/* Background abstract curves */}
         <div className="absolute top-[-50px] right-[-50px] w-[200px] h-[200px] bg-white/10 rounded-full blur-2xl"></div>
-        <div className={`absolute bottom-[-30px] left-[-30px] w-[150px] h-[150px] ${themeClasses.accent} rounded-full blur-xl`}></div>
+        <div className="absolute bottom-[-30px] left-[-30px] w-[150px] h-[150px] bg-blue-400/30 rounded-full blur-xl"></div>
 
         <button
           onClick={onBack}
@@ -416,9 +406,9 @@ export function AccountDetailScreen({
                     <p>No transactions found.</p>
                   </div>
                 ) : (
-                  filteredTransactions.map((tx, idx) => (
+                  filteredTransactions.map((tx) => (
                     <div
-                      key={tx.id || `act-tx-${idx}`}
+                      key={tx.id}
                       onClick={() => {
                         if (onTransactionClick) {
                           if (true) {
@@ -442,7 +432,7 @@ export function AccountDetailScreen({
                           </h3>
                           <p className="text-[12px] text-slate-500 mt-0.5">
                             {tx.timestamp} •{" "}
-                            {tx.type === "mint_nft" ? "Mint NFT" : tx.type.charAt(0).toUpperCase() + tx.type.slice(1)}
+                            {tx.type.charAt(0).toUpperCase() + tx.type.slice(1)}
                           </p>
                         </div>
                       </div>
@@ -513,10 +503,10 @@ export function AccountDetailScreen({
                     />
                     <div className="flex flex-col text-left">
                       <span className="font-bold text-slate-800 text-[15px] leading-tight">
-                        USD Coin (Arc)
+                        USD Coin
                       </span>
                       <span className="text-[12px] text-slate-500 mt-0.5">
-                        USDC • Arc Testnet
+                        USDC • Stablecoin
                       </span>
                     </div>
                   </div>
@@ -966,7 +956,7 @@ export function AccountDetailScreen({
 
                   <button
                     onClick={handleImportCustom}
-                    className={`w-full mt-2 ${themeClasses.button} text-white text-[13.5px] font-bold py-3.5 px-4 rounded-xl active:scale-[0.98] transition-all cursor-pointer border-0 uppercase tracking-wide font-sans shadow-md`}
+                    className="w-full mt-2 bg-slate-900 text-white hover:bg-slate-800 text-[13.5px] font-bold py-3.5 px-4 rounded-xl active:scale-[0.98] transition-all cursor-pointer border-0 uppercase tracking-wide font-sans shadow-md"
                   >
                     Import Custom Token
                   </button>

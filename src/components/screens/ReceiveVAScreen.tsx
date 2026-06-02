@@ -1,24 +1,14 @@
 import React, { useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { useApp } from "../../contexts/AppContext";
-import { useStore } from "../../store/useStore";
 
 interface ReceiveVAScreenProps {
   onBack: () => void;
 }
 
 export function ReceiveVAScreen({ onBack }: ReceiveVAScreenProps) {
-  const { fetchBalance, fetchTransactions } = useApp();
-  const { registeredUser, displayToast, activeAccountType } = useStore();
-  
-  const themeClasses = React.useMemo(() => ({
-    container: activeAccountType === "unified" ? "bg-[#f0f9f8]" : "bg-[#ecf5fc]",
-    header: activeAccountType === "unified" ? "bg-teal-900" : "bg-slate-900",
-    button: activeAccountType === "unified" ? "bg-teal-600 hover:bg-teal-700 shadow-teal-500/20" : "bg-slate-900 hover:bg-slate-800",
-    buttonPulse: activeAccountType === "unified" ? "bg-teal-600" : "bg-slate-900",
-    buttonPulseBg: activeAccountType === "unified" ? "bg-teal-600/10" : "bg-slate-900/10",
-  }), [activeAccountType]);
-
+  const { registeredUser, displayToast, fetchBalance, fetchTransactions } =
+    useApp();
   const [isSimulating, setIsSimulating] = useState(false);
 
   const handleSimulatePayment = async () => {
@@ -50,8 +40,8 @@ export function ReceiveVAScreen({ onBack }: ReceiveVAScreenProps) {
   };
 
   return (
-    <div className={`absolute inset-0 z-[60] ${themeClasses.container} flex flex-col animate-in slide-in-from-right duration-300`}>
-      <div className={`flex items-center px-4 pt-6 pb-3 ${themeClasses.header} shadow-md relative z-10 w-full justify-between`}>
+    <div className="absolute inset-0 z-[60] bg-[#ecf5fc] flex flex-col animate-in slide-in-from-right duration-300">
+      <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between">
         <div className="flex items-center">
           <button
             onClick={onBack}
@@ -96,7 +86,7 @@ export function ReceiveVAScreen({ onBack }: ReceiveVAScreenProps) {
           </div>
 
           <button
-            className={`w-full ${themeClasses.button} text-white font-bold py-3.5 rounded-xl text-[14px] transition-colors border-0 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed uppercase tracking-wide`}
+            className="w-full bg-slate-900 text-white font-bold py-3.5 rounded-xl text-[14px] hover:bg-slate-800 transition-colors border-0 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
             onClick={handleSimulatePayment}
             disabled={isSimulating}
           >
@@ -105,8 +95,8 @@ export function ReceiveVAScreen({ onBack }: ReceiveVAScreenProps) {
         </div>
 
         <div className="mt-8 flex gap-3 px-2">
-          <div className={`w-8 h-8 rounded-full ${themeClasses.buttonPulseBg} flex items-center justify-center shrink-0`}>
-            <div className={`w-2 h-2 ${themeClasses.buttonPulse} rounded-full animate-pulse`}></div>
+          <div className="w-8 h-8 rounded-full bg-slate-900/10 flex items-center justify-center shrink-0">
+            <div className="w-2 h-2 bg-slate-900 rounded-full animate-pulse"></div>
           </div>
           <div>
             <p className="text-[12px] font-bold text-slate-800 mb-1 leading-none uppercase tracking-widest">

@@ -272,17 +272,10 @@ export function TransferScreen({
   const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  const { registeredUser, activeAccountType } = useStore();
-  const themeClasses = React.useMemo(() => ({
-    container: activeAccountType === "unified" ? "bg-[#f0f9f8]" : "bg-[#ecf5fc]",
-    header: activeAccountType === "unified" ? "bg-teal-900" : "bg-slate-900",
-    button: activeAccountType === "unified" ? "bg-teal-600 hover:bg-teal-700" : "bg-slate-900 hover:bg-slate-800",
-  }), [activeAccountType]);
-
   return (
-    <div className={`w-full h-full ${themeClasses.container} relative flex flex-col z-50 animate-in slide-in-from-right duration-300`}>
+    <div className="w-full h-full bg-[#ecf5fc] relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
       {/* Header */}
-      <div className={`flex justify-center ${themeClasses.header} shadow-md relative z-10 shrink-0 w-full`}>
+      <div className="flex justify-center bg-slate-900 shadow-md relative z-10 shrink-0 w-full">
         <div className="flex items-center px-4 pt-6 pb-3 w-full max-w-[500px] justify-between">
           <div className="flex items-center">
             {!hideBack && (
@@ -456,7 +449,7 @@ export function TransferScreen({
             ) : (
               <button
                 onClick={onNewTransfer}
-                className={`w-full ${themeClasses.button} text-white py-[14px] rounded-full font-bold text-[14px] shadow-lg flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] cursor-pointer border-0`}
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white py-[14px] rounded-full font-bold text-[14px] shadow-lg flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] cursor-pointer border-0"
               >
                 <UserPlus size={18} strokeWidth={2.5} /> Transfer to New Recipient
               </button>

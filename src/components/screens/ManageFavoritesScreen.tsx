@@ -21,7 +21,7 @@ export const defaultSelectedShortcuts: ShortcutItem[] = [
   {
     id: "14",
     icon: "Landmark",
-    label: "ATM",
+    label: "CCPT Bridge",
     color: "text-indigo-600",
     badge: "NEW",
   },
@@ -43,22 +43,10 @@ export const defaultSelectedShortcuts: ShortcutItem[] = [
 
 export const defaultAvailableShortcuts: ShortcutItem[] = [
   {
-    id: "11",
-    icon: "Receipt",
-    label: "Transaction History",
-    color: "text-slate-600",
-  },
-  {
     id: "13",
     icon: "Landmark",
     label: "Withdraw",
     color: "text-red-500",
-  },
-  {
-    id: "unified",
-    icon: "Wallet",
-    label: "Unified Balance",
-    color: "text-blue-600",
   },
 ];
 

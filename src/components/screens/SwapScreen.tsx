@@ -26,13 +26,7 @@ interface SwapScreenProps {
 }
 
 export function SwapScreen({ onBack }: SwapScreenProps) {
-  const { registeredUser, activeAccountType, platformConfig, fetchPlatformConfig } = useStore();
-  const themeClasses = React.useMemo(() => ({
-    container: activeAccountType === "unified" ? "bg-[#f0f9f8]" : "bg-[#ecf5fc]",
-    header: activeAccountType === "unified" ? "bg-teal-900" : "bg-slate-900",
-    button: activeAccountType === "unified" ? "bg-teal-600 hover:bg-teal-700" : "bg-slate-900 hover:bg-slate-800",
-    tab: activeAccountType === "unified" ? "text-teal-600 bg-teal-50" : "text-blue-600 bg-blue-50",
-  }), [activeAccountType]);
+  const { registeredUser, platformConfig, fetchPlatformConfig } = useStore();
   const queryClient = useQueryClient();
   const { data: balanceData } = useBalances();
 
@@ -226,15 +220,15 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
 
   if (swapFinished) {
     return (
-      <div className={`w-full h-full ${themeClasses.container} relative flex flex-col z-50 animate-in slide-in-from-bottom duration-300`}>
-        <div className={`flex items-center px-4 pt-6 pb-3 ${themeClasses.header} shadow-md relative z-10 w-full shrink-0 justify-between`}>
+      <div className="w-full h-full bg-[#ecf5fc] relative flex flex-col z-50 animate-in slide-in-from-bottom duration-300">
+        <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full shrink-0 justify-between">
           <button
             onClick={onBack}
             className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
           >
             <X size={20} className="text-white" />
           </button>
-          <h2 className="font-bold text-[16px] text-white ml-2 uppercase tracking-wide">
+          <h2 className="font-bold text-[16px] text-white ml-2">
             Transaction Receipt
           </h2>
         </div>
@@ -299,7 +293,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
 
             <button
               onClick={() => setSwapFinished(false)}
-              className={`w-full ${themeClasses.button} text-white font-bold py-4 rounded-xl transition-colors shadow-lg active:scale-95 border-0 cursor-pointer`}
+              className="w-full bg-slate-900 text-white font-bold py-4 rounded-xl hover:bg-slate-800 transition-colors shadow-lg active:scale-95"
             >
               Return to Swap
             </button>
@@ -310,9 +304,9 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
   }
 
   return (
-    <div className={`w-full h-full ${themeClasses.container} relative flex flex-col z-50 animate-in slide-in-from-right duration-300`}>
+    <div className="w-full h-full bg-[#ecf5fc] relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
       {/* Header */}
-      <div className={`flex justify-center ${themeClasses.header} shadow-md relative z-10 w-full`}>
+      <div className="flex justify-center bg-slate-900 shadow-md relative z-10 w-full">
         <div className="flex items-center px-4 pt-6 pb-3 w-full max-w-[500px] justify-between">
           <div className="flex items-center">
             <button
@@ -321,7 +315,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
             >
               <ArrowLeft size={20} className="text-white" />
             </button>
-            <h2 className="font-bold text-[16px] text-white ml-2 uppercase tracking-wide">SWAP</h2>
+            <h2 className="font-bold text-[16px] text-white ml-2">SWAP</h2>
           </div>
         </div>
       </div>
@@ -568,13 +562,13 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
                   : !hasEnoughBalance
                     ? "bg-red-50 text-red-500 border border-red-100 cursor-not-allowed"
                     : !isSwapping
-                      ? `${themeClasses.button} text-white shadow-lg`
-                      : `${themeClasses.button} text-white shadow-xl scale-[0.98]`
+                      ? "bg-slate-900 text-white shadow-lg hover:bg-slate-800"
+                      : "bg-slate-800 text-white shadow-xl scale-[0.98]"
               }`}
           >
             {isSwapping ? (
               <>
-                <RefreshCw size={20} className="animate-spin text-white/50" />
+                <RefreshCw size={20} className="animate-spin text-slate-300" />
                 Processing Swap...
               </>
             ) : fromToken?.symbol === toToken?.symbol ? (

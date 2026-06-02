@@ -1,9 +1,9 @@
 import express from "express";
 import { GoogleGenAI } from "@google/genai";
-import { publicClient, getTokenMetadata } from "../services/arcViem";
-import { verifyAndProcessWebhook } from "../services/webhook";
-import { getSupabaseAdmin } from "../config/supabase";
-import { getTokenDetails, executeTransaction } from "../services/circle";
+import { publicClient, getTokenMetadata } from "../services/arcViem.js";
+import { verifyAndProcessWebhook } from "../services/webhook.js";
+import { getSupabaseAdmin } from "../config/supabase.js";
+import { getTokenDetails, executeTransaction } from "../services/circle.js";
 import * as crypto from "crypto";
 
 const router = express.Router();
@@ -186,19 +186,13 @@ router.post("/tokens/import", async (req, res) => {
 router.get("/tokens/imported/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
-    console.log(`[API] Fetching imported tokens for user: ${userId}`);
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from("user_tokens")
       .select("*")
       .eq("user_id", userId);
 
-    if (error) {
-      console.error("[API] Supabase error fetching user tokens:", error);
-      throw error;
-    }
-    
-    console.log(`[API] Found ${data?.length || 0} tokens for user: ${userId}`);
+    if (error) throw error;
     res.json(
       data.map((t: any) => ({
         symbol: t.symbol,
@@ -208,7 +202,6 @@ router.get("/tokens/imported/:userId", async (req, res) => {
       })),
     );
   } catch (error: any) {
-    console.error("[API] Error fetching user tokens:", error);
     res.status(500).json({ error: error.message });
   }
 });

@@ -15,7 +15,6 @@ import {
   Hexagon,
 } from "lucide-react";
 import { useApp } from "../../contexts/AppContext";
-import { useStore } from "../../store/useStore";
 import { ARC_TESTNET } from "../../lib/arcConfig";
 import { Transaction } from "../../types";
 
@@ -27,12 +26,6 @@ export function TransactionHistoryScreen({
   onBack,
 }: TransactionHistoryScreenProps) {
   const { transactions } = useApp();
-  const { activeAccountType } = useStore();
-  const themeClasses = React.useMemo(() => ({
-    container: activeAccountType === "unified" ? "bg-[#f0f9f8]" : "bg-[#ecf5fc]",
-    header: activeAccountType === "unified" ? "bg-teal-900" : "bg-slate-900",
-  }), [activeAccountType]);
-
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -56,8 +49,6 @@ export function TransactionHistoryScreen({
         return <RefreshCw size={20} className="text-slate-600" />;
       case "bridge":
         return <Hexagon size={20} className="text-blue-500" />;
-      case "mint_nft":
-        return <Hexagon size={20} className="text-yellow-500" />;
       default:
         return <Receipt size={20} className="text-slate-500" />;
     }
@@ -79,8 +70,6 @@ export function TransactionHistoryScreen({
         return "bg-slate-100 border-slate-200";
       case "bridge":
         return "bg-blue-50 border-blue-100";
-      case "mint_nft":
-        return "bg-yellow-50 border-yellow-100";
       default:
         return "bg-slate-50 border-slate-100";
     }
@@ -117,9 +106,9 @@ export function TransactionHistoryScreen({
   }, [transactions, searchQuery]);
 
   return (
-    <div className={`w-full h-full ${themeClasses.container} relative flex flex-col z-50 animate-in slide-in-from-right duration-300`}>
+    <div className="w-full h-full bg-[#ecf5fc] relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
       {/* Header */}
-      <div className={`flex flex-col px-4 pt-6 pb-4 ${themeClasses.header} shadow-md relative z-10 w-full shrink-0`}>
+      <div className="flex flex-col px-4 pt-6 pb-4 bg-slate-900 shadow-md relative z-10 w-full shrink-0">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
             <button
@@ -175,9 +164,9 @@ export function TransactionHistoryScreen({
                     {date}
                   </h3>
                   <div className="space-y-3">
-                    {txs.map((tx, idx) => (
+                    {txs.map((tx) => (
                       <div
-                        key={tx.id || `tx-${idx}`}
+                        key={tx.id}
                         onClick={() => setSelectedTx(tx)}
                         className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex items-center justify-between cursor-pointer hover:bg-slate-50 active:scale-[0.98] transition-all"
                       >
@@ -194,7 +183,7 @@ export function TransactionHistoryScreen({
                             <p className="text-[11px] text-slate-500 mt-0.5 font-medium">
                               {tx.timestamp.split(",")[1]?.trim() ||
                                 tx.timestamp}{" "}
-                              • {tx.type === "mint_nft" ? "Mint NFT" : tx.type}
+                              • {tx.type}
                             </p>
                           </div>
                         </div>

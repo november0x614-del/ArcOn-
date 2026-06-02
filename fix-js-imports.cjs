@@ -21,7 +21,13 @@ function walk(dir) {
 const files = walk('./api');
 files.forEach((file) => {
   let content = fs.readFileSync(file, 'utf8');
-  content = content.replace(/\.js"/g, '"');
+  // Match relative imports that don't have an extension
+  content = content.replace(/(from\s+["'])(\.\.?\/[^"']+)(["'])/g, (match, prefix, p1, suffix) => {
+    if (p1.endsWith('.js') || p1.includes('.json') || p1.endsWith('.ts')) {
+      return match;
+    }
+    return `${prefix}${p1}.js${suffix}`;
+  });
   fs.writeFileSync(file, content);
 });
-console.log('Fixed .js imports');
+console.log('Fixed .js imports (added extensions)');

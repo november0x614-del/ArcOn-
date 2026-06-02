@@ -1,6 +1,6 @@
 import * as crypto from "crypto";
 import { Request, Response } from "express";
-import { interpretCircleError } from "./circle";
+import { interpretCircleError } from "./circle.js";
 
 // Public key cache
 const publicKeyCache: Record<string, { publicKey: string; algorithm: string }> =
@@ -146,11 +146,6 @@ export async function verifyAndProcessWebhook(
       // Arc hardening: extract txHash if available
       const txHash =
         transfer.transactionHash || data.txHash || data.transactionHash;
-
-      // Log if this is a contract execution for debugging
-      if (type === "contractExecutions.updated") {
-        console.log(`[NFT Mint Webhook] Contract execution updated (internalRef=${internalRef}, status=${txStatus}, txHash=${txHash})`);
-      }
 
       // Extract error details if failed
       let errorMessage = null;

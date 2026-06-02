@@ -293,7 +293,7 @@ function ResiContent({
               <p className="text-slate-400 font-bold text-[13px]">No matching records found.</p>
            </div>
         ) : (
-          visibleTransactions.map((tx: any, idx: number) => {
+          visibleTransactions.map((tx: any) => {
             const isRead = readReceiptIds.includes(tx.id);
             const isIncoming =
               tx.type === "receive" ||
@@ -315,7 +315,7 @@ function ResiContent({
             }
 
             return (
-              <div key={tx.id || `inbox-tx-${idx}`} className="relative">
+              <div key={tx.id} className="relative">
                 <TransactionItem
                   id={tx.id}
                   icon={icon}

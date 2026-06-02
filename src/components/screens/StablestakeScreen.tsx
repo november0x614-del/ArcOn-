@@ -8,14 +8,8 @@ interface StablestakeScreenProps {
 }
 
 export function StablestakeScreen({ onBack }: StablestakeScreenProps) {
-  const { transactions, registeredUser, displayToast, startSyncPolling, activeAccountType } =
+  const { transactions, registeredUser, displayToast, startSyncPolling } =
     useStore();
-  const themeClasses = React.useMemo(() => ({
-    container: activeAccountType === "unified" ? "bg-[#f0f9f8]" : "bg-[#ecf5fc]",
-    header: activeAccountType === "unified" ? "bg-teal-900" : "bg-slate-900",
-    button: activeAccountType === "unified" ? "bg-teal-600 hover:bg-teal-700 shadow-teal-500/20" : "bg-slate-900 hover:bg-slate-800 shadow-slate-900/20",
-    card: activeAccountType === "unified" ? "from-teal-900 to-teal-800" : "from-slate-900 to-slate-800",
-  }), [activeAccountType]);
   const [stakeAmountInput, setStakeAmountInput] = useState("");
   const [isStaking, setIsStaking] = useState(false);
 
@@ -64,9 +58,9 @@ export function StablestakeScreen({ onBack }: StablestakeScreenProps) {
   };
 
   return (
-    <div className={`w-full h-full ${themeClasses.container} relative flex flex-col z-50 animate-in slide-in-from-right duration-300`}>
+    <div className="w-full h-full bg-[#ecf5fc] relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
       {/* Header */}
-      <div className={`flex justify-center ${themeClasses.header} shadow-md relative z-10 w-full shrink-0`}>
+      <div className="flex justify-center bg-slate-900 shadow-md relative z-10 w-full shrink-0">
         <div className="flex items-center px-4 pt-6 pb-3 w-full max-w-[500px] justify-between">
           <div className="flex items-center">
             <button
@@ -75,7 +69,7 @@ export function StablestakeScreen({ onBack }: StablestakeScreenProps) {
             >
               <ArrowLeft size={20} className="text-white" />
             </button>
-            <h2 className="font-bold text-[16px] text-white ml-2 uppercase tracking-wide">STABLESTAKE</h2>
+            <h2 className="font-bold text-[16px] text-white ml-2">STABLESTAKE</h2>
           </div>
         </div>
       </div>
@@ -103,7 +97,7 @@ export function StablestakeScreen({ onBack }: StablestakeScreenProps) {
           </p>
 
           {/* Staking Pool Overview Card */}
-          <div className={`bg-gradient-to-tr ${themeClasses.card} rounded-[24px] p-6 text-white flex flex-col gap-5 shadow-lg relative overflow-hidden mt-2 border-0`}>
+          <div className="bg-gradient-to-tr from-slate-900 to-slate-800 rounded-[24px] p-6 text-white flex flex-col gap-5 shadow-lg relative overflow-hidden mt-2">
             <div className="absolute -right-4 -top-4 opacity-10">
               <ShieldCheck size={140} />
             </div>
@@ -168,9 +162,9 @@ export function StablestakeScreen({ onBack }: StablestakeScreenProps) {
               <button
                 onClick={handleStake}
                 disabled={isStaking || !stakeAmountInput}
-                className={`flex-1 ${themeClasses.button} text-white font-bold px-6 rounded-2xl text-[14px] active:scale-95 transition-all flex items-center justify-center gap-2 shrink-0 border-0 cursor-pointer shadow-md`}
+                className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold px-6 rounded-2xl text-[14px] active:scale-95 transition-all flex items-center justify-center gap-2 shrink-0 border-0 cursor-pointer shadow-md"
               >
-                {isStaking ? "Staking..." : "Stake Now"}
+                {isStaking ? "Staking..." : "Stake"}
               </button>
             </div>
           </div>

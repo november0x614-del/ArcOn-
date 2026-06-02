@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 import { useApp } from "../../contexts/AppContext";
 import { useArc } from "../../contexts/ArcContext";
-import { useStore } from "../../store/useStore";
 
 interface WithdrawScreenProps {
   onBack: () => void;
@@ -28,13 +27,6 @@ export function WithdrawScreen({ onBack, onSuccess, hideBack }: WithdrawScreenPr
     platformConfig,
     fetchPlatformConfig,
   } = useApp();
-  
-  const { activeAccountType } = useStore();
-  const themeClasses = React.useMemo(() => ({
-    container: activeAccountType === "unified" ? "bg-[#f0f9f8]" : "bg-[#ecf5fc]",
-    header: activeAccountType === "unified" ? "bg-teal-900" : "bg-slate-900",
-    button: activeAccountType === "unified" ? "bg-teal-600 hover:bg-teal-700 shadow-teal-500/20" : "bg-slate-900 hover:bg-slate-800 shadow-slate-900/20",
-  }), [activeAccountType]);
 
   useEffect(() => {
     if (!platformConfig) {
@@ -113,7 +105,7 @@ export function WithdrawScreen({ onBack, onSuccess, hideBack }: WithdrawScreenPr
 
   if (step === "success") {
     return (
-      <div className={`absolute inset-0 bg-[#ecf5fc] z-[70] flex flex-col items-center justify-center p-8 text-center animate-in zoom-in-95 duration-300`}>
+      <div className="absolute inset-0 bg-[#ecf5fc] z-[70] flex flex-col items-center justify-center p-8 text-center animate-in zoom-in-95 duration-300">
         <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 mb-6">
           <CheckCircle2 size={40} />
         </div>
@@ -133,7 +125,7 @@ export function WithdrawScreen({ onBack, onSuccess, hideBack }: WithdrawScreenPr
             setMemo("");
             setStep("form");
           }}
-          className={`w-full ${themeClasses.button} text-white py-4 rounded-2xl font-bold transition-all active:scale-[0.98] border-0 cursor-pointer uppercase tracking-widest`}
+          className="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold transition-all active:scale-[0.98] border-0 cursor-pointer"
         >
           Return to Withdraw
         </button>
@@ -142,9 +134,9 @@ export function WithdrawScreen({ onBack, onSuccess, hideBack }: WithdrawScreenPr
   }
 
   return (
-    <div className={`absolute inset-0 z-[70] ${themeClasses.container} flex flex-col animate-in slide-in-from-right duration-300`}>
+    <div className="absolute inset-0 z-[70] bg-[#ecf5fc] flex flex-col animate-in slide-in-from-right duration-300">
       {/* Header */}
-      <div className={`flex justify-center ${themeClasses.header} shadow-md relative z-10 w-full`}>
+      <div className="flex justify-center bg-slate-900 shadow-md relative z-10 w-full">
         <div className="flex items-center px-4 pt-6 pb-3 w-full max-w-[500px] justify-between">
           <div className="flex items-center">
             {!hideBack && (
@@ -302,7 +294,7 @@ export function WithdrawScreen({ onBack, onSuccess, hideBack }: WithdrawScreenPr
             className={`w-full py-4 rounded-full font-bold transition-all active:scale-[0.98] border-0 cursor-pointer shadow-lg
               ${(!amount || parseFloat(amount) <= 0 || (parseFloat(amount) + PLATFORM_FEE) > balance || !selectedBank || !accountNumber) 
                 ? "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none" 
-                : `${themeClasses.button} text-white shadow-xl`}
+                : "bg-slate-900 text-white shadow-slate-200 hover:bg-slate-800"}
             `}
           >
             {(!amount || parseFloat(amount) <= 0) 
@@ -374,7 +366,7 @@ export function WithdrawScreen({ onBack, onSuccess, hideBack }: WithdrawScreenPr
                   setShowConfirmModal(false);
                   handleWithdraw();
                 }}
-                className={`w-full ${themeClasses.button} text-white py-[16px] rounded-full flex justify-between px-6 items-center transition-all shadow-xl active:scale-[0.98] border-0 cursor-pointer`}
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white py-[16px] rounded-full flex justify-between px-6 items-center transition-all shadow-[0_4px_14px_rgba(15,23,42,0.3)] active:scale-[0.98] border-0 cursor-pointer"
               >
                 <div className="flex items-center gap-3">
                   <span className="font-bold text-[15px]">Confirm Withdrawal</span>

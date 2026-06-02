@@ -6,13 +6,13 @@ import {
   waitForConfirmation,
   USDC_ADDRESS,
   getArcScanUrl,
-} from "./arcViem";
+} from "./arcViem.js";
 import { encodeFunctionData, parseAbi } from "viem";
-import { logAuditEvent } from "./audit";
-import { getCircleClientInstance, circleApiFetch } from "./circleClient";
+import { logAuditEvent } from "./audit.js";
+import { getCircleClientInstance, circleApiFetch } from "./circleClient.js";
 import * as crypto from "crypto";
 
-import { getSupabaseAdmin } from "../config/supabase";
+import { getSupabaseAdmin } from "../config/supabase.js";
 
 async function getGasFeeStrategy(): Promise<"SPONSORED" | "USER_PAID_USDC"> {
   try {
@@ -72,13 +72,29 @@ export async function createWallet(supabaseAdmin: any, userId: string) {
 
   // 3. Save to Supabase if userId is provided
   if (userId) {
+    // If this is the special Admin ID, we must ensure it exists in auth.users to satisfy the foreign key constraint
+    if (userId === "00000000-0000-0000-0000-000000000000") {
+      try {
+        await supabaseAdmin.auth.admin.createUser({
+          id: userId,
+          email: "admin@arc.lounge",
+          password: crypto.randomBytes(32).toString("hex"),
+          email_confirm: true,
+          user_metadata: { role: 'platform_admin' }
+        });
+        console.log("[CircleService] Auto-created virtual Auth user for Admin ID to satisfy database constraints.");
+      } catch (authErr) {
+        // If already exists or error, we continue. The upsert below will determine if it worked.
+      }
+    }
+
     const { error } = await supabaseAdmin.from("user_wallets").upsert({
       id: userId,
       wallet_id: wallet.id,
       wallet_address: wallet.address,
       wallet_set_id: walletSet.id,
     });
-    if (error) console.error("Failed mapping to Supabase:", error);
+    if (error) console.error("Failed mapping to Supabase (user_wallets):", JSON.stringify(error, null, 2));
   }
 
   return {
@@ -143,7 +159,7 @@ export async function batchCreateWallets(
     const { error } = await supabaseAdmin
       .from("user_wallets")
       .upsert(upsertData);
-    if (error) console.error("Failed batch mapping to Supabase:", error);
+    if (error) console.error("Failed batch mapping to Supabase (user_wallets):", JSON.stringify(error, null, 2));
   }
 
   return createdWallets;
@@ -743,14 +759,25 @@ export async function executeReleaseEscrow(
   orderId: string
 ) {
   const adminId = "00000000-0000-0000-0000-000000000000";
-  const { data: adminWallet } = await supabaseAdmin
+  let { data: adminWallet } = await supabaseAdmin
     .from("user_wallets")
     .select("wallet_id, wallet_address")
     .eq("id", adminId)
     .single();
 
   if (!adminWallet?.wallet_id) {
-    throw new Error("Platform Treasury wallet (Admin wallet) is not found in database or not initialized.");
+    console.log(`[EscrowService] Admin treasury wallet missing. Attempting auto-initialization for ${adminId}...`);
+    try {
+      const newAdminWallet = await createWallet(supabaseAdmin, adminId);
+      adminWallet = {
+        wallet_id: newAdminWallet.walletId,
+        wallet_address: newAdminWallet.address
+      };
+      console.log(`[EscrowService] Admin treasury wallet automatically initialized: ${adminWallet.wallet_address}`);
+    } catch (initErr: any) {
+      console.error("[EscrowService] Critical: Failed to auto-initialize treasury wallet:", initErr);
+      throw new Error("Platform Treasury wallet (Admin wallet) is not found and auto-initialization failed.");
+    }
   }
 
   const client = getCircleClientInstance();

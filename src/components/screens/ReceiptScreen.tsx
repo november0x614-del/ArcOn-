@@ -275,7 +275,7 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                   </div>
                 )}
                 {isBridge && (
-                  <div className="mt-2 text-[10px] font-black text-blue-700 bg-blue-100 px-3 py-1 rounded-full uppercase tracking-wider border border-blue-200">
+                  <div className="mt-2 text-[11px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full uppercase tracking-tighter italic border border-blue-100">
                     BRIDGE TRANSACTION
                   </div>
                 )}
