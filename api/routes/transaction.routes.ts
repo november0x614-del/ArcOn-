@@ -228,7 +228,7 @@ router.post("/swap/execute", async (req, res) => {
             const { data: adminWallet } = await supabaseAdmin
               .from("user_wallets")
               .select("wallet_address")
-              .eq("id", "00000000-0000-0000-0000-000000000000")
+              .eq("id", "11111111-1111-1111-1111-111111111111")
               .single();
               
             if (adminWallet?.wallet_address && fromToken?.symbol === "USDC") {
@@ -480,7 +480,7 @@ router.post("/withdraw/execute", async (req, res) => {
       const { data: treasuryWallet } = await supabaseAdmin
         .from("user_wallets")
         .select("wallet_address")
-        .eq("id", "00000000-0000-0000-0000-000000000000")
+        .eq("id", "11111111-1111-1111-1111-111111111111")
         .single();
       treasuryAddress = treasuryWallet?.wallet_address;
     }
@@ -776,7 +776,7 @@ router.post("/stake/execute", async (req, res) => {
       const { data: treasuryWallet } = await supabaseAdmin
         .from("user_wallets")
         .select("wallet_address")
-        .eq("id", "00000000-0000-0000-0000-000000000000") // Admin ID pattern
+        .eq("id", "11111111-1111-1111-1111-111111111111") // Admin ID pattern
         .single();
       treasuryAddress = treasuryWallet?.wallet_address;
     }
@@ -832,7 +832,7 @@ router.post("/stake/withdraw", async (req, res) => {
 
     const supabaseAdmin = getSupabaseAdmin();
     // 1. Dapatkan Admin ID dan Wallet Address User
-    const adminId = "00000000-0000-0000-0000-000000000000";
+    const adminId = "11111111-1111-1111-1111-111111111111";
     const { data: userWallet } = await supabaseAdmin
       .from("user_wallets")
       .select("wallet_address")
@@ -1053,16 +1053,27 @@ router.post("/nft/mint", async (req, res) => {
     const { data: adminWallet } = await supabaseAdmin
       .from("user_wallets")
       .select("wallet_id, wallet_address")
-      .eq("id", "00000000-0000-0000-0000-000000000000")
+      .eq("id", "11111111-1111-1111-1111-111111111111")
       .single();
 
     if (!adminWallet || !adminWallet.wallet_id) {
       return res.status(500).json({ 
-        error: "Platform Admin Minter Wallet (00000000-0000-0000-0000-000000000000) belum dikonfigurasi di user_wallets." 
+        error: "Platform Admin Minter Wallet (11111111-1111-1111-1111-111111111111) belum dikonfigurasi di user_wallets." 
       });
     }
 
-    const nftContractAddress = process.env.NFT_CONTRACT_ADDRESS || "0x582531CBA2D68a9F0F4E83b38466e3bfCDbaab51";
+    let nftContractAddress = process.env.NFT_CONTRACT_ADDRESS || "0x4aaa0f998817be80405ab1ef4106f3ac9d462b5e";
+
+    // Proteksi tambahan: jika environment masih membaca alamat default/lama yang bermasalah,
+    // kita arahkan secara otomatis ke alamat kontrak baru Anda yang sudah dikonfigurasi & di-grant role.
+    if (
+      !nftContractAddress ||
+      nftContractAddress.toLowerCase() === "0x206a27aedca603fa707997493e6fc8db0c3eb318" ||
+      nftContractAddress.toLowerCase() === "0x582531cba2d68a9f0f4e83b38466e3bfcdbaab51"
+    ) {
+      console.log(`[NFT Mint] Overriding old/reverted contract ${nftContractAddress} with user's verified contract: 0x4aaa0f998817be80405ab1ef4106f3ac9d462b5e`);
+      nftContractAddress = "0x4aaa0f998817be80405ab1ef4106f3ac9d462b5e";
+    }
     const formattedTokenUri = `ipfs://QmZX${crypto.randomBytes(16).toString("hex")}`;
     const idempotencyKey = crypto.randomUUID();
 
@@ -1083,13 +1094,33 @@ router.post("/nft/mint", async (req, res) => {
 
     const responseData = response.data as any;
     const circleTxId = responseData?.id;
-    const txHash = responseData?.transaction?.txHash || "0x" + crypto.randomBytes(32).toString("hex");
+    let txHash = responseData?.transaction?.txHash || responseData?.txHash;
+
+    // Poll Circle API to get real txHash
+    if (!txHash && circleTxId) {
+      const { circleApiFetch } = await import("../services/circleClient.js");
+      for (let i = 0; i < 7; i++) {
+        await new Promise(r => setTimeout(r, 2000));
+        try {
+          const checkRes = await circleApiFetch(`/v1/w3s/transactions/${circleTxId}`);
+          if (checkRes.data?.transaction?.txHash) {
+            txHash = checkRes.data.transaction.txHash;
+            break;
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+
+    // fallback if still pending after polling
+    if (!txHash) txHash = "pending";
 
     await supabaseAdmin.from("transactions").insert({
       user_id: userId,
       amount: "0",
       type: "mint_nft",
-      status: "success",
+      status: txHash === "pending" ? "pending" : "success",
       internal_ref: circleTxId || `mock_mint_${crypto.randomBytes(8).toString("hex")}`,
       tx_hash: txHash,
       metadata: {
@@ -1099,7 +1130,8 @@ router.post("/nft/mint", async (req, res) => {
         image,
         real: true,
         nftContractAddress,
-        tokenUri: formattedTokenUri
+        tokenUri: formattedTokenUri,
+        circleTxId
       }
     });
 
@@ -1110,11 +1142,12 @@ router.post("/nft/mint", async (req, res) => {
       destination_address: nftContractAddress,
       circle_tx_id: circleTxId || `mock_mint_${crypto.randomBytes(8).toString("hex")}`,
       tx_hash: txHash,
-      status: "COMPLETE",
+      status: txHash === "pending" ? "PENDING" : "COMPLETE",
       metadata: {
         name,
         description,
-        tokenUri: formattedTokenUri
+        tokenUri: formattedTokenUri,
+        circleTxId
       }
     });
 
@@ -1125,7 +1158,7 @@ router.post("/nft/mint", async (req, res) => {
       image,
       tx_hash: txHash,
       contract_address: nftContractAddress,
-      metadata: { tokenUri: formattedTokenUri }
+      metadata: { tokenUri: formattedTokenUri, circleTxId }
     });
 
     res.status(200).json({ 
@@ -1148,6 +1181,7 @@ router.get("/nfts/:userId", async (req, res) => {
       .from("user_nfts")
       .select("*")
       .eq("user_id", userId)
+      .neq("tx_hash", "pending")
       .order("created_at", { ascending: false });
 
     if (error) throw error;

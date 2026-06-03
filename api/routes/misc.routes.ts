@@ -41,7 +41,7 @@ router.post("/faucet/claim", async (req, res) => {
     if (!address) return res.status(400).json({ error: "Address required" });
 
     const supabaseAdmin = getSupabaseAdmin();
-    const adminId = "00000000-0000-0000-0000-000000000000";
+    const adminId = "11111111-1111-1111-1111-111111111111";
 
     let txHash = `faucet_${crypto.randomBytes(8).toString("hex")}`;
     let successMessage = "100 USDC sent to your wallet on Arc Testnet via Circle SDK";

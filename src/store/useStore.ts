@@ -533,14 +533,6 @@ export const useStore = create<AppState>()((set) => ({
     });
   },
   mintedNfts: [],
-  setMintedNfts: (nfts) => {
-    set({ mintedNfts: nfts });
-  },
-  addMintedNft: (nft) =>
-    set((state) => {
-      const newList = [nft, ...state.mintedNfts];
-      return { mintedNfts: newList };
-    }),
   favorites: [],
   setFavorites: (favorites) => {
     set((state) => {
@@ -644,7 +636,6 @@ export const useStore = create<AppState>()((set) => ({
           favorites: prefs.favorites || [],
           deletedContactIds: prefs.deletedContactIds || [],
           arcbirdHighscore: prefs.arcbirdHighscore || 0,
-          mintedNfts: prefs.mintedNfts || [],
           readReceiptIds: prefs.readReceiptIds || [],
           selectedShortcuts: loadedShortcuts,
           cart: prefs.cart || {},

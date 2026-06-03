@@ -24,6 +24,7 @@ import {
   X,
   Settings2,
   Hexagon,
+  PackageOpen,
 } from "lucide-react";
 import { useApp } from "../../contexts/AppContext";
 import { UIDCard } from "../common/UIDCard";
@@ -642,75 +643,71 @@ export function AccountDetailScreen({
               </div>
             ) : (
               /* NFT List Panel */
-              <div className="grid grid-cols-2 gap-4 pb-12 w-full">
-                {[
-                  ...mintedNfts,
-                  {
-                    id: "0xgenesisnftpass777",
-                    name: "Arc Genesis Pass #459",
-                    description: "Elite membership Pass",
-                    image: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=300&auto=format&fit=crop",
-                    txHash: "0x89eeef21db0f17a81df101239"
-                  },
-                  {
-                    id: "0xpioneersstable666",
-                    name: "StablePioneer Diamond",
-                    description: "Lounge Stablecoin Master",
-                    image: "https://images.unsplash.com/photo-1644024541215-68e83fdf0840?q=80&w=300&auto=format&fit=crop",
-                    txHash: "0x12a9efb8b2e59df6f15777aa"
-                  }
-                ].map((nft, idx) => (
-                  <motion.div
-                    key={nft.id + idx}
-                    whileHover={{ 
-                      scale: 1.03, 
-                      boxShadow: "0 10px 25px -5px rgba(15, 23, 42, 0.08)",
-                      borderColor: "rgba(15, 23, 42, 0.15)"
-                    }}
-                    whileTap={{ scale: 0.98 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                    className="bg-white rounded-3xl border border-slate-200/50 overflow-hidden shadow-sm flex flex-col group cursor-pointer"
-                  >
-                    <div className="h-32 w-full bg-slate-50 relative overflow-hidden">
-                      <img
-                        src={nft.image}
-                        alt={nft.name}
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                      <div className="absolute top-2 right-2 bg-slate-900/80 backdrop-blur-sm text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-white/20">
-                        Arc
+              mintedNfts.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-white rounded-3xl border border-dashed border-slate-200 w-full mb-12">
+                  <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 mb-3 border border-slate-100/80">
+                    <PackageOpen size={22} className="stroke-[1.5]" />
+                  </div>
+                  <h4 className="font-bold text-[14px] text-slate-800 tracking-tight">Tidak Ada NFT</h4>
+                  <p className="text-[11px] text-slate-400 mt-1 max-w-[200px] leading-relaxed">
+                    Kamu belum memiliki NFT di dompet ini. Silakan cetak NFT baru!
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4 pb-12 w-full">
+                  {mintedNfts.map((nft, idx) => (
+                    <motion.div
+                      key={nft.id + idx}
+                      whileHover={{ 
+                        scale: 1.03, 
+                        boxShadow: "0 10px 25px -5px rgba(15, 23, 42, 0.08)",
+                        borderColor: "rgba(15, 23, 42, 0.15)"
+                      }}
+                      whileTap={{ scale: 0.98 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                      className="bg-white rounded-3xl border border-slate-200/50 overflow-hidden shadow-sm flex flex-col group cursor-pointer"
+                    >
+                      <div className="h-32 w-full bg-slate-50 relative overflow-hidden">
+                        <img
+                          src={nft.image}
+                          alt={nft.name}
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                        <div className="absolute top-2 right-2 bg-slate-900/80 backdrop-blur-sm text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-white/20">
+                          Arc
+                        </div>
                       </div>
-                    </div>
-                    <div className="p-3.5 flex flex-col text-left">
-                      <span className="font-bold text-[13px] text-slate-800 truncate leading-snug">
-                        {nft.name}
-                      </span>
-                      <span className="text-[10px] text-slate-400 font-medium truncate mt-0.5">
-                        {nft.description}
-                      </span>
-                      <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
-                        <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">
-                          ID
+                      <div className="p-3.5 flex flex-col text-left">
+                        <span className="font-bold text-[13px] text-slate-800 truncate leading-snug">
+                          {nft.name}
                         </span>
-                        <a
-                          href={nft.txHash && !nft.txHash.startsWith("0xgenesis") && !nft.txHash.startsWith("0xpioneer") ? `https://testnet.arcscan.app/tx/${nft.txHash}` : undefined}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-[10px] font-bold text-slate-400 hover:text-slate-600 truncate max-w-[80px]"
-                          onClick={(e) => {
-                            if (!nft.txHash || nft.txHash.startsWith("0xgenesis") || nft.txHash.startsWith("0xpioneer")) {
-                              e.preventDefault();
-                            }
-                          }}
-                        >
-                          {nft.id ? `#${nft.id.slice(2, 6).toUpperCase()}` : "Verified"}
-                        </a>
+                        <span className="text-[10px] text-slate-400 font-medium truncate mt-0.5">
+                          {nft.description}
+                        </span>
+                        <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                          <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">
+                            ID
+                          </span>
+                          <a
+                            href={nft.txHash ? `https://testnet.arcscan.app/tx/${nft.txHash}` : undefined}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[10px] font-bold text-slate-400 hover:text-slate-600 truncate max-w-[80px]"
+                            onClick={(e) => {
+                              if (!nft.txHash) {
+                                e.preventDefault();
+                              }
+                            }}
+                          >
+                            {nft.id ? `#${nft.id.slice(2, 6).toUpperCase()}` : "Verified"}
+                          </a>
+                        </div>
                       </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )
             )}
           </div>
         )}

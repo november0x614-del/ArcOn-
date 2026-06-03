@@ -125,7 +125,7 @@ router.post("/init", async (_req, res) => {
 
     console.log(`[AdminInit] Initializing default admin: ${adminEmail}`);
 
-    const userId = "00000000-0000-0000-0000-000000000000";
+    const userId = "11111111-1111-1111-1111-111111111111";
 
     const { data: existingWallet } = await supabase
       .from("user_wallets")
@@ -245,7 +245,7 @@ router.get("/users", async (_req, res) => {
       let email =
         authUser?.email ||
         `user_${w.wallet_address.substring(2, 6)}@testnet.com`;
-      if (w.id === "00000000-0000-0000-0000-000000000000") {
+      if (w.id === "11111111-1111-1111-1111-111111111111") {
         email = adminEmail;
       }
 
@@ -253,7 +253,7 @@ router.get("/users", async (_req, res) => {
         id: w.id,
         name:
           profile?.full_name ||
-          (w.id === "00000000-0000-0000-0000-000000000000"
+          (w.id === "11111111-1111-1111-1111-111111111111"
             ? "Platform Admin"
             : "Anonymous"),
         email: email,
@@ -363,7 +363,7 @@ router.post("/users/block", async (req, res) => {
   try {
     const { userId, block } = req.body;
     if (!userId) return res.status(400).json({ error: "Missing userId" });
-    if (userId === "00000000-0000-0000-0000-000000000000") {
+    if (userId === "11111111-1111-1111-1111-111111111111") {
       return res.status(400).json({ error: "Cannot block platform admin" });
     }
 
@@ -389,7 +389,7 @@ router.delete("/users/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
     if (!userId) return res.status(400).json({ error: "Missing userId" });
-    if (userId === "00000000-0000-0000-0000-000000000000") {
+    if (userId === "11111111-1111-1111-1111-111111111111") {
       return res.status(400).json({ error: "Cannot delete platform admin" });
     }
 
@@ -441,7 +441,7 @@ router.delete("/users/:userId", async (req, res) => {
 
     try {
       await supabase.from("audit_logs").insert({
-        user_id: "00000000-0000-0000-0000-000000000000", // Admin Action
+        user_id: "11111111-1111-1111-1111-111111111111", // Admin Action
         action: "HARD_DELETE_USER",
         metadata: { deleted_target: userId, timestamp: new Date().toISOString() },
       });
@@ -495,12 +495,12 @@ router.get("/stats", async (_req, res) => {
       const { data: adminWallet } = await supabase
         .from("user_wallets")
         .select("wallet_id, wallet_address")
-        .eq("id", "00000000-0000-0000-0000-000000000000")
+        .eq("id", "11111111-1111-1111-1111-111111111111")
         .single();
 
       if (adminWallet) {
         const balanceResult = await fetchUnifiedBalance(
-          "00000000-0000-0000-0000-000000000000",
+          "11111111-1111-1111-1111-111111111111",
           adminWallet,
           supabase,
         );
@@ -667,7 +667,7 @@ router.post("/approvals/:txId/decide", async (req, res) => {
     const { decision } = req.body; // 'approve' | 'reject'
     const result = await decideApproval(txId, decision);
     await logAdminAction(
-      "00000000-0000-0000-0000-000000000000",
+      "11111111-1111-1111-1111-111111111111",
       decision === "approve" ? "TREASURY_TX_APPROVED" : "TREASURY_TX_REJECTED",
       txId,
       { decision },
@@ -706,7 +706,7 @@ router.post("/compliance/blocklist", async (req, res) => {
       .insert({
         address,
         reason,
-        added_by: "00000000-0000-0000-0000-000000000000", // Admin by default for now
+        added_by: "11111111-1111-1111-1111-111111111111", // Admin by default for now
       })
       .select()
       .single();
@@ -714,7 +714,7 @@ router.post("/compliance/blocklist", async (req, res) => {
     if (error) throw error;
 
     await logAdminAction(
-      "00000000-0000-0000-0000-000000000000",
+      "11111111-1111-1111-1111-111111111111",
       "COMPLIANCE_ADDRESS_BLOCKED",
       address,
       { reason },
@@ -738,7 +738,7 @@ router.delete("/compliance/blocklist/:address", async (req, res) => {
     if (error) throw error;
 
     await logAdminAction(
-      "00000000-0000-0000-0000-000000000000",
+      "11111111-1111-1111-1111-111111111111",
       "COMPLIANCE_ADDRESS_UNBLOCKED",
       address,
     );
@@ -785,7 +785,7 @@ router.post("/config/fees", async (req, res) => {
     if (error) throw error;
 
     await logAdminAction(
-      "00000000-0000-0000-0000-000000000000",
+      "11111111-1111-1111-1111-111111111111",
       "FEE_STRATEGY_UPDATED",
       strategy,
     );
@@ -838,7 +838,7 @@ router.post("/treasury/sweep", async (req, res) => {
     );
 
     await logAdminAction(
-      "00000000-0000-0000-0000-000000000000",
+      "11111111-1111-1111-1111-111111111111",
       "TREASURY_MANUAL_SWEEP",
       treasuryAddress,
       { amount }
@@ -951,7 +951,7 @@ router.post("/config/simulate-circle-webhook", async (req, res) => {
 
     // Log admin action for auditing simulation
     await logAdminAction(
-      "00000000-0000-0000-0000-000000000000",
+      "11111111-1111-1111-1111-111111111111",
       "TRANSACTION_WEBHOOK_SIMULATED",
       internalRef,
       { status: newStatus, isFailed },

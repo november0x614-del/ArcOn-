@@ -89,7 +89,7 @@ export const ArcProvider: React.FC<{ children: React.ReactNode }> = ({
     } catch (error) {
       console.error("Failed to fetch balance:", error);
     }
-  }, []);
+  }, [address]);
 
   const getFeeEstimate = useCallback(async (gasLimit: bigint = 21000n) => {
     try {
@@ -180,7 +180,7 @@ export const ArcProvider: React.FC<{ children: React.ReactNode }> = ({
         success: false,
       };
     }
-  }, []);
+  }, [userId, address]);
 
   const value = {
     balance,

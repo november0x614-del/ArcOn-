@@ -63,6 +63,7 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
   const [newProductCategory, setNewProductCategory] = useState("Grocery");
   const [newProductImage, setNewProductImage] = useState("");
   const [newProductDesc, setNewProductDesc] = useState("");
+  const [newProductTxHash, setNewProductTxHash] = useState("");
 
   // Statistics calculated from real-time database transactions
   const totalSalesCount = recentSales.length;
@@ -75,6 +76,7 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
     setNewProductImage(nft.image);
     setNewProductDesc(nft.description || "Arc Network Native NFT");
     setNewProductStock("1");
+    setNewProductTxHash(nft.txHash || "");
     useStore.getState().displayToast(`Attached NFT "${nft.name}"!`);
   };
 
@@ -118,7 +120,8 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
       sales: 0,
       desc: newProductDesc || "Fresh merchant addition sold securely on Arc Testnet.",
       dateLabel: newProductCategory === "NFT" ? "Unique L1 NFT" : `Valid until ${new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).getDate()}/${new Date().getMonth() + 1}`,
-      seller_address: address
+      seller_address: address,
+      tx_hash: newProductTxHash
     };
     
     await useStore.getState().saveProduct(newProduct);
@@ -129,6 +132,7 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
     setNewProductStock("");
     setNewProductImage("");
     setNewProductDesc("");
+    setNewProductTxHash("");
   };
 
   useEffect(() => {
@@ -992,36 +996,42 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
                       <span className="text-[10px] font-black text-blue-600 bg-blue-50 border border-blue-100/40 px-2 rounded-full">Arc Network</span>
                     </div>
 
-                    {mintedNfts.length === 0 ? (
+                    {mintedNfts.filter(nft => !products.some(p => p.tx_hash === nft.txHash)).length === 0 ? (
                       <div className="bg-amber-50/50 rounded-2xl p-4 border border-amber-100 text-center space-y-2">
-                        <p className="text-[12.5px] font-black text-amber-800 leading-snug">Kamu belum mencetak NFT apa pun</p>
-                        <p className="text-[10px] text-amber-600 font-bold uppercase tracking-wider">Silakan buka menu "Mint NFT" utama terlebih dahulu!</p>
+                        <p className="text-[12.5px] font-black text-amber-800 leading-snug">
+                          {mintedNfts.length === 0 ? "Kamu belum mencetak NFT apa pun" : "Semua NFT kamu sudah terdaftar di toko"}
+                        </p>
+                        <p className="text-[10px] text-amber-600 font-bold uppercase tracking-wider">
+                          {mintedNfts.length === 0 ? "Silakan buka menu 'Mint NFT' utama terlebih dahulu!" : "Cek daftar inventory kamu!"}
+                        </p>
                       </div>
                     ) : (
                       <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-hide -mx-2 px-2">
-                        {mintedNfts.map((nft) => {
-                          const isSelected = newProductName === nft.name && newProductImage === nft.image;
-                          return (
-                            <button
-                              key={nft.id || nft.txHash}
-                              type="button"
-                              onClick={() => handleSelectNft(nft)}
-                              className={`flex items-center gap-3 bg-white hover:bg-slate-50/80 rounded-2xl p-2.5 border shrink-0 transition-all cursor-pointer ${
-                                isSelected 
-                                  ? "border-slate-800 ring-[1px] ring-slate-800 shadow-sm"
-                                  : "border-slate-150 hover:border-slate-200"
-                              }`}
-                            >
-                              <img src={nft.image} className="w-10 h-10 rounded-xl object-cover shrink-0 bg-slate-100" alt={nft.name} />
-                              <div className="flex flex-col text-left max-w-[120px] truncate">
-                                <span className="text-[12px] font-bold text-slate-800 truncate">{nft.name}</span>
-                                <span className="text-[9px] font-mono font-bold text-slate-400 uppercase tracking-tight truncate">
-                                  {nft.txHash ? `${nft.txHash.slice(0, 6)}...${nft.txHash.slice(-4)}` : "L-1 Mint"}
-                                </span>
-                              </div>
-                            </button>
-                          );
-                        })}
+                        {mintedNfts
+                          .filter(nft => !products.some(p => p.tx_hash === nft.txHash))
+                          .map((nft) => {
+                            const isSelected = newProductName === nft.name && newProductImage === nft.image;
+                            return (
+                              <button
+                                key={nft.id || nft.txHash}
+                                type="button"
+                                onClick={() => handleSelectNft(nft)}
+                                className={`flex items-center gap-3 bg-white hover:bg-slate-50/80 rounded-2xl p-2.5 border shrink-0 transition-all cursor-pointer ${
+                                  isSelected 
+                                    ? "border-slate-800 ring-[1px] ring-slate-800 shadow-sm"
+                                    : "border-slate-150 hover:border-slate-200"
+                                }`}
+                              >
+                                <img src={nft.image} className="w-10 h-10 rounded-xl object-cover shrink-0 bg-slate-100" alt={nft.name} />
+                                <div className="flex flex-col text-left max-w-[120px] truncate">
+                                  <span className="text-[12px] font-bold text-slate-800 truncate">{nft.name}</span>
+                                  <span className="text-[9px] font-mono font-bold text-slate-400 uppercase tracking-tight truncate">
+                                    {nft.txHash ? `${nft.txHash.slice(0, 6)}...${nft.txHash.slice(-4)}` : "L-1 Mint"}
+                                  </span>
+                                </div>
+                              </button>
+                            );
+                          })}
                       </div>
                     )}
 

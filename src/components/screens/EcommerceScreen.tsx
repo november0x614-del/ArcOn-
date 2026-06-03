@@ -13,7 +13,9 @@ import {
   Home,
   Package,
   Lock,
-  ShieldAlert
+  ShieldAlert,
+  ShieldCheck,
+  ExternalLink
 } from "lucide-react";
 import { useStore } from "../../store/useStore";
 
@@ -626,6 +628,29 @@ export function EcommerceScreen({ onBack, isDesktop }: EcommerceScreenProps) {
                         <div className="flex-1">
                           <h2 className="text-[24px] sm:text-[28px] font-black text-slate-900 leading-tight mb-2 break-words">{selectedProduct?.name}</h2>
                           <p className="text-[12px] font-black text-slate-400 uppercase tracking-widest">{selectedProduct?.category} • Testnet</p>
+                          
+                          {/* On-Chain NFT Verification Panel */}
+                          {selectedProduct?.category === "NFT" && selectedProduct?.tx_hash && (
+                            <div className="mt-4 p-4 bg-blue-50/50 border border-blue-100 rounded-2xl flex items-center justify-between animate-in fade-in slide-in-from-top-1 duration-500">
+                              <div className="flex items-center gap-3">
+                                <ShieldCheck size={20} className="text-blue-600 shrink-0" />
+                                <div className="flex flex-col text-left">
+                                  <span className="text-[9px] font-black text-blue-400 uppercase tracking-[0.1em]">L1 Verified Asset</span>
+                                  <span className="text-[11.5px] font-mono font-bold text-blue-900 truncate max-w-[140px]">
+                                    {selectedProduct.tx_hash}
+                                  </span>
+                                </div>
+                              </div>
+                              <a 
+                                href={`https://arcscan.io/tx/${selectedProduct.tx_hash}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="bg-white text-[9.5px] font-black text-blue-600 border border-blue-100 px-3 py-2 rounded-xl hover:bg-blue-50 transition-all flex items-center gap-1.5 shadow-sm no-underline active:scale-95"
+                              >
+                                EXPLORER <ExternalLink size={11} />
+                              </a>
+                            </div>
+                          )}
                         </div>
                         <div className="bg-slate-50 p-4 rounded-3xl border border-slate-100 text-right">
                           <div className="text-[22px] font-black text-slate-900 tracking-tight">{selectedProduct?.price}</div>

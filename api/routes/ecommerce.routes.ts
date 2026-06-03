@@ -23,7 +23,7 @@ router.post("/ecommerce/checkout", async (req, res) => {
       const { data: treasuryWallet } = await supabaseAdmin
         .from("user_wallets")
         .select("wallet_address")
-        .eq("id", "00000000-0000-0000-0000-000000000000")
+        .eq("id", "11111111-1111-1111-1111-111111111111")
         .single();
       treasuryAddress = treasuryWallet?.wallet_address;
     }

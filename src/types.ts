@@ -129,6 +129,7 @@ export interface Product {
   desc?: string;
   dateLabel?: string;
   seller_address?: string;
+  tx_hash?: string;
   created_at?: string;
 }
 

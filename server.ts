@@ -1,3 +1,10 @@
+import dotenv from "dotenv";
+try {
+  dotenv.config({ override: true });
+} catch (e) {
+  console.warn("Dotenv load warning on server startup:", e);
+}
+
 import app from "./api/index.js";
 import path from "path";
 import express from "express";

@@ -368,7 +368,7 @@ export const BackendClient = {
   },
 
   async fetchNFTs(userId: string) {
-    return apiRequest(`/api/transactions/nfts/${userId}`, "GET");
+    return apiRequest(`/api/nfts/${userId}`, "GET");
   },
 
   async deleteProduct(productId: string | number) {

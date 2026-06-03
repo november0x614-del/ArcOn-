@@ -22,6 +22,7 @@ export function MintNFTScreen({ onBack }: { onBack: () => void }) {
   const { executeArcTransaction } = useArc();
   const [step, setStep] = useState<"input" | "minting" | "success" | "crop">("input");
   const [nftName, setNftName] = useState("");
+  const [nftDescription, setNftDescription] = useState("");
   const [txHash, setTxHash] = useState("");
   const [selectedImage, setSelectedImage] = useState<string>("https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=300&auto=format&fit=crop");
   const [imageLabel, setImageLabel] = useState<string>("Default Generative Image");
@@ -64,19 +65,24 @@ export function MintNFTScreen({ onBack }: { onBack: () => void }) {
         type: "MINT_NFT",
         metadata: {
           name: nftName,
-          description: "Arc Network Native NFT",
+          description: nftDescription || "Arc Network Native NFT",
           image: selectedImage
         }
       });
 
       if (result.success) {
-        const hash = result.txHash || "0x" + Math.random().toString(16).slice(2);
-        setTxHash(hash);
+        setTxHash(result.txHash || "pending");
         
         // Finalize state by fetching fresh assets from server (Server-First)
         await useStore.getState().fetchMintedNfts();
 
-        addLog(`NFT Minted Successfully: ${nftName}`);
+        if (result.txHash === "pending") {
+          addLog(`NFT Minting in Progress: ${nftName}`);
+          displayToast("Proses minting sedang berjalan di background!");
+        } else {
+          addLog(`NFT Minted Successfully: ${nftName}`);
+          displayToast("Berhasil mencetak NFT baru!");
+        }
         setStep("success");
       } else {
         displayToast("Minting failed. Please try again.");
@@ -189,6 +195,18 @@ export function MintNFTScreen({ onBack }: { onBack: () => void }) {
                       </div>
                     </div>
                   )}
+
+                  <div className="flex flex-col gap-1.5 mt-2">
+                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Description (Optional)</label>
+                    <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 shadow-inner flex items-center">
+                      <textarea 
+                        value={nftDescription}
+                        onChange={(e) => setNftDescription(e.target.value)}
+                        placeholder="Tell a story about your NFT..."
+                        className="bg-transparent border-none outline-none w-full font-bold text-[14px] text-slate-800 placeholder:text-slate-300 resize-none h-16"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -303,15 +321,19 @@ export function MintNFTScreen({ onBack }: { onBack: () => void }) {
                   <div className="w-full space-y-3">
                     <div className="flex justify-between items-center px-2">
                       <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Explorer Link</span>
-                      <a 
-                        href={`https://testnet.arcscan.app/tx/${txHash}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-[12px] font-bold text-blue-600 flex items-center gap-1 hover:underline"
-                      >
-                        {txHash.slice(0, 6)}...{txHash.slice(-4)}
-                        <ExternalLink size={12} />
-                      </a>
+                      {txHash !== "pending" ? (
+                        <a 
+                          href={`https://testnet.arcscan.app/tx/${txHash}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[12px] font-bold text-blue-600 flex items-center gap-1 hover:underline"
+                        >
+                          {txHash.slice(0, 6)}...{txHash.slice(-4)}
+                          <ExternalLink size={12} />
+                        </a>
+                      ) : (
+                        <span className="text-[12px] font-medium text-slate-500 italic">Processing...</span>
+                      )}
                     </div>
                   </div>
                </div>
