@@ -360,17 +360,21 @@ router.post("/transfer/execute", async (req, res) => {
 
     const { executeAtomicBatchTransfer } = await import("../services/circle.js");
     
-    // Using atomic service for single transfer as requested (blocking execution)
-    const result = await executeAtomicBatchTransfer(
-      supabaseAdmin,
-      userId,
-      [{
-        address: destinationAddress,
-        amount: amountNum,
-        name: recipientName || "EVM Account"
-      }],
-      fee
-    );
+    // Add to pending queue in DB immediately
+    await supabaseAdmin.from("transactions").insert({
+      user_id: userId,
+      amount: `-${amount}`,
+      type: "transfer",
+      status: "pending",
+      internal_ref: internalRef,
+      metadata: {
+        recipientName: recipientName || "EVM Account",
+        destinationAddress,
+        memo,
+        platformFee: fee,
+        isAtomic: true
+      },
+    });
 
     // Write to the requested transaction_ledger
     await supabaseAdmin.from("transaction_ledger").insert({
@@ -378,7 +382,7 @@ router.post("/transfer/execute", async (req, res) => {
       tx_type: "SEND",
       amount: amountNum,
       destination_address: destinationAddress,
-      circle_tx_id: result.txId,
+      circle_tx_id: internalRef,
       status: "PENDING",
       metadata: {
         recipientName: recipientName || "EVM Account",
@@ -388,9 +392,62 @@ router.post("/transfer/execute", async (req, res) => {
       },
     });
 
-    res.status(200).json({
+    // Run execution in background (Non-blocking)
+    const runSend = async () => {
+      try {
+        const result = await executeAtomicBatchTransfer(
+          supabaseAdmin,
+          userId,
+          [{
+            address: destinationAddress,
+            amount: amountNum,
+            name: recipientName || "EVM Account"
+          }],
+          fee,
+          true // skipDbInsert
+        );
+
+        // Success: update both tables
+        await supabaseAdmin
+          .from("transactions")
+          .update({
+            tx_hash: result.txId,
+            status: "success",
+          })
+          .eq("internal_ref", internalRef);
+          
+        await supabaseAdmin
+          .from("transaction_ledger")
+          .update({
+            tx_hash: result.txId,
+            status: "COMPLETE",
+          })
+          .eq("circle_tx_id", internalRef);
+      } catch (err: any) {
+        console.error("Async send failed:", err);
+        await supabaseAdmin
+          .from("transactions")
+          .update({
+            status: "failed",
+            metadata: { error: err.message || "Failed to execute transaction" },
+          })
+          .eq("internal_ref", internalRef);
+          
+        await supabaseAdmin
+          .from("transaction_ledger")
+          .update({
+            status: "FAILED",
+            metadata: { error: err.message || "Failed to execute transaction" },
+          })
+          .eq("circle_tx_id", internalRef);
+      }
+    };
+    
+    runSend().catch(err => console.error("Uncaught error in runSend:", err));
+
+    res.status(202).json({
       message: "Transfer initiated via Atomic Protocol",
-      txId: result.txId,
+      txId: internalRef,
       status: "pending",
       memo: memo,
     });
@@ -544,37 +601,97 @@ router.post("/payments/batch", async (req, res) => {
       `[BatchRoute] Initiating Atomic Batch for User ${userId} with ${recipientCount} recipients. Fee: ${feeValue} USDC`,
     );
 
-    // Using atomic service with platformFee inclusion
-    const result = await executeAtomicBatchTransfer(
-      getSupabaseAdmin(),
-      userId,
-      recipients.map((r: any) => ({
-        address: r.address,
-        amount: parseFloat(r.amount),
-        name: r.name,
-      })),
-      feeValue,
-    );
+    const internalRef = `batch_${crypto.randomBytes(8).toString("hex")}`;
+    const supabaseAdmin = getSupabaseAdmin();
 
-    await getSupabaseAdmin().from("transaction_ledger").insert({
+    // Add to pending queue in DB immediately
+    await supabaseAdmin.from("transactions").insert({
+      user_id: userId,
+      amount: `-${totalAmount.toFixed(2)}`,
+      type: "batchTransfer",
+      status: "pending",
+      internal_ref: internalRef,
+      metadata: {
+        description: `Atomic Batch Transfer to ${recipientCount} recipients`,
+        recipients,
+        platformFee: feeValue,
+        real: true,
+        isAtomicBatch: true,
+        atomicity: "MSCA_MULTI_CALL",
+      },
+    });
+
+    await supabaseAdmin.from("transaction_ledger").insert({
       user_id: userId,
       tx_type: "SEND",
-      amount: result.totalAmount,
-      circle_tx_id: result.txId,
+      amount: totalAmount + feeValue,
+      circle_tx_id: internalRef,
       status: "PENDING",
       metadata: {
         isBatch: true,
-        recipientCount: result.recipientCount,
+        recipientCount: recipientCount,
         platformFee: feeValue,
       },
     });
 
-    res.json({
+    const runBatch = async () => {
+      try {
+        const result = await executeAtomicBatchTransfer(
+          supabaseAdmin,
+          userId,
+          recipients.map((r: any) => ({
+            address: r.address,
+            amount: parseFloat(r.amount),
+            name: r.name,
+          })),
+          feeValue,
+          true // skipDbInsert
+        );
+
+        // Success: update both tables
+        await supabaseAdmin
+          .from("transactions")
+          .update({
+            tx_hash: result.txId,
+            status: "success",
+          })
+          .eq("internal_ref", internalRef);
+          
+        await supabaseAdmin
+          .from("transaction_ledger")
+          .update({
+            tx_hash: result.txId,
+            status: "COMPLETE",
+          })
+          .eq("circle_tx_id", internalRef);
+      } catch (err: any) {
+        console.error("Async batch failed:", err);
+        await supabaseAdmin
+          .from("transactions")
+          .update({
+            status: "failed",
+            metadata: { error: err.message || "Failed to execute batch" },
+          })
+          .eq("internal_ref", internalRef);
+          
+        await supabaseAdmin
+          .from("transaction_ledger")
+          .update({
+            status: "FAILED",
+            metadata: { error: err.message || "Failed to execute batch" },
+          })
+          .eq("circle_tx_id", internalRef);
+      }
+    };
+    
+    runBatch().catch(err => console.error("Uncaught error in runBatch:", err));
+
+    res.status(202).json({
       success: true,
-      message: "Atomic batch transaction initiated",
-      txId: result.txId,
-      recipientCount: result.recipientCount,
-      totalAmount: result.totalAmount,
+      message: "Atomic batch transaction queued",
+      txId: internalRef,
+      recipientCount: recipientCount,
+      totalAmount: totalAmount + feeValue,
     });
   } catch (error: any) {
     console.error("Batch Payment Execution Error:", error);
@@ -652,19 +769,39 @@ router.post("/stake/execute", async (req, res) => {
         error: "Fitur staking saat ini dinonaktifkan oleh administrator platform.",
       });
     }
-    // Industrial Standard: Staking Vault Address (Example Node Validator)
-    const vaultAddress = "0x5555555555555555555555555555555555555555";
+    const supabaseAdmin = getSupabaseAdmin();
+    // 1. Dapatkan Treasury/Vault Address (Admin Wallet)
+    let treasuryAddress = process.env.PLATFORM_TREASURY_ADDRESS;
+    if (!treasuryAddress) {
+      const { data: treasuryWallet } = await supabaseAdmin
+        .from("user_wallets")
+        .select("wallet_address")
+        .eq("id", "00000000-0000-0000-0000-000000000000") // Admin ID pattern
+        .single();
+      treasuryAddress = treasuryWallet?.wallet_address;
+    }
+
+    if (!treasuryAddress) {
+      return res.status(500).json({ error: "Platform Treasury/Vault belum dikonfigurasi." });
+    }
 
     const result = await executeTransaction(
-      getSupabaseAdmin(),
+      supabaseAdmin,
       userId,
       amount,
-      vaultAddress,
+      treasuryAddress,
       "stake",
       {
-        pool: "StableStake Vault #3A",
-        apy: "12.5%",
+        pool: "USDC Liquid Pool",
+        apy: "Est. APY 5.5%",
         finality: "deterministic",
+        action: "stake",
+        stakeType: "Flexible",
+        lockDuration: "Flexible",
+        rewardToken: "USDC",
+        valueDate: "H+1 setelah staking",
+        distributionDate: "Harian",
+        maturityDate: "Flexible"
       },
     );
     res
@@ -672,6 +809,67 @@ router.post("/stake/execute", async (req, res) => {
       .json({ message: "Staking transaction initiated", txId: result.txId });
   } catch (error: any) {
     console.error("Stake Error", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post("/stake/withdraw", async (req, res) => {
+  try {
+    const { userId, amount, rewardAmount } = req.body;
+    if (await isUserBlocked(userId)) {
+      return res.status(403).json({
+        error:
+          "Your account has been disabled by the system administrator. All transaction operations are suspended.",
+      });
+    }
+
+    const config = getPlatformConfigs();
+    if (config && config.stableStakeEnabled === false) {
+      return res.status(403).json({
+        error: "Fitur staking saat ini dinonaktifkan oleh administrator platform.",
+      });
+    }
+
+    const supabaseAdmin = getSupabaseAdmin();
+    // 1. Dapatkan Admin ID dan Wallet Address User
+    const adminId = "00000000-0000-0000-0000-000000000000";
+    const { data: userWallet } = await supabaseAdmin
+      .from("user_wallets")
+      .select("wallet_address")
+      .eq("id", userId)
+      .single();
+
+    if (!userWallet?.wallet_address) {
+      return res.status(400).json({ error: "User wallet not found" });
+    }
+
+    // Returning principal + reward from vault
+    const totalAmountToReturn = parseFloat(amount) + parseFloat(rewardAmount || 0);
+
+    // Unstake causes Admin Treasury to send funds back to the User
+    const result = await executeTransaction(
+      supabaseAdmin,
+      adminId, // Sender is Admin/Vault
+      totalAmountToReturn,
+      userWallet.wallet_address, // Receiver is User
+      "unstake_payout",
+      {
+        pool: "USDC Liquid Pool",
+        action: "unstake",
+        principalAmount: `${amount} USDC`,
+        rewardAmount: `${rewardAmount || 0} USDC`,
+        rewardToken: "USDC",
+        unbondingPeriod: "Instant",
+        type: "unstake",
+        memo: `UNSTAKE-${userId}` // Identifiable for webhook
+      },
+    );
+
+    res
+      .status(200)
+      .json({ message: "Unstake transaction successful", txId: result.txId });
+  } catch (error: any) {
+    console.error("Unstake Error", error);
     res.status(500).json({ error: error.message });
   }
 });

@@ -401,6 +401,7 @@ export async function executeAtomicBatchTransfer(
   userId: string,
   recipients: { address: string; amount: number; name?: string }[],
   platformFee: number = 0,
+  skipDbInsert: boolean = false
 ) {
   const { data: walletData } = await supabaseAdmin
     .from("user_wallets")
@@ -521,31 +522,33 @@ export async function executeAtomicBatchTransfer(
 
     // 4. Record the ATOMIC transaction
     const isSingle = recipients.length === 1;
-    const { error: dbError } = await supabaseAdmin.from("transactions").insert({
-      user_id: userId,
-      amount: `-${totalAmountWithFee.toFixed(2)}`,
-      type: isSingle ? "transfer" : "batchTransfer",
-      status: "pending",
-      internal_ref: circleTxId,
-      metadata: {
-        description: isSingle 
-          ? `Transfer to ${recipients[0].name || recipients[0].address}` 
-          : `Atomic Batch Transfer to ${recipients.length} recipients`,
-        recipients,
-        platformFee,
-        real: true,
-        isAtomicBatch: true,
-        atomicity: "MSCA_MULTI_CALL",
-        contractCall: "executeBatch",
-        decimals,
-      },
-    });
+    if (!skipDbInsert) {
+      const { error: dbError } = await supabaseAdmin.from("transactions").insert({
+        user_id: userId,
+        amount: `-${totalAmountWithFee.toFixed(2)}`,
+        type: isSingle ? "transfer" : "batchTransfer",
+        status: "pending",
+        internal_ref: circleTxId,
+        metadata: {
+          description: isSingle 
+            ? `Transfer to ${recipients[0].name || recipients[0].address}` 
+            : `Atomic Batch Transfer to ${recipients.length} recipients`,
+          recipients,
+          platformFee,
+          real: true,
+          isAtomicBatch: true,
+          atomicity: "MSCA_MULTI_CALL",
+          contractCall: "executeBatch",
+          decimals,
+        },
+      });
 
-    if (dbError) {
-      console.error("[CircleService] Failed to record batch in DB:", dbError);
-      throw new Error(
-        `Failed to record batch transaction in database: ${JSON.stringify(dbError)}`,
-      );
+      if (dbError) {
+        console.error("[CircleService] Failed to record batch in DB:", dbError);
+        throw new Error(
+          `Failed to record batch transaction in database: ${JSON.stringify(dbError)}`,
+        );
+      }
     }
 
     return {

@@ -39,6 +39,7 @@ export type ViewState =
   | "bridge"
   | "mintNFT"
   | "batchTransfer"
+  | "transferSuccess"
   | "adminDashboard";
 
 export interface ShortcutItem {
@@ -79,6 +80,7 @@ export interface Transaction {
     | "receive"
     | "bridge"
     | "stake"
+    | "unstake"
     | "batchTransfer";
   title: string;
   amount: string;
@@ -93,8 +95,8 @@ export interface Transaction {
     productCategory?: string;
     instructions?: string;
     merchantId?: string;
-    fromToken?: string;
-    toToken?: string;
+    fromToken?: any;
+    toToken?: any;
     destinationAddress?: string;
     recipientName?: string;
     direction?: "inbound" | "outbound";
@@ -110,6 +112,9 @@ export interface Transaction {
     isBatch?: boolean;
     recipients?: any[];
     platformFee?: number;
+    destinationTxHash?: string;
+    bridgeFee?: string | number;
+    destinationGasFee?: string | number;
   };
 }
 

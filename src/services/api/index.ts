@@ -228,6 +228,27 @@ export const BackendClient = {
   },
 
   /**
+   * Unstaking functionality.
+   */
+  async unstakeTokens(amount: number, rewardAmount: number) {
+    const { registeredUser } = useStore.getState();
+    if (!registeredUser?.supabaseUid) throw new Error("User not registered");
+
+    console.log(`[Adapter] [Unstake] Initiating unstake: ${amount} USDC principal with ${rewardAmount} USDC reward`);
+
+    return apiRequest(
+      "/api/stake/withdraw",
+      "POST",
+      {
+        userId: registeredUser.supabaseUid,
+        amount,
+        rewardAmount,
+      },
+      "Unstaking failed",
+    );
+  },
+
+  /**
    * Helper to handle localStorage caching with TTL (Disabled for Server-First)
    */
   getCachedData(key: string, ttlMs: number) {

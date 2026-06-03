@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { TransferSuccessScreen } from "./TransferSuccessScreen";
 import {
   ArrowLeft,
   Users,
@@ -653,104 +654,16 @@ export function BatchTransferScreen({
 
           {/* Step 4: Success Screen */}
           {multiSendStep === "success" && (
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="py-6 text-center"
-            >
-              <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 mb-6 mx-auto shadow-sm">
-                <CheckCircle2 size={42} strokeWidth={2.5} />
-              </div>
-              <h3 className="font-black text-[26px] text-slate-900 tracking-tight">
-                Success!
-              </h3>
-              <p className="text-[15px] text-slate-500 mt-2 max-w-[320px] mb-8 mx-auto leading-relaxed">
-                Transaction batch successfully confirmed on Arc Testnet.
-              </p>
-
-              <div className="bg-white border-[1.5px] border-slate-100 rounded-[32px] p-6 text-left mb-8 shadow-sm overflow-hidden">
-                <div className="flex justify-between items-center text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-4 mb-4">
-                  <span>Batch Distribution</span>
-                  <span className="text-[#005faa] bg-[#005faa]/5 px-2.5 py-1 rounded-lg">
-                    Verified Payout
-                  </span>
-                </div>
-                <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1 mb-4 custom-scrollbar">
-                  {recipients.map((rec) => (
-                    <div
-                      key={rec.id}
-                      className="flex justify-between items-center bg-slate-50/70 p-3.5 rounded-2xl border border-slate-100/50"
-                    >
-                      <div className="flex flex-col min-w-0 flex-1 mr-4">
-                        <span className="font-bold text-slate-900 text-[14px] truncate leading-tight">
-                          {rec.name ||
-                            (rec.address
-                              ? `User_${rec.address.slice(0, 6)}...${rec.address.slice(-4)}`
-                              : "Recipient")}
-                        </span>
-                        <span
-                          className="font-mono text-[10px] text-slate-400 mt-1"
-                          title={rec.address}
-                        >
-                          {rec.address
-                            ? `${rec.address.slice(0, 10)}...${rec.address.slice(-6)}`
-                            : rec.displayAddress}
-                        </span>
-                      </div>
-                      <div className="flex flex-col items-end shrink-0">
-                        <div className="flex items-center gap-1">
-                          <span className="font-black text-slate-900 text-[15px]">
-                            {parseFloat(rec.amount || "0").toFixed(2)}
-                          </span>
-                          <span className="text-[9px] font-bold text-slate-400 uppercase">
-                            USDC
-                          </span>
-                        </div>
-                        <span className="text-[8px] font-bold text-emerald-500 uppercase tracking-tighter mt-0.5">
-                          Confirmed
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex justify-between items-center border-t border-slate-50 pt-5 mt-2">
-                  <span className="text-[12px] font-bold text-slate-500">
-                    Total Transferred
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-black text-slate-800 text-[18px]">
-                      {recipients
-                        .reduce(
-                          (acc, curr) => acc + parseFloat(curr.amount || "0"),
-                          0,
-                        )
-                        .toFixed(2)}
-                    </span>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">
-                      USDC
-                    </span>
-                  </div>
-                </div>
-                <div className="mt-4 pt-4 border-t border-slate-50 flex flex-col gap-1.5">
-                  <span className="text-[11px] font-bold text-slate-300 uppercase tracking-wider italic">
-                    Circle Tx ID
-                  </span>
-                  <span className="font-mono text-[10px] text-[#10b981] bg-[#10b981]/5 px-3 py-2 rounded-xl border border-[#10b981]/10 break-all leading-relaxed font-bold">
-                    {actualTxId || "ARC_BATCH_FINALIZED"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-4">
-                <button
-                  onClick={onBack}
-                  className="w-full h-16 bg-[#0B192C] text-white rounded-[22px] font-bold text-[16px] shadow-lg shadow-slate-200 active:scale-[0.97] transition-all flex items-center justify-center gap-3 border-0 cursor-pointer"
-                >
-                  Back to Dashboard
-                </button>
-              </div>
-            </motion.div>
-          )}
+            <TransferSuccessScreen
+              txId={actualTxId || "ARC_BATCH_FINALIZED"}
+              amount={recipients.reduce((acc, curr) => acc + parseFloat(curr.amount || "0"), 0).toFixed(2)}
+              recipientName={recipients.length + " Recipients"}
+              fee={PLATFORM_FEE}
+              title="Batch Transfer Confirmed"
+              description={`Your batch transfer to ${recipients.length} recipients has been successfully broadcast.`}
+              onBack={() => { setMultiSendStep("form"); onBack(); }}
+            />
+        )}
         </div>
         </div>
       </div>

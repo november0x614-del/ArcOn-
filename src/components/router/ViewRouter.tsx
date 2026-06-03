@@ -12,6 +12,7 @@ import { SettingsScreen } from "../screens/SettingsScreen";
 import { NamaPanggilanScreen } from "../screens/NamaPanggilanScreen";
 import { EmailScreen } from "../screens/EmailScreen";
 import { OtherAccountsScreen } from "../screens/OtherAccountsScreen";
+import { TransferSuccessScreen } from "../screens/TransferSuccessScreen";
 import { BayarVAScreen } from "../screens/BayarVAScreen";
 import { EcommerceScreen } from "../screens/EcommerceScreen";
 import { MerchantScreen } from "../screens/MerchantScreen";
@@ -135,6 +136,7 @@ export const ViewRouter = React.memo(
     const userName = registeredUser?.username || "Account Holder";
 
     const [platformConfig, setPlatformConfig] = React.useState<any>(null);
+    const [transferSuccessData, setTransferSuccessData] = React.useState<any>(null);
 
     React.useEffect(() => {
       // Only fetch config if user is at least partially logged in or already at home
@@ -676,6 +678,16 @@ export const ViewRouter = React.memo(
           />
         )}
 
+        {viewState === "transferSuccess" && transferSuccessData && (
+          <TransferSuccessScreen
+            txId={transferSuccessData.txId}
+            amount={transferSuccessData.amount}
+            recipientName={transferSuccessData.recipientName}
+            fee={transferSuccessData.fee}
+            onBack={() => { setViewState("home"); fetchTransactions(); }}
+          />
+        )}
+
         {viewState === "receipt" && (
           <ReceiptScreen onBack={() => setViewState(receiptSource)} />
         )}
@@ -813,26 +825,13 @@ export const ViewRouter = React.memo(
                 await fetchBalance();
                 await fetchTransactions();
 
-                const txData = {
-                  id: result.txId || `send_${Math.random().toString(36).substring(7)}`,
-                  amount: `-${numAmount}`,
-                  currency: "USDC",
-                  type: "transfer",
-                  status: "success",
-                  timestamp: new Date().toISOString(),
-                  metadata: {
-                    recipientName: selectedContact.name,
-                    destinationAddress: selectedContact.account,
-                    memo: memo,
-                    real: true,
-                    isAsync: true,
-                    platformFee: fee > 0 ? fee.toFixed(2) : undefined,
-                  }
-                };
-
-                setSelectedTransaction(txData as any);
-                setReceiptSource("transfer");
-                setViewState("receipt");
+                setTransferSuccessData({
+                  txId: result.txId || `send_${Math.random().toString(36).substring(7)}`,
+                  amount: numAmount.toString(),
+                  recipientName: selectedContact.name,
+                  fee: fee > 0 ? fee.toFixed(2) : undefined
+                });
+                setViewState("transferSuccess");
 
                 displayToast(`Transfer to ${selectedContact.name} initiated!`);
               } catch (error) {

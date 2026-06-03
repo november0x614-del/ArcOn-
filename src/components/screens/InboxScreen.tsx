@@ -30,7 +30,27 @@ export function InboxScreen({ onBack, onTransactionClick }: InboxScreenProps) {
 
   const getReceipts = () => {
     return transactions.filter(
-      (t) => t.status === "success" || t.status === "failed",
+      (t) => {
+        if (t.status === "failed") return true;
+        if (t.status === "success") {
+           const possibleHash = t.metadata?.txHash || t.txHash || (t as any).tx_hash || t.id;
+           if (!possibleHash || typeof possibleHash !== "string") return false;
+           const clean = possibleHash.trim().toLowerCase();
+           if (
+             clean.includes("send_") ||
+             clean.includes("swap_") ||
+             clean.includes("bridge_") ||
+             clean.includes("stake_") ||
+             clean.includes("withdraw_") ||
+             clean.includes("pay_") ||
+             clean.includes("receive_")
+           ) {
+             return false;
+           }
+           return clean.startsWith("0x");
+        }
+        return false;
+      }
     );
   };
 

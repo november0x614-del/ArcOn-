@@ -801,20 +801,20 @@ export const HomeScreen = React.memo(
                             }}
                             className="flex items-center gap-3.5 p-3 rounded-2xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-all active:scale-[0.98]"
                           >
-                            <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-500 flex items-center justify-center text-white shrink-0 shadow-sm">
-                              <ShieldCheck size={20} />
+                            <div className="w-11 h-11 rounded-xl bg-slate-900 flex items-center justify-center text-white shrink-0 shadow-sm">
+                              <TrendingUp size={20} />
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1.5">
-                                <h4 className="font-bold text-[14px] text-slate-800 font-sans">
-                                  StableStake Vault
+                                <h4 className="font-bold text-[14px] text-slate-800 font-sans tracking-tight">
+                                  Circle Earn
                                 </h4>
-                                <span className="text-[9px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded font-sans">
-                                  Yield & DeFi
+                                <span className="text-[9px] font-semibold text-blue-600 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded font-sans uppercase">
+                                  DeFi Yield
                                 </span>
                               </div>
-                              <p className="text-[13px] text-slate-400 truncate mt-0.5 font-sans">
-                                Stake stablecoins & earn USDC yield
+                              <p className="text-[13px] text-slate-500 truncate mt-0.5 font-sans">
+                                Hubungkan USDC Anda ke protokol DeFi
                               </p>
                             </div>
                             <ChevronRight

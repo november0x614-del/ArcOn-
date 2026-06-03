@@ -259,10 +259,17 @@ export async function verifyAndProcessWebhook(
           return res.status(200).send("Accepted");
         }
 
+        // Determine transaction type based on memo
+        let txType = "receive";
+        if (memo && memo.startsWith("UNSTAKE-")) {
+          txType = "unstake";
+          console.log(`[Webhook] Inbound transaction ${id} determined as ${txType} from memo.`);
+        }
+
         const { error } = await supabaseAdmin.from("transactions").insert({
           user_id: walletData.id,
           amount: amountValue,
-          type: "receive",
+          type: txType,
           status: "success", // Deterministic finality: immediate success for inbound detected by Circle
           internal_ref: id,
           metadata: {
@@ -272,6 +279,7 @@ export async function verifyAndProcessWebhook(
             txHash,
             finality: "deterministic",
             memo: memo || null,
+            type: txType, // Sync with type
           },
         });
 

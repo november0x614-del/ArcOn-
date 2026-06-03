@@ -102,7 +102,11 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
     tx?.metadata?.isAtomicBatch === true ||
     tx?.metadata?.isBatch === true;
   const isBridge = tx?.type === "bridge" || (tx?.metadata as any)?.type === "bridge" || (tx?.metadata as any)?.destinationDomain !== undefined;
-
+  const isSwap = tx?.type === "swap" || (tx?.metadata as any)?.type === "swap";
+  const isMint = (tx?.type as string) === "mint" || (tx?.metadata as any)?.type === "mint" || ((tx?.metadata as any)?.contractAddress !== undefined);
+  const isStake = (tx?.type as string) === "stake" || (tx?.metadata as any)?.type === "stake" || (tx?.metadata as any)?.action === "stake";
+  const isUnstake = (tx?.type as string) === "unstake" || (tx?.metadata as any)?.type === "unstake" || (tx?.metadata as any)?.action === "unstake";
+  const isTransfer = tx?.type === "transfer" || (tx?.type as string) === "send" || (!isSwap && !isBatch && !isBridge && !isMint && !isStake && !isUnstake);
 
   const formatAddrShort = (addr: string) =>
     addr ? `0x${addr.substring(2, 6)}...${addr.slice(-4)}` : "";
@@ -115,6 +119,8 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
     tx?.metadata?.destinationAddress || tx?.metadata?.escrowAddress || "";
 
   const receiverAddress = isDeposit ? myWalletAddress : destAddr;
+
+  const [swapRate, setSwapRate] = useState<number | null>(null);
 
   useEffect(() => {
     async function resolveNames() {
@@ -138,6 +144,14 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
     }
     resolveNames();
   }, [senderAddress, receiverAddress, myWalletAddress]);
+
+  useEffect(() => {
+    if (isSwap && tx?.metadata?.fromToken && tx?.metadata?.toToken) {
+      BackendClient.getLiveRate(tx.metadata.fromToken.symbol, tx.metadata.toToken.symbol)
+        .then((res) => setSwapRate(res.rate))
+        .catch(console.error);
+    }
+  }, [isSwap, tx]);
 
   const senderName = isDeposit
     ? resolvedSenderUsername
@@ -247,73 +261,598 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
               </div>
               <div className="flex flex-col">
                 <h3 className="text-[17px] font-bold text-slate-800 tracking-tight leading-snug">
-                  {isSuccess ? "Transaction Successful" : "Transaction Failed"}
+                  {!isSuccess 
+                    ? "Transaction Failed" 
+                    : (isDeposit && isBridge)
+                    ? "Dana berhasil dijembatani!"
+                    : (isDeposit)
+                    ? `Anda menerima ${tx?.amount?.replace("-", "") || "0"} ${tx?.currency || "USDC"}`
+                    : "Transaction Successful"
+                  }
                 </h3>
                 <span className="text-[12px] text-slate-500 font-medium mt-0.5">
-                  {isSuccess
-                    ? "Confirmed on Arc Testnet"
-                    : "Reverted by network"}
+                  {!isSuccess 
+                    ? "Reverted by network"
+                    : (isDeposit && isBridge)
+                    ? `${tx?.amount?.replace("-", "") || "0"} ${tx?.currency || "USDC"} sukses diterima di jaringan ${((tx?.metadata as any)?.destinationDomain || "Arc") as string}`
+                    : (isDeposit)
+                    ? `dari ${senderName || formatAddrShort(senderAddress)}`
+                    : "Confirmed on Arc Testnet"
+                  }
                 </span>
               </div>
             </div>
 
             {/* Receipt Details Card */}
+            {isSwap ? (
+              <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 flex flex-col overflow-hidden">
+                <div className="bg-slate-900 p-5 flex flex-col items-center justify-center relative overflow-hidden">
+                  <div className="absolute inset-0 opacity-10 blur-xl bg-gradient-to-r from-blue-500 to-indigo-500"></div>
+                  <span className="text-[11px] font-black tracking-widest uppercase text-white/50 mb-1 z-10">Metode Transaksi</span>
+                  <span className="text-[20px] font-extrabold text-white tracking-widest z-10">SWAP</span>
+                </div>
+                <div className="p-6 flex flex-col gap-6">
+                  {/* 1. Data Identitas & Waktu */}
+                  <div className="flex flex-col gap-3">
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">1. Data Identitas & Waktu</h4>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">ID Transaksi (TxID)</span>
+                      {hasHash ? (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => window.open(tx?.metadata?.explorerUrl || `https://testnet.arcscan.app/tx/${txHash}`, "_blank")}
+                            className="text-[12px] font-mono font-bold text-blue-600 hover:text-blue-700 bg-transparent border-0 p-0 text-right cursor-pointer"
+                          >
+                            {formatAddrShort(txHash)}
+                          </button>
+                          <button onClick={() => handleCopy(txHash, "TxHash")} className="text-slate-400 hover:text-slate-600 bg-transparent border-0 cursor-pointer p-0"><Copy size={12} /></button>
+                        </div>
+                      ) : (
+                        <span className="text-[12px] font-bold text-slate-400 font-mono">-</span>
+                      )}
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Waktu Selesai</span>
+                      <span className="text-[12px] font-bold text-slate-800">{displayDate}</span>
+                    </div>
+                  </div>
+
+                  {/* 2. Rincian Konversi Aset */}
+                  <div className="flex flex-col gap-3">
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">2. Rincian Konversi Aset</h4>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Aset Keluar (Dari)</span>
+                      <span className="text-[14px] font-black text-slate-900">{tx?.amount?.replace("-", "") || "0.00"} {tx?.metadata?.fromToken?.symbol || "USDC"}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Aset Masuk (Ke)</span>
+                      <span className="text-[14px] font-black text-emerald-600">
+                        {swapRate && tx?.amount 
+                          ? "+" + (parseFloat(tx.amount.replace("-", "")) * swapRate).toFixed(4)
+                          : "~"
+                        } {tx?.metadata?.toToken?.symbol || ""}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Kurs Konversi (Rate)</span>
+                      <span className="text-[12px] font-bold text-slate-700">
+                        {swapRate 
+                          ? `1 ${tx?.metadata?.fromToken?.symbol || ""} = ${swapRate} ${tx?.metadata?.toToken?.symbol || ""}`
+                          : "Fetching rate..."}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 3. Data Pasar & Proteksi */}
+                  <div className="flex flex-col gap-3">
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">3. Data Pasar & Proteksi</h4>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Penyedia Rute</span>
+                      <span className="text-[12px] font-bold text-slate-800 bg-slate-100 px-2.5 py-1 rounded-md">Arc Network Swap</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Slippage Terpakai</span>
+                      <span className="text-[12px] font-bold text-slate-800">0.5% (Auto)</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Biaya Swap (Fee)</span>
+                      <span className="text-[12px] font-bold text-slate-800">{tx?.metadata?.platformFee || "0.00"} USDC</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : isTransfer ? (
+              <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 flex flex-col overflow-hidden">
+                <div className="bg-slate-900 p-5 flex flex-col items-center justify-center relative overflow-hidden">
+                  <div className="absolute inset-0 opacity-10 blur-xl bg-gradient-to-r from-blue-500 to-indigo-500"></div>
+                  <span className="text-[11px] font-black tracking-widest uppercase text-white/50 mb-1 z-10">Metode Transaksi</span>
+                  <span className="text-[20px] font-extrabold text-white tracking-widest z-10">{isDeposit ? "KIRIM (MASUK)" : "TRANSFER (KELUAR)"}</span>
+                </div>
+                <div className="p-6 flex flex-col gap-6">
+                  {/* 1. Data Identitas & Waktu */}
+                  <div className="flex flex-col gap-3">
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">1. Data Identitas & Waktu</h4>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">ID Transaksi (TxID)</span>
+                      {hasHash ? (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => window.open(tx?.metadata?.explorerUrl || `https://testnet.arcscan.app/tx/${txHash}`, "_blank")}
+                            className="text-[12px] font-mono font-bold text-blue-600 hover:text-blue-700 bg-transparent border-0 p-0 text-right cursor-pointer"
+                          >
+                            {formatAddrShort(txHash)}
+                          </button>
+                          <button onClick={() => handleCopy(txHash, "TxHash")} className="text-slate-400 hover:text-slate-600 bg-transparent border-0 cursor-pointer p-0"><Copy size={12} /></button>
+                        </div>
+                      ) : (
+                        <span className="text-[12px] font-bold text-slate-400 font-mono">-</span>
+                      )}
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Waktu Selesai</span>
+                      <span className="text-[12px] font-bold text-slate-800">{displayDate}</span>
+                    </div>
+                  </div>
+
+                  {/* 2. Informasi Pengirim & Penerima */}
+                  <div className="flex flex-col gap-3">
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">2. Informasi Pengirim & Penerima</h4>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Pengirim (Dari)</span>
+                      <span className="text-[12px] font-bold text-slate-800">
+                        {senderName ? senderName : formatAddrShort(senderAddress)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Penerima (Ke)</span>
+                      <span className="text-[12px] font-bold text-slate-800">
+                        {receiverName ? receiverName : formatAddrShort(receiverAddress)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 3. Rincian Aset & Biaya */}
+                  <div className="flex flex-col gap-3">
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">3. Rincian Aset & Biaya</h4>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Jumlah Aset (Amount)</span>
+                      <span className="text-[14px] font-black text-slate-900">{tx?.amount?.replace("-", "") || "0.00"} {tx?.currency || "USDC"}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Biaya Jaringan (Fee)</span>
+                      <span className="text-[12px] font-bold text-slate-800 text-right">
+                        {tx?.metadata?.platformFee ? `${tx.metadata.platformFee} USDC` : "Bebas Biaya (Disponsori)"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : isBatch ? (
+              <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 flex flex-col overflow-hidden">
+                <div className="bg-slate-900 p-5 flex flex-col items-center justify-center relative overflow-hidden">
+                  <div className="absolute inset-0 opacity-10 blur-xl bg-gradient-to-r from-blue-500 to-indigo-500"></div>
+                  <span className="text-[11px] font-black tracking-widest uppercase text-white/50 mb-1 z-10">Metode Transaksi</span>
+                  <span className="text-[20px] font-extrabold text-white tracking-widest z-10">BATCH TRANSFER</span>
+                </div>
+                <div className="p-6 flex flex-col gap-6">
+                  {/* 1. Data Ringkasan Induk (Master Data) */}
+                  <div className="flex flex-col gap-3">
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">1. Data Ringkasan Induk (Master Data)</h4>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">ID Transaksi (Batch TxID)</span>
+                      {hasHash ? (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => window.open(tx?.metadata?.explorerUrl || `https://testnet.arcscan.app/tx/${txHash}`, "_blank")}
+                            className="text-[12px] font-mono font-bold text-blue-600 hover:text-blue-700 bg-transparent border-0 p-0 text-right cursor-pointer"
+                          >
+                            {formatAddrShort(txHash)}
+                          </button>
+                          <button onClick={() => handleCopy(txHash, "TxHash")} className="text-slate-400 hover:text-slate-600 bg-transparent border-0 cursor-pointer p-0"><Copy size={12} /></button>
+                        </div>
+                      ) : (
+                        <span className="text-[12px] font-bold text-slate-400 font-mono">-</span>
+                      )}
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Waktu Selesai</span>
+                      <span className="text-[12px] font-bold text-slate-800">{displayDate}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Total Alamat Tujuan</span>
+                      <span className="text-[12px] font-bold text-slate-800">
+                        {tx?.metadata?.recipients ? (tx.metadata.recipients as any[]).length : "0"} Alamat
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Total Dana Keluar</span>
+                      <span className="text-[14px] font-black text-slate-900">{tx?.amount?.replace("-", "") || "0.00"} {tx?.currency || "USDC"}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Total Biaya (Total Fee)</span>
+                      <span className="text-[12px] font-bold text-slate-800 text-right">
+                        {tx?.metadata?.platformFee ? `${tx.metadata.platformFee} USDC` : "Bebas Biaya (Disponsori)"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 2. Data Rincian Penerima (Detail Sub-Transaksi) */}
+                  <div className="flex flex-col gap-3">
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">2. Data Rincian Penerima (Detail Sub-Transaksi)</h4>
+                    {tx?.metadata?.recipients ? (
+                      <div className="w-full bg-slate-50 rounded-2xl p-3 border border-slate-100 flex flex-col gap-2 relative">
+                        {(tx.metadata.recipients as any[]).map((r, i) => (
+                          <div key={i} className="flex flex-col bg-white p-3 rounded-xl border border-slate-100 shadow-sm relative">
+                            <span className="absolute top-2 right-2 text-[10px] font-bold uppercase tracking-wider bg-green-50 text-green-600 px-2 py-0.5 rounded-full border border-green-100">
+                               {isSuccess ? "Status: Sukses" : "Status: Gagal"}
+                            </span>
+                            <div className="flex justify-between items-center mb-1">
+                               <span className="text-[11px] font-bold text-slate-500">Alamat Tujuan (To [{i + 1}])</span>
+                            </div>
+                            <span className="text-[13px] font-bold text-slate-800 mb-1">{r.name || r.username || "Unknown"}</span>
+                            <span className="text-[11px] font-mono font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded w-fit mb-2">
+                               {r.address || "0x..."}
+                            </span>
+                            <div className="flex justify-between items-center border-t border-slate-100 pt-2 mt-1">
+                               <span className="text-[11px] font-bold text-slate-400">Nominal per Alamat</span>
+                               <span className="text-[13px] font-black text-slate-900">{r.amount} USDC</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-[12px] font-medium text-slate-500 italic text-center py-4 bg-slate-50 rounded-xl border border-slate-100">Data rincian alamat tidak tersedia.</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : isBridge ? (
+              <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 flex flex-col overflow-hidden">
+                <div className="bg-slate-900 p-5 flex flex-col items-center justify-center relative overflow-hidden">
+                  <div className="absolute inset-0 opacity-10 blur-xl bg-gradient-to-r from-blue-500 to-indigo-500"></div>
+                  <span className="text-[11px] font-black tracking-widest uppercase text-white/50 mb-1 z-10">Metode Transaksi</span>
+                  <span className="text-[20px] font-extrabold text-white tracking-widest z-10">CROSS-CHAIN TRANSFER</span>
+                </div>
+                <div className="p-6 flex flex-col gap-6">
+                  {/* 1. Data Identitas Ganda & Waktu */}
+                  <div className="flex flex-col gap-3">
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">1. Data Identitas Ganda & Waktu</h4>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">ID Transaksi Asal (Source)</span>
+                      {hasHash ? (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => window.open(tx?.metadata?.explorerUrl || `https://testnet.arcscan.app/tx/${txHash}`, "_blank")}
+                            className="text-[12px] font-mono font-bold text-blue-600 hover:text-blue-700 bg-transparent border-0 p-0 text-right cursor-pointer"
+                          >
+                            {formatAddrShort(txHash)}
+                          </button>
+                          <button onClick={() => handleCopy(txHash, "TxHash")} className="text-slate-400 hover:text-slate-600 bg-transparent border-0 cursor-pointer p-0"><Copy size={12} /></button>
+                        </div>
+                      ) : (
+                        <span className="text-[12px] font-bold text-slate-400 font-mono">-</span>
+                      )}
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">ID Transaksi Tujuan (Dest)</span>
+                      {tx?.metadata?.destinationTxHash ? (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[12px] font-mono font-bold text-blue-600">
+                             {formatAddrShort(tx?.metadata?.destinationTxHash as string)}
+                          </span>
+                        </div>
+                      ) : (
+                         <span className="text-[12px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded italic">Dalam Proses...</span>
+                      )}
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Waktu Selesai (Timestamp)</span>
+                      <span className="text-[12px] font-bold text-slate-800">{displayDate}</span>
+                    </div>
+                  </div>
+
+                  {/* 2. Rincian Jaringan (Rute Cross-Chain) */}
+                  <div className="flex flex-col gap-3">
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">2. Rincian Jaringan (Rute)</h4>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Jaringan Asal (Source)</span>
+                      <span className="text-[12px] font-bold text-slate-800">
+                        {((tx?.metadata as any)?.sourceDomain || "Arc") as string}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Jaringan Tujuan (Dest)</span>
+                      <span className="text-[12px] font-bold text-slate-800">
+                        {((tx?.metadata as any)?.destinationDomain || "Ethereum") as string}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 3. Rincian Aset & Konversi Nilai */}
+                  <div className="flex flex-col gap-3">
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">3. Rincian Aset & Konversi</h4>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Aset Dikirim (Deposited)</span>
+                      <span className="text-[13px] font-black text-slate-900">{tx?.amount?.replace("-", "") || "0.00"} {tx?.currency || "USDC"}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Aset Diterima (Received)</span>
+                      <span className="text-[13px] font-black text-green-600">
+                        {tx?.amount?.replace("-", "") || "0.00"} {tx?.currency || "USDC"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Kurs Jembatan (Bridge Rate)</span>
+                      <span className="text-[12px] font-bold text-slate-800">1:1 (Pegged)</span>
+                    </div>
+                  </div>
+
+                  {/* 4. Rincian Biaya Multi-Jaringan */}
+                  <div className="flex flex-col gap-3">
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">4. Rincian Biaya Lintas Jaringan</h4>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Biaya Jembatan (Protocol Fee)</span>
+                      <span className="text-[12px] font-bold text-slate-800">
+                         {tx?.metadata?.bridgeFee ? `${tx.metadata.bridgeFee} USDC` : "0.00 USDC"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Biaya Gas Tujuan (Dest Gas)</span>
+                      <span className="text-[12px] font-bold text-slate-800">
+                         {tx?.metadata?.destinationGasFee ? `${tx.metadata.destinationGasFee} USDC` : "Bebas Biaya (Disponsori)"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : isStake ? (
+              <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 flex flex-col overflow-hidden">
+                <div className="bg-slate-900 p-5 flex flex-col items-center justify-center relative overflow-hidden">
+                  <div className="absolute inset-0 opacity-10 blur-xl bg-gradient-to-r from-emerald-500 to-teal-500"></div>
+                  <span className="text-[11px] font-black tracking-widest uppercase text-white/50 mb-1 z-10">Metode Transaksi</span>
+                  <span className="text-[20px] font-extrabold text-white tracking-widest z-10">STAKE / DEPOSIT EARN</span>
+                </div>
+                <div className="p-6 flex flex-col gap-6">
+                  {/* 1. Status & Tipe Penguncian */}
+                  <div className="flex flex-col gap-3">
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">1. Status & Tipe Penguncian</h4>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">ID Transaksi (TxID)</span>
+                      {hasHash ? (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => window.open(tx?.metadata?.explorerUrl || `https://testnet.arcscan.app/tx/${txHash}`, "_blank")}
+                            className="text-[12px] font-mono font-bold text-blue-600 hover:text-blue-700 bg-transparent border-0 p-0 text-right cursor-pointer"
+                          >
+                            {formatAddrShort(txHash)}
+                          </button>
+                          <button onClick={() => handleCopy(txHash, "TxHash")} className="text-slate-400 hover:text-slate-600 bg-transparent border-0 cursor-pointer p-0"><Copy size={12} /></button>
+                        </div>
+                      ) : (
+                        <span className="text-[12px] font-bold text-slate-400 font-mono">-</span>
+                      )}
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Jenis Staking</span>
+                      <span className="text-[12px] font-bold text-slate-800">
+                        {((tx?.metadata as any)?.stakeType as string) || "Flexible"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Durasi Penguncian</span>
+                      <span className="text-[12px] font-bold text-slate-800">
+                        {((tx?.metadata as any)?.lockDuration as string) || "Flexible"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 2. Proyeksi Keuntungan */}
+                  <div className="flex flex-col gap-3">
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">2. Proyeksi Keuntungan</h4>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Estimasi APY / APR</span>
+                      <span className="text-[12px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded">
+                         {((tx?.metadata as any)?.apy as string) || "Est. APY 5.5%"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Aset Berlangganan</span>
+                      <span className="text-[13px] font-black text-slate-900">
+                         {tx?.amount?.replace("-", "") || "0.00"} {tx?.currency || "USDC"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Mata Uang Imbalan</span>
+                      <span className="text-[12px] font-bold text-slate-800">
+                         {((tx?.metadata as any)?.rewardToken as string) || tx?.currency || "USDC"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 3. Jadwal Waktu Finansial */}
+                  <div className="flex flex-col gap-3">
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">3. Jadwal Waktu Finansial (Timeline)</h4>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Tanggal Mulai (Value Date)</span>
+                      <span className="text-[12px] font-bold text-slate-800">
+                        {((tx?.metadata as any)?.valueDate as string) || "H+1 setelah staking"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Distribusi Imbalan</span>
+                      <span className="text-[12px] font-bold text-slate-800">
+                        {((tx?.metadata as any)?.distributionDate as string) || "Harian"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Tanggal Selesai (Maturity)</span>
+                      <span className="text-[12px] font-bold text-slate-800">
+                        {((tx?.metadata as any)?.maturityDate as string) || "Flexible"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : isUnstake ? (
+              <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 flex flex-col overflow-hidden">
+                <div className="bg-slate-900 p-5 flex flex-col items-center justify-center relative overflow-hidden">
+                  <div className="absolute inset-0 opacity-10 blur-xl bg-gradient-to-r from-emerald-500 to-teal-500"></div>
+                  <span className="text-[11px] font-black tracking-widest uppercase text-white/50 mb-1 z-10">Metode Transaksi</span>
+                  <span className="text-[20px] font-extrabold text-white tracking-widest z-10">UNSTAKE / REDEEM</span>
+                </div>
+                <div className="p-6 flex flex-col gap-6">
+                  {/* 1. Identitas Transaksi */}
+                  <div className="flex flex-col gap-3">
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">1. Identitas Transaksi</h4>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">ID Transaksi (TxID)</span>
+                      {hasHash ? (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => window.open(tx?.metadata?.explorerUrl || `https://testnet.arcscan.app/tx/${txHash}`, "_blank")}
+                            className="text-[12px] font-mono font-bold text-blue-600 hover:text-blue-700 bg-transparent border-0 p-0 text-right cursor-pointer"
+                          >
+                            {formatAddrShort(txHash)}
+                          </button>
+                          <button onClick={() => handleCopy(txHash, "TxHash")} className="text-slate-400 hover:text-slate-600 bg-transparent border-0 cursor-pointer p-0"><Copy size={12} /></button>
+                        </div>
+                      ) : (
+                        <span className="text-[12px] font-bold text-slate-400 font-mono">-</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 2. Rincian Penarikan Berhenti */}
+                  <div className="flex flex-col gap-3">
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">2. Rincian Penarikan Dana</h4>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Modal Ditarik (Principal)</span>
+                      <span className="text-[14px] font-black text-slate-900">
+                         {((tx?.metadata as any)?.principalAmount as string) || `${tx?.amount?.replace("-", "") || "0.00"} ${tx?.currency || "USDC"}`}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Total Keuntungan (Reward)</span>
+                      <span className="text-[14px] font-black text-green-600">
+                         +{((tx?.metadata as any)?.rewardAmount as string) || `0.00 ${((tx?.metadata as any)?.rewardToken as string) || tx?.currency || "USDC"}`}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Periode Pencairan (Unbonding)</span>
+                      <span className="text-[12px] font-bold text-slate-800">
+                        {((tx?.metadata as any)?.unbondingPeriod as string) || "Instant"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : isMint ? (
+              <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 flex flex-col overflow-hidden">
+                <div className="bg-slate-900 p-5 flex flex-col items-center justify-center relative overflow-hidden">
+                  <div className="absolute inset-0 opacity-10 blur-xl bg-gradient-to-r from-blue-500 to-indigo-500"></div>
+                  <span className="text-[11px] font-black tracking-widest uppercase text-white/50 mb-1 z-10">Metode Transaksi</span>
+                  <span className="text-[20px] font-extrabold text-white tracking-widest z-10">NFT MINTING</span>
+                </div>
+                <div className="p-6 flex flex-col gap-6">
+                  {/* 1. Data Identitas NFT & Koleksi */}
+                  <div className="flex flex-col gap-3">
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">1. Data Identitas NFT & Koleksi</h4>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">ID Transaksi (TxID)</span>
+                      {hasHash ? (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => window.open(tx?.metadata?.explorerUrl || `https://testnet.arcscan.app/tx/${txHash}`, "_blank")}
+                            className="text-[12px] font-mono font-bold text-blue-600 hover:text-blue-700 bg-transparent border-0 p-0 text-right cursor-pointer"
+                          >
+                            {formatAddrShort(txHash)}
+                          </button>
+                          <button onClick={() => handleCopy(txHash, "TxHash")} className="text-slate-400 hover:text-slate-600 bg-transparent border-0 cursor-pointer p-0"><Copy size={12} /></button>
+                        </div>
+                      ) : (
+                        <span className="text-[12px] font-bold text-slate-400 font-mono">-</span>
+                      )}
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Alamat Kontrak</span>
+                      <span className="text-[12px] font-bold text-slate-800 text-right font-mono">
+                        {formatAddrShort((tx?.metadata as any)?.contractAddress || "")}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Token ID</span>
+                      <span className="text-[12px] font-bold text-slate-800">
+                        #{(tx?.metadata as any)?.tokenId || "TBD"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Standar Token</span>
+                      <span className="text-[12px] font-bold text-slate-800">
+                        {((tx?.metadata as any)?.tokenStandard as string) || "ERC-721"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 2. Rincian Biaya & Pembayaran */}
+                  <div className="flex flex-col gap-3">
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">2. Rincian Biaya & Pembayaran</h4>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Harga Mint (Mint Price)</span>
+                      <span className="text-[12px] font-bold text-slate-800">
+                         {tx?.amount === "0" || !tx?.amount ? "Gratis (Free Mint)" : `${tx?.amount?.replace("-", "")} ${tx?.currency || "ETH"}`}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Biaya Jaringan (Gas Fee)</span>
+                      <span className="text-[12px] font-bold text-slate-800 text-right">
+                        {tx?.metadata?.platformFee ? `${tx.metadata.platformFee} USDC` : "0.00 USDC"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Total Biaya</span>
+                      <span className="text-[13px] font-black text-slate-900">
+                         {tx?.amount === "0" || !tx?.amount ? (tx?.metadata?.platformFee ? `${tx.metadata.platformFee} USDC` : "0.00 USDC") : `${tx?.amount?.replace("-", "")} ${tx?.currency || "ETH"}`}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 3. Informasi Kepemilikan & Cetakan */}
+                  <div className="flex flex-col gap-3">
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">3. Informasi Kepemilikan & Cetakan</h4>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Alamat Pencetak (To)</span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] font-bold bg-green-50 text-green-600 px-1.5 py-0.5 rounded uppercase">Owner</span>
+                        <span className="text-[12px] font-bold text-slate-800 font-mono">
+                          {formatAddrShort(destAddr)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Jumlah Cetakan (Qty)</span>
+                      <span className="text-[12px] font-black text-slate-900">{((tx?.metadata as any)?.quantity as number) || 1} NFT</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
             <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 flex flex-col p-6">
               {/* Amount Row */}
               <div className="flex flex-col items-center justify-center pb-6 border-b border-slate-100 mb-6">
                 <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                  {isBatch ? "Total Batch Amount" : "Total Amount"}
+                  Total Amount
                 </span>
                 <span
                   className={`text-[32px] font-black tracking-tight ${isSuccess ? "text-slate-900" : "text-slate-500 line-through decoration-slate-300"}`}
                 >
                   {tx ? tx.amount : "0.00"} {tx?.currency || "USDC"}
                 </span>
-                {isBatch && (
-                  <div className="mt-2 text-[11px] font-black text-purple-600 bg-purple-50 px-3 py-1 rounded-full uppercase tracking-tighter italic border border-purple-100">
-                    SCA BATCH OPTIMIZED
-                  </div>
-                )}
                 {isBridge && (
                   <div className="mt-2 text-[11px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full uppercase tracking-tighter italic border border-blue-100">
                     BRIDGE TRANSACTION
                   </div>
                 )}
               </div>
-
-              {/* Batch Recipients Breakdown */}
-              {isBatch && tx?.metadata?.recipients && (
-                <div className="w-full bg-slate-50 rounded-3xl p-4 mb-6 border border-slate-100 animate-in fade-in slide-in-from-top-4 duration-500">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 px-1">
-                    Distribution Summary
-                  </p>
-                  <div className="space-y-2">
-                    {(tx.metadata.recipients as any[]).map((recipient, i) => (
-                      <div
-                        key={i}
-                        className="flex justify-between items-center bg-white p-3 rounded-2xl border border-slate-50 shadow-sm"
-                      >
-                        <div className="flex flex-col">
-                          <span className="text-[13px] font-bold text-slate-800">
-                            {recipient.name || recipient.username || "Unknown"}
-                          </span>
-                          <span className="text-[10px] font-mono text-slate-400">
-                            {recipient.address
-                              ? formatAddrShort(recipient.address)
-                              : ""}
-                          </span>
-                        </div>
-                        <span className="text-[13px] font-black text-slate-900">
-                          {recipient.amount}{" "}
-                          <span className="text-[10px] text-slate-400">
-                            USDC
-                          </span>
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               {/* Details List */}
               <div className="flex flex-col gap-5">
@@ -498,6 +1037,7 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                 </div>
               )}
             </div>
+            )}
           </div>
         )}
       </div>
