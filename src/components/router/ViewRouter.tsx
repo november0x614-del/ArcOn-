@@ -300,13 +300,7 @@ export const ViewRouter = React.memo(
 
     const renderLayoutWrapper = (children: React.ReactNode) => {
       if (!isAuthenticatedView) {
-        return (
-          <div className="flex w-full h-[100dvh] bg-[#ecf5fc] text-left justify-center items-center p-4">
-            <div className={`w-full h-full flex flex-col relative overflow-hidden bg-white font-sans transition-all duration-300 ${isDesktop ? "max-w-[480px] h-[92%] rounded-[32px] shadow-[0_20px_50px_rgba(15,23,42,0.08)] border border-slate-200/50" : "sm:max-w-[480px] sm:h-[92%] sm:rounded-[32px] sm:shadow-xl sm:border border-slate-100"}`}>
-              {children}
-            </div>
-          </div>
-        );
+        return <div className="w-full h-full flex flex-col">{children}</div>;
       }
 
       return (
