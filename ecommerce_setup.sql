@@ -2,7 +2,7 @@
 -- E-COMMERCE ORDERS TABLE
 -- ==========================================
 
-CREATE TABLE public.ecommerce_orders (
+CREATE TABLE IF NOT EXISTS public.ecommerce_orders (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     product_id TEXT,
     product_name TEXT NOT NULL,
@@ -22,7 +22,7 @@ CREATE TABLE public.ecommerce_orders (
 -- E-COMMERCE PRODUCTS TABLE
 -- ==========================================
 
-CREATE TABLE public.ecommerce_products (
+CREATE TABLE IF NOT EXISTS public.ecommerce_products (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     name TEXT NOT NULL,
     price NUMERIC NOT NULL,

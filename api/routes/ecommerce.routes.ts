@@ -214,9 +214,19 @@ router.post("/ecommerce/products", async (req, res) => {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      if (error.code === "42P01") {
+        return res.status(503).json({ 
+          error: "Database Table Missing", 
+          message: "Tabel 'ecommerce_products' belum dibuat. Silakan jalankan file 'ecommerce_setup.sql' di Supabase SQL Editor.",
+          code: "TABLE_MISSING"
+        });
+      }
+      throw error;
+    }
     res.json(data);
   } catch (error: any) {
+    console.error("Save Product Error:", error);
     res.status(500).json({ error: error.message });
   }
 });

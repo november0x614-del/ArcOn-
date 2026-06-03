@@ -452,7 +452,7 @@ export const useStore = create<AppState>()((set) => ({
     try {
       const products = await BackendClient.getProducts();
       set({ products: Array.isArray(products) ? products : [] });
-    } catch (e) {
+    } catch (e: any) {
       set({ products: [] });
     }
   },

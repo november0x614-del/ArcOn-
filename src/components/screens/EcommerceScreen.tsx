@@ -616,8 +616,13 @@ export function EcommerceScreen({ onBack, isDesktop }: EcommerceScreenProps) {
                        <div className="absolute top-4 right-4 bg-slate-900/85 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-white/10 shadow-lg">
                           <span className="text-white text-[10px] font-black uppercase tracking-widest">1:1 Standard</span>
                        </div>
-                       <div className="absolute bottom-6 left-6 right-6">
-                          <span className="bg-emerald-500 text-white text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest shadow-lg">In Stock</span>
+                       <div className="absolute bottom-6 left-6 right-6 flex flex-col gap-2">
+                          <span className="bg-emerald-500 text-white text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest shadow-lg w-fit">In Stock</span>
+                          {selectedProduct?.date_label && (
+                            <span className="bg-slate-900/40 backdrop-blur-sm px-3 py-1.5 rounded-full text-[9px] font-bold text-white uppercase tracking-[0.1em] border border-white/10 w-fit">
+                              {selectedProduct.date_label}
+                            </span>
+                          )}
                        </div>
                     </div>
                   </div>

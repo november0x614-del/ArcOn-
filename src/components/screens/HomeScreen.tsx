@@ -377,9 +377,9 @@ export const HomeScreen = React.memo(
               {/* Left Column for Desktop */}
               <div className={`${isDesktop ? "col-span-7 xl:col-span-8" : ""} flex flex-col gap-3`}>
                 {/* Wrapping Accounts & Favorites for precise height alignment with Right Column feature popup on Desktop */}
-                <div className={`flex flex-col gap-3 shrink-0 ${isDesktop ? "h-[680px]" : ""}`}>
+                <div className={`flex flex-col gap-3 shrink-0 ${isDesktop ? "" : ""}`}>
                   {/* Accounts Section */}
-                  <section className={`bg-white rounded-[24px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] border border-slate-50/50`}>
+                  <section className={`bg-white rounded-[24px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] border border-slate-50/50 ${isDesktop ? "mx-0" : "mx-4"}`}>
                 <div className="flex justify-between items-center mb-3">
                   <h2 className="text-[17px] font-bold text-slate-800 tracking-tight">
                     Accounts
@@ -511,7 +511,7 @@ export const HomeScreen = React.memo(
               </section>
 
               {/* Favorite Transactions Section */}
-              <section className={`bg-white rounded-[24px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] border border-slate-50/50 ${isDesktop ? "mb-0 mx-0 flex-1 flex flex-col justify-start" : "mb-3"}`}>
+              <section className={`bg-white rounded-[24px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] border border-slate-50/50 ${isDesktop ? "mb-0 mx-0 flex-none flex flex-col justify-start" : "mb-3 mx-4"}`}>
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-[17px] font-bold text-slate-800 tracking-tight">
                     Favorite Transactions
@@ -636,7 +636,7 @@ export const HomeScreen = React.memo(
               </div>
 
               {/* Special For You (Promo Banner) */}
-              <section className={`bg-white rounded-[24px] overflow-hidden shadow-sm pb-4 border border-x-transparent border-t-transparent border-b-slate-50 relative z-10 ${isDesktop ? "mb-0 mx-0 mt-8" : "mb-4"}`}>
+              <section className={`bg-white rounded-[24px] overflow-hidden shadow-sm pb-4 border border-x-transparent border-t-transparent border-b-slate-50 relative z-10 ${isDesktop ? "mb-0 mx-0 mt-8" : "mb-4 mx-4"}`}>
                 <div className="px-5 pt-5 pb-3">
                   <h2 className="text-[17px] font-bold text-slate-800 tracking-tight mb-0 text-left">
                     Special For You
@@ -711,7 +711,7 @@ export const HomeScreen = React.memo(
                     platformConfig.swapEnabled !== false ||
                     platformConfig.arcBirdEnabled !== false ||
                     platformConfig.stableStakeEnabled !== false) && (
-                    <section className={`bg-white rounded-[24px] p-5 shadow-sm text-left ${isDesktop ? "mb-0 mx-0" : "mb-4"}`}>
+                    <section className={`bg-white rounded-[24px] p-5 shadow-sm text-left ${isDesktop ? "mb-0 mx-0" : "mb-4 mx-4"}`}>
                       <div className="flex justify-between items-center mb-4">
                         <div className="flex flex-col">
                           <h2 className="text-[17px] font-bold text-slate-800 tracking-tight font-sans">
@@ -832,7 +832,7 @@ export const HomeScreen = React.memo(
                 </div>
 
                 <div className={`flex flex-col gap-6 w-full max-w-[500px] mx-auto ${isDesktop ? "max-w-none" : ""}`}>
-                  <section className={`bg-white rounded-[24px] p-5 shadow-sm ${isDesktop ? "mx-0 mb-0" : "mb-4"}`}>
+                  <section className={`bg-white rounded-[24px] p-5 shadow-sm ${isDesktop ? "mx-0 mb-0" : "mx-4 mb-4"}`}>
                     <div className="mb-4 text-left flex justify-between items-start">
                       <div>
                         <h2 className="text-[17px] font-bold text-slate-800 tracking-tight">
@@ -891,7 +891,7 @@ export const HomeScreen = React.memo(
                   {!isDesktop && (!platformConfig ||
                     platformConfig.merchantEnabled !== false ||
                     platformConfig.faucetEnabled !== false) && (
-                    <section className="bg-white rounded-[24px] p-5 shadow-sm mb-8">
+                    <section className="bg-white rounded-[24px] p-5 shadow-sm mx-4 mb-8">
                       <h2 className="text-[17px] font-bold text-slate-800 tracking-tight mb-4 text-left">
                         Services
                       </h2>

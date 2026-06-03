@@ -127,7 +127,7 @@ export interface Product {
   category: string;
   sales: number;
   desc?: string;
-  dateLabel?: string;
+  date_label?: string;
   seller_address?: string;
   tx_hash?: string;
   created_at?: string;

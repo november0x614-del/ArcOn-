@@ -16,7 +16,7 @@ import {
   ChevronDown,
   ChevronUp,
   CheckCircle2,
-  Trash2,
+  X,
   Package,
   ShoppingCart,
   Home,
@@ -119,20 +119,24 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
       category: newProductCategory,
       sales: 0,
       desc: newProductDesc || "Fresh merchant addition sold securely on Arc Testnet.",
-      dateLabel: newProductCategory === "NFT" ? "Unique L1 NFT" : `Valid until ${new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).getDate()}/${new Date().getMonth() + 1}`,
+      date_label: newProductCategory === "NFT" ? "Unique L1 NFT" : `Valid until ${new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).getDate()}/${new Date().getMonth() + 1}`,
       seller_address: address,
       tx_hash: newProductTxHash
     };
     
-    await useStore.getState().saveProduct(newProduct);
-    useStore.getState().displayToast(`Successfully listed ${newProductName}!`);
-    setShowAddModal(false);
-    setNewProductName("");
-    setNewProductPrice("");
-    setNewProductStock("");
-    setNewProductImage("");
-    setNewProductDesc("");
-    setNewProductTxHash("");
+    try {
+      await useStore.getState().saveProduct(newProduct);
+      useStore.getState().displayToast(`Successfully listed ${newProductName}!`);
+      setShowAddModal(false);
+      setNewProductName("");
+      setNewProductPrice("");
+      setNewProductStock("");
+      setNewProductImage("");
+      setNewProductDesc("");
+      setNewProductTxHash("");
+    } catch (err: any) {
+      useStore.getState().displayToast(err.message || "Failed to save product");
+    }
   };
 
   useEffect(() => {
@@ -444,10 +448,11 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
                         </h3>
                         <button 
                           onClick={() => handleDeleteListing(p.id, p.name)}
-                          className="text-slate-300 hover:text-red-500 transition-colors p-1 bg-transparent border-0 cursor-pointer active:scale-95"
-                          title="Delete Listing"
+                          className="flex items-center gap-1 bg-white text-slate-400 hover:text-red-600 px-2.5 py-1 rounded-xl border border-slate-100 hover:border-red-100 hover:bg-red-50/50 transition-all cursor-pointer active:scale-95 group/btn shadow-xs"
+                          title="Unlist Listing"
                         >
-                          <Trash2 size={15} strokeWidth={2.5} />
+                          <X size={12} strokeWidth={3} className="group-hover/btn:rotate-90 transition-transform" />
+                          <span className="text-[9px] font-black uppercase tracking-widest leading-none">Unlist</span>
                         </button>
                       </div>
                       <div className="flex items-center justify-between mt-2">
@@ -514,7 +519,7 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
                                     {p.name}
                                   </span>
                                   <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wide mt-1.5 truncate">
-                                    {p.dateLabel || "Physical Product"}
+                                    {p.date_label || "Physical Product"}
                                   </span>
                                 </div>
                               </div>
@@ -557,10 +562,11 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
                             <td className="py-4 px-6 text-center">
                               <button 
                                 onClick={() => handleDeleteListing(p.id, p.name)}
-                                className="text-slate-320 hover:text-red-650 p-2 rounded-xl hover:bg-red-50 transition-all border-0 bg-transparent cursor-pointer active:scale-95"
-                                title="Remove list"
+                                className="flex items-center gap-1.5 bg-white text-slate-400 hover:text-red-600 px-3 py-1.5 rounded-xl border border-slate-100 hover:border-red-100 hover:bg-red-50/50 transition-all cursor-pointer active:scale-95 group/btn shadow-sm"
+                                title="Unlist listing"
                               >
-                                <Trash2 size={16} strokeWidth={2.5} />
+                                <X size={13} strokeWidth={3} className="group-hover/btn:rotate-90 transition-transform" />
+                                <span className="text-[10px] font-black uppercase tracking-widest leading-none">Unlist</span>
                               </button>
                             </td>
                           </tr>
