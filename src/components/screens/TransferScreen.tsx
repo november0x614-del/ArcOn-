@@ -191,9 +191,9 @@ export function TransferScreen({
   const { realContacts: allContacts } = useContacts();
   const { 
     favorites, 
-    setFavorites, 
+    setFavorites,
     deletedContactIds, 
-    setDeletedContactIds 
+    deleteContacts 
   } = useStore();
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -447,25 +447,8 @@ export function TransferScreen({
                   : "This contact will also be removed from your Favorites list and completely hidden from your transfer history. You can still initiate manual transfers to this address anytime."}
               </p>
               <button
-                onClick={() => {
-                  const newlyDeleted = [
-                    ...deletedContactIds,
-                    ...selectedContacts,
-                  ];
-                  setDeletedContactIds(newlyDeleted);
-
-                  setFavorites((prev) => {
-                    const selectedLower = selectedContacts.map((id) =>
-                      String(id).toLowerCase().trim(),
-                    );
-                    const newFavs = prev.filter((f) => {
-                      const fId = String(f.id || f.number || "")
-                        .toLowerCase()
-                        .trim();
-                      return fId && !selectedLower.includes(fId);
-                    });
-                    return newFavs;
-                  });
+                onClick={async () => {
+                  await deleteContacts(selectedContacts);
                   setSelectedContacts([]);
                   setShowDeleteModal(false);
                   setIsManageContacts(false);

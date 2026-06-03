@@ -47,7 +47,7 @@ export function InboxScreen({ onBack, onTransactionClick }: InboxScreenProps) {
            ) {
              return false;
            }
-           return clean.startsWith("0x");
+           return clean.length > 10;
         }
         return false;
       }

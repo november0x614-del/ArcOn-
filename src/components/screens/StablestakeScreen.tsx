@@ -2,32 +2,25 @@ import React, { useState, useEffect, useMemo } from "react";
 import { ArrowLeft, TrendingUp, Pickaxe, PiggyBank, CircleDollarSign } from "lucide-react";
 import { useStore } from "../../store/useStore";
 import { BackendClient } from "../../services/api/index";
+import { useBalances } from "../../hooks/useBalances";
 
 interface EarnScreenProps {
   onBack: () => void;
 }
 
 export function StablestakeScreen({ onBack }: EarnScreenProps) {
-  const { transactions, registeredUser, displayToast, startSyncPolling } =
-    useStore();
+  useBalances(); // Trigger balance fetch
+
+  const {
+    transactions,
+    registeredUser,
+    displayToast,
+    startSyncPolling,
+    balance,
+  } = useStore();
   const [stakeAmountInput, setStakeAmountInput] = useState("");
   const [activeTab, setActiveTab] = useState<"deposit" | "redeem">("deposit");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [balance, setBalance] = useState(0);
-
-  useEffect(() => {
-    const fetchBalance = async () => {
-      try {
-        const balResp = await BackendClient.getBalance();
-        if (balResp && balResp.tokenBalances && balResp.tokenBalances.length > 0) {
-          setBalance(parseFloat(balResp.tokenBalances[0].amount));
-        }
-      } catch (err) {
-        console.error("Failed to fetch balance", err);
-      }
-    };
-    fetchBalance();
-  }, []);
 
   // Calculate staked amount from real transactions
   const stakedAmount = useMemo(() => {
@@ -112,38 +105,38 @@ export function StablestakeScreen({ onBack }: EarnScreenProps) {
   };
 
   return (
-    <div className="w-full h-full bg-slate-50 relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
-      {/* Hero Header Atas */}
-      <div className="flex justify-center bg-slate-900 rounded-b-[40px] shadow-sm relative z-10 w-full shrink-0">
-        <div className="flex flex-col px-4 pt-6 pb-8 w-full max-w-[500px]">
-          <div className="flex items-center mb-4">
+    <div className="w-full h-full bg-[#ecf5fc] relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
+      {/* Header */}
+      <div className="flex justify-center bg-slate-900 shadow-md relative z-10 w-full shrink-0">
+        <div className="flex items-center px-4 pt-6 pb-3 w-full max-w-[500px] justify-between">
+          <div className="flex items-center">
             <button
               onClick={onBack}
-              className="p-2 hover:bg-white/10 rounded-full transition-colors active:scale-95 cursor-pointer border-0 bg-transparent flex items-center justify-center text-white"
+              className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
             >
-              <ArrowLeft size={20} />
+              <ArrowLeft size={20} className="text-white" />
             </button>
-            <h2 className="font-bold text-[16px] text-white ml-2 tracking-tight uppercase">CIRCLE EARN</h2>
-          </div>
-          
-          <div className="flex items-center gap-4 px-2 mt-2">
-            <div className="w-14 h-14 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white shrink-0 shadow-sm">
-              <TrendingUp size={24} />
-            </div>
-            <div className="flex flex-col">
-              <h3 className="font-bold text-[20px] text-white tracking-tight leading-tight">
-                DeFi Yield Vault
-              </h3>
-              <p className="text-[13px] text-slate-300 font-medium">
-                Hubungkan USDC Anda ke protokol DeFi.
-              </p>
-            </div>
+            <h2 className="font-bold text-[16px] text-white ml-2">CIRCLE EARN</h2>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-24 p-5 flex flex-col w-full scrollbar-hide relative bg-slate-50">
-        <div className="w-full max-w-[500px] mx-auto flex flex-col relative h-full gap-5 mt-2">
+      <div className="flex-1 overflow-y-auto pb-24 p-5 flex flex-col pt-6 w-full scrollbar-hide relative">
+        <div className="w-full max-w-[500px] mx-auto flex flex-col relative h-full gap-5">
+          {/* Intro & Info */}
+          <div className="flex items-center gap-4 mb-2">
+            <div className="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-white shrink-0 shadow-sm">
+              <TrendingUp size={24} />
+            </div>
+            <div className="flex flex-col">
+              <h3 className="font-bold text-[18px] text-slate-800 tracking-tight">
+                DeFi Yield Vault
+              </h3>
+              <p className="text-[12px] text-slate-500 font-medium">
+                Hubungkan USDC Anda ke protokol DeFi.
+              </p>
+            </div>
+          </div>
 
           {/* Staking Pool Overview Card */}
           <div className="bg-white rounded-[24px] p-6 text-slate-900 flex flex-col shadow-sm relative overflow-hidden border border-slate-100">
@@ -190,24 +183,24 @@ export function StablestakeScreen({ onBack }: EarnScreenProps) {
             </div>
           </div>
 
-          {/* Action Tabs */}
-          <div className="flex flex-col gap-4">
-            <div className="flex bg-slate-50 p-1.5 rounded-[16px] border border-slate-100">
+          {/* Action Tabs and Input */}
+          <div className="flex flex-col mt-4">
+            <div className="flex bg-slate-200/50 p-1 rounded-[16px] mb-4 w-fit mx-auto border border-slate-200">
               <button
                 onClick={() => setActiveTab("deposit")}
-                className={`flex-1 py-2.5 text-[13px] font-bold rounded-[12px] transition-all border-0 cursor-pointer ${
+                className={`py-2 px-6 text-[12px] font-bold rounded-[12px] transition-all border-0 cursor-pointer ${
                   activeTab === "deposit"
-                    ? "bg-white text-slate-900 shadow-sm border border-slate-200"
+                    ? "bg-white text-slate-900 shadow-sm"
                     : "bg-transparent text-slate-500 hover:text-slate-700"
                 }`}
               >
-                Subscribe (Deposit)
+                Deposit (Earn)
               </button>
               <button
                 onClick={() => setActiveTab("redeem")}
-                className={`flex-1 py-2.5 text-[13px] font-bold rounded-[12px] transition-all border-0 cursor-pointer ${
+                className={`py-2 px-6 text-[12px] font-bold rounded-[12px] transition-all border-0 cursor-pointer ${
                   activeTab === "redeem"
-                    ? "bg-white text-slate-900 shadow-sm border border-slate-200"
+                    ? "bg-white text-slate-900 shadow-sm"
                     : "bg-transparent text-slate-500 hover:text-slate-700"
                 }`}
               >
@@ -216,16 +209,20 @@ export function StablestakeScreen({ onBack }: EarnScreenProps) {
             </div>
 
             {/* Input Form */}
-            <div className="flex flex-col gap-3">
-              <div className="flex justify-between items-end px-1">
-                <label className="text-[12px] font-bold text-slate-500 uppercase tracking-wider">
+            <div
+              className={`bg-white p-5 rounded-[24px] shadow-sm border transition-all duration-300 relative z-10 ${isProcessing ? "border-blue-400/50 shadow-blue-100/50 opacity-80" : "border-slate-200 focus-within:border-slate-400"}`}
+            >
+              <div className="flex justify-between items-center mb-4">
+                <label className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
                   {activeTab === "deposit" ? "Nominal Deposit" : "Nominal Penarikan"}
                 </label>
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-medium text-slate-400">
-                    {activeTab === "deposit" 
-                      ? `Tersedia: ${balance.toFixed(2)} USDC` 
-                      : `Tersedia: ${stakedAmount.toFixed(2)} USDC`}
+                  <span className="text-[12px] font-bold text-slate-500">
+                    Balance:{" "}
+                    {activeTab === "deposit"
+                      ? balance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                      : stakedAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
+                    USDC
                   </span>
                   <button
                     onClick={() => {
@@ -235,45 +232,42 @@ export function StablestakeScreen({ onBack }: EarnScreenProps) {
                         setStakeAmountInput(stakedAmount.toString());
                       }
                     }}
-                    className="text-[11px] font-bold text-blue-600 cursor-pointer hover:underline bg-blue-50 px-2 py-0.5 rounded border border-blue-100"
+                    className="bg-slate-100 text-slate-800 font-bold text-[10px] px-2 py-0.5 rounded uppercase hover:bg-slate-200 transition-colors border-0 cursor-pointer"
                   >
-                    Max
+                    MAX
                   </button>
                 </div>
               </div>
               
-              <div className="relative flex items-center">
-                <div className="absolute left-4 text-slate-400 flex items-center justify-center">
-                  <CircleDollarSign size={20} />
-                </div>
+              <div className="flex justify-between items-center">
                 <input
                   type="number"
                   value={stakeAmountInput}
                   onChange={(e) => setStakeAmountInput(e.target.value)}
-                  className="w-full bg-white border-[1.5px] border-slate-200 rounded-[16px] pl-11 pr-16 py-4 text-[18px] font-mono font-black text-slate-900 focus:outline-none focus:border-slate-900 transition-all shadow-sm"
-                  placeholder="0.00"
+                  disabled={isProcessing}
+                  className="w-1/2 bg-transparent border-none outline-none text-[36px] font-extrabold text-slate-800 placeholder:text-slate-200 disabled:opacity-50"
+                  placeholder="0"
                 />
-                <span className="absolute right-4 text-[13px] font-black text-slate-400 font-mono">
-                  USDC
-                </span>
+                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-2 rounded-full shrink-0 h-10">
+                  <div className="w-6 h-6 rounded-full bg-[#2775ca] flex items-center justify-center">
+                    <CircleDollarSign size={14} className="text-white" />
+                  </div>
+                  <span className="font-bold text-slate-800 text-[14px]">USDC</span>
+                </div>
               </div>
-              
-              <p className="text-[11px] text-slate-400 font-medium px-1">
-                {activeTab === "deposit" 
-                  ? "Dana akan dikunci dalam smart contract DeFi pilihan dan mulai menghasilkan bunga." 
-                  : "Penarikan instan dari pool likuiditas (tanpa unbonding period)."}
-              </p>
             </div>
+            
+            <p className="text-[11px] text-slate-400 font-medium px-2 text-center mt-3 mb-6">
+              {activeTab === "deposit" 
+                ? "Dana akan dikunci dalam smart contract DeFi dan mulai menghasilkan bunga." 
+                : "Penarikan instan dari pool likuiditas (tanpa unbonding period)."}
+            </p>
             
             {/* Action Button */}
             <button
               onClick={handleTransaction}
               disabled={isProcessing || !stakeAmountInput}
-              className={`w-full text-white font-bold py-4 rounded-[16px] text-[15px] active:scale-[0.98] transition-all flex items-center justify-center gap-2 border-0 cursor-pointer shadow-sm mt-2 ${
-                activeTab === "deposit" 
-                  ? "bg-slate-900 hover:bg-slate-800 disabled:bg-slate-300" 
-                  : "bg-white text-slate-900 border-[1.5px] border-slate-200 hover:bg-slate-50 disabled:text-slate-400 disabled:border-slate-100 disabled:bg-slate-50"
-              }`}
+              className="w-full bg-slate-900 text-white font-bold py-4 rounded-full text-[15px] active:scale-[0.98] transition-all flex items-center justify-center gap-2 border-0 cursor-pointer shadow-lg hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
             >
               {isProcessing 
                 ? "Memproses..." 

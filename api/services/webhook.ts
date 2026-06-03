@@ -184,7 +184,11 @@ export async function verifyAndProcessWebhook(
 
       const { error } = await supabaseAdmin
         .from("transactions")
-        .update({ status: newStatus, metadata: updatedMetadata })
+        .update({ 
+          status: newStatus, 
+          metadata: updatedMetadata,
+          ...(txHash ? { tx_hash: txHash } : {})
+        })
         .eq("internal_ref", internalRef);
 
       // Ledger equivalent update

@@ -784,23 +784,6 @@ export function BatchTransferScreen({
                       </div>
                     </div>
 
-                    {/* Checkbox indicator */}
-                    <div
-                      className={`flex items-center gap-3 ${isSelected ? "opacity-100" : "opacity-30"} hover:opacity-100 cursor-pointer`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // Trigger deletion logic
-                        const confirmDelete = window.confirm(`Hapus kontak ${contact.name}?`);
-                        if (confirmDelete) {
-                          const { deletedContactIds, setDeletedContactIds } = useStore.getState();
-                          const newDeleted = [...deletedContactIds, contact.id];
-                          setDeletedContactIds(newDeleted);
-                          displayToast(`Kontak ${contact.name} berhasil dihapus.`);
-                        }
-                      }}
-                    >
-                      <Trash2 size={18} className="text-red-400" />
-                    </div>
                     <div
                       className={`w-6 h-6 rounded-full border-[2px] flex items-center justify-center transition-all ${
                         isSelected

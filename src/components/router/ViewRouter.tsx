@@ -236,7 +236,13 @@ export const ViewRouter = React.memo(
 
     const [isDesktop, setIsDesktop] = React.useState(false);
     React.useEffect(() => {
-      const checkDesktop = () => setIsDesktop(window.innerWidth >= 1024);
+      const checkDesktop = () => {
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        // iPad landscape typically has width >= 768 and aspect ratio is landscape (width > height)
+        // Standard desktop monitors are width >= 1024
+        setIsDesktop(w >= 1024 || (w > h && w >= 768));
+      };
       checkDesktop();
       window.addEventListener("resize", checkDesktop);
       return () => window.removeEventListener("resize", checkDesktop);
@@ -283,9 +289,9 @@ export const ViewRouter = React.memo(
       }
 
       return (
-        <div className="flex w-full h-full bg-[#ecf5fc] text-left">
-          {/* Desktop Sidebar (lg) */}
-          <div className="hidden lg:flex w-[260px] flex-col bg-white border-r border-slate-200 shrink-0 h-full relative z-[100] p-6 text-left shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+        <div className="flex w-full h-full bg-[#ecf5fc] text-left justify-center">
+          {/* Desktop/Tablet Landscape Sidebar */}
+          <div className={`${isDesktop ? "flex" : "hidden"} w-[260px] flex-col bg-white border-r border-slate-200 shrink-0 h-full relative z-[100] p-6 text-left shadow-[4px_0_24px_rgba(0,0,0,0.02)]`}>
             <div className="mb-8">
               <h2 className="text-2xl font-black italic tracking-tight text-slate-800">
                 Lounge
@@ -413,7 +419,7 @@ export const ViewRouter = React.memo(
 
           {/* Main Content Dashboard Container */}
           <div className="flex-1 flex justify-center h-full relative w-full items-start bg-[#ecf5fc]">
-            <div className="w-full h-full lg:max-w-[1200px] flex flex-col relative overflow-hidden bg-white lg:border-x lg:border-slate-200/50 lg:shadow-xl font-sans">
+            <div className={`w-full h-full flex flex-col relative overflow-hidden bg-white font-sans transition-all duration-300 ${isDesktop ? "lg:max-w-[1200px] border-x border-slate-200/50 shadow-xl" : "sm:max-w-[680px] md:max-w-[720px] sm:shadow-lg sm:border-x sm:border-slate-100 sm:h-full"}`}>
               {children}
             </div>
           </div>
@@ -921,6 +927,7 @@ export const ViewRouter = React.memo(
             onNavigate={onNavigate}
             platformConfig={platformConfig}
             activeView={viewState}
+            isDesktop={isDesktop}
           />
         )}
       </>
@@ -944,6 +951,7 @@ export const ViewRouter = React.memo(
                 onNavigate={onNavigate}
                 platformConfig={platformConfig}
                 activeView={viewState}
+                isDesktop={isDesktop}
                 desktopRightColumn={
                   <div className="w-full h-full relative flex-1 flex flex-col font-sans">
                     {activeViewComponent}

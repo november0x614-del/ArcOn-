@@ -249,27 +249,11 @@ export const BackendClient = {
   },
 
   /**
-   * Helper to handle localStorage caching with TTL (Disabled for Server-First)
-   */
-  getCachedData(key: string, ttlMs: number) {
-    return null;
-  },
-
-  setCachedData(key: string, data: any) {
-    // Disabled
-  },
-
-  /**
    * Fetches current balances for the registered user.
-   * Cached for 30 seconds to prevent rapid redundant calls.
    */
   async getBalance() {
     const { registeredUser } = useStore.getState();
     if (!registeredUser?.supabaseUid) throw new Error("User not registered");
-
-    const CACHE_KEY = `arc_balance_${registeredUser.supabaseUid}`;
-    const cached = BackendClient.getCachedData(CACHE_KEY, 30 * 1000); // 30s
-    if (cached) return cached;
 
     const data = await apiRequest(
       `/api/balance/${registeredUser.supabaseUid}`,
@@ -278,7 +262,6 @@ export const BackendClient = {
       "Failed to fetch balance",
     );
 
-    if (data) BackendClient.setCachedData(CACHE_KEY, data);
     return data;
   },
 
@@ -296,22 +279,14 @@ export const BackendClient = {
 
   /**
    * Fetches available tokens list.
-   * Cached for 1 hour.
    */
   async getTokens() {
-    const CACHE_KEY = "arc_tokens_list";
-    const cached = BackendClient.getCachedData(CACHE_KEY, 60 * 60 * 1000); // 1h
-    if (cached) return cached;
-
-    const data = await apiRequest(
+    return apiRequest(
       `/api/tokens`,
       "GET",
       undefined,
       "Failed to fetch tokens",
     );
-
-    if (data) BackendClient.setCachedData(CACHE_KEY, data);
-    return data;
   },
 
   /**
@@ -333,13 +308,6 @@ export const BackendClient = {
     const cleanAddr = address.toLowerCase().trim();
     if (!cleanAddr || !cleanAddr.startsWith("0x")) return null;
 
-    const CACHE_KEY = `arc_token_metadata_${cleanAddr}`;
-    const cached = BackendClient.getCachedData(
-      CACHE_KEY,
-      7 * 24 * 60 * 60 * 1000,
-    ); // 7 days
-    if (cached) return cached;
-
     try {
       const data = await apiRequest(
         `/api/tokens/resolve/${cleanAddr}`,
@@ -347,9 +315,6 @@ export const BackendClient = {
         undefined,
         "Failed to resolve token",
       );
-      if (data) {
-        BackendClient.setCachedData(CACHE_KEY, data);
-      }
       return data;
     } catch (err) {
       console.error("[Token Resolver Error] API call failed:", err);
@@ -411,27 +376,16 @@ export const BackendClient = {
   },
 
   /**
-   * Resolves a wallet address to a username/name with caching.
-   * Cached for 24 hours.
+   * Resolves a wallet address to a username/name.
    */
   async resolveAddress(address: string) {
     const cleanAddr = address.toLowerCase().trim();
     if (!cleanAddr || cleanAddr.length !== 42) return null;
 
-    const CACHE_KEY = `arc_resolve_${cleanAddr}`;
-    const cached = BackendClient.getCachedData(CACHE_KEY, 24 * 60 * 60 * 1000); // 24h
-    if (cached) {
-      console.log(`[Cache Hit] Resolved ${cleanAddr} -> ${cached.name}`);
-      return cached;
-    }
-
     try {
       const response = await fetch(`/api/wallets/resolve/${cleanAddr}`);
       if (response.ok) {
         const data = await response.json();
-        if (data && data.name) {
-          BackendClient.setCachedData(CACHE_KEY, data);
-        }
         return data;
       }
       return null;

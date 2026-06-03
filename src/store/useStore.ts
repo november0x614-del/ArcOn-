@@ -98,6 +98,7 @@ interface AppState {
   setFavorites: (favs: any[] | ((prev: any[]) => any[])) => void;
   deletedContactIds: string[];
   setDeletedContactIds: (ids: string[] | ((prev: string[]) => string[])) => void;
+  deleteContacts: (ids: string[]) => Promise<void>;
   arcbirdHighscore: number;
   setArcbirdHighscore: (score: number) => void;
   savePreferences: (updates?: any) => Promise<void>;
@@ -558,6 +559,45 @@ export const useStore = create<AppState>()((set) => ({
       return { deletedContactIds: newList };
     });
   },
+  deleteContacts: async (ids) => {
+    const idsLower = ids.map((id) => String(id).toLowerCase().trim());
+    set((state) => {
+      const currentDeleted = state.deletedContactIds.map((d) =>
+        String(d).toLowerCase().trim(),
+      );
+      const newlyDeletedIds = [...state.deletedContactIds];
+
+      ids.forEach((id) => {
+        const idLower = String(id).toLowerCase().trim();
+        if (!currentDeleted.includes(idLower)) {
+          newlyDeletedIds.push(idLower);
+        }
+      });
+
+      const newFavorites = state.favorites.filter((f) => {
+        const fId = String(f.id || f.number || "").toLowerCase().trim();
+        return fId && !idsLower.includes(fId);
+      });
+
+      const finalUpdates = {
+        favorites: newFavorites,
+        deletedContactIds: newlyDeletedIds,
+        arcbirdHighscore: state.arcbirdHighscore,
+        readReceiptIds: state.readReceiptIds,
+        selectedShortcuts: state.selectedShortcuts,
+        cart: state.cart,
+      };
+
+      BackendClient.updatePreferences(finalUpdates).catch((e) => {
+        console.error("Failed to sync preferences on deleteContacts", e);
+      });
+
+      return {
+        deletedContactIds: newlyDeletedIds,
+        favorites: newFavorites,
+      };
+    });
+  },
   arcbirdHighscore: 0,
   setArcbirdHighscore: (score) => {
     set({ arcbirdHighscore: score });
@@ -590,13 +630,23 @@ export const useStore = create<AppState>()((set) => ({
     try {
       const prefs = await BackendClient.getPreferences();
       if (prefs) {
+        // Sanitize database saved shortcuts to ensure 'ATM' is migrated to 'CCPT Bridge'
+        let loadedShortcuts = prefs.selectedShortcuts || defaultSelectedShortcuts;
+        if (Array.isArray(loadedShortcuts)) {
+          loadedShortcuts = loadedShortcuts.map((item: any) => {
+            if (item && (item.label === "ATM" || item.id === "14")) {
+              return { ...item, label: "CCPT Bridge", icon: "Landmark" };
+            }
+            return item;
+          });
+        }
         set({
           favorites: prefs.favorites || [],
           deletedContactIds: prefs.deletedContactIds || [],
           arcbirdHighscore: prefs.arcbirdHighscore || 0,
           mintedNfts: prefs.mintedNfts || [],
           readReceiptIds: prefs.readReceiptIds || [],
-          selectedShortcuts: prefs.selectedShortcuts || defaultSelectedShortcuts,
+          selectedShortcuts: loadedShortcuts,
           cart: prefs.cart || {},
         });
       }

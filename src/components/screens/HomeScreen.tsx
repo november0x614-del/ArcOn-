@@ -43,6 +43,7 @@ export interface HomeScreenProps {
   platformConfig?: any;
   desktopRightColumn?: React.ReactNode;
   activeView?: ViewState;
+  isDesktop?: boolean;
 }
 
 export const HomeScreen = React.memo(
@@ -53,6 +54,7 @@ export const HomeScreen = React.memo(
     platformConfig,
     desktopRightColumn,
     activeView,
+    isDesktop = false,
   }: HomeScreenProps) => {
     const {
       transactions,
@@ -308,7 +310,7 @@ export const HomeScreen = React.memo(
         <div className="absolute top-0 left-0 right-0 h-[40vh] md:h-[450px] bg-slate-900 rounded-b-[40px] md:rounded-b-[50px] z-0"></div>
 
         {/* Top Header */}
-        <header className="relative text-white px-5 md:px-8 lg:px-10 pt-4 md:pt-8 pb-3 flex justify-between items-center z-20 shrink-0">
+        <header className={`relative text-white ${isDesktop ? "px-10" : "px-5 md:px-8"} pt-4 md:pt-8 pb-3 flex justify-between items-center z-20 shrink-0`}>
           <div className="flex items-center gap-3 cursor-pointer">
             <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-slate-800 font-[900] text-lg shadow-sm uppercase">
               {userName
@@ -369,14 +371,15 @@ export const HomeScreen = React.memo(
         </header>
 
         {/* Scrollable Main Content */}
-        <div className="flex-1 overflow-y-auto pb-[140px] pt-0 scrollbar-hide z-20 md:px-4 lg:px-6 relative">
-          <div className="flex flex-col lg:grid lg:grid-cols-12 lg:gap-6 mt-4">
-            {/* Left Column for Desktop */}
-            <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-3">
-              {/* Wrapping Accounts & Favorites for precise height alignment with Right Column feature popup on Desktop */}
-              <div className="flex flex-col gap-3 shrink-0">
-                {/* Accounts Section */}
-                <section className="bg-white rounded-[24px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] mx-4 lg:mx-0 border border-slate-50/50">
+        <div className="flex-1 overflow-y-auto pb-[140px] pt-0 scrollbar-hide z-20 relative w-full flex flex-col items-center">
+          <div className={`w-full ${isDesktop ? "max-w-none px-6" : "max-w-[700px] px-4 md:px-6 animate-in fade-in duration-300"}`}>
+            <div className={`flex flex-col ${isDesktop ? "grid grid-cols-12 gap-6" : ""} mt-4`}>
+              {/* Left Column for Desktop */}
+              <div className={`${isDesktop ? "col-span-7 xl:col-span-8" : ""} flex flex-col gap-3`}>
+                {/* Wrapping Accounts & Favorites for precise height alignment with Right Column feature popup on Desktop */}
+                <div className="flex flex-col gap-3 shrink-0">
+                  {/* Accounts Section */}
+                  <section className={`bg-white rounded-[24px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] border border-slate-50/50 ${isDesktop ? "mx-0" : "mx-4"}`}>
                 <div className="flex justify-between items-center mb-3">
                   <h2 className="text-[17px] font-bold text-slate-800 tracking-tight">
                     Accounts
@@ -508,7 +511,7 @@ export const HomeScreen = React.memo(
               </section>
 
               {/* Favorite Transactions Section */}
-              <section className="bg-white rounded-[24px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] mb-3 lg:mb-0 mx-4 lg:mx-0 border border-slate-50/50 lg:flex-1 lg:flex lg:flex-col justify-start">
+              <section className={`bg-white rounded-[24px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] border border-slate-50/50 ${isDesktop ? "mb-0 mx-0 flex-1 flex flex-col justify-start" : "mb-3 mx-4"}`}>
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-[17px] font-bold text-slate-800 tracking-tight">
                     Favorite Transactions
@@ -521,7 +524,7 @@ export const HomeScreen = React.memo(
                   </button>
                 </div>
 
-                <div className="grid grid-cols-4 gap-y-5 gap-x-2">
+                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-y-5 gap-x-2 justify-items-center">
                   {filteredShortcuts
                     .filter((item) => item.label !== "DApp Browser" && item.label !== "Transaction History" && item.label !== "Unified balance")
                     .map((item) => {
@@ -604,9 +607,9 @@ export const HomeScreen = React.memo(
                 )}
 
                 {(!platformConfig ||
-                  platformConfig.aiAgentEnabled !== false) && (
+                  platformConfig.aiAgentEnabled !== false) && !isDesktop && (
                   <div
-                    className="lg:hidden mt-6 bg-gradient-to-r from-indigo-50 to-blue-50 py-3 px-4 rounded-xl flex items-center justify-between gap-3 border border-indigo-100 relative cursor-pointer hover:bg-indigo-100/50 transition-colors"
+                    className="mt-6 bg-gradient-to-r from-indigo-50 to-blue-50 py-3 px-4 rounded-xl flex items-center justify-between gap-3 border border-indigo-100 relative cursor-pointer hover:bg-indigo-100/50 transition-colors"
                     onClick={() => onNavigate("aiAgent")}
                   >
                     {/* Tooltip triangle */}
@@ -633,7 +636,7 @@ export const HomeScreen = React.memo(
               </div>
 
               {/* Special For You (Promo Banner) */}
-              <section className="bg-white rounded-[24px] overflow-hidden shadow-sm mb-4 lg:mb-0 mx-4 lg:mx-0 pb-4 border border-x-transparent border-t-transparent border-b-slate-50 relative z-10 lg:mt-8">
+              <section className={`bg-white rounded-[24px] overflow-hidden shadow-sm pb-4 border border-x-transparent border-t-transparent border-b-slate-50 relative z-10 ${isDesktop ? "mb-0 mx-0 mt-8" : "mb-4 mx-4"}`}>
                 <div className="px-5 pt-5 pb-3">
                   <h2 className="text-[17px] font-bold text-slate-800 tracking-tight mb-0 text-left">
                     Special For You
@@ -701,14 +704,14 @@ export const HomeScreen = React.memo(
 
               {/* Moved Bottom Sections inside Left Column */}
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 relative z-10 w-full mb-8">
-                <div className="flex flex-col gap-6 w-full max-w-[500px] mx-auto lg:max-w-none">
+                <div className={`flex flex-col gap-6 w-full max-w-[500px] mx-auto ${isDesktop ? "max-w-none" : ""}`}>
                   {/* Dapps */}
                   {/* External DApps */}
                   {(!platformConfig ||
                     platformConfig.swapEnabled !== false ||
                     platformConfig.arcBirdEnabled !== false ||
                     platformConfig.stableStakeEnabled !== false) && (
-                    <section className="bg-white rounded-[24px] p-5 shadow-sm mb-4 lg:mb-0 mx-4 lg:mx-0 text-left">
+                    <section className={`bg-white rounded-[24px] p-5 shadow-sm text-left ${isDesktop ? "mb-0 mx-0" : "mb-4 mx-4"}`}>
                       <div className="flex justify-between items-center mb-4">
                         <div className="flex flex-col">
                           <h2 className="text-[17px] font-bold text-slate-800 tracking-tight font-sans">
@@ -828,8 +831,8 @@ export const HomeScreen = React.memo(
                   )}
                 </div>
 
-                <div className="flex flex-col gap-6 w-full max-w-[500px] mx-auto lg:max-w-none">
-                  <section className="bg-white rounded-[24px] p-5 shadow-sm mx-4 lg:mx-0 mb-4 lg:mb-0">
+                <div className={`flex flex-col gap-6 w-full max-w-[500px] mx-auto ${isDesktop ? "max-w-none" : ""}`}>
+                  <section className={`bg-white rounded-[24px] p-5 shadow-sm ${isDesktop ? "mx-0 mb-0" : "mx-4 mb-4"}`}>
                     <div className="mb-4 text-left flex justify-between items-start">
                       <div>
                         <h2 className="text-[17px] font-bold text-slate-800 tracking-tight">
@@ -885,10 +888,10 @@ export const HomeScreen = React.memo(
                   </section>
 
                   {/* Developer Services (Mobile Only) */}
-                  {(!platformConfig ||
+                  {!isDesktop && (!platformConfig ||
                     platformConfig.merchantEnabled !== false ||
                     platformConfig.faucetEnabled !== false) && (
-                    <section className="bg-white rounded-[24px] p-5 shadow-sm mx-4 lg:mx-0 mb-8 lg:mb-0 lg:hidden">
+                    <section className="bg-white rounded-[24px] p-5 shadow-sm mx-4 mb-8">
                       <h2 className="text-[17px] font-bold text-slate-800 tracking-tight mb-4 text-left">
                         Services
                       </h2>
@@ -922,114 +925,119 @@ export const HomeScreen = React.memo(
               </div>
             </div>
 
-            {/* Right Column for Desktop */}
-            <div className="lg:col-span-5 xl:col-span-4 hidden lg:flex relative z-20 flex-col gap-6">
-              {desktopRightColumn && (
-                <div className="rounded-[24px] bg-white shadow-[0_8px_30px_rgb(0,0,0,0.08)] overflow-hidden border border-slate-100 w-full max-w-[500px] mx-auto relative z-20 flex flex-col">
-                  {desktopRightColumn}
-                </div>
-              )}
-
-              {/* Developer Services (Desktop Only) */}
-              {(!platformConfig ||
-                platformConfig.merchantEnabled !== false ||
-                platformConfig.faucetEnabled !== false) && (
-                <section className="bg-white rounded-[24px] p-5 shadow-sm w-full max-w-[500px] mx-auto hidden lg:block">
-                  <h2 className="text-[17px] font-bold text-slate-800 tracking-tight mb-4 text-left">
-                    Services
-                  </h2>
-                  <div
-                    className={`grid ${!platformConfig || (platformConfig.merchantEnabled !== false && platformConfig.faucetEnabled !== false) ? "grid-cols-2" : "grid-cols-1"} gap-3`}
-                  >
-                    {(!platformConfig ||
-                      platformConfig.merchantEnabled !== false) && (
-                      <ProductCard
-                        title="Merchant Dashboard"
-                        desc="Manage your stock"
-                        icon={<Box size={20} className="text-slate-600" />}
-                        onClick={() => onNavigate("merchant")}
-                      />
-                    )}
-                    {(!platformConfig ||
-                      platformConfig.faucetEnabled !== false) && (
-                      <ProductCard
-                        title="Testnet Faucet"
-                        desc="Claim USDC Gas Token."
-                        icon={<Coins size={20} className="text-slate-600" />}
-                        onClick={() => onNavigate("faucet")}
-                      />
-                    )}
+            {/* Right Column for Desktop / Landscape Tablet */}
+            {isDesktop && (
+              <div className="col-span-5 xl:col-span-4 flex relative z-20 flex-col gap-6 w-full lg:max-w-[500px]">
+                {desktopRightColumn && (
+                  <div className="rounded-[24px] bg-white shadow-[0_8px_30px_rgb(0,0,0,0.08)] overflow-hidden border border-slate-100 w-full max-w-[500px] mx-auto relative z-20 flex flex-col h-[680px]">
+                    {desktopRightColumn}
                   </div>
-                </section>
-              )}
-            </div>
+                )}
+
+                {/* Developer Services (Desktop Only) */}
+                {(!platformConfig ||
+                  platformConfig.merchantEnabled !== false ||
+                  platformConfig.faucetEnabled !== false) && (
+                  <section className="bg-white rounded-[24px] p-5 shadow-sm w-full max-w-[500px] mx-auto">
+                    <h2 className="text-[17px] font-bold text-slate-800 tracking-tight mb-4 text-left">
+                      Services
+                    </h2>
+                    <div
+                      className={`grid ${!platformConfig || (platformConfig.merchantEnabled !== false && platformConfig.faucetEnabled !== false) ? "grid-cols-2" : "grid-cols-1"} gap-3`}
+                    >
+                      {(!platformConfig ||
+                        platformConfig.merchantEnabled !== false) && (
+                        <ProductCard
+                          title="Merchant Dashboard"
+                          desc="Manage your stock"
+                          icon={<Box size={20} className="text-slate-600" />}
+                          onClick={() => onNavigate("merchant")}
+                        />
+                      )}
+                      {(!platformConfig ||
+                        platformConfig.faucetEnabled !== false) && (
+                        <ProductCard
+                          title="Testnet Faucet"
+                          desc="Claim USDC Gas Token."
+                          icon={<Coins size={20} className="text-slate-600" />}
+                          onClick={() => onNavigate("faucet")}
+                        />
+                      )}
+                    </div>
+                  </section>
+                )}
+              </div>
+            )}
           </div>
         </div>
+      </div>
 
         {/* Aesthetic Bottom Navigation Wrapper with Cutout Notch */}
-        <div
-          className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none lg:hidden"
-          style={{ filter: "drop-shadow(0 -5px 15px rgba(0,0,0,0.06))" }}
-        >
-          {/* The Masked White Nav Bar */}
-          <nav
-            className="relative bg-white h-[75px] md:h-[85px] px-6 lg:px-12 pb-2 flex items-center justify-between lg:justify-around pointer-events-auto rounded-t-2xl md:rounded-t-3xl"
-            style={{
-              maskImage:
-                platformConfig?.scanQrEnabled === false
-                  ? "none"
-                  : "radial-gradient(circle at 50% 0px, transparent 34px, black 35px)",
-              WebkitMaskImage:
-                platformConfig?.scanQrEnabled === false
-                  ? "none"
-                  : "radial-gradient(circle at 50% 0px, transparent 34px, black 35px)",
-            }}
+        {!isDesktop && (
+          <div
+            className="fixed bottom-0 left-0 right-0 z-35 pointer-events-none"
+            style={{ filter: "drop-shadow(0 -5px 15px rgba(0,0,0,0.06))" }}
           >
-            <NavItem icon={<Home size={22} />} label="Home" active />
-            <NavItem
-              icon={<Mail size={22} />}
-              label="Inbox"
-              onClick={() => onNavigate("inbox")}
-              badge={
-                unreadCount > 0 ? (
-                  <span className="absolute -top-2 -right-2 h-4 min-w-4 flex items-center justify-center bg-red-500 text-white text-[9px] font-bold px-1 rounded-full border-2 border-white">
-                    {unreadCount > 99 ? "99+" : unreadCount}
-                  </span>
-                ) : undefined
-              }
-            />
-            {(!platformConfig || platformConfig.scanQrEnabled !== false) && (
-              <div className="w-[50px] md:w-[60px] shrink-0"></div>
-            )}
-            <NavItem
-              icon={<Settings size={22} />}
-              label="Settings"
-              onClick={() => onNavigate("settings")}
-            />
-            <NavItem
-              icon={<LogOut size={22} />}
-              label="Logout"
-              onClick={() => onNavigate("logout")}
-            />
-          </nav>
+            {/* The Masked White Nav Bar */}
+            <nav
+              className="relative bg-white h-[75px] md:h-[85px] px-6 pb-2 flex items-center justify-between pointer-events-auto rounded-t-2xl md:rounded-t-3xl"
+              style={{
+                maskImage:
+                  platformConfig?.scanQrEnabled === false
+                    ? "none"
+                    : "radial-gradient(circle at 50% 0px, transparent 34px, black 35px)",
+                WebkitMaskImage:
+                  platformConfig?.scanQrEnabled === false
+                    ? "none"
+                    : "radial-gradient(circle at 50% 0px, transparent 34px, black 35px)",
+              }}
+            >
+              <NavItem icon={<Home size={22} />} label="Home" active />
+              <NavItem
+                icon={<Mail size={22} />}
+                label="Inbox"
+                onClick={() => onNavigate("inbox")}
+                badge={
+                  unreadCount > 0 ? (
+                    <span className="absolute -top-2 -right-2 h-4 min-w-4 flex items-center justify-center bg-red-500 text-white text-[9px] font-bold px-1 rounded-full border-2 border-white">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  ) : undefined
+                }
+              />
+              {(!platformConfig || platformConfig.scanQrEnabled !== false) && (
+                <div className="w-[50px] md:w-[60px] shrink-0"></div>
+              )}
+              <NavItem
+                icon={<Settings size={22} />}
+                label="Settings"
+                onClick={() => onNavigate("settings")}
+              />
+              <NavItem
+                icon={<LogOut size={22} />}
+                label="Logout"
+                onClick={() => onNavigate("logout")}
+              />
+            </nav>
 
-          {/* Floating Action Button (QR/Pay) - overlapping the notch */}
-          {(!platformConfig || platformConfig.scanQrEnabled !== false) && (
-            <div className="absolute left-1/2 -translate-x-1/2 top-[-28px] pointer-events-auto">
-              <div
-                className="relative group cursor-pointer flex flex-col items-center justify-center active:scale-[0.98] transition-all duration-300"
-                onClick={() => onNavigate("scanQR")}
-              >
-                <div className="relative w-[56px] h-[56px] bg-slate-900 rounded-full flex flex-col items-center justify-center text-white shadow-[0_8px_24px_rgba(15,23,42,0.25)] transform transition-transform duration-300 group-hover:-translate-y-1 border-2 border-white/10">
-                  <Scan size={26} strokeWidth={2.2} />
-                  <span className="text-[9px] font-bold mt-0.5 tracking-tight uppercase">
-                    Pay
-                  </span>
+            {/* Floating Action Button (QR/Pay) - overlapping the notch */}
+            {(!platformConfig || platformConfig.scanQrEnabled !== false) && (
+              <div className="absolute left-1/2 -translate-x-1/2 top-[-28px] pointer-events-auto">
+                <div
+                  className="relative group cursor-pointer flex flex-col items-center justify-center active:scale-[0.98] transition-all duration-300"
+                  onClick={() => onNavigate("scanQR")}
+                >
+                  <div className="relative w-[56px] h-[56px] bg-slate-900 rounded-full flex flex-col items-center justify-center text-white shadow-[0_8px_24px_rgba(15,23,42,0.25)] transform transition-transform duration-300 group-hover:-translate-y-1 border-2 border-white/10">
+                    <Scan size={26} strokeWidth={2.2} />
+                    <span className="text-[9px] font-bold mt-0.5 tracking-tight uppercase">
+                      Pay
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
 
         {/* Deposit/Withdraw Initial Modal */}
 

@@ -146,7 +146,7 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
     const currentPhaseIndex = phases.indexOf(processingPhase);
 
     return (
-      <div className="absolute inset-0 bg-[#ecf5fc] z-[70] flex flex-col p-6 animate-in fade-in duration-300">
+      <div className="w-full h-full bg-[#ecf5fc] relative z-[70] flex flex-col p-6 animate-in fade-in duration-300">
         <div className="flex-1 flex flex-col items-center justify-center pt-10">
           <h3 className="text-[22px] font-black text-slate-900 mb-2 text-center">
             Transmitting to {toNetwork.name}
@@ -231,7 +231,7 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
 
   if (step === "success") {
     return (
-      <div className="absolute inset-0 bg-[#ecf5fc] z-[70] flex flex-col items-center justify-center p-8 text-center animate-in zoom-in-95 duration-300">
+      <div className="w-full h-full bg-[#ecf5fc] relative z-[70] flex flex-col items-center justify-center p-8 text-center animate-in zoom-in-95 duration-300">
         <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 mb-6 shadow-sm shadow-emerald-100">
           <CheckCircle2 size={40} />
         </div>
@@ -274,7 +274,7 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
   }
 
   return (
-    <div className="absolute inset-0 z-[70] bg-[#ecf5fc] flex flex-col animate-in slide-in-from-right duration-300">
+    <div className="w-full h-full bg-[#ecf5fc] relative z-[70] flex flex-col animate-in slide-in-from-right duration-300">
       {/* Header */}
       <div className="flex justify-center bg-slate-900 shadow-md relative z-10 shrink-0 w-full">
         <div className="flex items-center justify-between px-4 pt-6 pb-3 w-full max-w-[500px]">
