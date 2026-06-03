@@ -377,7 +377,7 @@ export const HomeScreen = React.memo(
               {/* Left Column for Desktop */}
               <div className={`${isDesktop ? "col-span-7 xl:col-span-8" : ""} flex flex-col gap-3`}>
                 {/* Wrapping Accounts & Favorites for precise height alignment with Right Column feature popup on Desktop */}
-                <div className="flex flex-col gap-3 shrink-0">
+                <div className={`flex flex-col gap-3 shrink-0 ${isDesktop ? "h-[680px]" : ""}`}>
                   {/* Accounts Section */}
                   <section className={`bg-white rounded-[24px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] border border-slate-50/50 ${isDesktop ? "mx-0" : "mx-4"}`}>
                 <div className="flex justify-between items-center mb-3">
@@ -524,7 +524,7 @@ export const HomeScreen = React.memo(
                   </button>
                 </div>
 
-                <div className="grid grid-cols-4 sm:grid-cols-6 gap-y-5 gap-x-2 justify-items-center">
+                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-y-5 gap-x-2 justify-items-center">
                   {filteredShortcuts
                     .filter((item) => item.label !== "DApp Browser" && item.label !== "Transaction History" && item.label !== "Unified balance")
                     .map((item) => {

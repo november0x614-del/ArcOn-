@@ -237,30 +237,15 @@ export const ViewRouter = React.memo(
     const [isDesktop, setIsDesktop] = React.useState(false);
     React.useEffect(() => {
       const checkDesktop = () => {
-        const currentZoom = parseFloat((document.documentElement.style as any).zoom || "1");
-        const w = window.innerWidth * currentZoom;
-        const h = window.innerHeight * currentZoom;
-        
-        // Horizontal tablet: landscape with physical width between 768 and 1220
-        const isHorizontalTablet = w > h && w >= 768 && w < 1220;
-        
-        const targetZoom = isHorizontalTablet ? "0.75" : "1";
-        if ((document.documentElement.style as any).zoom !== targetZoom) {
-          (document.documentElement.style as any).zoom = targetZoom;
-          setTimeout(checkDesktop, 0);
-          return;
-        }
-
-        setIsDesktop(window.innerWidth >= 1024 || (window.innerWidth > window.innerHeight && window.innerWidth >= 768));
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        // iPad landscape typically has width >= 768 and aspect ratio is landscape (width > height)
+        // Standard desktop monitors are width >= 1024
+        setIsDesktop(w >= 1024 || (w > h && w >= 768));
       };
       checkDesktop();
       window.addEventListener("resize", checkDesktop);
-      return () => {
-        window.removeEventListener("resize", checkDesktop);
-        try {
-          (document.documentElement.style as any).zoom = "1";
-        } catch (_) {}
-      };
+      return () => window.removeEventListener("resize", checkDesktop);
     }, []);
 
     React.useEffect(() => {
