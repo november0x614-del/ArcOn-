@@ -371,6 +371,14 @@ export const BackendClient = {
     return apiRequest(`/api/nfts/${userId}`, "GET");
   },
 
+  async mintNFT(productId: string | number, merchantAddress: string, metadataUri: string) {
+    return apiRequest("/api/ecommerce/mint-nft", "POST", {
+      productId,
+      merchantAddress,
+      metadataUri
+    });
+  },
+
   async deleteProduct(productId: string | number) {
     return apiRequest(`/api/ecommerce/products/${productId}`, "DELETE");
   },

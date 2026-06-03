@@ -1065,13 +1065,14 @@ router.post("/nft/mint", async (req, res) => {
     let nftContractAddress = process.env.NFT_CONTRACT_ADDRESS || "0x4aaa0f998817be80405ab1ef4106f3ac9d462b5e";
 
     // Proteksi tambahan: jika environment masih membaca alamat default/lama yang bermasalah,
-    // kita arahkan secara otomatis ke alamat kontrak baru Anda yang sudah dikonfigurasi & di-grant role.
+    // kita arahkan secara otomatis ke alamat kontrak Anda yang sudah diverifikasi (0x4aaa...).
     if (
       !nftContractAddress ||
       nftContractAddress.toLowerCase() === "0x206a27aedca603fa707997493e6fc8db0c3eb318" ||
+      nftContractAddress.toLowerCase() === "0x76231be309a473855eed23f6e7a13c414a0ee925" ||
       nftContractAddress.toLowerCase() === "0x582531cba2d68a9f0f4e83b38466e3bfcdbaab51"
     ) {
-      console.log(`[NFT Mint] Overriding old/reverted contract ${nftContractAddress} with user's verified contract: 0x4aaa0f998817be80405ab1ef4106f3ac9d462b5e`);
+      console.log(`[NFT Mint] Overriding outdated/deployer address ${nftContractAddress} with user's verified contract: 0x4aaa0f998817be80405ab1ef4106f3ac9d462b5e`);
       nftContractAddress = "0x4aaa0f998817be80405ab1ef4106f3ac9d462b5e";
     }
     const formattedTokenUri = `ipfs://QmZX${crypto.randomBytes(16).toString("hex")}`;

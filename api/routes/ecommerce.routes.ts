@@ -9,15 +9,13 @@ const router = express.Router();
 const DEFAULT_SELLER_ADDRESS = "0xMerchant";
 
 /**
- * 1. Checkout Endpoint
- * Pembeli mentransfer dana ke PLATFORM_TREASURY_ADDRESS
+ * 1. Checkout Batch Endpoint (Atomic Multiple Checkout)
  */
-router.post("/ecommerce/checkout", async (req, res) => {
+router.post("/ecommerce/checkout-batch", async (req, res) => {
   try {
-    const { buyerId, productId, amount, memo, sellerAddress = DEFAULT_SELLER_ADDRESS } = req.body;
+    const { buyerId, items, totalAmount, memo } = req.body;
     const supabaseAdmin = getSupabaseAdmin();
 
-    // Pastikan Treasury wallet tersedia
     let treasuryAddress = process.env.PLATFORM_TREASURY_ADDRESS;
     if (!treasuryAddress) {
       const { data: treasuryWallet } = await supabaseAdmin
@@ -29,63 +27,61 @@ router.post("/ecommerce/checkout", async (req, res) => {
     }
 
     if (!treasuryAddress) {
-      return res.status(500).json({ error: "Platform Treasury Belum Dikonfigurasi." });
+      return res.status(500).json({ error: "Platform Treasury Not Configured." });
     }
 
-    const orderMemo = `ORDER-${productId}-${Date.now()}`;
+    const orderBatchId = crypto.randomUUID();
+    const orderMemo = `BATCH-${orderBatchId.slice(0, 8)}-${Date.now()}`;
 
-    // Insert database record ke 'ecommerce_orders'
-    const { data: orderData, error: dbError } = await supabaseAdmin
-      .from("ecommerce_orders")
-      .insert({
-        buyer_id: buyerId,
-        seller_address: sellerAddress,
-        product_id: productId?.toString(),
-        product_name: memo, // We passed product_name as memo in frontend
-        amount: amount,
-        status: "PENDING_ESCROW",
-        memo: orderMemo // Added for webhook matching
-      })
-      .select()
-      .single();
+    // Insert database record ke 'ecommerce_orders' untuk setiap item
+    const orderPromises = items.map((item: any) => {
+      return supabaseAdmin
+        .from("ecommerce_orders")
+        .insert({
+          buyer_id: buyerId,
+          seller_address: item.merchantAddress || DEFAULT_SELLER_ADDRESS,
+          product_id: item.productId?.toString(),
+          product_name: item.name,
+          amount: parseFloat(item.price) * (item.quantity || 1),
+          status: "PENDING_ESCROW",
+          memo: orderMemo,
+          batch_id: orderBatchId
+        });
+    });
 
-    if (dbError && dbError.code !== "42P01") { // Ignore if table doesn't exist yet for testnet gracefully
-      console.error("Order Insert Error:", dbError);
-    }
+    await Promise.all(orderPromises);
 
-    const orderId = orderData ? orderData.id : "NO_DB_ORDER";
-
-    // Panggil Circle App Kit SDK (dari user ke Treasury)
+    // Panggil Circle SDK (Single Atomic Transfer for Total Amount)
     const result = await executeTransaction(
       supabaseAdmin,
       buyerId,
-      amount,
+      parseFloat(totalAmount),
       treasuryAddress,
-      "checkout", // tag 
+      "checkout_batch",
       {
         finality: "deterministic",
         memo: orderMemo,
-        product_id: productId,
-        order_status: "PENDING_ESCROW",
-        ecommerce_order_id: orderId
+        batch_id: orderBatchId,
+        order_status: "PENDING_ESCROW"
       }
     );
 
     // Update with txId
-    if (orderData) {
-       await supabaseAdmin.from("ecommerce_orders").update({ tx_hash: result.txId }).eq("id", orderData.id);
-    }
+    await supabaseAdmin
+      .from("ecommerce_orders")
+      .update({ tx_hash: result.txId })
+      .eq("memo", orderMemo);
     
     res.status(200).json({ 
-      message: "Proses transfer ke Escrow dimulai", 
+      message: "Proses Multi-Checkout Atomic dimulai", 
       txHash: result.txId,
       useEscrow: true,
       escrowAddress: treasuryAddress,
-      orderId: orderId
+      batchId: orderBatchId
     });
 
   } catch (error: any) {
-    console.error("Checkout Error:", error);
+    console.error("Batch Checkout Error:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -262,6 +258,59 @@ router.delete("/ecommerce/products/:id", async (req, res) => {
     if (error) throw error;
     res.json({ success: true });
   } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * 6. NFT Minting Management
+ */
+router.post("/ecommerce/mint-nft", async (req, res) => {
+  try {
+    const { productId, merchantAddress, metadataUri } = req.body;
+    const supabaseAdmin = getSupabaseAdmin();
+    
+    // contract address from env
+    let contractAddress = process.env.LOUNGE_NFT_ADDRESS || "0x4aaa0f998817be80405ab1ef4106f3ac9d462b5e";
+    
+    // Proteksi: arahkan ke alamat valid jika env kosong atau berisi alamat deployer
+    if (!contractAddress || contractAddress.toLowerCase() === "0x76231be309a473855eed23f6e7a13c414a0ee925") {
+      contractAddress = "0x4aaa0f998817be80405ab1ef4106f3ac9d462b5e";
+    }
+
+    // We use the Platform Admin Wallet to mint on behalf of the platform (since contract is owned by platform)
+    const adminId = "11111111-1111-1111-1111-111111111111";
+    
+    const { executeContractTransaction } = await import("../services/circle.js");
+
+    // abi: mint(address to, string memory uri)
+    const result = await executeContractTransaction(
+      supabaseAdmin,
+      adminId,
+      contractAddress,
+      "mint(address, string)", // function signature
+      [merchantAddress, metadataUri], // parameters
+      "HIGH"
+    );
+
+    // Update product record
+    await supabaseAdmin
+      .from("ecommerce_products")
+      .update({ 
+        category: "NFT",
+        tx_hash: result.txId,
+        date_label: "Lounge L1 Certificate"
+      })
+      .eq("id", productId);
+
+    res.json({
+      success: true,
+      message: "Minting request sent to Arc Network via Circle Developer Wallet.",
+      txId: result.txId
+    });
+
+  } catch (error: any) {
+    console.error("Mint NFT Error:", error);
     res.status(500).json({ error: error.message });
   }
 });

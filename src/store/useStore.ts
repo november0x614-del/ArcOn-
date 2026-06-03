@@ -86,6 +86,7 @@ interface AppState {
   fetchProducts: () => Promise<void>;
   saveProduct: (product: any) => Promise<void>;
   removeProduct: (productId: string | number) => Promise<void>;
+  mintProductNFT: (productId: string | number, merchantAddress: string, metadataUri: string) => Promise<void>;
   cart: Record<string, number>;
   setCart: (cart: Record<string, number>) => void;
   addToCart: (productId: string | number) => void;
@@ -477,6 +478,16 @@ export const useStore = create<AppState>()((set) => ({
       useStore.getState().fetchProducts();
     }
   },
+  mintProductNFT: async (productId, merchantAddress, metadataUri) => {
+    try {
+      await BackendClient.mintNFT(productId, merchantAddress, metadataUri);
+      // Re-fetch products to show NFT badge/tx_hash
+      await useStore.getState().fetchProducts();
+    } catch (e) {
+      console.error("[Store] mintProductNFT failed:", e);
+      throw e;
+    }
+  },
   cart: {},
   setCart: (cart) => {
     set({ cart });
@@ -651,6 +662,7 @@ export const useStore = create<AppState>()((set) => ({
       registeredUser: null,
       balance: 0,
       transactions: [],
+      products: [],
       pnlValue: 0,
       pnlPercentage: 0,
       readReceiptIds: [],

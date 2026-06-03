@@ -121,6 +121,16 @@ export function MintNFTScreen({ onBack }: { onBack: () => void }) {
               className="flex flex-col gap-6"
             >
               <div className="bg-white rounded-[24px] p-6 shadow-sm border border-slate-100 flex flex-col">
+                <div className="mb-4 flex items-center gap-2">
+                  <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center text-purple-600 shadow-sm">
+                    <ShieldCheck size={18} strokeWidth={3} />
+                  </div>
+                  <div>
+                    <h4 className="text-[14px] font-black text-slate-900 leading-tight">Premium Verification</h4>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Lounge Official Contract</p>
+                  </div>
+                </div>
+
                 <div className="w-full space-y-4">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Asset Name</label>
@@ -210,18 +220,34 @@ export function MintNFTScreen({ onBack }: { onBack: () => void }) {
                 </div>
               </div>
 
-              <div className="bg-blue-900/5 rounded-2xl p-4 border border-blue-100 flex items-start gap-3">
-                <ShieldCheck size={18} className="text-blue-600 shrink-0 mt-0.5" />
-                <p className="text-[12px] text-blue-700 font-medium leading-relaxed">
-                  Minting requires a small amount of gas (USDC). Ensure your wallet has sufficient balance on Arc Testnet.
-                </p>
+              <div className="bg-purple-900/5 rounded-2xl p-4 border border-purple-100 flex flex-col gap-3">
+                <div className="flex items-start gap-3">
+                  <Zap size={18} className="text-purple-600 shrink-0 mt-0.5" />
+                  <div className="flex flex-col">
+                    <p className="text-[12px] text-purple-900 font-black leading-tight mb-0.5">
+                      Premium Listing Fee: <span className="text-purple-600">$5.00 USDC</span>
+                    </p>
+                    <p className="text-[11px] text-slate-500 font-medium leading-tight">
+                      This fee ensures your asset is verified and prioritized on the marketplace.
+                    </p>
+                  </div>
+                </div>
+                <div className="h-[1px] bg-purple-100 w-full"></div>
+                <div className="flex items-center justify-between px-1">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Network Status</span>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
+                    <span className="text-[10px] font-bold text-slate-600">Arc Testnet Live</span>
+                  </div>
+                </div>
               </div>
 
               <button
                 onClick={handleMint}
-                className="w-full py-4 bg-slate-900 text-white font-black text-[15px] rounded-[20px] shadow-xl shadow-slate-200 active:scale-[0.98] transition-all border-0 cursor-pointer mt-4"
+                className="w-full py-4.5 bg-slate-900 text-white font-black text-[15px] rounded-[22px] shadow-2xl shadow-slate-300 active:scale-[0.98] transition-all border-0 cursor-pointer mt-4 flex items-center justify-center gap-2"
               >
-                Mint on Arc Network
+                <ShieldCheck size={18} />
+                Mint Verified Certificate
               </button>
             </motion.div>
           )}
@@ -298,23 +324,23 @@ export function MintNFTScreen({ onBack }: { onBack: () => void }) {
             >
                <div className="bg-white rounded-[32px] p-8 shadow-xl border border-slate-50 flex flex-col items-center text-center overflow-hidden relative">
                   <div className="absolute top-0 left-0 w-full h-2 bg-emerald-500"></div>
-                  <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-500 mb-6">
-                    <CheckCircle2 size={48} />
+                  <div className="w-20 h-20 bg-purple-50 rounded-full flex items-center justify-center text-purple-600 mb-6 shadow-inner ring-4 ring-purple-100/50">
+                    <ShieldCheck size={48} strokeWidth={2.5} />
                   </div>
-                  <h3 className="font-black text-[24px] text-slate-800 tracking-tight mb-2">Mint Successful!</h3>
-                  <p className="text-[14px] text-slate-500 mb-8 lowercase uppercase tracking-wide">
-                    {nftName} is now live on Arc
+                  <h3 className="font-black text-[24px] text-slate-800 tracking-tight mb-2">Verified Certificate Issued</h3>
+                  <p className="text-[14px] text-slate-500 mb-8 font-medium">
+                    {nftName} is now a premium asset on Arc
                   </p>
 
-                  <div className="w-full aspect-square rounded-2xl bg-slate-50 mb-8 overflow-hidden border border-slate-100 relative group">
+                  <div className="w-full aspect-square rounded-[32px] bg-slate-50 mb-8 overflow-hidden border-4 border-slate-100/50 relative group shadow-2xl">
                     <img 
                       src={selectedImage} 
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
                       alt="NFT"
                     />
-                    <div className="absolute top-3 left-3 bg-white/90 backdrop-blur px-3 py-1 rounded-full border border-white shadow-sm flex items-center gap-2">
-                       <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                       <span className="text-[10px] font-black uppercase text-slate-800">Verified on Arc</span>
+                    <div className="absolute top-4 left-4 bg-slate-900/90 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/20 shadow-xl flex items-center gap-2">
+                       <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div>
+                       <span className="text-[10px] font-black uppercase text-white tracking-widest">Lounge Premium Verified</span>
                     </div>
                   </div>
 

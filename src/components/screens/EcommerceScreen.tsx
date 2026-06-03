@@ -152,6 +152,9 @@ export function EcommerceScreen({ onBack, isDesktop }: EcommerceScreenProps) {
   };
 
   const filteredProducts = products.filter(p => {
+    // Premium Constraint: Only show verified NFT assets in the marketplace
+    if (p.category !== "NFT") return false;
+    
     // Basic filtering based on stock - hide if out of stock
     if (p.stock <= 0) return false;
 
@@ -195,18 +198,35 @@ export function EcommerceScreen({ onBack, isDesktop }: EcommerceScreenProps) {
     try {
       setPaymentStatus("broadcasting");
 
-      const response = await fetch("/api/ecommerce/checkout", {
+      const cartItems = products.filter(p => (cartQuantities[p.id] || 0) > 0);
+
+      const response = await fetch("/api/ecommerce/checkout-batch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           buyerId: registeredUser?.supabaseUid,
-          productId: selectedProduct?.id || 0,
-          amount: totalToPay,
-          memo: getCartCount() > 0 ? `Grocery Cart (${getCartCount()} items)` : (selectedProduct?.name || "Grocery"),
+          totalAmount: totalToPay,
+          items: cartItems.length > 0 ? cartItems.map(p => ({
+            productId: p.id,
+            quantity: cartQuantities[p.id],
+            price: p.price,
+            name: p.name,
+            merchantAddress: p.seller_address || "0xMerchant"
+          })) : [{
+            productId: selectedProduct?.id,
+            quantity: 1,
+            price: selectedProduct?.price,
+            name: selectedProduct?.name,
+            merchantAddress: selectedProduct?.seller_address || "0xMerchant"
+          }],
+          memo: cartItems.length > 0 ? `Lounge Market: ${cartItems.length} items` : `Asset: ${selectedProduct?.name}`,
         }),
       });
 
-      if (!response.ok) throw new Error("Purchase failed");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Purchase failed");
+      }
 
       const data = await response.json();
       setPaymentStatus("settling");
@@ -236,7 +256,7 @@ export function EcommerceScreen({ onBack, isDesktop }: EcommerceScreenProps) {
         txHash: data.txHash || "0x...",
         date: new Date().toISOString(),
         merchantBase: "Arc Marketplace",
-        voucherCode: "GROCERY-PICKUP",
+        voucherCode: `ORD-${Date.now().toString().slice(-6)}`, // Dynamic order code
         serviceFee: serviceFee.toFixed(2),
         totalPaid: totalToPay.toFixed(2),
         useEscrow: data.useEscrow,
@@ -271,22 +291,45 @@ export function EcommerceScreen({ onBack, isDesktop }: EcommerceScreenProps) {
 
             <div className="bg-white rounded-[32px] p-7 w-full shadow-sm border border-slate-100 relative overflow-hidden">
                <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-bl-full -z-0"></div>
-               <div className="relative z-10 space-y-6">
+               <div className="relative z-10 space-y-5">
                   <div className="flex justify-between items-center">
-                     <span className="text-slate-400 font-black text-[12px] uppercase tracking-widest">Amount Paid</span>
+                     <span className="text-slate-400 font-black text-[12px] uppercase tracking-widest leading-none">Settlement</span>
                      <span className="text-slate-900 font-black text-[18px]">{transactionMetadata?.totalPaid} USDC</span>
                   </div>
-                  <div className="flex justify-between items-center">
-                     <span className="text-slate-400 font-black text-[12px] uppercase tracking-widest">Voucher Code</span>
-                     <span className="text-slate-900 font-mono font-black text-[16px] bg-slate-50 px-3 py-1 rounded-xl">{transactionMetadata?.voucherCode}</span>
-                  </div>
-                  <div className="w-full h-px border-t border-slate-100 mt-2"></div>
-                  <div className="flex justify-between items-center pt-2">
-                     <span className="text-slate-400 font-black text-[12px] uppercase tracking-widest">Network</span>
-                     <div className="flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                        <span className="text-slate-900 font-black text-[13px] uppercase tracking-tighter">Arc Testnet</span>
-                     </div>
+
+                  {transactionMetadata?.useEscrow && (
+                    <div className="bg-blue-50/50 rounded-2xl p-4 border border-blue-100/50 flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck size={16} className="text-blue-600" />
+                        <span className="text-[11px] font-black text-blue-900 uppercase tracking-wider">Escrow Security Active</span>
+                      </div>
+                      <p className="text-[10px] text-blue-600 font-medium leading-relaxed">
+                        Dana Anda tertahan aman di platform treasury. Penjual akan menerima pembayaran setelah verifikasi NFT selesai.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="space-y-4 pt-2">
+                    <div className="flex justify-between items-center">
+                       <span className="text-slate-400 font-black text-[11px] uppercase tracking-widest">Network Status</span>
+                       <div className="flex items-center gap-1.5">
+                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                          <span className="text-slate-900 font-black text-[11px] uppercase">Arc Testnet Live</span>
+                       </div>
+                    </div>
+                    {transactionMetadata?.txHash && (
+                      <div className="flex justify-between items-center">
+                         <span className="text-slate-400 font-black text-[11px] uppercase tracking-widest">Digital Receipt</span>
+                         <a 
+                           href={`https://testnet.arcscan.app/tx/${transactionMetadata.txHash}`} 
+                           target="_blank" 
+                           rel="noopener noreferrer"
+                           className="text-blue-600 font-black text-[11px] uppercase flex items-center gap-1 no-underline hover:underline cursor-pointer"
+                         >
+                           View Scan <ExternalLink size={12} />
+                         </a>
+                      </div>
+                    )}
                   </div>
                </div>
             </div>
@@ -529,20 +572,24 @@ export function EcommerceScreen({ onBack, isDesktop }: EcommerceScreenProps) {
                         >
                           <div className="h-36 w-full mb-3.5 overflow-hidden rounded-2xl bg-slate-50 flex items-center justify-center relative">
                             <SafeProductImage src={p.image} name={p.name} category={p.category} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                            <div className="absolute top-2 right-2 bg-slate-900/85 backdrop-blur-sm text-white px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider border border-white/10">
-                              L1 NFT
+                            <div className="absolute top-2 right-2 bg-[#CEEC98] text-slate-900 px-2.5 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider border border-white/50 shadow-sm flex items-center gap-1">
+                              <ShieldCheck size={10} strokeWidth={3} />
+                              Verified
                             </div>
                           </div>
-                          <span className="font-black text-[13.5px] text-slate-900 mb-1 leading-tight line-clamp-1 px-1">{p.name}</span>
+                          <div className="flex items-center gap-1.5 mb-1 px-1">
+                             <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+                             <span className="font-black text-[13.5px] text-slate-900 leading-tight line-clamp-1">{p.name}</span>
+                          </div>
                           <span className="font-bold text-[11px] text-slate-400 mb-3 px-1 block uppercase tracking-wide truncate">{p.desc}</span>
                           
-                          <div className="mt-auto flex justify-between items-center px-1 pt-1.5 border-t border-slate-50">
+                          <div className="mt-auto flex justify-between items-center px-1 pt-2 border-t border-slate-50">
                              <div className="flex flex-col text-left">
-                               <span className="text-[9px] text-slate-400 font-black uppercase tracking-wider">Price</span>
-                               <span className="font-black text-[14.5px] text-slate-900 tracking-tight leading-none">{p.price} <span className="text-[10px] text-slate-500">USDC</span></span>
+                               <span className="text-[9px] text-slate-400 font-black uppercase tracking-wider">L1 Asset</span>
+                               <span className="font-black text-[14.5px] text-slate-900 tracking-tight leading-none">{p.price} <span className="text-[10px] text-slate-400 font-bold">USdc</span></span>
                              </div>
                              <button 
-                               onClick={(e) => { e.stopPropagation(); updateQuantity(p.id, 1); displayToast("Added NFT to Cart"); }} 
+                               onClick={(e) => { e.stopPropagation(); addToCart(p.id); displayToast("Added NFT to Cart"); }} 
                                className="w-8 h-8 rounded-full bg-slate-900 hover:bg-slate-850 flex items-center justify-center text-white active:scale-90 transition-all border-0 shadow-lg shadow-slate-200 cursor-pointer">
                                <Plus size={14} strokeWidth={3} />
                              </button>

@@ -60,7 +60,7 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
   const [newProductName, setNewProductName] = useState("");
   const [newProductPrice, setNewProductPrice] = useState("");
   const [newProductStock, setNewProductStock] = useState("");
-  const [newProductCategory, setNewProductCategory] = useState("Grocery");
+  const [newProductCategory, setNewProductCategory] = useState("Digital");
   const [newProductImage, setNewProductImage] = useState("");
   const [newProductDesc, setNewProductDesc] = useState("");
   const [newProductTxHash, setNewProductTxHash] = useState("");
@@ -115,11 +115,11 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
       name: newProductName,
       price: priceNum,
       stock: stockNum,
-      image: newProductImage || "https://images.unsplash.com/photo-1542838132-92c53300491e?w=300&auto=format&fit=crop",
+      image: newProductImage || "", // Remove hardcoded grocery image
       category: newProductCategory,
       sales: 0,
-      desc: newProductDesc || "Fresh merchant addition sold securely on Arc Testnet.",
-      date_label: newProductCategory === "NFT" ? "Unique L1 NFT" : `Valid until ${new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).getDate()}/${new Date().getMonth() + 1}`,
+      desc: newProductDesc || "Secured product listed on Arc Testnet via Lounge Marketplace.",
+      date_label: newProductCategory === "NFT" ? "Lounge L1 Certificate" : "Standard Asset",
       seller_address: address,
       tx_hash: newProductTxHash
     };
@@ -160,6 +160,25 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
   }, [address]);
 
   const [processingRelease, setProcessingRelease] = useState<string | null>(null);
+  const [processingMint, setProcessingMint] = useState<string | null>(null);
+
+  const handleMintNFT = async (product: any) => {
+    try {
+      setProcessingMint(String(product.id));
+      
+      // Simple metadata URI for now (could be dynamic later)
+      const metadataUri = `https://lounge.market/metadata/${product.id}.json`;
+      
+      await useStore.getState().mintProductNFT(product.id, address, metadataUri);
+      
+      useStore.getState().displayToast(`NFT Minting request successful for "${product.name}"!`);
+    } catch (err: any) {
+      console.error(err);
+      useStore.getState().displayToast(err.message || "Minting failed");
+    } finally {
+      setProcessingMint(null);
+    }
+  };
 
   const handleFinalize = async (sale: any) => {
     try {
@@ -192,6 +211,7 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
   };
 
   const filteredProducts = products.filter(p => 
+    p.seller_address?.toLowerCase() === address.toLowerCase() &&
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -446,14 +466,43 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
                         <h3 className="font-bold text-slate-950 text-[14px] leading-tight mb-1">
                           {p.name}
                         </h3>
-                        <button 
-                          onClick={() => handleDeleteListing(p.id, p.name)}
-                          className="flex items-center gap-1 bg-white text-slate-400 hover:text-red-600 px-2.5 py-1 rounded-xl border border-slate-100 hover:border-red-100 hover:bg-red-50/50 transition-all cursor-pointer active:scale-95 group/btn shadow-xs"
-                          title="Unlist Listing"
-                        >
-                          <X size={12} strokeWidth={3} className="group-hover/btn:rotate-90 transition-transform" />
-                          <span className="text-[9px] font-black uppercase tracking-widest leading-none">Unlist</span>
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                            p.category === "NFT" 
+                              ? "bg-emerald-50 text-emerald-600 border-emerald-100/60" 
+                              : "bg-slate-100 text-slate-500 border-slate-200/50"
+                          }`}>
+                            {p.category === "NFT" ? (
+                              <>
+                                <ShieldCheck size={10} strokeWidth={3} />
+                                <span>Verified</span>
+                              </>
+                            ) : (
+                              "Draft / Pending"
+                            )}
+                          </span>
+                          {p.category !== "NFT" && (
+                            <button 
+                              onClick={() => handleMintNFT(p)}
+                              disabled={processingMint === String(p.id)}
+                              className="flex items-center gap-1 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-2.5 py-1 rounded-xl border border-blue-100/50 transition-all cursor-pointer active:scale-95 shadow-xs disabled:opacity-50"
+                              title="Verify Product by minting NFT"
+                            >
+                              <ShieldCheck size={12} strokeWidth={3} />
+                              <span className="text-[9px] font-black uppercase tracking-widest leading-none">
+                                {processingMint === String(p.id) ? "Verifying..." : "Verify"}
+                              </span>
+                            </button>
+                          )}
+                          <button 
+                            onClick={() => handleDeleteListing(p.id, p.name)}
+                            className="flex items-center gap-1 bg-white text-slate-400 hover:text-red-600 px-2.5 py-1 rounded-xl border border-slate-100 hover:border-red-100 hover:bg-red-50/50 transition-all cursor-pointer active:scale-95 group/btn shadow-xs"
+                            title="Unlist Listing"
+                          >
+                            <X size={12} strokeWidth={3} className="group-hover/btn:rotate-90 transition-transform" />
+                            <span className="text-[9px] font-black uppercase tracking-widest leading-none">Unlist</span>
+                          </button>
+                        </div>
                       </div>
                       <div className="flex items-center justify-between mt-2">
                          <span className="font-extrabold text-[15px] text-slate-900">
@@ -526,17 +575,24 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
                             </td>
                             {/* Category badge */}
                             <td className="py-4 px-5">
-                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest border ${
-                                p.category === "NFT" 
-                                  ? "bg-purple-50 text-purple-600 border-purple-100" 
-                                  : p.category === "Grocery"
-                                  ? "bg-amber-50 text-amber-600 border-amber-100"
-                                  : p.category === "Bakery"
-                                  ? "bg-amber-50 text-amber-600 border-amber-100"
-                                  : "bg-blue-50 text-blue-600 border-blue-100"
-                              }`}>
-                                {p.category === "NFT" ? "Digital NFT" : p.category}
-                              </span>
+                              <div className="flex flex-col gap-1.5 items-start">
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest border ${
+                                  p.category === "NFT" 
+                                    ? "bg-purple-50 text-purple-600 border-purple-100" 
+                                    : "bg-slate-100 text-slate-500 border-slate-200"
+                                }`}>
+                                  {p.category === "NFT" ? "Premium NFT" : "Standard List"}
+                                </span>
+                                {p.category === "NFT" ? (
+                                  <span className="text-[9px] font-black text-emerald-600 flex items-center gap-1 ml-1">
+                                    <ShieldCheck size={10} /> Verified Market
+                                  </span>
+                                ) : (
+                                  <span className="text-[9px] font-black text-slate-400 flex items-center gap-1 ml-1 italic">
+                                    <ShieldAlert size={10} /> Not in Public Market
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             {/* Price unit display */}
                             <td className="py-4 px-5 font-extrabold text-slate-900 text-[14.5px]">
@@ -560,14 +616,29 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
                             </td>
                             {/* Column action triggers */}
                             <td className="py-4 px-6 text-center">
-                              <button 
-                                onClick={() => handleDeleteListing(p.id, p.name)}
-                                className="flex items-center gap-1.5 bg-white text-slate-400 hover:text-red-600 px-3 py-1.5 rounded-xl border border-slate-100 hover:border-red-100 hover:bg-red-50/50 transition-all cursor-pointer active:scale-95 group/btn shadow-sm"
-                                title="Unlist listing"
-                              >
-                                <X size={13} strokeWidth={3} className="group-hover/btn:rotate-90 transition-transform" />
-                                <span className="text-[10px] font-black uppercase tracking-widest leading-none">Unlist</span>
-                              </button>
+                              <div className="flex items-center justify-center gap-2">
+                                {p.category !== "NFT" && (
+                                  <button 
+                                    onClick={() => handleMintNFT(p)}
+                                    disabled={processingMint === String(p.id)}
+                                    className="flex items-center gap-1.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-3 py-1.5 rounded-xl border border-blue-100/50 transition-all cursor-pointer active:scale-95 shadow-sm disabled:opacity-50"
+                                    title="Verify & List Publicly"
+                                  >
+                                    <ShieldCheck size={13} strokeWidth={3} />
+                                    <span className="text-[10px] font-black uppercase tracking-widest leading-none">
+                                      {processingMint === String(p.id) ? "Verifying..." : "Verify Asset"}
+                                    </span>
+                                  </button>
+                                )}
+                                <button 
+                                  onClick={() => handleDeleteListing(p.id, p.name)}
+                                  className="flex items-center gap-1.5 bg-white text-slate-400 hover:text-red-600 px-3 py-1.5 rounded-xl border border-slate-100 hover:border-red-100 hover:bg-red-50/50 transition-all cursor-pointer active:scale-95 group/btn shadow-sm"
+                                  title="Unlist listing"
+                                >
+                                  <X size={13} strokeWidth={3} className="group-hover/btn:rotate-90 transition-transform" />
+                                  <span className="text-[10px] font-black uppercase tracking-widest leading-none">Unlist</span>
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))
@@ -984,11 +1055,10 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
                       }}
                       className="w-full bg-slate-50 border border-slate-150 hover:border-slate-200 rounded-2xl px-4 py-3.5 text-[14px] font-bold text-slate-800 focus:outline-none appearance-none cursor-pointer shadow-inner transition-colors"
                     >
-                      <option value="NFT">Digital Asset (NFT)</option>
-                      <option value="Grocery">Grocery / Food</option>
-                      <option value="Bakery">Bakery</option>
-                      <option value="Electronics">Electronics</option>
-                      <option value="Apparel">Style & Apparel</option>
+                      <option value="Digital">Digital / NFT Asset</option>
+                      <option value="Physical">Physical Goods</option>
+                      <option value="Service">Services / Freelancing</option>
+                      <option value="NFT">Secondary Marketplace NFT</option>
                     </select>
                     <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-450 pointer-events-none" />
                   </div>
