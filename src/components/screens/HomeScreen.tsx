@@ -214,27 +214,8 @@ export const HomeScreen = React.memo(
     };
 
     useEffect(() => {
-      const interval = setInterval(() => {
-        setMarketTokens((prevTokens) =>
-          prevTokens.map((token) => {
-            if (token.code === "USDC") return token; // Stablecoin, don't change
-
-            const changePercent = (Math.random() - 0.5) * 0.005; // -0.25% to +0.25% change
-            const changeAmount = token.price * changePercent;
-            const newPrice = token.price + changeAmount;
-
-            return {
-              ...token,
-              price: newPrice,
-              change: token.change + changeAmount,
-              percent: token.percent + changePercent * 100,
-              isDown: changeAmount < 0,
-            };
-          }),
-        );
-      }, 8000); // Reduced frequency from 2s to 8s for performance
-
-      return () => clearInterval(interval);
+      // Market trends simulation removed per user request for "Real-Only" application.
+      // In a production environment, this would be replaced with a real price websocket from an exchange API.
     }, []);
 
     const formatPrice = React.useCallback((price: number) => {

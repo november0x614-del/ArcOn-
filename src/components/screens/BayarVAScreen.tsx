@@ -7,6 +7,7 @@ interface BayarVAScreenProps {
 
 export function BayarVAScreen({ onBack }: BayarVAScreenProps) {
   const [vaNumber, setVaNumber] = useState("");
+  const [amount, setAmount] = useState("50");
   const [step, setStep] = useState<
     "input" | "confirm" | "processing" | "success"
   >("input");
@@ -40,7 +41,7 @@ export function BayarVAScreen({ onBack }: BayarVAScreenProps) {
         <p className="text-[14px] text-slate-500 mb-8 leading-relaxed px-4">
           VA Payment{" "}
           <span className="font-bold text-slate-800">{vaNumber}</span> for{" "}
-          <span className="font-bold text-slate-800">250.00 USDC</span> has been
+          <span className="font-bold text-slate-800">{amount} USDC</span> has been
           successfully processed via Arc Network.
         </p>
         <button
@@ -82,13 +83,24 @@ export function BayarVAScreen({ onBack }: BayarVAScreenProps) {
 
             <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-200/60 mb-6 font-sans">
               <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-2">
+                Bill Amount (USDC)
+              </label>
+              <input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0"
+                className="w-full py-2 bg-transparent border-b-2 border-slate-100 focus:border-[#005faa] outline-none text-xl font-bold text-slate-800 transition-colors placeholder:text-slate-200 mb-6"
+              />
+
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-2">
                 Virtual Account Number
               </label>
               <input
                 type="number"
                 value={vaNumber}
                 onChange={(e) => setVaNumber(e.target.value)}
-                placeholder="Example: 8871 0812 3344 5566"
+                placeholder="Enter VA Number"
                 className="w-full py-2 bg-transparent border-b-2 border-slate-100 focus:border-[#005faa] outline-none text-xl font-bold text-slate-800 transition-colors placeholder:text-slate-200"
               />
               <div className="mt-4 flex items-center gap-2 text-slate-400">
@@ -152,13 +164,13 @@ export function BayarVAScreen({ onBack }: BayarVAScreenProps) {
                   </span>
                 </div>
                 <div className="pt-4 border-t border-slate-100 flex justify-between items-end">
-                  <span className="text-sm text-slate-500">Total Bill</span>
+                  <span className="text-sm text-slate-500">Bill Amount</span>
                   <div className="text-right">
                     <span className="text-[10px] font-bold text-slate-800 block">
                       USDC
                     </span>
                     <span className="text-2xl font-black text-slate-800">
-                      250.00
+                      {amount}
                     </span>
                   </div>
                 </div>

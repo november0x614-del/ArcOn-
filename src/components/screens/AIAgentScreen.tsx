@@ -111,7 +111,7 @@ ${transactions
               Arc Assistant <Sparkles size={14} className="text-white" />
             </h2>
             <span className="text-[11px] text-green-400 font-medium tracking-wide">
-              ● Online
+              Verified Assistant
             </span>
           </div>
         </div>

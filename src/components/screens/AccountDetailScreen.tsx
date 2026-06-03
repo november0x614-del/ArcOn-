@@ -195,7 +195,7 @@ export function AccountDetailScreen({
           setPopularCatalog(
             tokens.map((t) => ({
               ...t,
-              initialBalance: Math.random() * 500 + 100, // Still mock balance for newly imported
+              initialBalance: 0,
               usdPrice: 1.0,
               type: t.type || "ArcScan Verified Token",
             })),
@@ -248,7 +248,6 @@ export function AccountDetailScreen({
     }
 
     const dec = parseInt(customDecimals) || 18;
-    const mockBalance = Math.floor(Math.random() * 850) + 150;
 
     const colors = [
       "bg-indigo-600",
@@ -269,7 +268,7 @@ export function AccountDetailScreen({
       name: customName,
       decimals: dec,
       contractAddress: customAddress,
-      balance: mockBalance,
+      balance: 0,
       usdPrice: 1.0,
       color: chosenColor,
     });

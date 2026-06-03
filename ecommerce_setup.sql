@@ -14,9 +14,21 @@ CREATE TABLE IF NOT EXISTS public.ecommerce_orders (
     circle_tx_id TEXT,
     tx_hash TEXT,
     memo TEXT,
+    batch_id UUID,
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
+
+-- Ensure missing columns exist for existing tables
+DO $$ 
+BEGIN 
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='ecommerce_orders' AND column_name='batch_id') THEN
+    ALTER TABLE public.ecommerce_orders ADD COLUMN batch_id UUID;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='ecommerce_orders' AND column_name='product_id') THEN
+    ALTER TABLE public.ecommerce_orders ADD COLUMN product_id TEXT;
+  END IF;
+END $$;
 
 -- ==========================================
 -- E-COMMERCE PRODUCTS TABLE

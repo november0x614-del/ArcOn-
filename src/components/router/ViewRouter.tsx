@@ -832,7 +832,7 @@ export const ViewRouter = React.memo(
                 await fetchTransactions();
 
                 setTransferSuccessData({
-                  txId: result.txId || `send_${Math.random().toString(36).substring(7)}`,
+                  txId: result.txId,
                   amount: numAmount.toString(),
                   recipientName: selectedContact.name,
                   fee: fee > 0 ? fee.toFixed(2) : undefined

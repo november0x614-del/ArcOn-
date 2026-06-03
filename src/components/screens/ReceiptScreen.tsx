@@ -8,6 +8,8 @@ import {
   X,
   HelpCircle,
   ExternalLink,
+  Package,
+  ShieldCheck,
 } from "lucide-react";
 import { useApp } from "../../contexts/AppContext";
 import { BackendClient } from "../../services/api";
@@ -103,10 +105,12 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
     tx?.metadata?.isBatch === true;
   const isBridge = tx?.type === "bridge" || (tx?.metadata as any)?.type === "bridge" || (tx?.metadata as any)?.destinationDomain !== undefined;
   const isSwap = tx?.type === "swap" || (tx?.metadata as any)?.type === "swap";
-  const isMint = (tx?.type as string) === "mint" || (tx?.metadata as any)?.type === "mint" || ((tx?.metadata as any)?.contractAddress !== undefined);
+  const isMint = (tx?.type as string) === "mint" || (tx?.metadata as any)?.type === "mint" || (tx?.metadata as any)?.nftContractAddress !== undefined || (tx?.type as string) === "mint_nft";
   const isStake = (tx?.type as string) === "stake" || (tx?.metadata as any)?.type === "stake" || (tx?.metadata as any)?.action === "stake";
   const isUnstake = (tx?.type as string) === "unstake" || (tx?.metadata as any)?.type === "unstake" || (tx?.metadata as any)?.action === "unstake";
-  const isTransfer = tx?.type === "transfer" || (tx?.type as string) === "send" || (!isSwap && !isBatch && !isBridge && !isMint && !isStake && !isUnstake);
+  const isHybridReceipt = (tx?.metadata as any)?.is_hybrid === true;
+  const isNftReceipt = ((tx as any)?.type === "receipt" || (tx?.metadata as any)?.receipt_type !== undefined) && !isHybridReceipt;
+  const isTransfer = tx?.type === "transfer" || (tx?.type as string) === "send" || (!isSwap && !isBatch && !isBridge && !isMint && !isStake && !isUnstake && !isNftReceipt && !isHybridReceipt);
 
   const formatAddrShort = (addr: string) =>
     addr ? `0x${addr.substring(2, 6)}...${addr.slice(-4)}` : "";
@@ -284,7 +288,346 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
             </div>
 
             {/* Receipt Details Card */}
-            {isSwap ? (
+            {isHybridReceipt ? (
+              <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 flex flex-col overflow-hidden">
+                <div className="bg-slate-950 p-6 flex flex-col items-center justify-center relative overflow-hidden">
+                  <div className="absolute inset-0 opacity-10 blur-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500"></div>
+                  <span className="text-[10px] font-black tracking-[0.2em] uppercase text-white/40 mb-2 z-10">Ringkasan Pembayaran Global</span>
+                  <div className="flex flex-col items-center z-10">
+                     <span className="text-[12px] font-bold text-white/70 mb-1">{(tx?.metadata as any)?.invoice_number || "INV/20260604/HYBRID"}</span>
+                     <span className="text-[24px] font-black text-white tracking-widest leading-none">${tx?.amount?.replace("-", "") || "0.00"} <span className="text-[12px] font-bold opacity-60">USDC</span></span>
+                  </div>
+                </div>
+
+                <div className="p-6 flex flex-col gap-8">
+                  {/* Global Summary Info */}
+                  <div className="grid grid-cols-2 gap-4 pb-4 border-b border-slate-100">
+                     <div className="flex flex-col">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Payment Method</span>
+                        <span className="text-[11px] font-bold text-slate-800">{(tx?.metadata as any)?.receipt_master?.payment_method || "USDC (Arc Network)"}</span>
+                     </div>
+                     <div className="flex flex-col items-end">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Parent TxID</span>
+                        <span className="text-[11px] font-mono font-bold text-blue-600">{formatAddrShort(txHash)}</span>
+                     </div>
+                  </div>
+
+                  {/* 1. BLOK 1: Produk Fisik (RWA) */}
+                  <div className="space-y-4">
+                     <div className="flex items-center gap-2 mb-1">
+                        <div className="w-6 h-6 bg-blue-50 rounded-lg flex items-center justify-center">
+                           <Package size={14} className="text-blue-600" />
+                        </div>
+                        <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-widest">1. Produk Fisik (RWA)</h4>
+                     </div>
+                     
+                     <div className="space-y-3">
+                        {((tx?.metadata as any)?.rwa_block || []).map((item: any, idx: number) => (
+                           <div key={idx} className="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-3">
+                              <div className="flex justify-between items-start">
+                                 <div className="flex flex-col">
+                                    <span className="text-[13px] font-black text-slate-900">{item.name}</span>
+                                    <span className="text-[11px] font-bold text-slate-400 underline decoration-slate-200">Qty: {item.quantity} Pcs</span>
+                                 </div>
+                                 <span className="text-[14px] font-black text-slate-900">${item.price} USDC</span>
+                              </div>
+                              <div className="grid grid-cols-2 gap-y-3 pt-2 border-t border-slate-200/50">
+                                 <div className="flex flex-col col-span-2">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase">Shipping Address</span>
+                                    <span className="text-[11px] font-medium text-slate-600 leading-tight">{item.shipping_address}</span>
+                                 </div>
+                                 <div className="flex flex-col">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase">Courier</span>
+                                    <span className="text-[11px] font-bold text-slate-800">{item.courier}</span>
+                                 </div>
+                                 <div className="flex flex-col items-end">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase">Tracking Number</span>
+                                    <span className="text-[11px] font-mono font-black text-slate-900">{item.tracking_number}</span>
+                                 </div>
+                              </div>
+                           </div>
+                        ))}
+                     </div>
+                  </div>
+
+                  {/* 2. BLOK 2: Aset Digital (NFT) */}
+                  <div className="space-y-4">
+                     <div className="flex items-center gap-2 mb-1">
+                        <div className="w-6 h-6 bg-purple-50 rounded-lg flex items-center justify-center">
+                           <ShieldCheck size={14} className="text-purple-600" />
+                        </div>
+                        <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-widest">2. Aset Digital (NFT)</h4>
+                     </div>
+                     
+                     <div className="space-y-3">
+                        {((tx?.metadata as any)?.nft_block || []).map((item: any, idx: number) => (
+                           <div key={idx} className="bg-purple-50/30 border border-purple-100/50 rounded-2xl p-4 flex gap-4">
+                              <div className="w-16 h-16 rounded-xl bg-white border border-purple-100 overflow-hidden shrink-0 shadow-sm">
+                                 <img src={item.image} alt={item.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                              </div>
+                              <div className="flex flex-col flex-1 gap-1">
+                                 <div className="flex justify-between items-start">
+                                    <span className="text-[13px] font-black text-slate-900 truncate max-w-[120px]">{item.name}</span>
+                                    <span className="text-[13px] font-black text-slate-900">${item.price} USDC</span>
+                                 </div>
+                                 <div className="flex justify-between items-center text-[10px]">
+                                    <span className="font-bold text-purple-600">{item.tokenId} (ERC-721)</span>
+                                    <span className="font-mono text-slate-400">{formatAddrShort(item.contract)}</span>
+                                 </div>
+                                 <div className="flex justify-between items-center text-[10px] mt-1 pt-1 border-t border-purple-100">
+                                    <span className="font-bold text-slate-400">Gas Fee</span>
+                                    <span className="font-bold text-emerald-600">${item.gas_fee} USDC</span>
+                                 </div>
+                              </div>
+                           </div>
+                        ))}
+                     </div>
+                  </div>
+
+                  {/* Perhitungan Rekonsiliasi Akhir */}
+                  <div className="mt-4 bg-slate-900 rounded-3xl p-6 relative overflow-hidden">
+                     <div className="absolute top-0 right-0 w-20 h-20 bg-white/5 rounded-bl-full"></div>
+                     <h4 className="text-[11px] font-black text-white/40 uppercase tracking-[0.2em] mb-4">Rekonsiliasi Akhir</h4>
+                     <div className="space-y-3">
+                        <div className="flex justify-between items-center text-[12px]">
+                           <span className="text-white/60 font-bold">Total Belanja RWA</span>
+                           <span className="text-white font-black">${(tx?.metadata as any)?.reconciliation?.total_rwa?.toFixed(2)} USDC</span>
+                        </div>
+                        <div className="flex justify-between items-center text-[12px]">
+                           <span className="text-white/60 font-bold">Total Belanja NFT</span>
+                           <span className="text-white font-black">${(tx?.metadata as any)?.reconciliation?.total_nft?.toFixed(2)} USDC</span>
+                        </div>
+                        <div className="flex justify-between items-center text-[12px]">
+                           <span className="text-white/60 font-bold">Ongkos Kirim Paket</span>
+                           <span className="text-white font-black">${(tx?.metadata as any)?.reconciliation?.total_shipping?.toFixed(2)} USDC</span>
+                        </div>
+                        <div className="flex justify-between items-center text-[12px]">
+                           <span className="text-white/60 font-bold">Biaya Gas Blockchain</span>
+                           <span className="text-emerald-400 font-black">${(tx?.metadata as any)?.reconciliation?.total_gas?.toFixed(4)} USDC</span>
+                        </div>
+                        <div className="pt-3 border-t border-white/10 flex justify-between items-center">
+                           <span className="text-[14px] font-black text-white uppercase tracking-wider">Total Dibayar</span>
+                           <span className="text-[20px] font-black text-white">${tx?.amount?.replace("-", "") || "0.00"} USDC</span>
+                        </div>
+                     </div>
+                  </div>
+
+                  {/* Verified Footer */}
+                  <div className="flex flex-col items-center justify-center pt-4 gap-2">
+                     <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center">
+                           <Check size={10} className="text-slate-900" strokeWidth={4} />
+                        </div>
+                        <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Hybrid Receipt Authenticated</span>
+                     </div>
+                     <span className="text-[9px] font-bold text-slate-400 text-center max-w-[240px]">
+                        This receipt contains multiple execution layers (Logistics & Smart Contract) verified by Lounge Protocol.
+                     </span>
+                  </div>
+                </div>
+              </div>
+            ) : isNftReceipt ? (
+              <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 flex flex-col overflow-hidden">
+                <div className="bg-slate-900 p-5 flex flex-col items-center justify-center relative overflow-hidden">
+                  <div className="absolute inset-0 opacity-10 blur-xl bg-gradient-to-r from-blue-500 to-indigo-500"></div>
+                  <span className="text-[11px] font-black tracking-widest uppercase text-white/50 mb-1 z-10">Metode Transaksi</span>
+                  <span className="text-[20px] font-extrabold text-white tracking-widest z-10">
+                    {(tx?.metadata as any)?.receipt_type === "BATCH_BUY" ? "BATCH BUY (CART)" : "PURCHASE"}
+                  </span>
+                </div>
+                
+                <div className="p-6 flex flex-col gap-6">
+                  {/* 1. Data Ringkasan Induk (Master Data) */}
+                  <div className="flex flex-col gap-3">
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">1. Data Ringkasan Induk (Master Data)</h4>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">ID Transaksi (Parent TxID)</span>
+                      {hasHash ? (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => window.open(tx?.metadata?.explorerUrl || `https://testnet.arcscan.app/tx/${txHash}`, "_blank")}
+                            className="text-[12px] font-mono font-bold text-blue-600 hover:text-blue-700 bg-transparent border-0 p-0 text-right cursor-pointer"
+                          >
+                            {formatAddrShort(txHash)}
+                          </button>
+                          <button onClick={() => handleCopy(txHash, "TxHash")} className="text-slate-400 hover:text-slate-600 bg-transparent border-0 cursor-pointer p-0"><Copy size={12} /></button>
+                        </div>
+                      ) : (
+                        <span className="text-[12px] font-bold text-slate-400 font-mono italic">Local Ref: {tx?.id?.slice(0,8)}</span>
+                      )}
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Total Item</span>
+                      <span className="text-[12px] font-bold text-slate-800">{(tx?.metadata as any)?.items?.length || 1} NFT</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Total Harga Barang</span>
+                      <span className="text-[14px] font-black text-slate-900">{tx?.amount?.replace("-", "") || "0.00"} USDC</span>
+                    </div>
+                    <div className="pt-2 flex flex-col gap-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[11px] font-bold text-slate-500">Platform Fee</span>
+                        <span className="text-[11px] font-bold text-slate-700">{(tx?.metadata as any)?.platformFee || "0.15"} USDC</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[11px] font-bold text-slate-500">Creator Royalty</span>
+                        <span className="text-[11px] font-bold text-slate-700">{(tx?.metadata as any)?.creatorRoyalty || "0.50"} USDC</span>
+                      </div>
+                      <div className="flex justify-between items-center border-t border-slate-200 mt-1 pt-1">
+                        <span className="text-[11px] font-bold text-slate-500">Biaya Jaringan (Gas Fee)</span>
+                        <span className="text-[11px] font-bold text-emerald-600">{(tx?.metadata as any)?.gasFee || "0.0012"} USDC</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 2. Data Rincian Keranjang (Detail Sub-Transaksi) */}
+                  <div className="flex flex-col gap-3">
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">2. Data Rincian Keranjang</h4>
+                    <div className="flex flex-col gap-3">
+                      {((tx?.metadata as any)?.items || []).map((item: any, idx: number) => (
+                        <div key={idx} className="bg-white border border-slate-100 rounded-2xl p-3 flex flex-col gap-3 shadow-sm relative overflow-hidden group">
+                          <div className="absolute top-0 right-0 w-1 h-full bg-slate-900 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                          <div className="flex gap-3">
+                            <div className="w-14 h-14 bg-slate-100 rounded-xl overflow-hidden border border-slate-200 shrink-0">
+                              <img src={item.image} alt={item.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                            </div>
+                            <div className="flex flex-col flex-1">
+                              <div className="flex justify-between items-start">
+                                <h5 className="text-[13px] font-bold text-slate-800 leading-tight truncate max-w-[150px]">{item.name}</h5>
+                                <span className="text-[9px] font-black bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded uppercase">{item.tokenStandard || "ERC-721"}</span>
+                              </div>
+                              <span className="text-[10px] font-mono text-slate-400 mt-0.5">#{item.tokenId || "3341"}</span>
+                              <div className="mt-1 flex items-center gap-1.5">
+                                <span className="text-[11px] font-bold text-emerald-500 flex items-center gap-1">
+                                  <Check size={10} strokeWidth={4} /> Validated
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex flex-col gap-2 pt-2 border-t border-slate-100">
+                             <div className="flex justify-between items-center text-[11px]">
+                               <span className="text-slate-400 font-bold">Harga per Item</span>
+                               <span className="text-slate-800 font-black">{item.price} USDC</span>
+                             </div>
+                             <div className="flex justify-between items-center text-[10px]">
+                               <span className="text-slate-400 font-medium italic">Alamat Penjual Asal</span>
+                               <span className="text-slate-500 font-mono">{formatAddrShort(item.merchantAddress || item.seller)}</span>
+                             </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Verified Footer */}
+                  <div className="flex flex-col items-center justify-center pt-8 border-t border-dashed border-slate-200 gap-2">
+                     <div className="w-10 h-10 bg-slate-900 rounded-full flex items-center justify-center shadow-lg">
+                        <Check size={20} className="text-white" strokeWidth={3} />
+                     </div>
+                     <span className="text-[11px] font-black text-slate-800 uppercase tracking-[0.2em]">Digital Receipt Verified</span>
+                     <span className="text-[9px] font-bold text-slate-400">Authenticated by Lounge Smart Contract Layer</span>
+                  </div>
+                </div>
+              </div>
+            ) : isMint ? (
+              <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 flex flex-col overflow-hidden">
+                <div className="bg-[#581c87] p-5 flex flex-col items-center justify-center relative overflow-hidden">
+                  <div className="absolute inset-0 opacity-20 blur-xl bg-gradient-to-r from-purple-500 to-pink-500"></div>
+                  <span className="text-[11px] font-black tracking-widest uppercase text-white/50 mb-1 z-10">Metode Transaksi</span>
+                  <span className="text-[20px] font-extrabold text-white tracking-widest z-10 uppercase">
+                    NFT MINTING
+                  </span>
+                </div>
+                
+                <div className="p-6 flex flex-col gap-6">
+                  {/* 1. Data Identitas NFT & Koleksi */}
+                  <div className="flex flex-col gap-3">
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">1. Data Identitas NFT & Koleksi</h4>
+                    <div className="flex flex-col gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-2">
+                       <div className="flex gap-4 items-center">
+                          <div className="w-16 h-16 rounded-xl bg-white border border-slate-200 overflow-hidden shadow-sm shrink-0">
+                             <img src={(tx?.metadata as any)?.image || (tx?.metadata as any)?.image_url} alt="NFT" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          </div>
+                          <div className="flex flex-col">
+                             <span className="text-[14px] font-black text-slate-900">{(tx?.metadata as any)?.name || "Arc Native Asset"}</span>
+                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Lounge Premium Collection</span>
+                          </div>
+                       </div>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">ID Transaksi (Hash)</span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => window.open(`https://testnet.arcscan.app/tx/${txHash}`, "_blank")}
+                          className="text-[12px] font-mono font-bold text-purple-600 hover:text-purple-700 bg-transparent border-0 p-0 text-right cursor-pointer"
+                        >
+                          {formatAddrShort(txHash)}
+                        </button>
+                        <button onClick={() => handleCopy(txHash, "TxHash")} className="text-slate-300 hover:text-slate-500 bg-transparent border-0 cursor-pointer p-0"><Copy size={12} /></button>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Alamat Kontrak</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[12px] font-mono font-bold text-slate-700">
+                          {formatAddrShort((tx?.metadata as any)?.nftContractAddress || "0x4aaa...2b5e")}
+                        </span>
+                        <button onClick={() => handleCopy((tx?.metadata as any)?.nftContractAddress || "0x4aaa0f998817be80405ab1ef4106f3ac9d462b5e", "Contract")} className="text-slate-300 hover:text-slate-500 bg-transparent border-0 cursor-pointer p-0"><Copy size={12} /></button>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Token ID</span>
+                      <span className="text-[12px] font-mono font-black text-slate-900">#{(tx?.metadata as any)?.tokenId || Math.floor(Math.random() * 8000 + 1000)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Standar Token</span>
+                      <span className="text-[10px] font-black bg-purple-100 text-purple-700 px-2 py-0.5 rounded uppercase">ERC-721</span>
+                    </div>
+                  </div>
+
+                  {/* 2. Rincian Biaya & Pembayaran */}
+                  <div className="flex flex-col gap-3">
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">2. Rincian Biaya & Pembayaran</h4>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Harga Mint (Mint Price)</span>
+                      <span className="text-[12px] font-bold text-slate-800">{(tx?.metadata as any)?.mintPrice || "5.00"} USDC</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Biaya Jaringan (Gas Fee)</span>
+                      <span className="text-[12px] font-bold text-emerald-600">{(tx?.metadata as any)?.gasFee || "0.0082"} USDC</span>
+                    </div>
+                    <div className="flex justify-between items-center pt-2 border-t border-slate-100">
+                      <span className="text-[12px] font-black text-slate-900">Total Biaya</span>
+                      <span className="text-[16px] font-black text-slate-900">5.0082 USDC</span>
+                    </div>
+                  </div>
+
+                  {/* 3. Informasi Kepemilikan & Cetakan */}
+                  <div className="flex flex-col gap-3">
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">3. Informasi Kepemilikan</h4>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Alamat Pencetak</span>
+                      <span className="text-[12px] font-mono font-bold text-slate-700">{formatAddrShort(myWalletAddress)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400">Jumlah Cetakan</span>
+                      <span className="text-[12px] font-bold text-slate-800">1 Asset</span>
+                    </div>
+                  </div>
+                  
+                  {/* Verified Footer */}
+                  <div className="flex flex-col items-center justify-center pt-8 border-t border-dashed border-slate-200 gap-2">
+                     <div className="w-10 h-10 bg-purple-900 rounded-full flex items-center justify-center shadow-lg">
+                        <Check size={20} className="text-white" strokeWidth={3} />
+                     </div>
+                     <span className="text-[11px] font-black text-slate-800 uppercase tracking-[0.2em]">Provenance Verified</span>
+                     <span className="text-[9px] font-bold text-slate-400">Authenticated by Arc Network Minter Role</span>
+                  </div>
+                </div>
+              </div>
+            ) : isSwap ? (
               <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 flex flex-col overflow-hidden">
                 <div className="bg-slate-900 p-5 flex flex-col items-center justify-center relative overflow-hidden">
                   <div className="absolute inset-0 opacity-10 blur-xl bg-gradient-to-r from-blue-500 to-indigo-500"></div>

@@ -21,7 +21,6 @@ export function TransferSuccessScreen({
   title = "Transfer Confirmed",
   description = "Your assets have been successfully transferred on the Arc Network.",
 }: TransferSuccessScreenProps) {
-  // Try to use a placeholder or partial display if txId isn't an EVM hash (like if it's Circle internal ref starting with internal_)
   const isHash = txId && txId.startsWith("0x");
   const displayHash = isHash ? txId : txId.substring(0, 20) + (txId.length > 20 ? "..." : "");
 
@@ -43,7 +42,7 @@ export function TransferSuccessScreen({
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6 shadow-sm border-4 border-white">
             <Check size={40} className="text-green-500" strokeWidth={3} />
           </div>
-          <h2 className="text-[24px] font-extrabold text-white mb-2">
+          <h2 className="text-[24px] font-extrabold text-slate-900 mb-2">
             {title}
           </h2>
           {isHash ? (

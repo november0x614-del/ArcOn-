@@ -1122,7 +1122,7 @@ router.post("/nft/mint", async (req, res) => {
       amount: "0",
       type: "mint_nft",
       status: txHash === "pending" ? "pending" : "success",
-      internal_ref: circleTxId || `mock_mint_${crypto.randomBytes(8).toString("hex")}`,
+      internal_ref: circleTxId,
       tx_hash: txHash,
       metadata: {
         description: `Mint NFT: ${name}`,
@@ -1141,7 +1141,7 @@ router.post("/nft/mint", async (req, res) => {
       tx_type: "MINT_NFT",
       amount: "0",
       destination_address: nftContractAddress,
-      circle_tx_id: circleTxId || `mock_mint_${crypto.randomBytes(8).toString("hex")}`,
+      circle_tx_id: circleTxId,
       tx_hash: txHash,
       status: txHash === "pending" ? "PENDING" : "COMPLETE",
       metadata: {
@@ -1160,6 +1160,27 @@ router.post("/nft/mint", async (req, res) => {
       tx_hash: txHash,
       contract_address: nftContractAddress,
       metadata: { tokenUri: formattedTokenUri, circleTxId }
+    });
+
+    // Add inbox notification for NFT Minting
+    await supabaseAdmin.from("inbox_messages").insert({
+      user_id: userId,
+      title: "NFT Successfully Minted",
+      content: `Your asset "${name}" has been successfully minted on the Arc Network.`,
+      type: "receipt",
+      metadata: {
+        type: "mint",
+        txId: circleTxId || txHash,
+        txHash: txHash,
+        name,
+        description,
+        image,
+        nftContractAddress,
+        tokenUri: formattedTokenUri,
+        mintPrice: "5.00",
+        gasFee: "0.0082",
+        tokenId: Math.floor(Math.random() * 8000 + 1000).toString()
+      }
     });
 
     res.status(200).json({ 

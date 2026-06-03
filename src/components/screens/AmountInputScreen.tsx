@@ -253,7 +253,7 @@ export function AmountInputScreen({
                   autoFocus={isEditingMemo}
                   value={memo}
                   onChange={(e) => setMemo(e.target.value)}
-                  placeholder="Ex: Payment for groceries"
+                  placeholder="Transfer Reference"
                   className="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl outline-none text-slate-700 text-[14px] font-medium"
                 />
               </div>

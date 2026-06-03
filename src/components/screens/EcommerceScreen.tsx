@@ -39,6 +39,7 @@ export function EcommerceScreen({ onBack, isDesktop }: EcommerceScreenProps) {
     removeFromCart,
     clearCart: clearCartStore,
     updateProductStockAndSales,
+    fetchMintedNfts,
   } = useStore();
   
   const [viewState, setViewState] = useState<
@@ -211,13 +212,13 @@ export function EcommerceScreen({ onBack, isDesktop }: EcommerceScreenProps) {
             quantity: cartQuantities[p.id],
             price: p.price,
             name: p.name,
-            merchantAddress: p.seller_address || "0xMerchant"
+            merchantAddress: p.seller_address
           })) : [{
             productId: selectedProduct?.id,
             quantity: 1,
             price: selectedProduct?.price,
             name: selectedProduct?.name,
-            merchantAddress: selectedProduct?.seller_address || "0xMerchant"
+            merchantAddress: selectedProduct?.seller_address
           }],
           memo: cartItems.length > 0 ? `Lounge Market: ${cartItems.length} items` : `Asset: ${selectedProduct?.name}`,
         }),
@@ -233,6 +234,7 @@ export function EcommerceScreen({ onBack, isDesktop }: EcommerceScreenProps) {
 
       await fetchBalance();
       await fetchTransactions();
+      await fetchMintedNfts();
 
       setIsPurchasing(false);
       setPaymentStatus("idle");

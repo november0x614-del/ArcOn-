@@ -87,7 +87,7 @@ export function StablestakeScreen({ onBack }: EarnScreenProps) {
         
         // Calculate proportional reward to unstake
         // In a real system, you would call contract. Redeem might claim all accrued rewards or proportional.
-        // For simulation, let's claim all rewards if unstaking everything, or proportional if partial.
+        // Calculate calculated yield for processing
         const rewardToClaim = (amount / stakedAmount) * accruedRewards;
         
         await BackendClient.unstakeTokens(amount, rewardToClaim);

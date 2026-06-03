@@ -338,44 +338,6 @@ router.post("/auth/cleanup-unconfirmed", async (req, res) => {
   }
 });
 
-router.post("/webhook/simulate", async (req, res) => {
-  try {
-    const { userId, amount } = req.body;
-    const ref = `sim_${crypto.randomBytes(8).toString("hex")}`;
-    const txHash = `0x${crypto.randomBytes(32).toString("hex")}`;
-
-    const { error } = await getSupabaseAdmin()
-      .from("transactions")
-      .insert({
-        user_id: userId,
-        amount: amount,
-        type: "receive",
-        status: "success",
-        internal_ref: ref,
-        metadata: {
-          txHash,
-          destinationAddress: "Simulated Wallet",
-        },
-      });
-
-    if (error) throw error;
-    
-    await getSupabaseAdmin().from("transaction_ledger").insert({
-      user_id: userId,
-      tx_type: "RECEIVE",
-      amount: amount,
-      circle_tx_id: ref,
-      tx_hash: txHash,
-      status: "COMPLETE",
-      destination_address: "Simulated Wallet"
-    });
-
-    res.status(200).json({ message: "Simulation successful" });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
 // Support GET (health-check/verification) and OPTIONS (CORS preflight) alongside POST on the Webhook route
 router
   .route("/circle/webhook")
