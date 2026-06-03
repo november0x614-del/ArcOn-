@@ -237,15 +237,30 @@ export const ViewRouter = React.memo(
     const [isDesktop, setIsDesktop] = React.useState(false);
     React.useEffect(() => {
       const checkDesktop = () => {
-        const w = window.innerWidth;
-        const h = window.innerHeight;
-        // iPad landscape typically has width >= 768 and aspect ratio is landscape (width > height)
-        // Standard desktop monitors are width >= 1024
-        setIsDesktop(w >= 1024 || (w > h && w >= 768));
+        const currentZoom = parseFloat((document.documentElement.style as any).zoom || "1");
+        const w = window.innerWidth * currentZoom;
+        const h = window.innerHeight * currentZoom;
+        
+        // Horizontal tablet: landscape with physical width between 768 and 1220
+        const isHorizontalTablet = w > h && w >= 768 && w < 1220;
+        
+        const targetZoom = isHorizontalTablet ? "0.75" : "1";
+        if ((document.documentElement.style as any).zoom !== targetZoom) {
+          (document.documentElement.style as any).zoom = targetZoom;
+          setTimeout(checkDesktop, 0);
+          return;
+        }
+
+        setIsDesktop(window.innerWidth >= 1024 || (window.innerWidth > window.innerHeight && window.innerWidth >= 768));
       };
       checkDesktop();
       window.addEventListener("resize", checkDesktop);
-      return () => window.removeEventListener("resize", checkDesktop);
+      return () => {
+        window.removeEventListener("resize", checkDesktop);
+        try {
+          (document.documentElement.style as any).zoom = "1";
+        } catch (_) {}
+      };
     }, []);
 
     React.useEffect(() => {
@@ -285,7 +300,13 @@ export const ViewRouter = React.memo(
 
     const renderLayoutWrapper = (children: React.ReactNode) => {
       if (!isAuthenticatedView) {
-        return <div className="w-full h-full flex flex-col">{children}</div>;
+        return (
+          <div className="flex w-full h-[100dvh] bg-[#ecf5fc] text-left justify-center items-center p-4">
+            <div className={`w-full h-full flex flex-col relative overflow-hidden bg-white font-sans transition-all duration-300 ${isDesktop ? "max-w-[480px] h-[92%] rounded-[32px] shadow-[0_20px_50px_rgba(15,23,42,0.08)] border border-slate-200/50" : "sm:max-w-[480px] sm:h-[92%] sm:rounded-[32px] sm:shadow-xl sm:border border-slate-100"}`}>
+              {children}
+            </div>
+          </div>
+        );
       }
 
       return (

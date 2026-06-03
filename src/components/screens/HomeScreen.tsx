@@ -524,7 +524,7 @@ export const HomeScreen = React.memo(
                   </button>
                 </div>
 
-                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-y-5 gap-x-2 justify-items-center">
+                <div className="grid grid-cols-4 sm:grid-cols-6 gap-y-5 gap-x-2 justify-items-center">
                   {filteredShortcuts
                     .filter((item) => item.label !== "DApp Browser" && item.label !== "Transaction History" && item.label !== "Unified balance")
                     .map((item) => {
