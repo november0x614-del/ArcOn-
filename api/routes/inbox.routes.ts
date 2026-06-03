@@ -18,14 +18,21 @@ router.get("/inbox/:userId", async (req, res) => {
       .order("created_at", { ascending: false });
 
     if (error) {
+       // Code 42P01 means table does not exist. We handle it by returning empty array
+       // to avoid breaking the UI for users who haven't run the SQL migration yet.
+       console.warn("[InboxRoute] Table inbox_messages might not exist yet:", error.message);
        if (error.code === '42P01') return res.json([]);
        throw error;
     }
 
     res.json(data || []);
   } catch (error: any) {
-    console.error("[InboxRoute] Error fetching messages:", error);
-    res.status(500).json({ error: error.message });
+    console.error("[InboxRoute] Error fetching messages (Full Error):", JSON.stringify(error, null, 2));
+    res.status(500).json({ 
+      error: error.message || "Unknown error fetching messages",
+      code: error.code,
+      details: error.details
+    });
   }
 });
 

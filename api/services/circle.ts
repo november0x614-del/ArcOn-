@@ -14,6 +14,10 @@ import * as crypto from "crypto";
 
 import { getSupabaseAdmin } from "../config/supabase.js";
 
+/**
+ * Fungsi ini bertugas mengambil strategi biaya gas (SPONSORED atau USER_PAID).
+ * Digunakan untuk menentukan apakah aplikasi yang menanggung biaya transaksi (Gas Station).
+ */
 async function getGasFeeStrategy(): Promise<"SPONSORED" | "USER_PAID_USDC"> {
   try {
     const supabase = getSupabaseAdmin();
@@ -42,6 +46,10 @@ export async function getTokenDetails(tokenId: string) {
   }
 }
 
+/**
+ * Membuat Dompet Baru (SCA - Smart Contract Account) untuk pengguna baru.
+ * Dompet ini diamankan oleh infrastruktur Circle dan dipetakan ke ID pengguna di database.
+ */
 export async function createWallet(supabaseAdmin: any, userId: string) {
   const client = getCircleClientInstance();
 
@@ -142,6 +150,10 @@ export const HIGH_VALUE_THRESHOLD = 500; // USDC threshold for mandatory admin a
  * Interprets Circle errorReason and errorDetails into human-readable messages.
  * Based on Circle Documentation: Transaction States and Errors.
  */
+/**
+ * Menerjemahkan kode error dari Circle menjadi pesan yang mudah dimengerti manusia.
+ * Sangat penting agar pengguna tidak bingung saat melihat pesan teknis blockchain.
+ */
 export function interpretCircleError(reason: string, details?: string): string {
   const reasonMap: Record<string, string> = {
     // Blockchain Reasons
@@ -207,6 +219,11 @@ export function interpretCircleError(reason: string, details?: string): string {
   );
 }
 
+/**
+ * Mengeksekusi transfer tunggal dari dompet pengguna.
+ * Dilengkapi dengan pemeriksaan saldo dan daftar blokir (Blocklist) demi keamanan.
+ * Juga menangani antrean persetujuan (Approval) untuk transaksi nilai tinggi.
+ */
 export async function executeTransaction(
   supabaseAdmin: any,
   userId: string,
@@ -214,6 +231,7 @@ export async function executeTransaction(
   _destinationAddress: string,
   type: string,
   metadata: any,
+  internalRef?: string // Optional parameter for deterministic ID
 ) {
   const { data: walletData } = await supabaseAdmin
     .from("user_wallets")
@@ -221,26 +239,26 @@ export async function executeTransaction(
     .eq("id", userId)
     .single();
   if (!walletData?.wallet_id || !walletData?.wallet_address)
-    throw new Error("No wallet found");
+    throw new Error("Dompet tidak ditemukan untuk pengguna ini.");
 
-  // Fase 1: Validate destination and check blocklist
+  // Fase 1: Validasi tujuan dan cek daftar blokir
   const validDest = validateDestination(_destinationAddress);
   const blocked = await isBlocklisted(validDest);
 
   if (blocked) {
     throw new Error(
-      `Destination address ${validDest} is blocklisted by Arc Protocol`,
+      `Alamat tujuan ${validDest} diblokir oleh Protokol Arc demi keamanan.`,
     );
   }
 
-  // --- START ENFORCED APPROVAL QUEUE FOR HIGH VALUE ---
+  // --- ANTREAN PERSETUJUAN UNTUK NILAI TINGGI ---
   const isBypass = metadata?.bypassApproval === true;
   if (
     !isBypass &&
     amount >= HIGH_VALUE_THRESHOLD &&
     userId !== "11111111-1111-1111-1111-111111111111"
   ) {
-    // Save to database as pending_approval
+    // Simpan ke database dengan status pending_approval
     const { data: pendingTx, error: dbError } = await supabaseAdmin
       .from("transactions")
       .insert({
@@ -248,10 +266,10 @@ export async function executeTransaction(
         amount: `-${amount.toFixed(2)}`,
         type: type,
         status: "pending_approval",
-        internal_ref: `pending_${crypto.randomBytes(8).toString("hex")}`,
+        internal_ref: internalRef || crypto.randomUUID(),
         metadata: {
           ...metadata,
-          description: `[Approval Required] ${metadata.memo || (type === "transfer" ? `Transfer to ${validDest}` : "Treasury Move")}`,
+          description: `[Butuh Persetujuan] ${metadata.memo || (type === "transfer" ? `Kirim ke ${validDest}` : "Pemindahan Treasury")}`,
           real: true,
           destinationAddress: validDest,
           isHighValue: true,
@@ -277,118 +295,80 @@ export async function executeTransaction(
       txId: pendingTx.id,
       status: "pending_approval",
       message:
-        "This transaction exceeds the threshold and requires administrator approval.",
+        "Transaksi ini melebihi batas dan memerlukan persetujuan admin sebelum diproses.",
     };
   }
-  // --- END ENFORCED APPROVAL QUEUE ---
+  // --- SELESAI ANTREAN PERSETUJUAN ---
 
-  // Fase 2: Gas Estimation & Balance Checks
+  // Fase 2: Estimasi Gas & Cek Saldo
   const sourceAddress = walletData.wallet_address as `0x${string}`;
 
-  // Use USDC_ADDRESS as default if no valid tokenAddress provided
   let tokenAddress = USDC_ADDRESS;
   if (type === "swap") {
-    // For swaps, the token being transferred out of user wallet is fromToken
-    if (
-      metadata.fromToken &&
-      metadata.fromToken !== "USDC" &&
-      metadata.tokenAddress
-    ) {
+    if (metadata.fromToken && metadata.fromToken !== "USDC" && metadata.tokenAddress) {
       tokenAddress = metadata.tokenAddress;
     }
-  } else {
-    if (metadata.tokenAddress && metadata.tokenAddress.startsWith("0x")) {
-      tokenAddress = metadata.tokenAddress;
-    }
+  } else if (metadata.tokenAddress && metadata.tokenAddress.startsWith("0x")) {
+    tokenAddress = metadata.tokenAddress;
   }
 
   const tokenAddressTyped = tokenAddress as `0x${string}`;
-
-  // Fetch token decimals for correct estimation
   const decimals = await getTokenDecimals(tokenAddressTyped);
-
-  // Amount in 18-decimal internal for logic checks
   const amountInternal = BigInt(Math.floor(amount * 1_000_000)) * 10n ** 12n;
 
-  // Fetch balances FIRST
-  const tokenBalanceRaw = await getTokenBalance(
-    sourceAddress,
-    tokenAddressTyped,
-  );
-
-  // Consistently normalize token balance to 18 decimals internal for comparison
+  const tokenBalanceRaw = await getTokenBalance(sourceAddress, tokenAddressTyped);
   const tokenBalanceInternal = tokenBalanceRaw * 10n ** BigInt(18 - decimals);
 
   if (tokenBalanceInternal < amountInternal) {
     const symbol = metadata.fromToken || "USDC";
     throw new Error(
-      `Insufficient ${symbol} balance. Need ${amount.toFixed(2)} ${symbol}, have ${(Number(tokenBalanceInternal) / 1e18).toFixed(2)} ${symbol}`,
+      `Saldo ${symbol} tidak mencukupi. Dibutuhkan ${amount.toFixed(2)}, tersedia ${(Number(tokenBalanceInternal) / 1e18).toFixed(2)}`,
     );
   }
-
-  // Skipped gas balance checking because we are using Gas Station (Sponsored fee)
 
   const client = getCircleClientInstance();
-  const idempotencyKey = crypto.randomUUID();
+  const idempotencyKey = internalRef || crypto.randomUUID();
 
-  // Fase 3 Preview: Memo support (if provided in metadata)
-  // Use tokenId for USDC on Arc, otherwise use tokenAddress
-  // IMPORTANT: On Arc Testnet, Native USDC is represented by ARC_USDC_TOKEN_ID in Circle SDK
   const isUsdc = tokenAddressTyped.toLowerCase() === USDC_ADDRESS.toLowerCase();
-
   const formattedAmount = amount.toFixed(decimals > 6 ? 6 : decimals);
-  if (parseFloat(formattedAmount) <= 0 && amount > 0) {
-    throw new Error(
-      `Amount is too small for the required token precision (${decimals} decimals).`,
-    );
-  }
 
   const txParams: any = {
     idempotencyKey,
     walletId: walletData.wallet_id,
     destinationAddress: validDest,
     amount: [formattedAmount],
-    fee: {
-      type: "level",
-      config: {
-        feeLevel: "MEDIUM",
-      },
-    },
+    blockchain: "ARC-TESTNET",
+    fee: { type: "level", config: { feeLevel: "MEDIUM" } },
   };
 
   if (isUsdc) {
     txParams.tokenId = ARC_USDC_TOKEN_ID;
   } else {
     txParams.tokenAddress = tokenAddressTyped;
-    txParams.blockchain = "ARC-TESTNET";
   }
 
-  // Perform transaction using Developer SDK
+  // Kirim permintaan ke Circle SDK
   const response = await client.createTransaction(txParams);
-
-  // Circle return an internal tx ID first
   const circleTxId = response.data?.id;
 
-  const { error } = await supabaseAdmin.from("transactions").insert({
-    user_id: userId,
-    amount: `-${amount.toFixed(2)}`,
-    type: type,
-    status: "pending",
-    internal_ref: circleTxId,
-    metadata: {
-      ...metadata,
-      description:
-        metadata.memo ||
-        (type === "transfer" ? `Transfer to ${validDest}` : undefined),
-      real: true,
-    },
-  });
+  // Catat transaksi hanya jika internalRef tidak diberikan (artinya bukan async flow yang sudah dicatat sebelumnya)
+  if (!internalRef) {
+    const { error } = await supabaseAdmin.from("transactions").insert({
+      user_id: userId,
+      amount: `-${amount.toFixed(2)}`,
+      type: type,
+      status: "pending",
+      internal_ref: circleTxId,
+      metadata: {
+        ...metadata,
+        description: metadata.memo || (type === "transfer" ? `Transfer ke ${validDest}` : undefined),
+        real: true,
+      },
+    });
+    if (error) throw error;
+  }
 
-  if (error) throw error;
-
-  return {
-    txId: circleTxId,
-  };
+  return { txId: circleTxId };
 }
 
 /**
@@ -396,12 +376,18 @@ export async function executeTransaction(
  * This ensures TRUE atomicity: if one transfer fails, the whole batch reverts.
  * Uses Circle's contractExecution endpoint with 'executeBatch' signature.
  */
+/**
+ * Eksekusi Transfer Massal (Batch) secara ATOMIK.
+ * Menggunakan fitur MSCA Multi-call: Jika satu transaksi gagal, seluruh batch dibatalkan.
+ * Berguna untuk efisiensi biaya dan integritas pengiriman banyak alamat sekaligus.
+ */
 export async function executeAtomicBatchTransfer(
   supabaseAdmin: any,
   userId: string,
   recipients: { address: string; amount: number; name?: string }[],
   platformFee: number = 0,
-  skipDbInsert: boolean = false
+  skipDbInsert: boolean = false,
+  internalRef?: string // New parameter for deterministic ID
 ) {
   const { data: walletData } = await supabaseAdmin
     .from("user_wallets")
@@ -490,15 +476,16 @@ export async function executeAtomicBatchTransfer(
   );
 
   const client = getCircleClientInstance();
-  const idempotencyKey = crypto.randomUUID();
+  
+  // Use provided internalRef as IdempotencyKey if available, otherwise generate new
+  const idempotencyKey = internalRef || crypto.randomUUID();
 
   // 3. Execute via Circle contractExecution
-  // Use slightly more compatible function signature if standard executeBatch is picky
-  // Circle's SCS accounts usually follow the executeBatch((address,uint256,bytes)[]) pattern
   const txParams: any = {
     idempotencyKey,
     walletId: walletData.wallet_id,
     contractAddress: walletData.wallet_address,
+    blockchain: "ARC-TESTNET",
     abiFunctionSignature: "executeBatch((address, uint256, bytes)[])",
     abiParameters: [calls],
     fee: {
@@ -595,6 +582,7 @@ export async function executeContractTransaction(
     idempotencyKey,
     walletId: walletData.wallet_id,
     contractAddress,
+    blockchain: "ARC-TESTNET",
     abiFunctionSignature,
     abiParameters,
     fee: {
@@ -663,6 +651,7 @@ export async function autoSweepWallets(
         destinationAddress: treasuryAddress,
         amount: [amountToSweep.toFixed(6)],
         tokenId: ARC_USDC_TOKEN_ID,
+        blockchain: "ARC-TESTNET",
         fee: { type: "level", config: { feeLevel: "MEDIUM" } },
       };
 
@@ -704,6 +693,7 @@ export async function manualSweepAdminWallet(
     destinationAddress: treasuryAddress,
     amount: [amount.toFixed(6)],
     tokenId: ARC_USDC_TOKEN_ID,
+    blockchain: "ARC-TESTNET",
     fee: { type: "level", config: { feeLevel: "MEDIUM" } },
   };
 
@@ -764,6 +754,7 @@ export async function executeReleaseEscrow(
     destinationAddress: validDest,
     amount: [sellerReceiveAmt.toFixed(6)],
     tokenId: ARC_USDC_TOKEN_ID,
+    blockchain: "ARC-TESTNET",
     fee: { type: "level", config: { feeLevel: "MEDIUM" } },
   };
 

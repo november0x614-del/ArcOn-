@@ -149,7 +149,7 @@ export const WalletCard = React.memo(function WalletCard({
                 <div className="w-1 sm:w-1.5 h-1 sm:h-1.5 rounded-full border-[1px] border-white"></div>
               </div>
               <span className="text-slate-900 font-bold text-[5px] sm:text-[6px] tracking-tight italic select-none leading-none">
-                arc
+                lounge
               </span>
               <span
                 className={`${currentTheme === "default" ? "text-slate-800" : currentTheme === "premium" ? "text-[#d4c085]" : "text-emerald-500"} text-[2.5px] sm:text-[3px] font-black mt-[-2px] ml-[-1px]`}
@@ -167,6 +167,11 @@ export const WalletCard = React.memo(function WalletCard({
           </div>
 
           <div className="flex flex-col relative z-10 mt-0.5">
+            <span
+              className={`text-[3px] sm:text-[3.5px] font-extrabold uppercase tracking-widest ${styles.uidSubText} mb-[1px] block leading-none`}
+            >
+              UUID
+            </span>
             <span
               className={`text-[5.5px] sm:text-[7px] font-mono ${styles.uidText} tracking-wide font-medium leading-none`}
             >

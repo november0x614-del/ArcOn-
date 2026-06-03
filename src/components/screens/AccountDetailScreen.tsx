@@ -727,11 +727,7 @@ export function AccountDetailScreen({
             {/* Handle bar */}
             <div className="w-12 h-1.5 bg-slate-200 rounded-full mt-4 mb-6"></div>
 
-            <div className="px-6 w-full flex flex-col items-center">
-              <h3 className="font-bold text-[18px] text-slate-800 mb-6">
-                Your UID Card
-              </h3>
-
+            <div className="px-6 w-full flex flex-col items-center pt-8">
               {/* Card Design */}
               <UIDCard userName={userName} isBlurred={!showUID} />
 

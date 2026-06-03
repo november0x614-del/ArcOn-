@@ -240,7 +240,7 @@ export function BatchTransferScreen({
 
       {/* Progress Indicator */}
       <div className="w-full bg-white border-b border-slate-100 flex justify-center shrink-0">
-        <div className="w-full max-w-[500px] px-5 py-3 flex gap-2">
+        <div className="w-full max-w-[500px] px-4 md:px-6 py-3 flex gap-2">
           <div
             className="h-1.5 flex-1 rounded-full bg-slate-900"
           ></div>
@@ -253,10 +253,8 @@ export function BatchTransferScreen({
         </div>
       </div>
 
-      <div className="flex-1 w-full flex flex-col overflow-y-auto pb-24 scrollbar-hide">
-        <div className="w-full max-w-[500px] mx-auto flex flex-col relative h-full">
-        {/* Content Step Logic */}
-        <div className="p-5">
+        <div className="flex-1 w-full flex flex-col overflow-y-auto pb-24 scrollbar-hide px-4 md:px-6">
+          <div className="w-full max-w-[500px] mx-auto flex flex-col relative h-full py-5">
           {/* Step 1: Info Screen */}
           {multiSendStep === "info" && (
             <motion.div
@@ -663,8 +661,7 @@ export function BatchTransferScreen({
               description={`Your batch transfer to ${recipients.length} recipients has been successfully broadcast.`}
               onBack={() => { setMultiSendStep("form"); onBack(); }}
             />
-        )}
-        </div>
+          )}
         </div>
       </div>
 

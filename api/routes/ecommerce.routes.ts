@@ -2,11 +2,17 @@ import express from "express";
 import crypto from "crypto";
 import { getSupabaseAdmin } from "../config/supabase.js";
 import { executeTransaction, executeReleaseEscrow } from "../services/circle.js";
+import { TransactionService } from "../services/transaction.service.js";
 
 const router = express.Router();
 
 /**
  * 1. Checkout Batch Endpoint (Atomic Multiple Checkout)
+ */
+/**
+ * Endpoint Checkout Massal (Atomic Multiple Checkout).
+ * Memungkinkan pembelian beberapa produk sekaligus dari merchant yang berbeda
+ * dalam satu kali pembayaran aman (Escrow).
  */
 router.post("/ecommerce/checkout-batch", async (req, res) => {
   try {
@@ -23,201 +29,76 @@ router.post("/ecommerce/checkout-batch", async (req, res) => {
       treasuryAddress = treasuryWallet?.wallet_address;
     }
 
-    if (!treasuryAddress) {
-      return res.status(500).json({ error: "Platform Treasury Not Configured." });
-    }
+    if (!treasuryAddress) throw new Error("Platform Treasury belum dikonfigurasi.");
 
     const orderBatchId = crypto.randomUUID();
-    const orderMemo = `BATCH-${orderBatchId.slice(0, 8)}-${Date.now()}`;
+    const orderMemo = memo || `BATCH-${orderBatchId.slice(0, 8)}`;
     const invoiceNumber = `INV/${new Date().toISOString().slice(0, 10).replace(/-/g, "")}/USDC-HYBRID/${Math.floor(Math.random() * 90000 + 10000)}`;
 
-    const itemDetails: any[] = [];
+    const internalRef = crypto.randomUUID();
 
-    // Insert database record ke 'ecommerce_orders' untuk setiap item
+    // 1. Registrasi Pesanan di Database (Instan)
     const orderPromises = items.map(async (item: any) => {
-      // Fetch product details to check if it's an NFT and get metadata
-      const { data: product } = await supabaseAdmin
-        .from("ecommerce_products")
-        .select("*")
-        .eq("id", item.productId)
-        .single();
-
-      itemDetails.push({ ...item, category: product?.category || "General", desc: product?.desc, image: product?.image });
-
-      const orderResult = await supabaseAdmin
-        .from("ecommerce_orders")
-        .insert({
-          buyer_id: buyerId,
-          seller_address: item.merchantAddress,
-          product_id: item.productId?.toString(),
-          product_name: item.name,
-          amount: parseFloat(item.price) * (item.quantity || 1),
-          status: "PENDING_ESCROW",
-          memo: orderMemo,
-          batch_id: orderBatchId
-        });
-
-      if (orderResult.error) throw orderResult.error;
-
-      // If it's an NFT, also register it to the user's NFT collection
-      if (product && product.category === "NFT") {
-        const { error: nftError } = await supabaseAdmin.from("user_nfts").insert({
-          user_id: buyerId,
-          name: product.name,
-          description: product.desc,
-          image: product.image,
-          tx_hash: product.tx_hash || "purchased",
-          contract_address: process.env.LOUNGE_NFT_ADDRESS || "0x4aaa0f998817be80405ab1ef4106f3ac9d462b5e",
-          metadata: { 
-            productId: product.id,
-            origin: "marketplace",
-            purchased_at: new Date().toISOString()
-          }
-        });
-        if (nftError) console.error("NFT Registration Error:", nftError);
-
-        // Mark product as sold out if it's a unique NFT
-        await supabaseAdmin
-          .from("ecommerce_products")
-          .update({ stock: 0 })
-          .eq("id", item.productId);
-      }
-
-      // 1.1 Notify Merchant/Seller
-      const { data: sellerWallet } = await supabaseAdmin
-        .from("user_wallets")
-        .select("user_id")
-        .eq("wallet_address", item.merchantAddress)
-        .single();
-      
-      if (sellerWallet) {
-        await supabaseAdmin.from("inbox_messages").insert({
-          user_id: sellerWallet.user_id,
-          title: "Premium Product Sold!",
-          content: `Your product "${item.name}" has been purchased by ${buyerId.slice(0, 8)}. Settlement is being held in platform escrow for safety.`,
-          type: "receipt",
-          metadata: {
-            receipt_type: "MERCHANT_SALE",
-            invoice_number: invoiceNumber,
-            product_id: item.productId,
-            product_name: item.name,
-            amount: item.price,
-            buyer: buyerId,
-            status: "ESCROWED",
-            checkout_at: new Date().toISOString(),
-            action_required: "Go to Merchant Suite to settle funds"
-          }
-        });
-      }
-
-      return orderResult;
+      return supabaseAdmin.from("ecommerce_orders").insert({
+        buyer_id: buyerId,
+        seller_address: item.merchantAddress,
+        product_id: item.productId?.toString(),
+        product_name: item.name,
+        amount: parseFloat(item.price) * (item.quantity || 1),
+        status: "PENDING_ESCROW",
+        memo: orderMemo,
+        batch_id: orderBatchId
+      });
     });
-
     await Promise.all(orderPromises);
 
-    const rwaItems = itemDetails.filter(i => i.category !== "NFT");
-    const nftItems = itemDetails.filter(i => i.category === "NFT");
-    const isHybrid = rwaItems.length > 0 && nftItems.length > 0;
-
-    const gasFee = 0.0012;
-    const platformFee = items.length * 0.15;
-    const creatorRoyalty = nftItems.length * 0.50;
-    const shippingFee = rwaItems.length > 0 ? 15.00 : 0;
-
-    // Panggil Circle SDK (Single Atomic Transfer for Total Amount)
-    const result = await executeTransaction(
-      supabaseAdmin,
-      buyerId,
-      parseFloat(totalAmount) + shippingFee, // Total includes shipping if RWA present
-      treasuryAddress,
-      "payment",
-      {
-        finality: "deterministic",
-        memo: orderMemo,
-        batch_id: orderBatchId,
-        order_status: "PENDING_ESCROW",
-        invoice_number: invoiceNumber,
-        is_hybrid: isHybrid,
-        receipt_type: isHybrid ? "HYBRID_PURCHASE" : (nftItems.length > 0 ? "NFT_PURCHASE" : "RWA_PURCHASE"),
-        receipt_master: {
-          invoice_number: invoiceNumber,
-          total_items: items.length,
-          total_paid: parseFloat(totalAmount) + shippingFee,
-          platform_fee: platformFee,
-          creator_royalty: creatorRoyalty,
-          gas_fee: gasFee,
-          shipping_fee: shippingFee,
-          payment_method: "USDC (via Arc Network)",
-          parent_tx_hash: null 
-        },
-        rwa_block: rwaItems.map(item => ({
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity || 1,
-          shipping_address: "Jl. Jendral Sudirman No. 45, Jakarta, Indonesia (10220)",
-          courier: "DHL Express / FedEx",
-          tracking_number: `AWB-${Math.floor(Math.random() * 900000000 + 100000000)}`,
-          shipping_fee: shippingFee / rwaItems.length
-        })),
-        nft_block: nftItems.map(item => ({
-          name: item.name,
-          tokenId: `#${Math.floor(Math.random() * 9000 + 1000)}`,
-          contract: process.env.LOUNGE_NFT_ADDRESS || "0x4aaa0f998817be80405ab1ef4106f3ac9d462b5e",
-          price: item.price,
-          gas_fee: gasFee / nftItems.length,
-          image: item.image
-        })),
-        reconciliation: {
-          total_rwa: rwaItems.reduce((acc, i) => acc + (parseFloat(i.price) * (i.quantity || 1)), 0),
-          total_nft: nftItems.reduce((acc, i) => acc + (parseFloat(i.price) * (i.quantity || 1)), 0),
-          total_shipping: shippingFee,
-          total_gas: gasFee
-        }
-      }
-    );
-
-    // Update with txId
-    await supabaseAdmin
-      .from("ecommerce_orders")
-      .update({ tx_hash: result.txId })
-      .eq("memo", orderMemo);
-
-    // Add an inbox notification for the purchase
-    await supabaseAdmin.from("inbox_messages").insert({
-      user_id: buyerId,
-      title: isHybrid ? "Hybrid Purchase Successful" : (nftItems.length > 0 ? "NFT Purchase Successful" : "Order Confirmed"),
-      content: `Your transaction ${invoiceNumber} has been successfully processed.`,
-      type: "receipt",
+    // 2. Registrasi Transaksi Finansial (Instan)
+    await TransactionService.registerPending(supabaseAdmin, buyerId, {
+      amount: totalAmount,
+      type: "payment",
+      internalRef,
       metadata: {
-        txId: result.txId,
-        invoice_number: invoiceNumber,
-        is_hybrid: isHybrid,
-        receipt_type: isHybrid ? "HYBRID_PURCHASE" : (nftItems.length > 1 ? "BATCH_BUY" : "PURCHASE"),
-        items: itemDetails,
-        rwa_items: rwaItems,
-        nft_items: nftItems,
-        totalAmount: (parseFloat(totalAmount) + shippingFee).toFixed(2),
-        platformFee,
-        creatorRoyalty,
-        gasFee,
-        shippingFee,
-        reconciliation: {
-          total_rwa: rwaItems.reduce((acc, i) => acc + (parseFloat(i.price) * (i.quantity || 1)), 0),
-          total_nft: nftItems.reduce((acc, i) => acc + (parseFloat(i.price) * (i.quantity || 1)), 0),
-          total_shipping: shippingFee,
-          total_gas: gasFee
-        }
+        description: `Pembayaran Checkout #${invoiceNumber}`,
+        invoiceNumber,
+        batchId: orderBatchId,
+        itemsCount: items.length
       }
     });
-    
-    res.status(200).json({ 
-      message: "Proses Multi-Checkout Atomic dimulai", 
-      txHash: result.txId,
-      useEscrow: true,
-      escrowAddress: treasuryAddress,
-      batchId: orderBatchId
-    });
 
+    // 3. Eksekusi Pembayaran di Latar Belakang (Async)
+    const shippingFee = items.some((i: any) => i.category !== "NFT") ? 15.00 : 0;
+    
+    TransactionService.executeAsync(
+      supabaseAdmin,
+      internalRef,
+      () => executeTransaction(
+        supabaseAdmin,
+        buyerId,
+        parseFloat(totalAmount) + shippingFee,
+        treasuryAddress!,
+        "payment",
+        {
+          memo: orderMemo,
+          invoice_number: invoiceNumber,
+          batch_id: orderBatchId,
+          receipt_type: "BATCH_CHECKOUT"
+        },
+        internalRef
+      ),
+      async (finalTxId) => {
+        // Setelah berhasil di blockchain, update sisa metadata di tabel order
+        await supabaseAdmin
+          .from("ecommerce_orders")
+          .update({ tx_hash: finalTxId })
+          .eq("batch_id", orderBatchId);
+      }
+    ).catch(e => console.error("[CheckoutAsync] Fatal error:", e));
+
+    res.status(202).json({ 
+      message: "Proses pembayaran aman (Escrow) sedang berjalan", 
+      txId: internalRef,
+      invoiceNumber 
+    });
   } catch (error: any) {
     console.error("Batch Checkout Error:", error);
     res.status(500).json({ error: error.message });

@@ -110,7 +110,7 @@ export function MintNFTScreen({ onBack }: { onBack: () => void }) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 flex flex-col pb-24">
+      <div className="flex-1 overflow-y-auto px-4 md:px-6 flex flex-col pb-24 pt-6">
         <div className="w-full max-w-[500px] mx-auto flex flex-col relative h-full">
         <AnimatePresence mode="wait">
           {step === "input" && (

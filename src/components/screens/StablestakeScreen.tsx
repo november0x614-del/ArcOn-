@@ -121,7 +121,7 @@ export function StablestakeScreen({ onBack }: EarnScreenProps) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-24 p-5 flex flex-col pt-6 w-full scrollbar-hide relative">
+      <div className="flex-1 overflow-y-auto pb-24 px-4 md:px-6 flex flex-col pt-6 w-full scrollbar-hide relative">
         <div className="w-full max-w-[500px] mx-auto flex flex-col relative h-full gap-5">
           {/* Intro & Info */}
           <div className="flex items-center gap-4 mb-2">

@@ -95,7 +95,7 @@ ${transactions
 
   return (
     <div className="w-full h-full bg-slate-50 relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
-      <div className="px-5 pt-6 pb-3 bg-slate-900 shadow-md flex items-center relative z-10 sticky top-0 justify-between">
+      <div className="px-4 md:px-6 pt-6 pb-3 bg-slate-900 shadow-md flex items-center relative z-10 sticky top-0 justify-between">
         <div className="flex items-center">
           <button
             onClick={onBack}
@@ -117,7 +117,7 @@ ${transactions
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4">
+      <div className="flex-1 overflow-y-auto px-4 md:px-6 py-5 flex flex-col gap-4">
         <div className="text-center my-4">
           <span className="bg-slate-200/50 text-slate-500 font-semibold px-3 py-1 rounded-full text-[10px] uppercase tracking-widest">
             Today

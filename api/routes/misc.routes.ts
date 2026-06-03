@@ -43,7 +43,7 @@ router.post("/faucet/claim", async (req, res) => {
     const supabaseAdmin = getSupabaseAdmin();
     const adminId = "11111111-1111-1111-1111-111111111111";
 
-    let txHash = `faucet_${crypto.randomBytes(8).toString("hex")}`;
+    let txHash = crypto.randomUUID();
     let successMessage = "100 USDC sent to your wallet on Arc Testnet via Circle SDK";
     
     try {

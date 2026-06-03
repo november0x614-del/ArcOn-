@@ -147,7 +147,7 @@ export function TransactionHistoryScreen({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto w-full px-4">
+      <div className="flex-1 overflow-y-auto w-full px-4 md:px-6">
         {!selectedTx ? (
           <div className="py-4 space-y-6">
             {filteredAndGroupedTransactions.length === 0 ? (

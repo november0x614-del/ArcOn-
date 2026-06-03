@@ -406,13 +406,12 @@ export const useStore = create<AppState>()((set) => ({
     const user = useStore.getState().registeredUser;
     if (!user?.supabaseUid) return;
     try {
-      const response = await fetch(`/api/inbox/${user.supabaseUid}`);
-      if (response.ok) {
-        const data = await response.json();
-        set({ inboxMessages: Array.isArray(data) ? data : [] });
-      }
-    } catch (e) {
-      console.error("Failed to fetch inbox messages:", e);
+      const data = await BackendClient.getInboxMessages(user.supabaseUid);
+      set({ inboxMessages: Array.isArray(data) ? data : [] });
+    } catch (e: any) {
+      console.warn("[Store] Failed to fetch inbox messages (Expected if table missing):", e.message);
+      // Fallback to empty to prevent UI breakage
+      set({ inboxMessages: [] });
     }
   },
   availableShortcuts: defaultAvailableShortcuts,

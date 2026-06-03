@@ -265,7 +265,7 @@ export function TransferScreen({
       {/* Sub Content area */}
       <div className="flex-1 w-full flex flex-col overflow-hidden relative">
         {/* Scrollable List Area */}
-        <div className="flex-1 overflow-y-auto w-full px-5 pb-24 scrollbar-hide">
+        <div className="flex-1 overflow-y-auto w-full px-4 md:px-6 pb-24 scrollbar-hide">
           <div className="w-full max-w-[500px] mx-auto flex flex-col relative">
             {/* Favorites Section */}
           {!isManageContacts && (realFavorites.length > 0 || isLoadingFavorite) && (

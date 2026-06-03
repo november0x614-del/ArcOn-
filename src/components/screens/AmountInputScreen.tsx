@@ -146,8 +146,8 @@ export function AmountInputScreen({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto w-full pb-32 p-5 bg-[#ecf5fc]">
-        <div className="w-full max-w-[500px] mx-auto flex flex-col relative w-full h-full">
+      <div className="flex-1 overflow-y-auto w-full pb-32 px-4 md:px-6 bg-[#ecf5fc] pt-5">
+        <div className="w-full max-w-[500px] mx-auto flex flex-col relative h-full">
           {/* Recipient Card - Updated Design */}
           <div className="bg-white rounded-[32px] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 mb-8 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-500">
             {avatarEl}

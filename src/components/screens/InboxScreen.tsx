@@ -70,13 +70,13 @@ export function InboxScreen({ onBack, onTransactionClick }: InboxScreenProps) {
   };
 
   return (
-    <div className="w-full h-full bg-white relative flex flex-col z-50 animate-in slide-in-from-bottom duration-300">
+    <div className="w-full h-full bg-[#ecf5fc] relative flex flex-col z-50 animate-in slide-in-from-bottom duration-300">
       {/* Header */}
       <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between shrink-0">
         <div className="flex items-center">
           <button
             onClick={onBack}
-            className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent -ml-2"
+            className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
           >
             <ArrowLeft size={20} className="text-white" />
           </button>
@@ -85,7 +85,7 @@ export function InboxScreen({ onBack, onTransactionClick }: InboxScreenProps) {
       </div>
 
       {/* Segmented Tabs Control */}
-      <div className="px-4 py-2 shrink-0 border-b border-slate-100 bg-white">
+      <div className="px-4 py-2 shrink-0 border-b border-slate-150 bg-[#ecf5fc]">
         <div className="bg-slate-100 p-1 rounded-2xl flex items-center relative gap-1">
           <button
             onClick={() => setActiveTab("receipts")}

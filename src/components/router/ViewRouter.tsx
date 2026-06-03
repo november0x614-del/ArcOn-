@@ -419,7 +419,7 @@ export const ViewRouter = React.memo(
 
           {/* Main Content Dashboard Container */}
           <div className="flex-1 flex justify-center h-full relative w-full items-start bg-[#ecf5fc]">
-            <div className={`w-full h-full flex flex-col relative overflow-hidden bg-white font-sans transition-all duration-300 ${isDesktop ? "lg:max-w-[1200px] border-x border-slate-200/50 shadow-xl" : "sm:max-w-[680px] md:max-w-[720px] sm:shadow-lg sm:border-x sm:border-slate-100 sm:h-full"}`}>
+            <div className={`w-full h-full flex flex-col relative overflow-hidden bg-white font-sans transition-all duration-300 ${isDesktop ? "lg:max-w-[1200px] border-x border-slate-200/50 shadow-xl" : "h-full"}`}>
               {children}
             </div>
           </div>

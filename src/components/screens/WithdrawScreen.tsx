@@ -154,8 +154,8 @@ export function WithdrawScreen({ onBack, onSuccess, hideBack }: WithdrawScreenPr
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-5 pb-32">
-        <div className="w-full max-w-[500px] mx-auto flex flex-col relative w-full h-full">
+      <div className="flex-1 overflow-y-auto px-4 md:px-6 pb-32 pt-5">
+        <div className="w-full max-w-[500px] mx-auto flex flex-col relative h-full">
         <div className="bg-white rounded-[24px] p-5 shadow-sm border border-slate-200 mb-2 text-left space-y-4">
           <label className="text-[12px] font-bold text-slate-400 uppercase tracking-wider block">
             Bank Destination Details

@@ -424,4 +424,15 @@ export const BackendClient = {
   async getAdminStats() {
     return apiRequest("/api/admin/stats", "GET");
   },
+
+  /**
+   * Inbox Notifications
+   */
+  async getInboxMessages(userId: string) {
+    return apiRequest(`/api/inbox/${userId}`, "GET");
+  },
+
+  async markMessageAsRead(messageId: string) {
+    return apiRequest("/api/inbox/read", "POST", { messageId });
+  },
 };

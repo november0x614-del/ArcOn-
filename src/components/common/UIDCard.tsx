@@ -96,7 +96,7 @@ export function UIDCard({ userName, isBlurred = false }: UIDCardProps) {
             <span
               className={`text-[16px] font-bold tracking-tight italic ${styles.uidText} select-none`}
             >
-              arc
+              lounge
             </span>
             <span
               className={`text-[8px] font-black mt-[-10px] ml-[-2px] ${currentTheme === "default" ? "text-slate-800" : currentTheme === "premium" ? "text-[#d4c085]" : "text-emerald-500"}`}
@@ -131,7 +131,12 @@ export function UIDCard({ userName, isBlurred = false }: UIDCardProps) {
           style={{ transform: "translateZ(30px)" }}
         >
           <span
-            className={`text-[22px] sm:text-[28px] font-mono ${styles.uidText} tracking-[0.15em] font-medium block text-center mt-4 drop-shadow-sm`}
+            className={`text-[8px] font-extrabold uppercase tracking-widest ${styles.uidSubText} mb-1 block`}
+          >
+            UUID
+          </span>
+          <span
+            className={`text-[20px] sm:text-[28px] md:text-[32px] font-mono ${styles.uidText} tracking-[0.15em] font-medium block text-center drop-shadow-sm`}
           >
             {formattedUid.substring(0, 19)}
           </span>
@@ -151,16 +156,6 @@ export function UIDCard({ userName, isBlurred = false }: UIDCardProps) {
           </div>
 
           <div className="flex items-center gap-6">
-            <div className="flex flex-col items-end">
-              <span
-                className={`text-[6px] ${styles.uidSubText} uppercase tracking-widest mb-0.5`}
-              >
-                Valid Thru
-              </span>
-              <span className={`text-[12px] font-mono ${styles.uidText}`}>
-                05/30
-              </span>
-            </div>
             <div className="flex flex-col items-end">
               <span
                 className={`text-[6px] ${styles.uidSubText} uppercase tracking-widest mb-0.5`}

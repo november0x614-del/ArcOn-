@@ -5,6 +5,7 @@ import {
   executeAtomicBatchTransfer,
   ARC_USDC_TOKEN_ID,
 } from "../services/circle.js";
+import { TransactionService } from "../services/transaction.service.js";
 import {
   initiateOutboundBridge,
   finalizeInboundBridge,
@@ -171,7 +172,7 @@ router.post("/swap/execute", async (req, res) => {
       throw new Error("User wallet not found");
     }
 
-    const internalRef = `swap_${crypto.randomBytes(8).toString("hex")}`;
+    const internalRef = crypto.randomUUID();
 
     const swapFeeStr = config?.swapFee || "0.15%";
     const swapFeePercent = parseFloat(swapFeeStr.replace(/[^0-9.]/g, "")) || 0.15;
@@ -309,66 +310,53 @@ router.post("/swap/execute", async (req, res) => {
   }
 });
 
+/**
+ * Route untuk melakukan transfer (pengiriman) dana.
+ * Menggunakan TransactionService untuk memproses transaksi di latar belakang
+ * agar API tetap responsif dan terhindar dari timeout.
+ */
 router.post("/transfer/execute", async (req, res) => {
   try {
-    const { userId, amount, destinationAddress, memo, recipientName } =
-      req.body;
+    const { userId, amount, destinationAddress, memo, recipientName } = req.body;
+
+    // 1. Cek keamanan: apakah user diblokir?
     if (await isUserBlocked(userId)) {
-      return res.status(403).json({
-        error:
-          "Your account has been disabled by the system administrator. All transaction operations are suspended.",
-      });
+      return res.status(403).json({ error: "Akun Anda dinonaktifkan oleh administrator." });
     }
 
     const config = getPlatformConfigs();
     if (config && config.transferEnabled === false) {
-      return res.status(403).json({
-        error: "Fitur transfer saat ini dinonaktifkan oleh administrator platform.",
-      });
+      return res.status(403).json({ error: "Fitur transfer sedang dinonaktifkan." });
     }
 
     const amountNum = parseFloat(amount || "0");
     const minTransfer = parseFloat(config?.minTransferAmount || "0.1");
     if (amountNum < minTransfer) {
-      return res.status(400).json({
-        error: `Minimum transfer amount is ${minTransfer} USDC`,
-      });
+      return res.status(400).json({ error: `Minimal transfer adalah ${minTransfer} USDC` });
     }
 
+    // 2. Cek limit harian
     const dailyLimit = parseFloat(config?.dailyTransferLimit?.replace(/[^0-9.]/g, "") || "5000");
     const todayTotal = await getUserTodayTransferTotal(userId);
     if (todayTotal + amountNum > dailyLimit) {
       return res.status(400).json({
-        error: `Batas transfer harian terlampaui. Batas harian Anda adalah ${dailyLimit} USDC. Total transfer Anda hari ini: ${todayTotal.toFixed(2)} USDC.`,
+        error: `Limit harian terlampaui. Batas Anda: ${dailyLimit} USDC. Sudah dipakai hari ini: ${todayTotal.toFixed(2)} USDC.`,
       });
     }
 
     const supabaseAdmin = getSupabaseAdmin();
-
-    const { data: userWallet } = await supabaseAdmin
-      .from("user_wallets")
-      .select("wallet_id, wallet_address")
-      .eq("id", userId)
-      .single();
-
-    if (!userWallet?.wallet_address) throw new Error("Wallet not found");
-
-    const internalRef = `send_${crypto.randomBytes(8).toString("hex")}`;
-
+    const internalRef = crypto.randomUUID();
     const fee = parseFloat(config?.withdrawFee?.replace(/[^0-9.]/g, "") || "0");
-    const sponsored = !!config?.gasSubsidyEnabled;
 
-    const { executeAtomicBatchTransfer } = await import("../services/circle.js");
-    
-    // Add to pending queue in DB immediately
-    await supabaseAdmin.from("transactions").insert({
-      user_id: userId,
-      amount: `-${amount}`,
+    // 3. Daftarkan transaksi ke DB (Status PENDING sementara)
+    await TransactionService.registerPending(supabaseAdmin, userId, {
+      amount,
       type: "transfer",
-      status: "pending",
-      internal_ref: internalRef,
+      internalRef,
+      ledgerType: "SEND",
+      destinationAddress,
       metadata: {
-        recipientName: recipientName || "EVM Account",
+        recipientName: recipientName || "Akun EVM",
         destinationAddress,
         memo,
         platformFee: fee,
@@ -376,80 +364,25 @@ router.post("/transfer/execute", async (req, res) => {
       },
     });
 
-    // Write to the requested transaction_ledger
-    await supabaseAdmin.from("transaction_ledger").insert({
-      user_id: userId,
-      tx_type: "SEND",
-      amount: amountNum,
-      destination_address: destinationAddress,
-      circle_tx_id: internalRef,
-      status: "PENDING",
-      metadata: {
-        recipientName: recipientName || "EVM Account",
-        memo,
-        platformFee: fee,
-        isAtomic: true
-      },
-    });
+    // 4. Jalankan eksekusi Blockchain di latar belakang (Async)
+    TransactionService.executeAsync(
+      supabaseAdmin,
+      internalRef,
+      () => executeAtomicBatchTransfer(
+        supabaseAdmin,
+        userId,
+        [{ address: destinationAddress, amount: amountNum, name: recipientName || "Akun EVM" }],
+        fee,
+        true, // skipDbInsert karena sudah kita lakukan di registerPending
+        internalRef
+      )
+    ).catch(e => console.error("[TransferAsync] Fatal error:", e));
 
-    // Run execution in background (Non-blocking)
-    const runSend = async () => {
-      try {
-        const result = await executeAtomicBatchTransfer(
-          supabaseAdmin,
-          userId,
-          [{
-            address: destinationAddress,
-            amount: amountNum,
-            name: recipientName || "EVM Account"
-          }],
-          fee,
-          true // skipDbInsert
-        );
-
-        // Success: update both tables
-        await supabaseAdmin
-          .from("transactions")
-          .update({
-            tx_hash: result.txId,
-            status: "success",
-          })
-          .eq("internal_ref", internalRef);
-          
-        await supabaseAdmin
-          .from("transaction_ledger")
-          .update({
-            tx_hash: result.txId,
-            status: "COMPLETE",
-          })
-          .eq("circle_tx_id", internalRef);
-      } catch (err: any) {
-        console.error("Async send failed:", err);
-        await supabaseAdmin
-          .from("transactions")
-          .update({
-            status: "failed",
-            metadata: { error: err.message || "Failed to execute transaction" },
-          })
-          .eq("internal_ref", internalRef);
-          
-        await supabaseAdmin
-          .from("transaction_ledger")
-          .update({
-            status: "FAILED",
-            metadata: { error: err.message || "Failed to execute transaction" },
-          })
-          .eq("circle_tx_id", internalRef);
-      }
-    };
-    
-    runSend().catch(err => console.error("Uncaught error in runSend:", err));
-
+    // 5. Berikan respons CEPAT ke pengguna
     res.status(202).json({
-      message: "Transfer initiated via Atomic Protocol",
+      message: "Transfer sedang diproses dalam jaringan (Background Processing)",
       txId: internalRef,
-      status: "pending",
-      memo: memo,
+      status: "pending"
     });
   } catch (error: any) {
     console.error("Atomic Transfer Error:", error);
@@ -457,22 +390,23 @@ router.post("/transfer/execute", async (req, res) => {
   }
 });
 
+/**
+ * Route untuk penarikan dana (Withdraw) ke rekening bank.
+ * Dana dikirim ke Treasury platform, lalu diproses secara manual/otomatis ke rekening bank tujuan.
+ */
 router.post("/withdraw/execute", async (req, res) => {
   try {
     const { userId, amount, bank, memo } = req.body;
+
     if (await isUserBlocked(userId)) {
-      return res.status(403).json({
-        error:
-          "Your account has been disabled by the system administrator. All transaction operations are suspended.",
-      });
+      return res.status(403).json({ error: "Akun Anda dinonaktifkan." });
     }
 
     const config = getPlatformConfigs();
     if (config && config.withdrawEnabled === false) {
-      return res.status(403).json({
-        error: "Fitur withdraw saat ini dinonaktifkan oleh administrator platform.",
-      });
+      return res.status(403).json({ error: "Fitur withdraw sedang dinonaktifkan." });
     }
+
     const supabaseAdmin = getSupabaseAdmin();
     let treasuryAddress = process.env.PLATFORM_TREASURY_ADDRESS;
 
@@ -485,19 +419,38 @@ router.post("/withdraw/execute", async (req, res) => {
       treasuryAddress = treasuryWallet?.wallet_address;
     }
 
-    if (!treasuryAddress) {
-      throw new Error("Treasury wallet not configured");
-    }
+    if (!treasuryAddress) throw new Error("Dompet Treasury platform belum dikonfigurasi.");
 
-    const result = await executeTransaction(
-      getSupabaseAdmin(),
-      userId,
+    const internalRef = crypto.randomUUID();
+
+    // 1. Registrasi awal
+    await TransactionService.registerPending(supabaseAdmin, userId, {
       amount,
-      treasuryAddress,
-      "withdraw",
-      { bank, memo, finality: "deterministic" },
-    );
-    res.status(200).json({ message: "Withdraw queued", txId: result.txId });
+      type: "withdraw",
+      internalRef,
+      metadata: { bank, memo, finality: "deterministic" },
+    });
+
+    // 2. Eksekusi pemindahan dana ke treasury (Async)
+    TransactionService.executeAsync(
+      supabaseAdmin,
+      internalRef,
+      () => executeTransaction(
+        supabaseAdmin,
+        userId,
+        parseFloat(amount),
+        treasuryAddress!,
+        "withdraw",
+        { bank, memo, finality: "deterministic" },
+        internalRef
+      )
+    ).catch(e => console.error("[WithdrawAsync] Fatal error:", e));
+
+    res.status(202).json({ 
+      message: "Permintaan withdraw sedang diproses", 
+      txId: internalRef,
+      status: "pending" 
+    });
   } catch (error: any) {
     console.error("Withdraw Error", error);
     res.status(500).json({ error: error.message });
@@ -549,21 +502,21 @@ router.post("/payments/create", async (req, res) => {
   }
 });
 
+/**
+ * Route untuk pengiriman massal (Batch Transfer).
+ * Sangat efisien untuk mengirim dana ke banyak orang sekaligus dalam satu klik.
+ */
 router.post("/payments/batch", async (req, res) => {
   try {
     const { userId, recipients, platformFee } = req.body;
 
     if (await isUserBlocked(userId)) {
-      return res.status(403).json({
-        error: "Your account has been disabled. Transaction suspended.",
-      });
+      return res.status(403).json({ error: "Akun Anda dinonaktifkan." });
     }
 
     const config = getPlatformConfigs();
     if (config && config.batchTransferEnabled === false) {
-      return res.status(403).json({
-        error: "Fitur batch transfer saat ini dinonaktifkan oleh administrator platform.",
-      });
+      return res.status(403).json({ error: "Fitur batch transfer sedang dinonaktifkan." });
     }
 
     const recipientCount = Array.isArray(recipients) ? recipients.length : 0;
@@ -573,125 +526,57 @@ router.post("/payments/batch", async (req, res) => {
 
     const minTransfer = parseFloat(config?.minTransferAmount || "0.1");
     if (recipientCount < 3) {
-      return res.status(400).json({
-        error: "Batch transfer memerlukan minimal 3 penerima. Untuk pengiriman tunggal, silakan gunakan fitur Transfer biasa.",
-      });
-    }
-
-    if (Array.isArray(recipients)) {
-      for (const r of recipients) {
-        if (parseFloat(r.amount) < minTransfer) {
-          return res.status(400).json({
-            error: `Minimum amount per recipient in batch is ${minTransfer} USDC`,
-          });
-        }
-      }
+      return res.status(400).json({ error: "Batch transfer memerlukan minimal 3 penerima." });
     }
 
     const dailyLimit = parseFloat(config?.dailyTransferLimit?.replace(/[^0-9.]/g, "") || "5000");
     const todayTotal = await getUserTodayTransferTotal(userId);
     if (todayTotal + totalAmount > dailyLimit) {
-      return res.status(400).json({
-        error: `Batas transfer harian terlampaui. Batas harian Anda adalah ${dailyLimit} USDC. Total transfer Anda hari ini: ${todayTotal.toFixed(2)} USDC.`,
-      });
+      return res.status(400).json({ error: "Limit harian terlampaui." });
     }
+
     const feeValue = parseFloat(platformFee || "0");
-
-    console.log(
-      `[BatchRoute] Initiating Atomic Batch for User ${userId} with ${recipientCount} recipients. Fee: ${feeValue} USDC`,
-    );
-
-    const internalRef = `batch_${crypto.randomBytes(8).toString("hex")}`;
     const supabaseAdmin = getSupabaseAdmin();
+    const internalRef = crypto.randomUUID();
 
-    // Add to pending queue in DB immediately
-    await supabaseAdmin.from("transactions").insert({
-      user_id: userId,
-      amount: `-${totalAmount.toFixed(2)}`,
+    // 1. Registrasi awal di Database
+    await TransactionService.registerPending(supabaseAdmin, userId, {
+      amount: totalAmount.toFixed(2),
       type: "batchTransfer",
-      status: "pending",
-      internal_ref: internalRef,
+      internalRef,
+      ledgerType: "SEND",
       metadata: {
-        description: `Atomic Batch Transfer to ${recipientCount} recipients`,
+        description: `Transfer Massal ke ${recipientCount} penerima`,
         recipients,
         platformFee: feeValue,
-        real: true,
         isAtomicBatch: true,
         atomicity: "MSCA_MULTI_CALL",
       },
     });
 
-    await supabaseAdmin.from("transaction_ledger").insert({
-      user_id: userId,
-      tx_type: "SEND",
-      amount: totalAmount + feeValue,
-      circle_tx_id: internalRef,
-      status: "PENDING",
-      metadata: {
-        isBatch: true,
-        recipientCount: recipientCount,
-        platformFee: feeValue,
-      },
-    });
-
-    const runBatch = async () => {
-      try {
-        const result = await executeAtomicBatchTransfer(
-          supabaseAdmin,
-          userId,
-          recipients.map((r: any) => ({
-            address: r.address,
-            amount: parseFloat(r.amount),
-            name: r.name,
-          })),
-          feeValue,
-          true // skipDbInsert
-        );
-
-        // Success: update both tables
-        await supabaseAdmin
-          .from("transactions")
-          .update({
-            tx_hash: result.txId,
-            status: "success",
-          })
-          .eq("internal_ref", internalRef);
-          
-        await supabaseAdmin
-          .from("transaction_ledger")
-          .update({
-            tx_hash: result.txId,
-            status: "COMPLETE",
-          })
-          .eq("circle_tx_id", internalRef);
-      } catch (err: any) {
-        console.error("Async batch failed:", err);
-        await supabaseAdmin
-          .from("transactions")
-          .update({
-            status: "failed",
-            metadata: { error: err.message || "Failed to execute batch" },
-          })
-          .eq("internal_ref", internalRef);
-          
-        await supabaseAdmin
-          .from("transaction_ledger")
-          .update({
-            status: "FAILED",
-            metadata: { error: err.message || "Failed to execute batch" },
-          })
-          .eq("circle_tx_id", internalRef);
-      }
-    };
-    
-    runBatch().catch(err => console.error("Uncaught error in runBatch:", err));
+    // 2. Eksekusi berat di latar belakang
+    TransactionService.executeAsync(
+      supabaseAdmin,
+      internalRef,
+      () => executeAtomicBatchTransfer(
+        supabaseAdmin,
+        userId,
+        recipients.map((r: any) => ({
+          address: r.address,
+          amount: parseFloat(r.amount),
+          name: r.name,
+        })),
+        feeValue,
+        true,
+        internalRef
+      )
+    ).catch(e => console.error("[BatchAsync] Fatal error:", e));
 
     res.status(202).json({
       success: true,
-      message: "Atomic batch transaction queued",
+      message: "Transfer massal sedang diproses (Background Processing)",
       txId: internalRef,
-      recipientCount: recipientCount,
-      totalAmount: totalAmount + feeValue,
+      status: "pending"
     });
   } catch (error: any) {
     console.error("Batch Payment Execution Error:", error);
@@ -753,60 +638,70 @@ router.post("/purchase/execute", async (req, res) => {
   }
 });
 
+/**
+ * Route untuk memulai Staking (USDC Liquid Pool).
+ * Dana dipindahkan ke Vault platform untuk diolah dan menghasilkan yield.
+ */
 router.post("/stake/execute", async (req, res) => {
   try {
     const { userId, amount } = req.body;
     if (await isUserBlocked(userId)) {
-      return res.status(403).json({
-        error:
-          "Your account has been disabled by the system administrator. All transaction operations are suspended.",
-      });
+      return res.status(403).json({ error: "Akun Anda dinonaktifkan." });
     }
 
     const config = getPlatformConfigs();
     if (config && config.stableStakeEnabled === false) {
-      return res.status(403).json({
-        error: "Fitur staking saat ini dinonaktifkan oleh administrator platform.",
-      });
+      return res.status(403).json({ error: "Fitur staking sedang dinonaktifkan." });
     }
+
     const supabaseAdmin = getSupabaseAdmin();
-    // 1. Dapatkan Treasury/Vault Address (Admin Wallet)
     let treasuryAddress = process.env.PLATFORM_TREASURY_ADDRESS;
     if (!treasuryAddress) {
       const { data: treasuryWallet } = await supabaseAdmin
         .from("user_wallets")
         .select("wallet_address")
-        .eq("id", "11111111-1111-1111-1111-111111111111") // Admin ID pattern
+        .eq("id", "11111111-1111-1111-1111-111111111111")
         .single();
       treasuryAddress = treasuryWallet?.wallet_address;
     }
 
-    if (!treasuryAddress) {
-      return res.status(500).json({ error: "Platform Treasury/Vault belum dikonfigurasi." });
-    }
+    if (!treasuryAddress) throw new Error("Vault platform belum dikonfigurasi.");
 
-    const result = await executeTransaction(
-      supabaseAdmin,
-      userId,
+    const internalRef = crypto.randomUUID();
+    const stakeMetadata = {
+      pool: "USDC Liquid Pool",
+      apy: "Est. APY 5.5%",
+      finality: "deterministic",
+      action: "stake",
+      stakeType: "Flexible",
+      lockDuration: "Flexible",
+      rewardToken: "USDC"
+    };
+
+    // 1. Registrasi awal
+    await TransactionService.registerPending(supabaseAdmin, userId, {
       amount,
-      treasuryAddress,
-      "stake",
-      {
-        pool: "USDC Liquid Pool",
-        apy: "Est. APY 5.5%",
-        finality: "deterministic",
-        action: "stake",
-        stakeType: "Flexible",
-        lockDuration: "Flexible",
-        rewardToken: "USDC",
-        valueDate: "H+1 setelah staking",
-        distributionDate: "Harian",
-        maturityDate: "Flexible"
-      },
-    );
-    res
-      .status(200)
-      .json({ message: "Staking transaction initiated", txId: result.txId });
+      type: "stake",
+      internalRef,
+      metadata: stakeMetadata
+    });
+
+    // 2. Eksekusi pemindahan dana ke vault (Async)
+    TransactionService.executeAsync(
+      supabaseAdmin,
+      internalRef,
+      () => executeTransaction(
+        supabaseAdmin,
+        userId,
+        parseFloat(amount),
+        treasuryAddress!,
+        "stake",
+        stakeMetadata,
+        internalRef
+      )
+    ).catch(e => console.error("[StakeAsync] Fatal error:", e));
+
+    res.status(202).json({ message: "Staking Anda sedang diproses oleh jaringan", txId: internalRef });
   } catch (error: any) {
     console.error("Stake Error", error);
     res.status(500).json({ error: error.message });
@@ -908,7 +803,7 @@ router.post("/bridge/cctp", async (req, res) => {
 
     if (!userWallet?.wallet_address) throw new Error("Wallet not found");
 
-    const internalRef = `bridge_${crypto.randomBytes(8).toString("hex")}`;
+    const internalRef = crypto.randomUUID();
     
     // Use userWallet.wallet_address instead of destinationAddress to enforce SCA as destination
     const secureDestinationAddress = userWallet.wallet_address;
@@ -996,7 +891,7 @@ router.post("/bridge/inbound/claim", async (req, res) => {
   try {
     const { userId, sourceTxHash, sourceChainRpc } = req.body;
     const supabaseAdmin = getSupabaseAdmin();
-    const internalRef = `claim_${crypto.randomBytes(8).toString("hex")}`;
+    const internalRef = crypto.randomUUID();
     
     await supabaseAdmin.from("transaction_ledger").insert({
       user_id: userId,

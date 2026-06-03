@@ -38,7 +38,7 @@ export function SettingsScreen({
   return (
     <div className="w-full h-full bg-slate-50 relative flex flex-col z-50 animate-in slide-in-from-bottom duration-300">
       {/* Header */}
-      <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 shrink-0">
+      <div className="flex items-center px-4 md:px-6 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 shrink-0">
         <div className="flex items-center">
           <button
             onClick={onBack}
@@ -53,15 +53,15 @@ export function SettingsScreen({
       </div>
 
       {/* Settings Content */}
-      <div className="flex-1 overflow-y-auto pb-[120px] scrollbar-hide pt-2">
+      <div className="flex-1 overflow-y-auto pb-[120px] scrollbar-hide pt-2 px-4 md:px-6">
         {/* Profile & Account */}
         <div className="mt-4">
-          <div className="px-6 mb-2">
+          <div className="mb-2">
             <span className="text-[11px] font-bold text-slate-400 tracking-wider uppercase">
               Profile & Account
             </span>
           </div>
-          <div className="mx-4 bg-white rounded-2xl border border-slate-100 flex flex-col overflow-hidden shadow-sm">
+          <div className="bg-white rounded-2xl border border-slate-100 flex flex-col overflow-hidden shadow-sm">
             <SettingItem
               icon={<UserCircle size={20} className="text-slate-700" />}
               label="Username"
@@ -94,12 +94,12 @@ export function SettingsScreen({
 
         {/* Security & Limits */}
         <div className="mt-6">
-          <div className="px-6 mb-2">
+          <div className="mb-2">
             <span className="text-[11px] font-bold text-slate-400 tracking-wider uppercase">
               Security & Limits
             </span>
           </div>
-          <div className="mx-4 bg-white rounded-2xl border border-slate-100 flex flex-col overflow-hidden shadow-sm">
+          <div className="bg-white rounded-2xl border border-slate-100 flex flex-col overflow-hidden shadow-sm">
             <SettingItem
               icon={<Fingerprint size={20} className="text-slate-700" />}
               label="Biometric Login"
@@ -127,12 +127,12 @@ export function SettingsScreen({
 
         {/* Network & Platform */}
         <div className="mt-6">
-          <div className="px-6 mb-2">
+          <div className="mb-2">
             <span className="text-[11px] font-bold text-slate-400 tracking-wider uppercase">
               Network & Platform
             </span>
           </div>
-          <div className="mx-4 bg-white rounded-2xl border border-slate-100 flex flex-col overflow-hidden shadow-sm">
+          <div className="bg-white rounded-2xl border border-slate-100 flex flex-col overflow-hidden shadow-sm">
             <SettingItem
               icon={<BadgeDollarSign size={20} className="text-slate-700" />}
               label="Gas Fee Sponsorship"
@@ -153,12 +153,12 @@ export function SettingsScreen({
 
         {/* Help & Support */}
         <div className="mt-6 mb-8">
-          <div className="px-6 mb-2">
+          <div className="mb-2">
             <span className="text-[11px] font-bold text-slate-400 tracking-wider uppercase">
               Help & Support
             </span>
           </div>
-          <div className="mx-4 bg-white rounded-2xl border border-slate-100 flex flex-col overflow-hidden shadow-sm">
+          <div className="bg-white rounded-2xl border border-slate-100 flex flex-col overflow-hidden shadow-sm">
             <SettingItem
               icon={<HeadphonesIcon size={20} className="text-slate-700" />}
               label="Contact Support"

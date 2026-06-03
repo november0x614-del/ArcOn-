@@ -36,7 +36,7 @@ export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
         </div>
       </div>
 
-      <div className="flex-1 p-6 flex flex-col items-center overflow-y-auto pb-24">
+      <div className="flex-1 px-4 md:px-6 flex flex-col items-center overflow-y-auto pb-24 pt-6">
         <div className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-200/60 flex flex-col items-center w-full">
           <span className="text-[11px] font-black tracking-widest text-slate-800 bg-slate-100 px-2.5 py-1 rounded-full mb-6 uppercase">
             USDC (ARC TESTNET)

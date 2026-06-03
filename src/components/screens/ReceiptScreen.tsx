@@ -186,7 +186,7 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
   }
 
   return (
-    <div className="w-full h-full bg-slate-100 relative flex flex-col z-50 animate-in fade-in slide-in-from-right duration-300">
+    <div className="w-full h-full bg-[#ecf5fc] relative flex flex-col z-50 animate-in fade-in slide-in-from-right duration-300">
       {/* Toast Feedback */}
       {copiedText && (
         <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-slate-900 border border-slate-800 text-white text-xs px-3.5 py-2 rounded-full shadow-xl z-[9999] flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
@@ -217,7 +217,7 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-5 py-6 pb-24 flex flex-col items-center gap-4 bg-slate-50">
+      <div className="flex-1 overflow-y-auto px-4 md:px-6 py-6 pb-24 flex flex-col items-center gap-4 bg-[#ecf5fc]">
         {isPending ? (
           <div className="flex flex-col items-center justify-center mt-20 p-8 w-full max-w-[370px]">
             <div className="w-16 h-16 bg-slate-100 text-slate-600 rounded-full flex items-center justify-center mb-6 shadow-sm">

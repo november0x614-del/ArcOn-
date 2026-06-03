@@ -291,7 +291,7 @@ export const HomeScreen = React.memo(
         <div className="absolute top-0 left-0 right-0 h-[40vh] md:h-[450px] bg-slate-900 rounded-b-[40px] md:rounded-b-[50px] z-0"></div>
 
         {/* Top Header */}
-        <header className={`relative text-white ${isDesktop ? "px-10" : "px-5 md:px-8"} pt-4 md:pt-8 pb-3 flex justify-between items-center z-20 shrink-0`}>
+        <header className={`relative text-white ${isDesktop ? "px-10" : "px-4 md:px-6"} pt-4 md:pt-8 pb-3 flex justify-between items-center z-20 shrink-0`}>
           <div className="flex items-center gap-3 cursor-pointer">
             <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-slate-800 font-[900] text-lg shadow-sm uppercase">
               {userName
@@ -353,15 +353,15 @@ export const HomeScreen = React.memo(
 
         {/* Scrollable Main Content */}
         <div className="flex-1 overflow-y-auto pb-[140px] pt-0 scrollbar-hide z-20 relative w-full flex flex-col items-center">
-          <div className={`w-full ${isDesktop ? "max-w-none px-6" : "max-w-[700px] px-4 md:px-6 animate-in fade-in duration-300"}`}>
+          <div className={`w-full ${isDesktop ? "max-w-none px-6" : "px-4 md:px-6 animate-in fade-in duration-300"}`}>
             <div className={`flex flex-col ${isDesktop ? "grid grid-cols-12 gap-6" : ""} mt-4`}>
               {/* Left Column for Desktop */}
               <div className={`${isDesktop ? "col-span-7 xl:col-span-8" : ""} flex flex-col gap-3`}>
                 {/* Wrapping Accounts & Favorites for precise height alignment with Right Column feature popup on Desktop */}
-                <div className={`flex flex-col gap-3 shrink-0 ${isDesktop ? "" : ""}`}>
+                <div className={`flex flex-col gap-3 shrink-0 ${isDesktop ? "h-[680px]" : ""}`}>
                   {/* Accounts Section */}
-                  <section className={`bg-white rounded-[24px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] border border-slate-50/50 ${isDesktop ? "mx-0" : "mx-4"}`}>
-                <div className="flex justify-between items-center mb-3">
+                  <section className="bg-white rounded-[24px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] border border-slate-50/50">
+                    <div className="flex justify-between items-center mb-3">
                   <h2 className="text-[17px] font-bold text-slate-800 tracking-tight">
                     Accounts
                   </h2>
@@ -491,8 +491,8 @@ export const HomeScreen = React.memo(
                 </div>
               </section>
 
-              {/* Favorite Transactions Section */}
-              <section className={`bg-white rounded-[24px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] border border-slate-50/50 ${isDesktop ? "mb-0 mx-0 flex-none flex flex-col justify-start" : "mb-3 mx-4"}`}>
+                {/* Favorite Transactions Section */}
+              <section className={`bg-white rounded-[24px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] border border-slate-50/50 ${isDesktop ? "mb-0 flex-1 flex flex-col" : "mb-3"}`}>
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-[17px] font-bold text-slate-800 tracking-tight">
                     Favorite Transactions
@@ -505,7 +505,7 @@ export const HomeScreen = React.memo(
                   </button>
                 </div>
 
-                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-y-5 gap-x-2 justify-items-center">
+                <div className={`${isDesktop ? "grid grid-cols-5 gap-y-7 gap-x-4 max-w-[560px] mx-auto" : "grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-y-5 gap-x-2"} justify-items-center w-full`}>
                   {filteredShortcuts
                     .filter((item) => item.label !== "DApp Browser" && item.label !== "Transaction History" && item.label !== "Unified balance")
                     .map((item) => {
@@ -542,23 +542,24 @@ export const HomeScreen = React.memo(
                         mappedView = "transactionHistory";
 
                       return (
-                        <MenuIcon
-                          key={item.id}
-                          icon={item.icon}
-                          label={item.label}
-                          color={item.color}
-                          bgCircle={item.bgCircle}
-                          badge={item.badge}
-                          badgeColor={item.badgeColor}
-                          isTextIcon={item.isTextIcon}
-                          textIcon={item.textIcon}
-                          isActive={
-                            (activeView as string) === mappedView && mappedView !== ""
-                          }
-                          onClick={() => {
-                            if (mappedView) onNavigate(mappedView as any);
-                          }}
-                        />
+                        <div key={item.id} className="w-full flex justify-center">
+                          <MenuIcon
+                            icon={item.icon}
+                            label={item.label}
+                            color={item.color}
+                            bgCircle={item.bgCircle}
+                            badge={item.badge}
+                            badgeColor={item.badgeColor}
+                            isTextIcon={item.isTextIcon}
+                            textIcon={item.textIcon}
+                            isActive={
+                              (activeView as string) === mappedView && mappedView !== ""
+                            }
+                            onClick={() => {
+                              if (mappedView) onNavigate(mappedView as any);
+                            }}
+                          />
+                        </div>
                       );
                     })}
                 </div>
@@ -617,7 +618,7 @@ export const HomeScreen = React.memo(
               </div>
 
               {/* Special For You (Promo Banner) */}
-              <section className={`bg-white rounded-[24px] overflow-hidden shadow-sm pb-4 border border-x-transparent border-t-transparent border-b-slate-50 relative z-10 ${isDesktop ? "mb-0 mx-0 mt-8" : "mb-4 mx-4"}`}>
+              <section className={`bg-white rounded-[24px] overflow-hidden shadow-sm pb-4 border border-x-transparent border-t-transparent border-b-slate-50 relative z-10 ${isDesktop ? "mb-0 mt-8" : "mb-4"}`}>
                 <div className="px-5 pt-5 pb-3">
                   <h2 className="text-[17px] font-bold text-slate-800 tracking-tight mb-0 text-left">
                     Special For You
@@ -692,7 +693,7 @@ export const HomeScreen = React.memo(
                     platformConfig.swapEnabled !== false ||
                     platformConfig.arcBirdEnabled !== false ||
                     platformConfig.stableStakeEnabled !== false) && (
-                    <section className={`bg-white rounded-[24px] p-5 shadow-sm text-left ${isDesktop ? "mb-0 mx-0" : "mb-4 mx-4"}`}>
+                    <section className={`bg-white rounded-[24px] p-5 shadow-sm text-left ${isDesktop ? "mb-0" : "mb-4"}`}>
                       <div className="flex justify-between items-center mb-4">
                         <div className="flex flex-col">
                           <h2 className="text-[17px] font-bold text-slate-800 tracking-tight font-sans">
@@ -813,7 +814,7 @@ export const HomeScreen = React.memo(
                 </div>
 
                 <div className={`flex flex-col gap-6 w-full max-w-[500px] mx-auto ${isDesktop ? "max-w-none" : ""}`}>
-                  <section className={`bg-white rounded-[24px] p-5 shadow-sm ${isDesktop ? "mx-0 mb-0" : "mx-4 mb-4"}`}>
+                  <section className={`bg-white rounded-[24px] p-5 shadow-sm ${isDesktop ? "mb-0" : "mb-4"}`}>
                     <div className="mb-4 text-left flex justify-between items-start">
                       <div>
                         <h2 className="text-[17px] font-bold text-slate-800 tracking-tight">
@@ -872,7 +873,7 @@ export const HomeScreen = React.memo(
                   {!isDesktop && (!platformConfig ||
                     platformConfig.merchantEnabled !== false ||
                     platformConfig.faucetEnabled !== false) && (
-                    <section className="bg-white rounded-[24px] p-5 shadow-sm mx-4 mb-8">
+                    <section className="bg-white rounded-[24px] p-5 shadow-sm mb-8">
                       <h2 className="text-[17px] font-bold text-slate-800 tracking-tight mb-4 text-left">
                         Services
                       </h2>
