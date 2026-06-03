@@ -1,8 +1,5 @@
-import { AppKit, BridgeChain } from "@circle-fin/app-kit";
-import {
-  createCircleWalletsAdapter,
-  CircleWalletsAdapter,
-} from "@circle-fin/adapter-circle-wallets";
+import type { AppKit } from "@circle-fin/app-kit";
+import type { CircleWalletsAdapter } from "@circle-fin/adapter-circle-wallets";
 
 let appKitInstance: AppKit | null = null;
 let appKitAdapter: CircleWalletsAdapter | null = null;
@@ -51,7 +48,7 @@ export const getAppKit = async () => {
 
   const kitKey = getValidKitKey();
 
-  const { resolveWalletSetId } = await import("./circleClient");
+  const { resolveWalletSetId } = await import("./circleClient.js");
   const walletSetId = await resolveWalletSetId();
 
   if (!apiKey || !entitySecret || !kitKey || !walletSetId) {
@@ -59,6 +56,15 @@ export const getAppKit = async () => {
       "Missing Circle Configurations. Ensure CIRCLE_API_KEY, CIRCLE_ENTITY_SECRET, KIT_KEY, and CIRCLE_WALLET_SET_ID are set in environment variables."
     );
   }
+
+  // Lazy load heavy dependencies to isolate Solana/Web3 parsing payload until needed
+  const [
+    { AppKit }, 
+    { createCircleWalletsAdapter }
+  ] = await Promise.all([
+    import("@circle-fin/app-kit"),
+    import("@circle-fin/adapter-circle-wallets")
+  ]);
 
   const adapter = createCircleWalletsAdapter({
     apiKey,
