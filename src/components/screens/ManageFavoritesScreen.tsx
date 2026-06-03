@@ -19,15 +19,9 @@ export const defaultSelectedShortcuts: ShortcutItem[] = [
     color: "text-slate-800",
   },
   {
-    id: "13",
-    icon: "Landmark",
-    label: "Withdraw",
-    color: "text-red-500",
-  },
-  {
     id: "14",
-    icon: "Layers",
-    label: "Bridge USDC",
+    icon: "Landmark",
+    label: "CCPT Bridge",
     color: "text-indigo-600",
     badge: "NEW",
   },
@@ -38,14 +32,21 @@ export const defaultSelectedShortcuts: ShortcutItem[] = [
     color: "text-emerald-500",
     badge: "NEW",
   },
+  {
+    id: "15",
+    icon: "Hexagon",
+    label: "Mint NFT",
+    color: "text-purple-600",
+    badge: "MAIN",
+  },
 ];
 
 export const defaultAvailableShortcuts: ShortcutItem[] = [
   {
-    id: "11",
-    icon: "Receipt",
-    label: "Transaction History",
-    color: "text-slate-600",
+    id: "13",
+    icon: "Landmark",
+    label: "Withdraw",
+    color: "text-red-500",
   },
 ];
 
@@ -79,17 +80,19 @@ export function ManageFavoritesScreen({
   return (
     <div className="w-full h-full bg-white relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
       {/* Header */}
-      <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between">
-        <div className="flex items-center">
-          <button
-            onClick={onBack}
-            className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
-          >
-            <ArrowLeft size={20} className="text-white" />
-          </button>
-          <h2 className="font-bold text-[16px] text-white ml-2">
-            MANAGE MENUS
-          </h2>
+      <div className="flex justify-center bg-slate-900 shadow-md relative z-10 w-full shrink-0">
+        <div className="flex items-center px-4 pt-6 pb-3 w-full max-w-[500px] justify-between">
+          <div className="flex items-center">
+            <button
+              onClick={onBack}
+              className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
+            >
+              <ArrowLeft size={20} className="text-white" />
+            </button>
+            <h2 className="font-bold text-[16px] text-white ml-2">
+              MANAGE MENUS
+            </h2>
+          </div>
         </div>
       </div>
 
@@ -199,22 +202,24 @@ export function ManageFavoritesScreen({
         </div>
       </div>
 
-      <div className="bg-white/95 backdrop-blur-md px-5 pb-5 pt-4 absolute bottom-0 w-full z-30 shadow-[0_-5px_15px_rgba(0,0,0,0.02)]">
-        <button
-          onClick={() => {
-            if (!isSaveDisabled) onSave(selected, available);
-          }}
-          disabled={isSaveDisabled}
-          className={`w-full py-3.5 rounded-full font-bold text-[15px] transition-all
-            ${
-              isSaveDisabled
-                ? "bg-slate-200 text-slate-400"
-                : "bg-slate-900 text-white hover:bg-slate-800 active:scale-[0.98]"
-            }
-          `}
-        >
-          Save
-        </button>
+      <div className="bg-white/95 backdrop-blur-md px-5 pb-5 pt-4 absolute bottom-0 w-full z-30 shadow-[0_-5px_15px_rgba(0,0,0,0.02)] flex justify-center">
+        <div className="w-full max-w-[500px]">
+          <button
+            onClick={() => {
+              if (!isSaveDisabled) onSave(selected, available);
+            }}
+            disabled={isSaveDisabled}
+            className={`w-full py-3.5 rounded-full font-bold text-[15px] transition-all
+              ${
+                isSaveDisabled
+                  ? "bg-slate-200 text-slate-400"
+                  : "bg-slate-900 text-white hover:bg-slate-800 active:scale-[0.98]"
+              }
+            `}
+          >
+            Save
+          </button>
+        </div>
       </div>
     </div>
   );

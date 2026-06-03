@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { Html5Qrcode } from "html5-qrcode";
 import { Contact } from "../../types";
+import { useStore } from "../../store/useStore";
 
 interface ScanQRScreenProps {
   onBack: () => void;
@@ -66,17 +67,37 @@ export function ScanQRScreen({ onBack, onScanResult }: ScanQRScreenProps) {
   const handleScanSuccess = (text: string) => {
     if (!scanning) return;
 
+    // Default amount to empty
+    let parsedAmount = "";
+
     // Simple validation for EVM/Arc Address (0x followed by 40 hex chars)
-    const ethAddressRegex = /^0x[a-fA-F0-9]{40}$/;
+    const ethAddressRegex = /^0x[a-fA-F0-9]{40}$/i;
     let walletAddress = text.trim();
 
-    // Handle possible URI scheme like arc:0x... or ethereum:0x...
+    // Handle possible URI scheme like arc:0x...?amount=10
     if (walletAddress.includes(":")) {
-      walletAddress = walletAddress.split(":")[1].split("?")[0];
+      const parts = walletAddress.split(":");
+      const addrAndParams = parts[1];
+      if (addrAndParams.includes("?")) {
+        const [addr, paramsString] = addrAndParams.split("?");
+        walletAddress = addr;
+        
+        // Parse params
+        const params = new URLSearchParams(paramsString);
+        if (params.has("amount")) {
+          parsedAmount = params.get("amount") || "";
+        }
+      } else {
+        walletAddress = addrAndParams;
+      }
     }
 
     if (ethAddressRegex.test(walletAddress)) {
       setScanning(false);
+      
+      if (parsedAmount) {
+        useStore.getState().setTransferAmount(parsedAmount);
+      }
 
       // Stop scanner before moving on
       if (scannerRef.current && scannerRef.current.isScanning) {

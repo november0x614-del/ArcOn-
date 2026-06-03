@@ -7,10 +7,12 @@ import {
   CheckCircle2,
   Loader2,
   Plus,
+  ArrowRight,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { useApp } from "../../contexts/AppContext";
 import { Contact } from "../../types";
+import { useStore } from "../../store/useStore";
 
 interface BatchTransferScreenProps {
   onBack: () => void;
@@ -31,7 +33,6 @@ export function BatchTransferScreen({
     registeredUser,
     platformConfig,
     fetchPlatformConfig,
-    startSyncPolling,
   } = useApp();
 
   React.useEffect(() => {
@@ -41,7 +42,7 @@ export function BatchTransferScreen({
   }, [platformConfig, fetchPlatformConfig]);
 
   const [multiSendStep, setMultiSendStep] = useState<
-    "info" | "form" | "confirm" | "processing" | "success"
+    "form" | "confirm" | "success"
   >("form");
   const [recipients, setRecipients] = useState<
     {
@@ -56,6 +57,7 @@ export function BatchTransferScreen({
   const [newAmount, setNewAmount] = useState("");
   const [processingStatus, setProcessingStatus] = useState<string>("");
   const [isAddedFeedback, setIsAddedFeedback] = useState(false);
+  const [isSending, setIsSending] = useState(false);
 
   const [showQuickAddModal, setShowQuickAddModal] = useState(false);
   const [selectedQuickAddIds, setSelectedQuickAddIds] = useState<string[]>([]);
@@ -71,32 +73,42 @@ export function BatchTransferScreen({
     if (!newAddress || !newAmount) return;
 
     const addressList = newAddress.split(/[\s,]+/).filter(Boolean);
+    const newItems: typeof recipients = [];
+    const invalidList: string[] = [];
 
-    const newItems = addressList.map((addr, idx) => {
+    addressList.forEach((addr) => {
       const match = contacts.find(
         (c) =>
           (c.number?.toLowerCase() || "") === (addr?.toLowerCase() || "") ||
+          (c.name?.toLowerCase() || "") === (addr?.toLowerCase() || "") ||
           (c.number || "").includes(addr),
       );
       const fullAddr = match ? match.number : addr;
-      // USER_ + [4 char start] + ... + [4 char end]
-      const name = match
-        ? match.name
-        : `User_${fullAddr.substring(0, 6)}...${fullAddr.substring(fullAddr.length - 4)}`;
-      
-      const formattedAddress =
-        fullAddr.length > 12
-          ? `${fullAddr.substring(0, 6)}...${fullAddr.substring(fullAddr.length - 4)}`
-          : fullAddr;
 
-      return {
-        id: `${fullAddr}-${Date.now()}-${Math.random()}`,
-        address: fullAddr,
-        displayAddress: formattedAddress,
-        name,
-        amount: newAmount,
-      };
+      if (!fullAddr.startsWith("0x") || fullAddr.length !== 42) {
+        invalidList.push(addr);
+      } else {
+        const name = match
+          ? match.name
+          : `Recipient #${recipients.length + newItems.length + 1}`;
+        const formattedAddress = `${fullAddr.substring(0, 6)}...${fullAddr.substring(fullAddr.length - 4)}`;
+
+        newItems.push({
+          id: `${fullAddr}-${Date.now()}-${Math.random()}`,
+          address: fullAddr,
+          displayAddress: formattedAddress,
+          name,
+          amount: newAmount,
+        });
+      }
     });
+
+    if (invalidList.length > 0) {
+      displayToast(
+        `Format alamat tidak valid untuk: ${invalidList.join(", ")}. Harus berformat 0x dengan 42 karakter.`
+      );
+      return;
+    }
 
     setRecipients((prev) => [...prev, ...newItems]);
     setNewAddress("");
@@ -111,19 +123,47 @@ export function BatchTransferScreen({
     setRecipients((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const PLATFORM_FEE = platformConfig ? parseFloat(platformConfig.withdrawFee || "0.25") : 0.25;
-  const NETWORK_GAS = platformConfig?.gasSubsidyEnabled ? 0.00 : 0.05;
+  // Dynamic Fee Calculation
+  // Formula: BATCH_BASE_FEE + (BATCH_PER_RECIPIENT_FEE * (total_recipients - 1))
+  const getBatchFees = () => {
+    if (recipients.length === 0) return { base: 0, incremental: 0, total: 0 };
+    
+    // Parse values from platformConfig
+    const baseFee = platformConfig?.batchBaseFee 
+      ? parseFloat(platformConfig.batchBaseFee.replace(/[^0-9.]/g, '')) || 0.15
+      : 0.15;
+      
+    const incrementalFee = platformConfig?.batchPerRecipientFee
+      ? parseFloat(platformConfig.batchPerRecipientFee.replace(/[^0-9.]/g, '')) || 0.02
+      : 0.02;
+    
+    const incrementalTotal = incrementalFee * (recipients.length - 1);
+    
+    return {
+      base: baseFee,
+      incremental: incrementalFee,
+      incrementalTotal: incrementalTotal,
+      total: baseFee + incrementalTotal
+    };
+  };
+
+  const fees = getBatchFees();
+  const PLATFORM_FEE = fees.total;
+  const NETWORK_GAS = platformConfig?.gasSubsidyEnabled ? 0.0 : 0.05;
 
   const totalPayout = recipients.reduce(
     (acc, curr) => acc + parseFloat(curr.amount || "0"),
     0,
   );
-  
+
   const totalRequired = totalPayout + PLATFORM_FEE + NETWORK_GAS;
+  const hasEnoughBalance = recipients.length > 0 && balance >= totalRequired;
 
   const startProcessing = () => {
-    if (totalRequired > balance) {
-      displayToast("Insufficient balance for this batch transfer including fees.");
+    if (!hasEnoughBalance) {
+      displayToast(
+        "Insufficient balance for this batch transfer including fees.",
+      );
       return;
     }
     setMultiSendStep("confirm");
@@ -132,7 +172,7 @@ export function BatchTransferScreen({
   const [actualTxId, setActualTxId] = useState<string>("");
 
   const executeBatch = async () => {
-    setMultiSendStep("processing");
+    setIsSending(true);
     setProcessingStatus("Packaging transaction inputs...");
 
     try {
@@ -151,7 +191,8 @@ export function BatchTransferScreen({
       });
 
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Batch transfer failed");
+      if (!response.ok)
+        throw new Error(result.error || "Batch transfer failed");
 
       setProcessingStatus("Broadcasting successfully completed.");
       if (result.txId) {
@@ -161,52 +202,58 @@ export function BatchTransferScreen({
       // Update global state
       await fetchBalance();
       await fetchTransactions();
-      
-      // Start polling to self-heal pending transactions
-      startSyncPolling();
 
       setMultiSendStep("success");
     } catch (error: any) {
       console.error("Batch send failed", error);
-      displayToast(error.message || "Batch transfer failed.");
+      let errorMessage = error.message;
+      if (errorMessage.includes("blocklisted")) {
+        errorMessage =
+          "Batch aborted: One or more recipients are in the blocklist.";
+      }
+      displayToast(errorMessage || "Batch transfer failed.");
       setMultiSendStep("form");
+    } finally {
+      setIsSending(false);
     }
   };
 
   return (
-    <div className="w-full h-full bg-[#f8fafc] relative flex flex-col items-center overflow-hidden z-50">
+    <div className="w-full h-full bg-[#ecf5fc] relative flex flex-col items-center overflow-hidden z-50">
       {/* Header */}
-      <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between">
-        <div className="flex items-center">
-          <button
-            onClick={onBack}
-            className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
-          >
-            <ArrowLeft size={20} className="text-white" />
-          </button>
-          <h2 className="font-bold text-[16px] text-white ml-2">
-            BATCH TRANSFER
-          </h2>
+      <div className="flex justify-center bg-slate-900 shadow-md relative z-10 w-full shrink-0">
+        <div className="flex items-center px-4 pt-6 pb-3 w-full max-w-[500px] justify-between">
+          <div className="flex items-center">
+            <button
+              onClick={onBack}
+              className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
+            >
+              <ArrowLeft size={20} className="text-white" />
+            </button>
+            <h2 className="font-bold text-[16px] text-white ml-2">
+              BATCH TRANSFER
+            </h2>
+          </div>
         </div>
       </div>
 
       {/* Progress Indicator */}
-      <div className="w-full bg-white border-b border-slate-100 px-5 py-3 flex gap-2">
-        <div
-          className={`h-1.5 flex-1 rounded-full ${multiSendStep === "form" ? "bg-slate-900" : "bg-slate-900"}`}
-        ></div>
-        <div
-          className={`h-1.5 flex-1 rounded-full ${multiSendStep === "confirm" || multiSendStep === "processing" || multiSendStep === "success" ? "bg-slate-900" : "bg-slate-100"}`}
-        ></div>
-        <div
-          className={`h-1.5 flex-1 rounded-full ${multiSendStep === "processing" || multiSendStep === "success" ? "bg-slate-900" : "bg-slate-100"}`}
-        ></div>
-        <div
-          className={`h-1.5 flex-1 rounded-full ${multiSendStep === "success" ? "bg-slate-900" : "bg-slate-100"}`}
-        ></div>
+      <div className="w-full bg-white border-b border-slate-100 flex justify-center shrink-0">
+        <div className="w-full max-w-[500px] px-5 py-3 flex gap-2">
+          <div
+            className="h-1.5 flex-1 rounded-full bg-slate-900"
+          ></div>
+          <div
+            className={`h-1.5 flex-1 rounded-full ${multiSendStep === "confirm" || multiSendStep === "success" ? "bg-slate-900" : "bg-slate-100"}`}
+          ></div>
+          <div
+            className={`h-1.5 flex-1 rounded-full ${multiSendStep === "success" ? "bg-slate-900" : "bg-slate-100"}`}
+          ></div>
+        </div>
       </div>
 
       <div className="flex-1 w-full flex flex-col overflow-y-auto pb-24 scrollbar-hide">
+        <div className="w-full max-w-[500px] mx-auto flex flex-col relative h-full">
         {/* Content Step Logic */}
         <div className="p-5">
           {/* Step 1: Info Screen */}
@@ -428,10 +475,18 @@ export function BatchTransferScreen({
 
               <button
                 onClick={startProcessing}
-                disabled={recipients.length === 0}
-                className="w-full h-16 bg-[#0B192C] text-white rounded-[22px] font-bold text-[16px] shadow-lg shadow-slate-200 active:scale-[0.97] transition-all disabled:opacity-30 disabled:shadow-none mb-10 border-0 cursor-pointer flex items-center justify-center"
+                disabled={recipients.length === 0 || !hasEnoughBalance}
+                className={`w-full h-16 rounded-[22px] font-bold text-[16px] active:scale-[0.97] transition-all mb-10 border-0 cursor-pointer flex items-center justify-center shadow-lg
+                  ${
+                    recipients.length === 0
+                      ? "bg-dash-100 text-slate-400 opacity-30 shadow-none cursor-not-allowed"
+                      : !hasEnoughBalance
+                        ? "bg-red-50 text-red-500 border border-red-100 cursor-not-allowed"
+                        : "bg-[#0B192C] text-white shadow-slate-200 hover:bg-slate-800"
+                  }
+                `}
               >
-                Review Batch Send
+                {recipients.length > 0 && !hasEnoughBalance ? "Insufficient Balance" : "Review Batch Send"}
               </button>
             </motion.div>
           )}
@@ -455,21 +510,37 @@ export function BatchTransferScreen({
               <div className="bg-white border border-slate-100 rounded-[28px] p-6 shadow-sm mb-6">
                 <div className="space-y-4 mb-6">
                   {recipients.slice(0, 3).map((rec) => {
-                    const isNameVerified = rec.name && !rec.name.startsWith("User_") && !rec.name.startsWith("Scanned");
+                    const isNameVerified =
+                      rec.name &&
+                      !rec.name.startsWith("User_") &&
+                      !rec.name.startsWith("Scanned");
                     return (
-                      <div key={rec.id} className="flex justify-between items-center bg-slate-50/50 p-3 rounded-2xl border border-slate-100/30">
+                      <div
+                        key={rec.id}
+                        className="flex justify-between items-center bg-slate-50/50 p-3 rounded-2xl border border-slate-100/30"
+                      >
                         <div className="flex flex-col min-w-0 flex-1 mr-3">
-                          <span className="font-bold text-slate-900 text-[14px] truncate">{rec.name}</span>
+                          <span className="font-bold text-slate-900 text-[14px] truncate">
+                            {rec.name}
+                          </span>
                           <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="font-mono text-[10px] text-slate-400">{rec.displayAddress}</span>
-                            <span className={`text-[10px] font-bold flex items-center gap-1 ${isNameVerified ? "text-emerald-500" : "text-amber-500"}`}>
-                              {isNameVerified ? "🟢 Connected" : "🟡 Not Linked"}
+                            <span className="font-mono text-[10px] text-slate-400">
+                              {rec.displayAddress}
+                            </span>
+                            <span
+                              className={`text-[8px] ${isNameVerified ? "text-emerald-500" : "text-amber-500"}`}
+                            >
+                              {isNameVerified ? "🟢" : "🟡"}
                             </span>
                           </div>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
-                          <span className="font-bold text-slate-900 text-[14px]">{parseFloat(rec.amount).toFixed(2)}</span>
-                          <span className="text-[9px] font-bold text-slate-400 uppercase">USDC</span>
+                          <span className="font-bold text-slate-900 text-[14px]">
+                            {parseFloat(rec.amount).toFixed(2)}
+                          </span>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase">
+                            USDC
+                          </span>
                         </div>
                       </div>
                     );
@@ -485,23 +556,53 @@ export function BatchTransferScreen({
 
                 <div className="pt-5 border-t border-slate-100 space-y-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-[13px] text-slate-500 font-bold">Total Payout</span>
-                    <span className="font-mono font-bold text-slate-800">{totalPayout.toFixed(2)} USDC</span>
+                    <span className="text-[13px] text-slate-500 font-bold">
+                      Total Payout
+                    </span>
+                    <span className="font-mono font-bold text-slate-800">
+                      {totalPayout.toFixed(2)} USDC
+                    </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-[13px] text-slate-500 font-bold flex items-center gap-1.5">
                       Platform Fee
-                      <div className="w-3.5 h-3.5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-[8px] font-black cursor-help" title="Application distribution fee">i</div>
+                      <div
+                        className="w-3.5 h-3.5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-[8px] font-black cursor-help"
+                        title={`Base: ${fees.base.toFixed(2)} + ${fees.incremental.toFixed(2)} per extra recipient`}
+                      >
+                        i
+                      </div>
                     </span>
-                    <span className="font-mono font-bold text-slate-800">{PLATFORM_FEE.toFixed(2)} USDC</span>
+                    <div className="flex flex-col items-end">
+                      <span className="font-mono font-bold text-slate-800">
+                        {PLATFORM_FEE.toFixed(2)} USDC
+                      </span>
+                      {recipients.length > 1 && (
+                        <span className="text-[9px] text-slate-400 font-medium">
+                          ({fees.base.toFixed(2)} + {fees.incrementalTotal.toFixed(2)})
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-[13px] text-slate-500 font-bold">Network Gas</span>
-                    <span className="font-mono font-bold text-slate-800">{NETWORK_GAS.toFixed(2)} USDC</span>
-                  </div>
-                  
+                    <div className="flex justify-between items-center mt-3">
+                      <span className="text-[13px] text-slate-500 font-bold">
+                        Network Gas {platformConfig?.gasSubsidyEnabled && "(Sponsored)"}
+                      </span>
+                      {platformConfig?.gasSubsidyEnabled ? (
+                        <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md w-fit">
+                          Free
+                        </span>
+                      ) : (
+                        <span className="font-mono font-bold text-slate-800">
+                          {NETWORK_GAS.toFixed(2)} USDC
+                        </span>
+                      )}
+                    </div>
+
                   <div className="pt-4 mt-2 border-t-2 border-dashed border-slate-100 flex justify-between items-center">
-                    <span className="text-[15px] text-slate-900 font-black">Total Amount</span>
+                    <span className="text-[15px] text-slate-900 font-black">
+                      Total Amount
+                    </span>
                     <span className="text-[20px] font-mono font-black text-slate-900">
                       {totalRequired.toFixed(2)} USDC
                     </span>
@@ -511,10 +612,34 @@ export function BatchTransferScreen({
 
               <div className="flex flex-col gap-4">
                 <button
+                  disabled={isSending}
                   onClick={executeBatch}
-                  className="w-full h-16 bg-[#0B192C] text-white rounded-[22px] font-bold text-[16px] shadow-lg shadow-slate-200 active:scale-[0.97] transition-all border-0 cursor-pointer flex items-center justify-center"
+                  className={`w-full text-white py-[18px] rounded-full flex justify-between px-6 items-center shadow-[0_4px_14px_rgba(15,23,42,0.3)] border-0 transition-all duration-300 ${
+                    isSending 
+                      ? "bg-[#0B1527] cursor-not-allowed cursor-wait" 
+                      : "bg-slate-900 hover:bg-slate-800 active:scale-[0.98] cursor-pointer"
+                  }`}
                 >
-                  Confirm & Execute
+                  <div className="flex items-center gap-3">
+                    {isSending ? (
+                      <>
+                        <div className="w-5 h-5 border-[2.5px] border-white/20 border-t-white rounded-full animate-spin"></div>
+                        <span className="font-bold text-[15px] tracking-wide">Broadcasting Atomic Batch...</span>
+                      </>
+                    ) : (
+                      <span className="font-bold text-[15px]">Confirm & Execute</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-extrabold text-[16px] tracking-tight">
+                      {totalRequired.toFixed(2)} USDC
+                    </span>
+                    {!isSending && (
+                      <div className="bg-white/20 w-8 h-8 rounded-full border-0 flex items-center justify-center shadow-inner">
+                        <ArrowRight size={18} strokeWidth={3} className="text-white" />
+                      </div>
+                    )}
+                  </div>
                 </button>
                 <button
                   onClick={() => setMultiSendStep("form")}
@@ -524,33 +649,6 @@ export function BatchTransferScreen({
                 </button>
               </div>
             </motion.div>
-          )}
-
-          {/* Step 3: Processing Sequence */}
-          {multiSendStep === "processing" && (
-            <div className="py-20 flex flex-col items-center text-center">
-              <div className="relative mb-10">
-                <div className="w-24 h-24 rounded-full border-4 border-blue-50 flex items-center justify-center">
-                  <Loader2 className="animate-spin text-slate-800" size={48} />
-                </div>
-                <div className="absolute inset-0 animate-ping rounded-full border border-blue-200/50"></div>
-              </div>
-
-              <h3 className="font-black text-[22px] text-slate-900 tracking-tight">
-                On-Chain Processing
-              </h3>
-              <p className="text-[14px] text-slate-500 mt-2 max-w-[280px] leading-relaxed">
-                Verifying batch signature with Circle API and broadcasting to
-                Arc Testnet.
-              </p>
-
-              <div className="w-full bg-slate-900 text-emerald-400 font-mono text-[11px] rounded-2xl p-5 mt-10 text-left leading-relaxed shadow-2xl uppercase border border-slate-800">
-                <span className="text-slate-600 mr-2 opacity-50 font-sans tracking-widest">
-                  {">"}
-                </span>
-                {processingStatus}
-              </div>
-            </div>
           )}
 
           {/* Step 4: Success Screen */}
@@ -573,7 +671,9 @@ export function BatchTransferScreen({
               <div className="bg-white border-[1.5px] border-slate-100 rounded-[32px] p-6 text-left mb-8 shadow-sm overflow-hidden">
                 <div className="flex justify-between items-center text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-4 mb-4">
                   <span>Batch Distribution</span>
-                  <span className="text-[#005faa] bg-[#005faa]/5 px-2.5 py-1 rounded-lg">Verified Payout</span>
+                  <span className="text-[#005faa] bg-[#005faa]/5 px-2.5 py-1 rounded-lg">
+                    Verified Payout
+                  </span>
                 </div>
                 <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1 mb-4 custom-scrollbar">
                   {recipients.map((rec) => (
@@ -583,13 +683,18 @@ export function BatchTransferScreen({
                     >
                       <div className="flex flex-col min-w-0 flex-1 mr-4">
                         <span className="font-bold text-slate-900 text-[14px] truncate leading-tight">
-                          {rec.name || (rec.address ? `User_${rec.address.slice(0,6)}...${rec.address.slice(-4)}` : "Recipient")}
+                          {rec.name ||
+                            (rec.address
+                              ? `User_${rec.address.slice(0, 6)}...${rec.address.slice(-4)}`
+                              : "Recipient")}
                         </span>
                         <span
                           className="font-mono text-[10px] text-slate-400 mt-1"
                           title={rec.address}
                         >
-                          {rec.address ? `${rec.address.slice(0, 10)}...${rec.address.slice(-6)}` : rec.displayAddress}
+                          {rec.address
+                            ? `${rec.address.slice(0, 10)}...${rec.address.slice(-6)}`
+                            : rec.displayAddress}
                         </span>
                       </div>
                       <div className="flex flex-col items-end shrink-0">
@@ -597,9 +702,13 @@ export function BatchTransferScreen({
                           <span className="font-black text-slate-900 text-[15px]">
                             {parseFloat(rec.amount || "0").toFixed(2)}
                           </span>
-                          <span className="text-[9px] font-bold text-slate-400 uppercase">USDC</span>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase">
+                            USDC
+                          </span>
                         </div>
-                        <span className="text-[8px] font-bold text-emerald-500 uppercase tracking-tighter mt-0.5">Confirmed</span>
+                        <span className="text-[8px] font-bold text-emerald-500 uppercase tracking-tighter mt-0.5">
+                          Confirmed
+                        </span>
                       </div>
                     </div>
                   ))}
@@ -617,7 +726,9 @@ export function BatchTransferScreen({
                         )
                         .toFixed(2)}
                     </span>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">USDC</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">
+                      USDC
+                    </span>
                   </div>
                 </div>
                 <div className="mt-4 pt-4 border-t border-slate-50 flex flex-col gap-1.5">
@@ -640,6 +751,7 @@ export function BatchTransferScreen({
               </div>
             </motion.div>
           )}
+        </div>
         </div>
       </div>
 
@@ -700,14 +812,19 @@ export function BatchTransferScreen({
             {/* Select All Controller */}
             <div className="px-5 py-3 border-b border-slate-50 flex justify-between items-center shrink-0 bg-slate-50/50">
               <span className="text-[13px] font-bold text-slate-500">
-                {selectedQuickAddIds.length} of {filteredModalContacts.length} Contacts Selected
+                {selectedQuickAddIds.length} of {filteredModalContacts.length}{" "}
+                Contacts Selected
               </span>
               <button
                 onClick={() => {
-                  if (selectedQuickAddIds.length === filteredModalContacts.length) {
+                  if (
+                    selectedQuickAddIds.length === filteredModalContacts.length
+                  ) {
                     setSelectedQuickAddIds([]);
                   } else {
-                    setSelectedQuickAddIds(filteredModalContacts.map((c) => c.id));
+                    setSelectedQuickAddIds(
+                      filteredModalContacts.map((c) => c.id),
+                    );
                   }
                 }}
                 className="bg-white border border-slate-200 text-slate-800 hover:bg-slate-100 px-3.5 py-1.5 rounded-full text-[12px] font-bold transition-all active:scale-[0.97] cursor-pointer"
@@ -735,7 +852,9 @@ export function BatchTransferScreen({
                     className={`flex items-center justify-between py-4 cursor-pointer hover:bg-slate-50 -mx-5 px-5 transition-colors ${isSelected ? "bg-slate-50/50" : ""}`}
                   >
                     <div className="flex items-center gap-4">
-                      <div className={`w-[44px] h-[44px] rounded-full flex items-center justify-center font-bold text-[13px] border ${isSelected ? "bg-slate-900 text-white border-slate-900" : "bg-slate-100 text-slate-700 border-slate-200"}`}>
+                      <div
+                        className={`w-[44px] h-[44px] rounded-full flex items-center justify-center font-bold text-[13px] border ${isSelected ? "bg-slate-900 text-white border-slate-900" : "bg-slate-100 text-slate-700 border-slate-200"}`}
+                      >
                         {contact.initials}
                       </div>
                       <div className="text-left">
@@ -743,13 +862,32 @@ export function BatchTransferScreen({
                           {contact.name}
                         </p>
                         <p className="font-mono text-slate-400 text-[11px] mt-1 pr-1 truncate max-w-[220px]">
-                          {contact.number.substring(0, 14)}...{contact.number.substring(contact.number.length - 4)}
-                          <span className="font-sans italic ml-1 text-slate-300">({contact.network || "Arc Network"})</span>
+                          {contact.number.substring(0, 14)}...
+                          {contact.number.substring(contact.number.length - 4)}
+                          <span className="font-sans italic ml-1 text-slate-300">
+                            ({contact.network || "Arc Network"})
+                          </span>
                         </p>
                       </div>
                     </div>
 
                     {/* Checkbox indicator */}
+                    <div
+                      className={`flex items-center gap-3 ${isSelected ? "opacity-100" : "opacity-30"} hover:opacity-100 cursor-pointer`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Trigger deletion logic
+                        const confirmDelete = window.confirm(`Hapus kontak ${contact.name}?`);
+                        if (confirmDelete) {
+                          const { deletedContactIds, setDeletedContactIds } = useStore.getState();
+                          const newDeleted = [...deletedContactIds, contact.id];
+                          setDeletedContactIds(newDeleted);
+                          displayToast(`Kontak ${contact.name} berhasil dihapus.`);
+                        }
+                      }}
+                    >
+                      <Trash2 size={18} className="text-red-400" />
+                    </div>
                     <div
                       className={`w-6 h-6 rounded-full border-[2px] flex items-center justify-center transition-all ${
                         isSelected
@@ -791,17 +929,45 @@ export function BatchTransferScreen({
               <button
                 onClick={() => {
                   if (selectedQuickAddIds.length === 0) return;
-                  
-                  const selectedAddresses = contacts
-                    .filter((c) => selectedQuickAddIds.includes(c.id))
-                    .map((c) => c.number)
-                    .join(", ");
 
-                  setNewAddress((prev) => prev ? `${prev}, ${selectedAddresses}` : selectedAddresses);
-                  setShowQuickAddModal(false);
-                  displayToast(
-                    `Selected ${selectedQuickAddIds.length} contacts populated!`,
+                  const selectedContacts = contacts.filter((c) =>
+                    selectedQuickAddIds.includes(c.id)
                   );
+
+                  if (newAmount) {
+                    // Instantly add to the recipient list with the preset amount
+                    const newItems = selectedContacts.map((contact) => {
+                      const fullAddr = contact.number;
+                      const formattedAddress = `${fullAddr.substring(0, 6)}...${fullAddr.substring(fullAddr.length - 4)}`;
+
+                      return {
+                        id: `${fullAddr}-${Date.now()}-${Math.random()}`,
+                        address: fullAddr,
+                        displayAddress: formattedAddress,
+                        name: contact.name,
+                        amount: newAmount,
+                      };
+                    });
+
+                    setRecipients((prev) => [...prev, ...newItems]);
+                    setShowQuickAddModal(false);
+                    displayToast(
+                      `Berhasil menambahkan langsung ${selectedQuickAddIds.length} kontak ke daftar transfer batch!`
+                    );
+                  } else {
+                    // Fallback to populating the text area
+                    const selectedAddresses = selectedContacts
+                      .map((c) => c.number)
+                      .join(", ");
+
+                    setNewAddress((prev) =>
+                      prev ? `${prev}, ${selectedAddresses}` : selectedAddresses,
+                    );
+                    setShowQuickAddModal(false);
+                    displayToast(
+                      `Berhasil menyalin ${selectedQuickAddIds.length} alamat. Masukkan jumlah USDC untuk menambahkannya.`
+                    );
+                  }
                 }}
                 disabled={selectedQuickAddIds.length === 0}
                 className="w-full bg-slate-900 border-0 hover:bg-slate-800 disabled:opacity-45 text-white py-4 rounded-full font-bold text-[15px] shadow-lg hover:shadow-xl transition-all active:scale-[0.98] cursor-pointer"

@@ -22,7 +22,7 @@ export function DepositQRScreen({ onBack }: DepositQRScreenProps) {
   };
 
   return (
-    <div className="w-full h-full bg-[#f8fafc] relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
+    <div className="w-full h-full bg-[#ecf5fc] relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full">
         <div className="flex items-center">

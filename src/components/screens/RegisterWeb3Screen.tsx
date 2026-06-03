@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { ArrowLeft, Wallet, Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Wallet,
+  Eye,
+  EyeOff,
+  CheckCircle2,
+  Check,
+} from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 
 interface RegisterWeb3ScreenProps {
@@ -31,98 +38,25 @@ export function RegisterWeb3Screen({
   const [walletData, setWalletData] = useState<any>(null);
   const [otp, setOtp] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
+  const [signUpData, setSignUpData] = useState<any>(null);
 
-  const handleVerifyOtp = async () => {
-    if (!otp || otp.length < 6) {
-      setError("Please enter a valid OTP code.");
-      return;
-    }
-    setIsVerifying(true);
-    setError(null);
+  // Password complexity checks
+  const hasLowercase = /[a-z]/.test(password);
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasDigit = /[0-9]/.test(password);
+  const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"|<>?,./`~]/.test(password);
+  const isLongEnough = password.length >= 6;
+  const isPasswordValid =
+    hasLowercase && hasUppercase && hasDigit && hasSpecial && isLongEnough;
+
+  // Final Action: Wallet Creation (Happens AFTER OTP, or skipped if no OTP required)
+  const executeWalletCreation = async (
+    userId: string,
+    authSession: any,
+    verifiedEmail: string,
+    verifiedUsername: string,
+  ) => {
     try {
-      const { error: verifyError } = await supabase.auth.verifyOtp({
-        email,
-        token: otp,
-        type: "signup",
-      });
-
-      if (verifyError) {
-        throw verifyError;
-      }
-
-      if (walletData) {
-        onComplete({ ...walletData, isVerified: true });
-      } else {
-        throw new Error("Missing account data.");
-      }
-    } catch (err: any) {
-      console.error("OTP Verification Error:", err);
-      setError(err.message || "Invalid OTP code. Please try again.");
-      setIsVerifying(false);
-    }
-  };
-
-  const createWallet = async () => {
-    if (isCreating) return;
-
-    // Validasi Dasar Frontend
-    if (!email.includes("@")) {
-      setError("Invalid email format.");
-      return;
-    }
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
-      return;
-    }
-
-    setIsCreating(true);
-    setError(null);
-    try {
-      // 1. Initial Check Username Uniqueness
-      const { data: existingProfiles, error: profileError } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("username", username)
-        .limit(1);
-
-      if (profileError) {
-        console.error("Profile check error:", profileError);
-        throw new Error("Failed to verify username availability.");
-      }
-      
-      if (existingProfiles && existingProfiles.length > 0) {
-        throw new Error("Username is already taken. Please choose another one.");
-      }
-
-      // 2. Supabase Auth SignUp
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { full_name: username, username: username },
-        },
-      });
-
-      if (authError) throw authError;
-
-      // Supabase security feature: if email exists, it returns a user with empty identities
-      if (
-        authData.user &&
-        authData.user.identities &&
-        authData.user.identities.length === 0
-      ) {
-        throw new Error(
-          "Email already registered. Please go back to login with your password.",
-        );
-      }
-
-      if (!authData.user || !authData.user.id) {
-        throw new Error("Registration failed. Please try again.");
-      }
-
-      const userId = authData.user.id;
-
-      // 2. Call backend to create Circle Wallet FIRST (before any session checks)
       const response = await fetch("/api/wallets/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -147,10 +81,131 @@ export function RegisterWeb3Screen({
         throw new Error(data?.error || "Wallet creation failed.");
       }
 
+      const completeData = {
+        username: verifiedUsername,
+        email: verifiedEmail,
+        isVerified: true,
+        walletId: data.walletId,
+        walletAddress: data.address,
+        supabaseUid: userId,
+        registrationDate: new Date().toLocaleDateString("en-US"),
+      };
+
+      setWalletData(completeData);
+      onComplete(completeData);
+    } catch (err: any) {
+      console.error("Wallet Creation Error:", err);
+      let msg = err.message || "Wallet creation failed. Please try again.";
+      setError(msg);
+      setStep(4); // Or error state
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otp || otp.length < 6) {
+      setError("Please enter a valid OTP code.");
+      return;
+    }
+    setIsVerifying(true);
+    setError(null);
+    try {
+      const { data: verifyData, error: verifyError } =
+        await supabase.auth.verifyOtp({
+          email,
+          token: otp,
+          type: "signup",
+        });
+
+      if (verifyError || !verifyData.user) {
+        throw verifyError || new Error("Verification failed.");
+      }
+
+      // Proceed to create wallet
+      await executeWalletCreation(
+        verifyData.user.id,
+        verifyData.session,
+        email,
+        username,
+      );
+    } catch (err: any) {
+      console.error("OTP Verification Error:", err);
+      setError(err.message || "Invalid OTP code. Please try again.");
+      setIsVerifying(false);
+    }
+  };
+
+  const processRegistration = async () => {
+    if (isCreating) return;
+
+    // Validasi Dasar Frontend
+    if (!email.includes("@")) {
+      setError("Invalid email format.");
+      return;
+    }
+    if (!isPasswordValid) {
+      setError("Password must meet all security requirements.");
+      return;
+    }
+
+    setIsCreating(true);
+    setError(null);
+    try {
+      // Pre-flight Cleanup is still useful here to prevent duplicate registration deadlocks
+      try {
+        await fetch("/api/auth/cleanup-unconfirmed", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, username }),
+        });
+      } catch (cleanupErr) {
+        // ignore
+      }
+
+      // Check Username Uniqueness
+      const { data: existingProfiles, error: profileError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("username", username)
+        .limit(1);
+
+      if (profileError) {
+        throw new Error("Failed to verify username availability.");
+      }
+      if (existingProfiles && existingProfiles.length > 0) {
+        throw new Error(
+          "Username is already taken. Please choose another one.",
+        );
+      }
+
+      // Supabase Auth SignUp
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name: username, username: username },
+        },
+      });
+
+      if (authError) throw authError;
+
+      if (
+        authData.user &&
+        authData.user.identities &&
+        authData.user.identities.length === 0
+      ) {
+        throw new Error(
+          "Email already registered. Please go back to login with your password.",
+        );
+      }
+      if (!authData.user || !authData.user.id) {
+        throw new Error("Registration failed. Please try again.");
+      }
+
+      setSignUpData(authData);
+
       // Check if email confirmation is required by looking at session
       let needsEmailConfirmation = false;
       if (!authData.session) {
-        // Attempt a quiet sign in to verify if they can get a session (if auto-confirm is off)
         const { error: newSignInError } =
           await supabase.auth.signInWithPassword({
             email,
@@ -161,29 +216,29 @@ export function RegisterWeb3Screen({
         }
       }
 
-      const completeData = {
-        username: username || "User",
-        email: email,
-        isVerified: !needsEmailConfirmation,
-        walletId: data.walletId,
-        walletAddress: data.address,
-        supabaseUid: userId,
-        registrationDate: new Date().toLocaleDateString("en-US"),
-      };
-
       if (needsEmailConfirmation) {
-        setWalletData(completeData);
-        setError(null);
-        setStep(3);
+        setStep(3); // Go to OTP
+        setIsCreating(false);
       } else {
-        onComplete(completeData);
+        // Auto-confirmed, proceed to wallet creation immediately
+        await executeWalletCreation(
+          authData.user.id,
+          authData.session,
+          email,
+          username,
+        );
       }
     } catch (err: any) {
-      console.error("Wallet/Auth Creation Error:", err);
+      console.error("Auth Creation Error:", err);
       let msg =
         err.message || "Sorry, a system error occurred. Please try again.";
-      if (err.message?.includes("rate limit"))
-        msg = "Too many attempts. Please try again later.";
+      if (
+        err.message?.includes("rate limit") ||
+        err.message?.includes("too many requests")
+      ) {
+        msg =
+          "Too many attempts. Silakan tunggu 1-2 menit sebelum mencoba kembali.";
+      }
       setError(msg);
       setIsCreating(false);
     }
@@ -191,127 +246,255 @@ export function RegisterWeb3Screen({
 
   React.useEffect(() => {
     if (step === 2) {
-      createWallet();
+      processRegistration();
     }
   }, [step]);
 
   return (
     <div className="w-full h-full bg-white relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
       {/* Header */}
-      <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between shrink-0">
-        <div className="flex items-center">
-          <button
-            onClick={onBack}
-            className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
-          >
-            <ArrowLeft size={20} className="text-white" />
-          </button>
-          <h2 className="font-bold text-[16px] text-white ml-2">
-            OPEN NEW ACCOUNT
-          </h2>
+      <div className="flex justify-center bg-slate-900 shadow-md relative z-10 w-full shrink-0">
+        <div className="flex items-center px-4 pt-6 pb-3 w-full max-w-[500px] justify-between">
+          <div className="flex items-center">
+            <button
+              onClick={onBack}
+              className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
+            >
+              <ArrowLeft size={20} className="text-white" />
+            </button>
+            <h2 className="font-bold text-[16px] text-white ml-2">
+              OPEN NEW ACCOUNT
+            </h2>
+          </div>
         </div>
       </div>
 
       {step === 1 && (
-        <div className="flex-1 p-6 flex flex-col pt-8">
-          <h3 className="text-[26px] tracking-tight font-extrabold text-slate-800 leading-tight mb-2">
-            Start Your
-            <br />
-            Easy Steps
-          </h3>
-          <p className="text-[14.5px] text-slate-500 mb-8 mt-2">
-            Enter your details to create your secure Lounge account.
-          </p>
+        <div className="flex-1 px-6 flex flex-col pt-8 items-center w-full">
+          <div className="w-full max-w-[500px] flex flex-col h-full">
+            <h3 className="text-[26px] tracking-tight font-extrabold text-slate-800 leading-tight mb-2">
+              Start Your
+              <br />
+              Easy Steps
+            </h3>
+            <p className="text-[14.5px] text-slate-500 mb-8 mt-2">
+              Enter your details to create your secure Lounge account.
+            </p>
 
-          <div className="space-y-4">
-            <div>
-              <label className="text-[13px] font-medium text-slate-700 mb-1.5 block ml-1">
-                Username
-              </label>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:ring-2 focus:ring-[#005faa]/20 focus:border-[#005faa] focus:bg-white text-[15px] font-medium text-slate-900 transition-all placeholder:text-slate-400 placeholder:font-normal"
-                placeholder="Enter Username"
-              />
-            </div>
-            <div className="relative">
-              <label className="text-[13px] font-medium text-slate-700 mb-1.5 block ml-1">
-                Email
-              </label>
-              <div className="relative">
+            <div className="space-y-4">
+              <div>
+                <label className="text-[13px] font-medium text-slate-700 mb-1.5 block ml-1">
+                  Username
+                </label>
                 <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 pr-10 outline-none focus:ring-2 focus:ring-[#005faa]/20 focus:border-[#005faa] focus:bg-white text-[15px] font-medium text-slate-900 transition-all placeholder:text-slate-400 placeholder:font-normal"
-                  placeholder="name@email.com"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:ring-2 focus:ring-[#005faa]/20 focus:border-[#005faa] focus:bg-white text-[15px] font-medium text-slate-900 transition-all placeholder:text-slate-400 placeholder:font-normal"
+                  placeholder="Enter Username"
                 />
-                {email.includes("@") && email.includes(".") && (
-                  <CheckCircle2 size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-green-500" />
+              </div>
+              <div className="relative">
+                <label className="text-[13px] font-medium text-slate-700 mb-1.5 block ml-1">
+                  Email
+                </label>
+                <div className="relative">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 pr-10 outline-none focus:ring-2 focus:ring-[#005faa]/20 focus:border-[#005faa] focus:bg-white text-[15px] font-medium text-slate-900 transition-all placeholder:text-slate-400 placeholder:font-normal"
+                    placeholder="name@email.com"
+                  />
+                  {email.includes("@") && email.includes(".") && (
+                    <CheckCircle2
+                      size={18}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-green-500"
+                    />
+                  )}
+                </div>
+              </div>
+              <div className="relative">
+                <label className="text-[13px] font-medium text-slate-700 mb-1.5 block ml-1">
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-4 pr-16 py-3.5 outline-none focus:ring-2 focus:ring-[#005faa]/20 focus:border-[#005faa] focus:bg-white text-[15px] font-medium text-slate-900 transition-all placeholder:text-slate-400 placeholder:font-normal"
+                    placeholder="••••••••"
+                  />
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center">
+                    {isPasswordValid && (
+                      <CheckCircle2
+                        size={18}
+                        className="text-green-500 mr-1 animate-in zoom-in duration-200"
+                      />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="p-2 text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Password Requirements Checklist */}
+                {password.length > 0 && (
+                  <div className="bg-slate-50 border-[1.5px] border-slate-200/60 rounded-2xl p-4.5 mt-3 space-y-2.5 animate-in slide-in-from-top-2 duration-200">
+                    <p className="text-[12px] font-bold text-slate-800 tracking-tight">
+                      PASSWORD SECURITY REQUIREMENTS:
+                    </p>
+                    <div className="grid grid-cols-1 gap-2 text-[12.5px]">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${isLongEnough ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}
+                        >
+                          <Check
+                            size={11}
+                            className={isLongEnough ? "stroke-[3]" : ""}
+                          />
+                        </div>
+                        <span
+                          className={
+                            isLongEnough
+                              ? "text-green-700 font-medium"
+                              : "text-slate-500"
+                          }
+                        >
+                          Minimal 6 karakter
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${hasLowercase ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}
+                        >
+                          <Check
+                            size={11}
+                            className={hasLowercase ? "stroke-[3]" : ""}
+                          />
+                        </div>
+                        <span
+                          className={
+                            hasLowercase
+                              ? "text-green-700 font-medium"
+                              : "text-slate-500"
+                          }
+                        >
+                          Satu huruf kecil (a-z)
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${hasUppercase ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}
+                        >
+                          <Check
+                            size={11}
+                            className={hasUppercase ? "stroke-[3]" : ""}
+                          />
+                        </div>
+                        <span
+                          className={
+                            hasUppercase
+                              ? "text-green-700 font-medium"
+                              : "text-slate-500"
+                          }
+                        >
+                          Satu huruf besar (A-Z)
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${hasDigit ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}
+                        >
+                          <Check
+                            size={11}
+                            className={hasDigit ? "stroke-[3]" : ""}
+                          />
+                        </div>
+                        <span
+                          className={
+                            hasDigit
+                              ? "text-green-700 font-medium"
+                              : "text-slate-500"
+                          }
+                        >
+                          Satu angka (0-9)
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${hasSpecial ? "bg-green-100 text-green-600" : "bg-slate-200/60 text-slate-400"}`}
+                        >
+                          <Check
+                            size={11}
+                            className={hasSpecial ? "stroke-[3]" : ""}
+                          />
+                        </div>
+                        <span
+                          className={
+                            hasSpecial
+                              ? "text-green-700 font-medium"
+                              : "text-slate-500"
+                          }
+                        >
+                          Satu karakter spesial (cth: !, @, #, $, %, etc.)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
-            <div className="relative">
-              <label className="text-[13px] font-medium text-slate-700 mb-1.5 block ml-1">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-4 pr-16 py-3.5 outline-none focus:ring-2 focus:ring-[#005faa]/20 focus:border-[#005faa] focus:bg-white text-[15px] font-medium text-slate-900 transition-all placeholder:text-slate-400 placeholder:font-normal"
-                  placeholder="••••••••"
-                />
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center">
-                  {password.length >= 6 && (
-                    <CheckCircle2 size={18} className="text-green-500 mr-1" />
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="p-2 text-slate-400 hover:text-slate-600 transition-colors"
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-              </div>
+
+            <div className="mt-auto pt-6 pb-6 space-y-3">
+              <button
+                disabled={
+                  !username ||
+                  !email ||
+                  !password ||
+                  !isPasswordValid ||
+                  isCreating
+                }
+                onClick={() => setStep(2)}
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl transition-all shadow-[0_8px_20px_rgba(15,23,42,0.15)] flex justify-center items-center gap-2 active:scale-[0.98] border-0 disabled:opacity-50 disabled:bg-slate-300 disabled:shadow-none disabled:cursor-not-allowed text-[15px]"
+              >
+                {isCreating ? "Creating..." : "Create Lounge Account"}
+              </button>
+
+              <p className="text-[11px] text-slate-400 text-center mt-4">
+                By continuing, you agree to Lounge Terms and Security Guidelines.
+              </p>
             </div>
-          </div>
-
-          <div className="mt-auto pt-6 pb-6 space-y-3">
-            <button
-              disabled={!username || !email || !password || isCreating}
-              onClick={() => setStep(2)}
-              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl transition-all shadow-[0_8px_20px_rgba(63,162,246,0.25)] flex justify-center items-center gap-2 active:scale-[0.98] border-0 disabled:opacity-70 disabled:cursor-not-allowed"
-            >
-              {isCreating ? "Creating..." : "Create Lounge Account"}
-            </button>
-
-            <p className="text-[11px] text-slate-400 text-center mt-4">
-              By continuing, you agree to Lounge Terms and Security
-              Guidelines.
-            </p>
           </div>
         </div>
       )}
 
       {step === 2 && (
         <div className="flex-1 p-6 flex flex-col items-center justify-center text-center animate-in fade-in duration-300">
+          <div className="w-full max-w-[500px]">
           {!error ? (
             <>
               <div className="relative mb-10 mt-[-10vh] flex items-center justify-center">
                 {/* Outer Glow */}
                 <div className="absolute w-28 h-28 bg-slate-900/5 rounded-full animate-pulse"></div>
-                
+
                 {/* Outer Ring */}
                 <div className="absolute w-24 h-24 border-[3px] border-slate-100 border-t-slate-900 rounded-full animate-spin"></div>
-                
+
                 {/* Inner Ring (Reverse Spin) */}
-                <div className="absolute w-20 h-20 border-[2px] border-transparent border-b-slate-400/30 rounded-full animate-spin" style={{ animationDirection: "reverse", animationDuration: "1.5s" }}></div>
-                
+                <div
+                  className="absolute w-20 h-20 border-[2px] border-transparent border-b-slate-400/30 rounded-full animate-spin"
+                  style={{
+                    animationDirection: "reverse",
+                    animationDuration: "1.5s",
+                  }}
+                ></div>
+
                 {/* Center Icon Container */}
                 <div className="relative z-10 w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.05)] border border-slate-50">
                   <Wallet size={26} className="text-slate-800" />
@@ -342,7 +525,7 @@ export function RegisterWeb3Screen({
               </div>
               <div className="flex flex-col gap-3">
                 <button
-                  onClick={() => createWallet()}
+                  onClick={() => processRegistration()}
                   className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl transition-all shadow-[0_8px_20px_rgba(15,23,42,0.2)] flex justify-center items-center gap-2 active:scale-[0.98] border-0"
                 >
                   Retry Creation
@@ -356,61 +539,116 @@ export function RegisterWeb3Screen({
               </div>
             </div>
           )}
+          </div>
         </div>
       )}
 
       {step === 3 && (
-        <div className="flex-1 p-6 flex flex-col pt-12 animate-in slide-in-from-right duration-300">
-          <div className="mb-8">
-            <h3 className="text-[26px] tracking-tight font-extrabold text-slate-800 leading-tight mb-2">
-              Verify your
-              <br />
-              Email Address
-            </h3>
-            <p className="text-[14.5px] text-slate-500 mb-8 mt-2">
-              We've sent a confirmation code to{" "}
-              <span className="font-bold text-slate-700">{email}</span>.
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <label className="text-[13px] font-medium text-slate-700 mb-1.5 block ml-1">
-                Security Code (OTP)
-              </label>
-              <input
-                type="text"
-                maxLength={8}
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ""))}
-                placeholder="000000"
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:ring-2 focus:ring-[#005faa]/20 focus:border-[#005faa] focus:bg-white text-[24px] tracking-[0.5em] text-center font-bold text-slate-900 transition-all placeholder:text-slate-300"
-              />
+        <div className="flex-1 px-6 flex flex-col pt-12 animate-in slide-in-from-right duration-300 items-center w-full">
+          <div className="w-full max-w-[500px] flex flex-col h-full">
+            <div className="mb-6">
+              <h3 className="text-[26px] tracking-tight font-extrabold text-slate-800 leading-tight mb-2">
+                Verify your
+                <br />
+                Email Address
+              </h3>
+              <p className="text-[14.5px] text-slate-500 mt-2">
+                We've sent a safety confirmation code to
+                <br />
+                <span className="font-bold text-slate-700">{email}</span>.
+              </p>
             </div>
-            
-            {error && (
-              <div className="bg-red-50 border border-red-100 p-3 rounded-xl mt-2">
-                <p className="text-[13px] text-red-600 font-medium text-center">
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-[13px] font-medium text-slate-700 mb-1.5 block ml-1">
+                  Security Code (OTP)
+                </label>
+                <input
+                  type="text"
+                  maxLength={8}
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ""))}
+                  placeholder="000000"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:ring-2 focus:ring-[#0f172a]/20 focus:border-[#0f172a] focus:bg-white text-[24px] tracking-[0.5em] text-center font-bold text-slate-900 transition-all placeholder:text-slate-300"
+                />
+              </div>
+
+              {error && (
+                <div className="bg-red-50 border border-red-100 p-3 rounded-xl mt-2">
+                  <p className="text-[13px] text-red-600 font-medium text-center">
+                    {error}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-auto pt-6 pb-6 space-y-4">
+              <button
+                disabled={otp.length < 6 || isVerifying}
+                onClick={handleVerifyOtp}
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-xl transition-all shadow-[0_8px_20px_rgba(15,23,42,0.15)] flex justify-center items-center gap-2 active:scale-[0.98] border-0 disabled:opacity-50 disabled:bg-slate-300 disabled:shadow-none disabled:cursor-not-allowed text-[15px]"
+              >
+                {isVerifying ? "Creating Wallet..." : "Confirm & Complete"}
+              </button>
+              <button
+                onClick={() => onBack()}
+                className="w-full bg-transparent text-slate-500 font-bold py-4 transition-colors hover:text-slate-800 text-[14.5px]"
+              >
+                Skip & Do Later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {step === 4 && (
+        <div className="flex-1 px-6 flex flex-col items-center justify-center text-center animate-in fade-in duration-300">
+          <div className="w-full max-w-[500px]">
+            <div className="mt-[-10vh] px-4 w-full">
+              <div className="relative mb-8 mx-auto w-24 h-24 flex items-center justify-center">
+                <div className="absolute inset-0 bg-red-500/10 rounded-full animate-pulse"></div>
+                <div className="relative z-10 w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-[0_4px_16px_rgba(239,68,68,0.15)] border border-red-100">
+                  <Wallet size={28} className="text-red-500" />
+                </div>
+              </div>
+              <h3 className="text-[22px] font-bold text-slate-900 mb-4 tracking-tight">
+                Wallet Setup Failed
+              </h3>
+              <p className="text-[14px] text-slate-500 mb-4 px-2">
+                Your account was created, but we couldn't configure your secure
+                wallet on the blockchain.
+              </p>
+              <div className="bg-red-50/80 border border-red-100/80 p-4 rounded-2xl mb-8 px-5">
+                <p className="text-[13.5px] text-red-600 font-medium text-center break-words overflow-auto max-h-[150px]">
                   {error}
                 </p>
               </div>
-            )}
-          </div>
-
-          <div className="mt-auto pt-6 pb-6 space-y-4">
-            <button
-              disabled={otp.length < 6 || isVerifying}
-              onClick={handleVerifyOtp}
-              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl transition-all shadow-[0_8px_20px_rgba(63,162,246,0.25)] flex justify-center items-center gap-2 active:scale-[0.98] border-0 disabled:opacity-70 disabled:cursor-not-allowed"
-            >
-              {isVerifying ? "Verifying..." : "Confirm & Complete"}
-            </button>
-            <button
-              onClick={() => onComplete(walletData)}
-              className="w-full bg-transparent text-slate-500 font-bold py-4 transition-colors hover:text-slate-800"
-            >
-              Skip for now
-            </button>
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={async () => {
+                    setError(null);
+                    if (signUpData?.user?.id) {
+                      await executeWalletCreation(
+                        signUpData.user.id,
+                        signUpData.session,
+                        email,
+                        username,
+                      );
+                    }
+                  }}
+                  className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl transition-all shadow-[0_8px_20px_rgba(15,23,42,0.2)] flex justify-center items-center gap-2 active:scale-[0.98] border-0"
+                >
+                  Retry Wallet Setup
+                </button>
+                <button
+                  onClick={() => onBack()}
+                  className="w-full bg-slate-50 text-slate-600 font-bold py-4 border border-slate-200 rounded-2xl hover:bg-slate-100 transition-colors active:scale-[0.98]"
+                >
+                  Go to Home
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

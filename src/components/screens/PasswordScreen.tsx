@@ -37,12 +37,16 @@ export function PasswordScreen({
         </button>
 
         <div className="z-10 bg-white/20 p-4 rounded-3xl backdrop-blur-md mb-4 border border-white/30 shadow-[0_8px_32px_rgba(0,0,0,0.1)]">
-          <div className="bg-white text-slate-800 p-3 rounded-2xl shadow-sm">
-            <Wallet size={36} strokeWidth={2.5} />
+          <div className="bg-white rounded-2xl shadow-sm w-[80px] h-[80px] overflow-hidden">
+            <img
+              src="/logo.png"
+              alt="Logo"
+              className="w-full h-full object-cover"
+            />
           </div>
         </div>
 
-        <h1 className="text-2xl font-bold text-slate-800 tracking-tight mb-1 text-center drop-shadow-sm">
+        <h1 className="text-2xl font-bold text-white tracking-tight mb-1 text-center drop-shadow-sm">
           Welcome Back
         </h1>
         <p className="text-blue-100 text-center text-[13px] font-medium px-6 leading-relaxed">
@@ -59,8 +63,8 @@ export function PasswordScreen({
       </div>
 
       {/* Bottom Area: Password Form */}
-      <div className="flex-1 px-8 pt-8 pb-10 flex flex-col bg-white">
-        <div className="flex-1 flex flex-col justify-center">
+      <div className="flex-1 px-8 pt-8 pb-10 flex flex-col bg-white items-center">
+        <div className="flex-1 flex flex-col justify-center w-full max-w-[500px]">
           <h2 className="text-[16px] font-bold text-slate-800 mb-6 text-center">
             Authentication
           </h2>
@@ -99,7 +103,7 @@ export function PasswordScreen({
                     : "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"
                 }
                 ${isLoading ? "opacity-70 cursor-not-allowed" : ""}`}
-          >
+            >
             {isLoading ? "Authenticating..." : "Login to Account"}
           </button>
 

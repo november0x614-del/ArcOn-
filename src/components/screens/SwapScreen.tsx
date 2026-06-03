@@ -8,17 +8,17 @@ import {
   Zap,
   Search,
   X,
-  Copy,
-  ExternalLink,
-  AlertCircle,
-  HelpCircle,
+  ArrowRight,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useStore } from "../../store/useStore";
 import { BackendClient } from "../../services/api/index";
 import { useBalances } from "../../hooks/useBalances";
 import { ARC_TESTNET } from "../../lib/arcConfig";
-import { ARC_TOKEN_REGISTRY, syncTokenWithArcScan } from "../../lib/arcRegistry";
+import {
+  ARC_TOKEN_REGISTRY,
+  syncTokenWithArcScan,
+} from "../../lib/arcRegistry";
 import { TokenIcon } from "../ui/TokenIcon";
 
 interface SwapScreenProps {
@@ -26,11 +26,7 @@ interface SwapScreenProps {
 }
 
 export function SwapScreen({ onBack }: SwapScreenProps) {
-  const {
-    registeredUser,
-    platformConfig,
-    fetchPlatformConfig,
-  } = useStore();
+  const { registeredUser, platformConfig, fetchPlatformConfig } = useStore();
   const queryClient = useQueryClient();
   const { data: balanceData } = useBalances();
 
@@ -57,31 +53,24 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
   const [txHash, setTxHash] = useState("");
   const [slippage, setSlippage] = useState<string>("0.5");
   const [showDetails, setShowDetails] = useState(false);
-
-  const [swapError, setSwapError] = useState<string | null>(null);
-  const [showFaucetGuide, setShowFaucetGuide] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  const handleCopyAddress = () => {
-    const address = registeredUser?.walletAddress || localStorage.getItem("arc_wallet_address") || "";
-    if (address) {
-      navigator.clipboard.writeText(address);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-      useStore.getState().displayToast("Alamat dompet berhasil disalin!");
-    }
-  };
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [swapError, setSwapError] = useState<{
+    title: string;
+    message: string;
+    code: string;
+    show: boolean;
+  } | null>(null);
 
   const getTokenData = (symbol: string) => {
     return balanceData?.allBalances?.find(
-      (b: any) => b.token?.symbol === symbol
+      (b: any) => b.token?.symbol === symbol,
     );
   };
 
   const getTokenBalance = (symbol: string) => {
     if (!balanceData?.allBalances) return 0;
     const matchingTokens = balanceData.allBalances.filter(
-      (b: any) => b.token?.symbol === symbol
+      (b: any) => b.token?.symbol === symbol,
     );
     let total = 0;
     for (const tokenData of matchingTokens) {
@@ -107,8 +96,8 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
   useEffect(() => {
     // Update rate when tokens change
     if (fromToken && toToken) {
-      BackendClient.getLiveRate(fromToken.symbol, toToken.symbol).then(
-        (res) => setExchangeRate(res.rate),
+      BackendClient.getLiveRate(fromToken.symbol, toToken.symbol).then((res) =>
+        setExchangeRate(res.rate),
       );
     }
   }, [fromToken, toToken]);
@@ -125,6 +114,28 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
     }
   }, [fromAmount, exchangeRate, fromToken, toToken]);
 
+  const numFromAmount = parseFloat(fromAmount) || 0;
+  const fromTokenBalance = getTokenBalance(fromToken?.symbol || "");
+  const usdcBalance = getTokenBalance("USDC");
+
+  // Dynamic fee calculation for button label and validation
+  const swapFeePercent = platformConfig?.swapFee
+    ? parseFloat(platformConfig.swapFee.replace(/[^0-9.]/g, "")) || 0.1
+    : 0.1;
+
+  // Estimation: Platform fee based on volume (minimum 0.1 USDC baseline)
+  const estimatedPlatformFee = Math.max(0.1, numFromAmount * (swapFeePercent / 100));
+
+  const hasEnoughTokenA = numFromAmount > 0 && numFromAmount <= fromTokenBalance;
+  const isUsdcSource = fromToken?.symbol === "USDC";
+
+  // Balance Check logic
+  const hasEnoughBalance = isUsdcSource
+    ? numFromAmount + estimatedPlatformFee <= usdcBalance
+    : hasEnoughTokenA && usdcBalance >= 0.1;
+
+  const isInvalid = !fromAmount || numFromAmount === 0 || fromToken?.symbol === toToken?.symbol;
+
   const handleSwap = async () => {
     if (!registeredUser?.supabaseUid) return;
 
@@ -135,12 +146,20 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
       return;
     }
 
-    const PLATFORM_FEE_PERCENT = platformConfig ? parseFloat(platformConfig.swapFee || "0.1") : 0.1;
+    const swapFee = platformConfig?.swapFee
+      ? parseFloat(platformConfig.swapFee.replace(/[^0-9.]/g, '')) || 0.1
+      : 0.1;
+    
     const usdcBalance = getTokenBalance("USDC");
-    const requiredMinUsdc = 0.10; // Basic check for platform fee context
+    // We assume a minimum USDC balance is needed to cover the platform fee context (at least 0.1 USDC)
+    const requiredMinUsdc = 0.1; 
 
     if (usdcBalance < requiredMinUsdc) {
-      useStore.getState().displayToast(`Insufficient USDC balance for Platform Fee (~${PLATFORM_FEE_PERCENT}% of nominal).`);
+      useStore
+        .getState()
+        .displayToast(
+          `Insufficient USDC balance for Platform Fee (${swapFee}% of volume).`,
+        );
       return;
     }
 
@@ -148,31 +167,46 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
     setSwapFinished(false);
 
     try {
-      setSwapError(null);
       const selectedFromToken = fromToken;
-      const targetTokenAddress = selectedFromToken?.contractAddress || 
-                                 selectedFromToken?.tokenAddress || 
-                                 getTokenData(selectedFromToken?.symbol || "")?.token?.tokenAddress || 
-                                 "";
+      const targetTokenAddress =
+        selectedFromToken?.contractAddress ||
+        selectedFromToken?.tokenAddress ||
+        getTokenData(selectedFromToken?.symbol || "")?.token?.tokenAddress ||
+        "";
 
       const result = await BackendClient.swapTokens(
         parseFloat(fromAmount),
-        fromToken?.symbol || "",
-        toToken?.symbol || "",
+        fromToken,
+        toToken,
         targetTokenAddress,
       );
 
       setTxHash(result.txId);
       setIsSwapping(false);
       setSwapFinished(true);
+      setShowConfirmModal(false);
       queryClient.invalidateQueries({ queryKey: ["balances"] });
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
     } catch (error: any) {
       console.error(error);
       setIsSwapping(false);
-      setSwapError(error.message || "Swap failed!");
-      setShowFaucetGuide(true);
-      useStore.getState().displayToast(error.message || "Swap failed!");
+      setShowConfirmModal(false);
+      
+      const errMsg = error.message || "";
+      if (
+        errMsg.includes("INPUT_UNSUPPORTED_ROUTE") || 
+        errMsg.includes("No route available") || 
+        errMsg.includes("Route or resource not found")
+      ) {
+        setSwapError({
+          title: "Swap Route Unsupported on Arc Testnet",
+          code: "INPUT_UNSUPPORTED_ROUTE",
+          message: `The Circle Stablecoin Services could not find an active on-chain swap route from ${fromToken?.symbol || "selected token"} to ${toToken?.symbol || "selected token"} on the Arc Testnet.`,
+          show: true,
+        });
+      } else {
+        useStore.getState().displayToast(errMsg || "Swap failed!");
+      }
     }
   };
 
@@ -186,7 +220,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
 
   if (swapFinished) {
     return (
-      <div className="w-full h-full bg-slate-50 relative flex flex-col z-50 animate-in slide-in-from-bottom duration-300">
+      <div className="w-full h-full bg-[#ecf5fc] relative flex flex-col z-50 animate-in slide-in-from-bottom duration-300">
         <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full shrink-0 justify-between">
           <button
             onClick={onBack}
@@ -203,7 +237,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
             <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6 shadow-sm border-4 border-white">
               <Check size={40} className="text-green-500" strokeWidth={3} />
             </div>
-            <h2 className="text-[24px] font-extrabold text-slate-900 mb-2">
+            <h2 className="text-[24px] font-extrabold text-white mb-2">
               Swap Confirmed
             </h2>
             <a
@@ -243,7 +277,9 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
                 ) : (
                   <span className="text-[12px] font-mono text-slate-600 break-all text-right">
                     {txHash} <br />
-                    <span className="text-[10px] text-slate-400">(Process ID - Pending On-chain Finality)</span>
+                    <span className="text-[10px] text-slate-400">
+                      (Process ID - Pending On-chain Finality)
+                    </span>
                   </span>
                 )}
               </div>
@@ -256,10 +292,10 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
             </div>
 
             <button
-              onClick={onBack}
+              onClick={() => setSwapFinished(false)}
               className="w-full bg-slate-900 text-white font-bold py-4 rounded-xl hover:bg-slate-800 transition-colors shadow-lg active:scale-95"
             >
-              Done
+              Return to Swap
             </button>
           </div>
         </div>
@@ -268,24 +304,28 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
   }
 
   return (
-    <div className="w-full h-full bg-slate-50 relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
+    <div className="w-full h-full bg-[#ecf5fc] relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
       {/* Header */}
-      <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between">
-        <div className="flex items-center">
-          <button
-            onClick={onBack}
-            className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
-          >
-            <ArrowLeft size={20} className="text-white" />
-          </button>
-          <h2 className="font-bold text-[16px] text-white ml-2">SWAP</h2>
+      <div className="flex justify-center bg-slate-900 shadow-md relative z-10 w-full">
+        <div className="flex items-center px-4 pt-6 pb-3 w-full max-w-[500px] justify-between">
+          <div className="flex items-center">
+            <button
+              onClick={onBack}
+              className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
+            >
+              <ArrowLeft size={20} className="text-white" />
+            </button>
+            <h2 className="font-bold text-[16px] text-white ml-2">SWAP</h2>
+          </div>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto pb-24 p-5 flex flex-col pt-6 w-full scrollbar-hide relative">
-        {/* Swap Box Container */}
-        <div className="relative mb-6">
-          {/* From */}
+        <div className="w-full max-w-[500px] mx-auto flex flex-col relative">
+          {/* Swap Box Container */}
+          <div className="relative mb-6">
+            {/* From */}
+
           <div
             className={`bg-white p-5 rounded-[24px] shadow-sm border transition-all duration-300 relative z-10 ${isSwapping ? "border-blue-400/50 shadow-blue-100/50 opacity-80" : "border-slate-200 focus-within:border-slate-400"}`}
           >
@@ -329,7 +369,9 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
                   className="flex items-center gap-2 bg-slate-50 border border-slate-200 hover:bg-slate-100 transition-colors px-3 py-2 rounded-full shrink-0 h-10"
                 >
                   <TokenIcon
-                    contractAddress={fromToken?.contractAddress || fromToken?.tokenAddress}
+                    contractAddress={
+                      fromToken?.contractAddress || fromToken?.tokenAddress
+                    }
                     symbol={fromToken?.symbol || ""}
                     className="w-6 h-6 text-[8px] shadow-sm shrink-0"
                     color={fromToken?.color || "bg-slate-300"}
@@ -395,7 +437,9 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
                   className="flex items-center gap-2 bg-slate-50 border border-slate-200 hover:bg-slate-100 transition-colors px-3 py-2 rounded-full shrink-0 h-10"
                 >
                   <TokenIcon
-                    contractAddress={toToken?.contractAddress || toToken?.tokenAddress}
+                    contractAddress={
+                      toToken?.contractAddress || toToken?.tokenAddress
+                    }
                     symbol={toToken?.symbol || ""}
                     className="w-6 h-6 text-[8px] shadow-sm shrink-0"
                     color={toToken?.color || "bg-slate-300"}
@@ -424,8 +468,8 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
               <Zap size={14} className="text-yellow-500" />1{" "}
               {fromToken?.symbol || ""} ={" "}
               {fromToken?.symbol === "USDC" && toToken?.symbol === "ARC"
-                ? exchangeRate
-                : (1 / (exchangeRate || 1)).toFixed(4)}{" "}
+                ? (typeof exchangeRate === 'number' ? Number(exchangeRate.toFixed(6)) : exchangeRate)
+                : (typeof exchangeRate === 'number' && exchangeRate !== 0 ? Number((1 / exchangeRate).toFixed(6)) : "0")}{" "}
               {toToken?.symbol || ""}
             </span>
           </div>
@@ -490,12 +534,16 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
               <div className="flex justify-between items-center mt-1">
                 <span className="text-[12px] text-slate-500">Platform Fee</span>
                 <span className="text-[12px] font-mono text-slate-700 font-bold">
-                  {platformConfig ? platformConfig.swapFee : "0.1"}%
+                  {platformConfig?.swapFee?.includes('%') ? platformConfig.swapFee : `${parseFloat(platformConfig?.swapFee?.replace(/[^0-9.]/g, '') || "0.1")}%`}
                 </span>
               </div>
               <div className="flex justify-between items-center mt-1">
-                <span className="text-[12px] text-slate-500">Network Gas (Sponsored)</span>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded w-fit ${platformConfig?.gasSubsidyEnabled ? "text-emerald-600 bg-emerald-50" : "text-slate-600 bg-slate-50"}`}>
+                <span className="text-[12px] text-slate-500">
+                  Network Gas (Sponsored)
+                </span>
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded w-fit ${platformConfig?.gasSubsidyEnabled ? "text-emerald-600 bg-emerald-50" : "text-slate-600 bg-slate-50"}`}
+                >
                   {platformConfig?.gasSubsidyEnabled ? "Free" : "Native"}
                 </span>
               </div>
@@ -503,110 +551,19 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
           )}
         </div>
 
-        {/* Interactive Faucet Guide */}
-        <div className="mt-4 mb-4">
-          <button
-            type="button"
-            onClick={() => setShowFaucetGuide(!showFaucetGuide)}
-            className="w-full flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition-all text-left group"
-          >
-            <div className="flex items-center gap-2">
-              <HelpCircle size={18} className="text-slate-500 group-hover:text-slate-800 transition-colors" />
-              <div>
-                <div className="text-[13px] font-bold text-slate-800">Butuh Gas fee atau Token Testnet?</div>
-                <div className="text-[11px] text-slate-500 font-medium">Panduan Klaim Faucet Real Arc Testnet</div>
-              </div>
-            </div>
-            <ChevronDown size={16} className={`text-slate-400 transition-transform duration-300 ${showFaucetGuide ? "rotate-180" : ""}`} />
-          </button>
-
-          {showFaucetGuide && (
-            <div className="mt-2.5 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm animate-in slide-in-from-top-3 duration-300 text-left">
-              {swapError && (
-                <div className="bg-amber-50 border border-amber-200/60 rounded-xl p-3 mb-4 flex items-start gap-2 text-left">
-                  <AlertCircle size={16} className="text-amber-600 shrink-0 mt-0.5" />
-                  <div className="flex-1">
-                    <span className="text-[12.5px] font-bold text-slate-800 block">Penyebab Transaksi Reverted:</span>
-                    <span className="text-[11px] text-slate-600 font-mono leading-relaxed mt-1 block">
-                      Blockchain menolak simulasi swap. Karena aplikasi ini menggunakan <b>Gas Station</b>, biaya gas transaksi disubsidi sepenuhnya (Gratis). Kegagalan ini murni disebabkan karena saldo riil <b>USDC atau token input</b> Anda di dompet on-chain asli masih kosong (diperlukan saldo aktif untuk divalidasi oleh smart contract router DEX selama simulasi swap).
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              <h3 className="font-bold text-[13.5px] text-slate-900 mb-3 flex items-center gap-1.5 uppercase tracking-wide">
-                <Zap size={14} className="text-amber-500 fill-amber-505" />
-                Langkah Klaim Faucet Resmi Circle (Real)
-              </h3>
-
-              <div className="space-y-4 text-[12.5px] text-slate-600">
-                <div>
-                  <span className="font-bold text-slate-800 block mb-1">1. Salin Alamat Dompet Developer Anda:</span>
-                  <div className="bg-slate-50 border border-slate-150 p-2.5 rounded-lg flex items-center justify-between font-mono text-[12px] text-slate-800">
-                    <span className="truncate select-all pr-2">
-                      {registeredUser?.walletAddress || localStorage.getItem("arc_wallet_address") || "0x..."}
-                    </span>
-                    <button
-                      onClick={handleCopyAddress}
-                      className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-slate-200 text-slate-700 rounded-md hover:bg-slate-50 transition-colors active:scale-95 duration-200"
-                    >
-                      <Copy size={13} />
-                      <span className="text-[11px] font-bold">{copied ? "Disalin" : "Salin"}</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <span className="font-bold text-slate-800 block mb-1">2. Kunjungi Portal Faucet Resmi Circle:</span>
-                  <p className="leading-relaxed mb-2 text-slate-500 text-[11.5px]">
-                    Gunakan Circle Faucet untuk secara otomatis mendanai dompet developer Anda dengan USDC testnet dan native gas token.
-                  </p>
-                  <a
-                    href="https://faucet.circle.com/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 text-[12px] shadow-sm transition-all duration-300 active:scale-[0.98]"
-                  >
-                    Buka Circle Faucet
-                    <ExternalLink size={14} />
-                  </a>
-                </div>
-
-                <div className="border-t border-slate-100 pt-3">
-                  <span className="font-bold text-slate-800 block mb-1">3. Konfigurasi di Halaman Faucet:</span>
-                  <ul className="list-disc list-inside space-y-1.5 text-slate-500 leading-relaxed pl-1 text-[11.5px]">
-                    <li>Pilih Blockchain: <span className="font-bold text-slate-800">ARC (Testnet)</span></li>
-                    <li>Tempelkan alamat dompet Anda yang telah Anda salin di langkah 1.</li>
-                    <li>Claim Token USDC Testnet (yang berfungsi ganda sebagai token gas native di Arc Testnet dan token transaksi). Koin akan langsung tiba dalam beberapa detik secara real-time on-chain!</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
         <div className="mt-auto pb-4">
           <button
-            disabled={
-              !fromAmount ||
-              parseFloat(fromAmount) === 0 ||
-              isSwapping ||
-              parseFloat(fromAmount) >
-                getTokenBalance(fromToken?.symbol || "") ||
-              fromToken?.symbol === toToken?.symbol
-            }
-            onClick={handleSwap}
+            disabled={isInvalid || isSwapping || !hasEnoughBalance}
+            onClick={() => setShowConfirmModal(true)}
             className={`w-full font-bold py-4 rounded-full transition-all flex items-center justify-center gap-3 text-[15px] active:scale-95
               ${
-                !fromAmount ||
-                parseFloat(fromAmount) === 0 ||
-                parseFloat(fromAmount) >
-                  getTokenBalance(fromToken?.symbol || "") ||
-                fromToken?.symbol === toToken?.symbol
+                isInvalid
                   ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                  : !isSwapping
-                    ? "bg-slate-900 text-white shadow-lg hover:bg-slate-800"
-                    : "bg-slate-800 text-white shadow-xl scale-[0.98]"
+                  : !hasEnoughBalance
+                    ? "bg-red-50 text-red-500 border border-red-100 cursor-not-allowed"
+                    : !isSwapping
+                      ? "bg-slate-900 text-white shadow-lg hover:bg-slate-800"
+                      : "bg-slate-800 text-white shadow-xl scale-[0.98]"
               }`}
           >
             {isSwapping ? (
@@ -616,19 +573,98 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
               </>
             ) : fromToken?.symbol === toToken?.symbol ? (
               "Invalid Pair"
-            ) : parseFloat(fromAmount) >
-              getTokenBalance(fromToken?.symbol || "") ? (
+            ) : !hasEnoughBalance ? (
               "Insufficient Balance"
             ) : (
               "Review Swap"
             )}
           </button>
         </div>
+        </div>
       </div>
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="absolute inset-0 z-[80] bg-black/40 flex flex-col justify-end animate-in fade-in duration-300">
+          <div className="bg-white rounded-t-[32px] w-full p-6 animate-in slide-in-from-bottom duration-300">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="font-black text-[20px] text-slate-800">Review Swap</h3>
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                className="p-2 bg-slate-50 rounded-full text-slate-400 border-0 cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="bg-slate-50 rounded-2xl p-4 mb-6 space-y-4">
+              <div className="flex justify-between items-center">
+                <div className="flex flex-col">
+                  <span className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">You Pay</span>
+                  <span className="font-black text-[18px] text-slate-800">{fromAmount} {fromToken?.symbol}</span>
+                </div>
+                <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-sm border border-slate-100">
+                  <ArrowRight size={14} className="text-slate-400" />
+                </div>
+                <div className="flex flex-col text-right">
+                  <span className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">You Get</span>
+                  <span className="font-black text-[18px] text-emerald-600">~{toAmount} {toToken?.symbol}</span>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-slate-200 space-y-2">
+                <div className="flex justify-between text-[13px]">
+                  <span className="text-slate-500 font-medium">Exchange Rate</span>
+                  <span className="text-slate-800 font-bold">1 {fromToken?.symbol} = {typeof exchangeRate === 'number' ? Number(exchangeRate.toFixed(6)) : exchangeRate} {toToken?.symbol}</span>
+                </div>
+                <div className="flex justify-between text-[13px]">
+                  <span className="text-slate-500 font-medium">Platform Fee</span>
+                  <span className="text-slate-800 font-bold">{estimatedPlatformFee.toFixed(2)} USDC</span>
+                </div>
+                <div className="flex justify-between text-[13px]">
+                  <span className="text-slate-500 font-medium">Network Gas</span>
+                  <span className="text-emerald-600 font-bold underline decoration-emerald-200 underline-offset-2">Sponsored (Free)</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              disabled={isSwapping}
+              onClick={async () => {
+                await handleSwap();
+              }}
+              className={`w-full text-white py-[18px] rounded-full flex justify-between px-6 items-center transition-all duration-300 shadow-xl border-0 mb-4 ${
+                isSwapping 
+                  ? "bg-[#0B1527] cursor-not-allowed cursor-wait" 
+                  : "bg-slate-900 hover:bg-slate-800 active:scale-[0.98] cursor-pointer"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                {isSwapping ? (
+                  <>
+                    <div className="w-5 h-5 border-[2.5px] border-white/20 border-t-white rounded-full animate-spin"></div>
+                    <span className="font-bold text-[16px] tracking-wide">Initiating Swap...</span>
+                  </>
+                ) : (
+                  <span className="font-black text-[16px]">Confirm Swap</span>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="font-black text-[17px] tracking-tight">{fromAmount} {fromToken?.symbol}</span>
+                {!isSwapping && (
+                  <div className="bg-white/20 w-8 h-8 rounded-full border-0 flex items-center justify-center">
+                    <ArrowRight size={18} strokeWidth={3} className="text-white" />
+                  </div>
+                )}
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Token Selector Modal */}
       {showTokenSelector && (
-        <div className="absolute inset-0 z-[60] bg-white flex flex-col animate-in slide-in-from-bottom duration-300">
+        <div className="absolute inset-0 z-[60] bg-[#ecf5fc] flex flex-col animate-in slide-in-from-bottom duration-300">
           <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 justify-between shrink-0">
             <div className="flex items-center">
               <button
@@ -665,8 +701,12 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
               {tokens
                 .filter(
                   (t) =>
-                    (t.name?.toLowerCase() || "").includes(searchToken.toLowerCase()) ||
-                    (t.symbol?.toLowerCase() || "").includes(searchToken.toLowerCase()),
+                    (t.name?.toLowerCase() || "").includes(
+                      searchToken.toLowerCase(),
+                    ) ||
+                    (t.symbol?.toLowerCase() || "").includes(
+                      searchToken.toLowerCase(),
+                    ),
                 )
                 .map((token) => (
                   <button
@@ -680,7 +720,9 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
                   >
                     <div className="flex items-center gap-3">
                       <TokenIcon
-                        contractAddress={token.contractAddress || token.tokenAddress}
+                        contractAddress={
+                          token.contractAddress || token.tokenAddress
+                        }
                         symbol={token.symbol}
                         className="w-10 h-10 text-[10px] shadow-sm"
                         color={token.color || "bg-slate-300"}
@@ -705,6 +747,44 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
                   </button>
                 ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Swap Error Explanation Modal */}
+      {swapError && swapError.show && (
+        <div className="absolute inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-white rounded-[28px] max-w-sm w-full p-6 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200 flex flex-col">
+            <div className="w-14 h-14 bg-amber-50 rounded-full flex items-center justify-center mb-5 text-amber-500 shrink-0 mx-auto">
+              <svg width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+            </div>
+            
+            <h3 className="text-[17px] font-bold text-slate-900 tracking-tight text-center mb-2 leading-snug uppercase">
+              {swapError.title}
+            </h3>
+            
+            <div className="text-[11px] font-mono text-amber-600 font-bold text-center mb-4 bg-amber-50/50 py-1 px-2.5 rounded-lg w-fit mx-auto border border-amber-100/30">
+              {swapError.code}
+            </div>
+
+            <p className="text-[13px] text-slate-600 leading-relaxed mb-6 font-normal">
+              {swapError.message}
+              <span className="block my-3 border-t border-slate-100"></span>
+              <span className="text-slate-500 text-[12px] block font-medium leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100">
+                💡 <strong>Under the Hood:</strong> On Arc Testnet, Circle Swap services require active pool routing to be established. Because swap liquidity is restricted in sandbox, standard on-chain routing is limited. All payment flows remain 100% active.
+              </span>
+            </p>
+
+            <button
+              onClick={() => setSwapError(null)}
+              className="w-full bg-[#0f172a] text-white font-bold py-3.5 rounded-[20px] shadow-sm hover:bg-slate-800 active:scale-[0.98] transition-all text-[14px] outline-none"
+            >
+              Understand & Dismiss
+            </button>
           </div>
         </div>
       )}

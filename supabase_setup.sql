@@ -2,10 +2,16 @@
 -- ARC COMMERCE: COMPLETE SUPABASE RESET
 -- ==========================================
 -- Gunakan script ini pada SQL Editor di Supabase Dashboard (https://supabase.com).
--- Script ini akan menghapus tabel lama (jika ada) dan membangun skema baru yang aman & bersih.
+-- Script ini akan menghapus tabel lama jika ada dan membangun skema baru yang aman & bersih.
 
--- 1. DROP EXISTING TABLES (Reset)
+-- 1. DROP EXISTING TABLES (Reset lengkap agar tidak error)
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users CASCADE;
+DROP TABLE IF EXISTS public.user_tokens CASCADE;
+DROP TABLE IF EXISTS public.app_settings CASCADE;
+DROP TABLE IF EXISTS public.sanctions_blocklist CASCADE;
+DROP TABLE IF EXISTS public.audit_logs CASCADE;
 DROP TABLE IF EXISTS public.transactions CASCADE;
+DROP TABLE IF EXISTS public.balances CASCADE;
 DROP TABLE IF EXISTS public.user_wallets CASCADE;
 DROP TABLE IF EXISTS public.profiles CASCADE;
 
@@ -27,7 +33,7 @@ CREATE TABLE public.user_wallets (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 3.5. CREATE BALANCES TABLE
+-- 3.5. CREATE BALANCES TABLE (Penyimpanan Saldo Native-Stablecoin)
 CREATE TABLE public.balances (
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
     amount DECIMAL NOT NULL DEFAULT 0,
@@ -40,12 +46,28 @@ CREATE TABLE public.transactions (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
     amount DECIMAL NOT NULL,
-    type TEXT CHECK (type IN ('deposit', 'withdraw', 'transfer', 'payment', 'swap', 'receive')) NOT NULL,
+    type TEXT CHECK (type IN ('deposit', 'withdraw', 'transfer', 'batchTransfer', 'payment', 'swap', 'receive')) NOT NULL,
     status TEXT CHECK (status IN ('pending', 'success', 'failed')) NOT NULL,
     tx_hash TEXT,
     internal_ref TEXT UNIQUE,
     metadata JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 4.5. CREATE TRANSACTION LEDGER TABLE (Extended Ledger)
+CREATE TABLE public.transaction_ledger (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    tx_type VARCHAR(50) NOT NULL, -- Enum: 'SEND', 'SWAP', 'BRIDGE_BURN', 'BRIDGE_MINT'
+    amount NUMERIC,
+    token_address VARCHAR(255),
+    destination_address VARCHAR(255),
+    circle_tx_id VARCHAR(255) UNIQUE, -- Identifier mutlak resi API Circle
+    tx_hash VARCHAR(255), -- Hash on-chain (terisi saat Webhook COMPLETE)
+    status VARCHAR(50) DEFAULT 'PENDING',
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ==========================================
@@ -55,23 +77,33 @@ CREATE TABLE public.transactions (
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_wallets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.transaction_ledger ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.balances ENABLE ROW LEVEL SECURITY;
 
--- Profiles: Semua orang bisa baca profile (untuk transfer antar user), tapi update & insert hanya milik sendiri
+-- Profiles: Semua orang bisa baca profile (untuk transfer antar user), tapi update hanya milik sendiri
 CREATE POLICY "Public profiles are viewable by everyone." ON public.profiles FOR SELECT USING (true);
-CREATE POLICY "Users can update own profile." ON public.profiles FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Users can update own profile." ON public.profiles FOR UPDATE USING (id = (SELECT auth.uid()));
 
--- Wallets: User hanya bisa BACA datanya sendiri. Server (Service Role) bisa SEMUANYA.
-CREATE POLICY "Users can view their own wallet." ON public.user_wallets FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "Service role manages wallets." ON public.user_wallets FOR ALL USING (auth.role() = 'service_role');
+-- Wallets: User hanya bisa BACA datanya sendiri. Server (Service Role) bisa mengelola semuanya.
+CREATE POLICY "Users can view their own wallet." ON public.user_wallets FOR SELECT USING (id = (SELECT auth.uid()));
+CREATE POLICY "Service role manages wallets." ON public.user_wallets FOR ALL TO service_role USING (true);
 
--- Transactions: User hanya bisa BACA transaksinya sendiri. Server (Service Role) bisa SEMUANYA.
-CREATE POLICY "Users can view their own transactions." ON public.transactions FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Service role manages transactions." ON public.transactions FOR ALL USING (auth.role() = 'service_role');
+-- Transactions: User hanya bisa BACA transaksinya sendiri. Server (Service Role) bisa mengelola semuanya.
+CREATE POLICY "Users can view their own transactions." ON public.transactions FOR SELECT USING (user_id = (SELECT auth.uid()));
+CREATE POLICY "Service role manages transactions." ON public.transactions FOR ALL TO service_role USING (true);
+
+-- Transaction Ledger: User hanya bisa BACA transaksinya sendiri. Server (Service Role) bisa mengelola semuanya.
+CREATE POLICY "Users can view their own transaction ledger." ON public.transaction_ledger FOR SELECT USING (user_id = (SELECT auth.uid()));
+CREATE POLICY "Service role manages transaction ledger." ON public.transaction_ledger FOR ALL TO service_role USING (true);
+
+-- Balances: User hanya bisa BACA saldonya sendiri. Server (Service Role) bisa mengelola semuanya.
+CREATE POLICY "Users can view their own balances." ON public.balances FOR SELECT USING (user_id = (SELECT auth.uid()));
+CREATE POLICY "Service role manages balances." ON public.balances FOR ALL TO service_role USING (true);
 
 -- ==========================================
--- Automation Trigger (Auth -> Profiles)
+-- Automation Trigger & Functions (Auth -> Profiles)
 -- ==========================================
--- Trigger ini akan otomatis membuat profile kosong saat user mendaftar di Supabase Auth.
+
 CREATE OR REPLACE FUNCTION public.handle_new_user() 
 RETURNS TRIGGER AS $$
 BEGIN
@@ -84,12 +116,14 @@ BEGIN
   );
   RETURN new;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
+-- Membatasi akses eksekusi langsung ke handle_new_user oleh anonim demi keamanan
+REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM PUBLIC, authenticated, anon;
 
 -- 5. CREATE AUDIT LOGS TABLE
 CREATE TABLE public.audit_logs (
@@ -102,8 +136,8 @@ CREATE TABLE public.audit_logs (
 
 -- RLS for Audit Logs
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can view their own audit logs." ON public.audit_logs FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Service role manages audit logs." ON public.audit_logs FOR ALL USING (auth.role() = 'service_role');
+CREATE POLICY "Users can view their own audit logs." ON public.audit_logs FOR SELECT USING (user_id = (SELECT auth.uid()));
+CREATE POLICY "Service role manages audit logs." ON public.audit_logs FOR ALL TO service_role USING (true);
 
 -- 6. CREATE SANCTIONS BLOCKLIST TABLE
 CREATE TABLE public.sanctions_blocklist (
@@ -117,7 +151,7 @@ CREATE TABLE public.sanctions_blocklist (
 -- RLS for Sanctions Blocklist
 ALTER TABLE public.sanctions_blocklist ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public can view blocklist." ON public.sanctions_blocklist FOR SELECT USING (true);
-CREATE POLICY "Service role manages sanctions." ON public.sanctions_blocklist FOR ALL USING (auth.role() = 'service_role');
+CREATE POLICY "Service role manages sanctions." ON public.sanctions_blocklist FOR ALL TO service_role USING (true);
 
 -- 7. CREATE APP SETTINGS TABLE
 CREATE TABLE public.app_settings (
@@ -132,7 +166,7 @@ INSERT INTO public.app_settings (key, value) VALUES ('GAS_FEE_STRATEGY', 'SPONSO
 -- RLS for App Settings
 ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public can view settings." ON public.app_settings FOR SELECT USING (true);
-CREATE POLICY "Service role manages settings." ON public.app_settings FOR ALL USING (auth.role() = 'service_role');
+CREATE POLICY "Service role manages settings." ON public.app_settings FOR ALL TO service_role USING (true);
 
 -- 8. CREATE USER TOKENS TABLE (Custom/Imported Tokens)
 CREATE TABLE public.user_tokens (
@@ -148,6 +182,5 @@ CREATE TABLE public.user_tokens (
 
 -- RLS for User Tokens
 ALTER TABLE public.user_tokens ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can manage their own imported tokens." ON public.user_tokens FOR ALL USING (auth.uid() = user_id);
-CREATE POLICY "Service role manages user tokens." ON public.user_tokens FOR ALL USING (auth.role() = 'service_role');
-
+CREATE POLICY "Users can manage their own imported tokens." ON public.user_tokens FOR ALL USING (user_id = (SELECT auth.uid()));
+CREATE POLICY "Service role manages user tokens." ON public.user_tokens FOR ALL TO service_role USING (true);

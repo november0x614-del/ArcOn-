@@ -1,5 +1,7 @@
 import React from "react";
 import { Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { useShallow } from "zustand/react/shallow";
+import { useStore } from "../../store/useStore";
 import { useApp } from "../../contexts/AppContext";
 import { UIDCardTheme } from "../../types";
 import { THEME_STYLES } from "../../utils/theme";
@@ -24,7 +26,16 @@ export const WalletCard = React.memo(function WalletCard({
     pnlPercentage,
     registeredUser,
     balance: unifiedBalance,
-  } = useApp();
+  } = useStore(
+    useShallow((state) => ({
+      showBalance: state.showBalance,
+      setShowBalance: state.setShowBalance,
+      pnlValue: state.pnlValue,
+      pnlPercentage: state.pnlPercentage,
+      registeredUser: state.registeredUser,
+      balance: state.balance,
+    })),
+  );
 
   const balanceValue =
     typeof unifiedBalance === "number"
@@ -32,7 +43,7 @@ export const WalletCard = React.memo(function WalletCard({
       : Number(unifiedBalance) || 0;
   const formattedBalance = balanceValue.toLocaleString("en-US", {
     minimumFractionDigits: 2,
-    maximumFractionDigits: 6,
+    maximumFractionDigits: 2,
   });
 
   const currentTheme: Exclude<UIDCardTheme, undefined> =
@@ -111,7 +122,9 @@ export const WalletCard = React.memo(function WalletCard({
             >
               PnL
             </span>
-            <span className={`text-[11px] sm:text-[12px] font-bold ${pnlValue >= 0 ? "text-emerald-500" : "text-rose-500"} whitespace-nowrap`}>
+            <span
+              className={`text-[11px] sm:text-[12px] font-bold ${pnlValue >= 0 ? "text-emerald-500" : "text-rose-500"} whitespace-nowrap`}
+            >
               {(() => {
                 return `${pnlValue >= 0 ? "+" : "-"}${Math.abs(pnlValue).toFixed(2).replace(".", ",")} (${pnlPercentage >= 0 ? "+" : ""}${pnlPercentage.toFixed(2).replace(".", ",")}%)`;
               })()}

@@ -141,12 +141,12 @@ export function validateDestination(address: string): `0x${string}` {
 }
 
 /**
- * Checks if an address is blocklisted. 
+ * Checks if an address is blocklisted.
  * Checks both the blockchain (USDC contract) and the local Supabase sanctions_blocklist.
  */
 export async function isBlocklisted(address: string): Promise<boolean> {
   const typedAddress = address as `0x${string}`;
-  
+
   try {
     // 1. Check Local Supabase Blocklist (Admin-controlled)
     try {
@@ -155,13 +155,16 @@ export async function isBlocklisted(address: string): Promise<boolean> {
         .select("id")
         .eq("address", getAddress(address))
         .maybeSingle();
-      
+
       if (localBlocked) {
         console.warn(`[ArcViem] Address ${address} is in LOCAL blocklist.`);
         return true;
       }
     } catch (dbErr) {
-      console.warn("[ArcViem] Failed to check local blocklist, falling back to blockchain-only:", dbErr);
+      console.warn(
+        "[ArcViem] Failed to check local blocklist, falling back to blockchain-only:",
+        dbErr,
+      );
     }
 
     // 2. Check Blockchain (Native USDC Blacklist)
@@ -171,10 +174,13 @@ export async function isBlocklisted(address: string): Promise<boolean> {
       functionName: "isBlacklisted",
       args: [typedAddress],
     } as any);
-    
+
     return !!blockchainBlocked;
   } catch (error: any) {
-    console.error(`[ArcViem] Failed to check blockchain blocklist for ${address}, defaulting to false to ensure service uptime:`, error.message || error);
+    console.error(
+      `[ArcViem] Failed to check blockchain blocklist for ${address}, defaulting to false to ensure service uptime:`,
+      error.message || error,
+    );
     // Graceful degradation during unstable testnet or missing contract methods:
     // Do not crash/block the user's transaction if the blockchain checker is offline.
     return false;
@@ -265,30 +271,38 @@ export async function getTokenDecimals(tokenAddress: string): Promise<number> {
 export async function getTokenMetadata(tokenAddress: string) {
   try {
     const address = tokenAddress as `0x${string}`;
-    
+
     // Check if the address is a contract by fetching bytecode
     const bytecode = await publicClient.getBytecode({ address });
     if (!bytecode || bytecode === "0x") {
-      console.warn(`[ArcViem] Address ${tokenAddress} is a wallet, not a contract.`);
+      console.warn(
+        `[ArcViem] Address ${tokenAddress} is a wallet, not a contract.`,
+      );
       return null;
     }
 
     const [name, symbol, decimals] = await Promise.all([
-      publicClient.readContract({
-        address,
-        abi: parseAbi(["function name() view returns (string)"]),
-        functionName: "name",
-      } as any).catch(() => "Unknown Token"),
-      publicClient.readContract({
-        address,
-        abi: parseAbi(["function symbol() view returns (string)"]),
-        functionName: "symbol",
-      } as any).catch(() => "TOKEN"),
-      publicClient.readContract({
-        address,
-        abi: parseAbi(["function decimals() view returns (uint8)"]),
-        functionName: "decimals",
-      } as any).catch(() => 18),
+      publicClient
+        .readContract({
+          address,
+          abi: parseAbi(["function name() view returns (string)"]),
+          functionName: "name",
+        } as any)
+        .catch(() => "Unknown Token"),
+      publicClient
+        .readContract({
+          address,
+          abi: parseAbi(["function symbol() view returns (string)"]),
+          functionName: "symbol",
+        } as any)
+        .catch(() => "TOKEN"),
+      publicClient
+        .readContract({
+          address,
+          abi: parseAbi(["function decimals() view returns (uint8)"]),
+          functionName: "decimals",
+        } as any)
+        .catch(() => 18),
     ]);
 
     return {
@@ -298,7 +312,10 @@ export async function getTokenMetadata(tokenAddress: string) {
       contractAddress: tokenAddress,
     };
   } catch (error) {
-    console.error(`[ArcViem] Failed to fetch metadata for ${tokenAddress}:`, error);
+    console.error(
+      `[ArcViem] Failed to fetch metadata for ${tokenAddress}:`,
+      error,
+    );
     return null;
   }
 }
@@ -315,7 +332,7 @@ export function getArcScanUrl(type: "tx" | "address", value: string): string {
  * Helper to generate Tenderly Debugger URLs for failed transactions.
  */
 export function getTenderlyDebugUrl(txHash: string): string {
-  // Arc Testnet is not always natively in Tenderly, but we can use the visual debugger 
+  // Arc Testnet is not always natively in Tenderly, but we can use the visual debugger
   // with the chain ID 5042002 if supported, or provide a generic search link.
   return `https://dashboard.tenderly.co/tx/arc-testnet/${txHash}`;
 }

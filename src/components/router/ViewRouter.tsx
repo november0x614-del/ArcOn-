@@ -2,49 +2,60 @@ import React from "react";
 import { motion, AnimatePresence, Variants } from "motion/react";
 import { ViewState } from "../../types";
 import { useApp } from "../../contexts/AppContext";
+import { useStore } from "../../store/useStore";
 import { LoginScreen } from "../screens/LoginScreen";
 import { RegisterWeb3Screen } from "../screens/RegisterWeb3Screen";
 import { RegisterSuccessScreen } from "../screens/RegisterSuccessScreen";
 import { PasswordScreen } from "../screens/PasswordScreen";
+import { ForgotPasswordScreen } from "../screens/ForgotPasswordScreen";
+import { SettingsScreen } from "../screens/SettingsScreen";
+import { NamaPanggilanScreen } from "../screens/NamaPanggilanScreen";
+import { EmailScreen } from "../screens/EmailScreen";
+import { OtherAccountsScreen } from "../screens/OtherAccountsScreen";
+import { BayarVAScreen } from "../screens/BayarVAScreen";
+import { EcommerceScreen } from "../screens/EcommerceScreen";
+import { MerchantScreen } from "../screens/MerchantScreen";
+import { FaucetScreen } from "../screens/FaucetScreen";
 import { SwapScreen } from "../screens/SwapScreen";
+import { DepositQRScreen } from "../screens/DepositQRScreen";
+import { StablestakeScreen } from "../screens/StablestakeScreen";
+import { DepositOptionsScreen } from "../screens/DepositOptionsScreen";
+import { ReceiveVAScreen } from "../screens/ReceiveVAScreen";
+import { ReceiveQRISScreen } from "../screens/ReceiveQRISScreen";
+import { LogoutScreen } from "../screens/LogoutScreen";
+import { ArcBirdScreen } from "../screens/ArcBirdScreen";
+import { InboxScreen } from "../screens/InboxScreen";
+import { AccountDetailScreen } from "../screens/AccountDetailScreen";
+import { ReceiptScreen } from "../screens/ReceiptScreen";
+import { ManageFavoritesScreen } from "../screens/ManageFavoritesScreen";
+import { ConnectEWalletScreen } from "../screens/ConnectEWalletScreen";
+import { ScanQRScreen } from "../screens/ScanQRScreen";
+import { AIAgentScreen } from "../screens/AIAgentScreen";
+import { TransferScreen } from "../screens/TransferScreen";
+import { NewTransferScreen } from "../screens/NewTransferScreen";
+import { AmountInputScreen } from "../screens/AmountInputScreen";
+import { BatchTransferScreen } from "../screens/BatchTransferScreen";
+import { WithdrawScreen } from "../screens/WithdrawScreen";
+import { BridgeScreen } from "../screens/BridgeScreen";
+import { MintNFTScreen } from "../screens/MintNFTScreen";
+import { TransactionHistoryScreen } from "../screens/TransactionHistoryScreen";
 import { HomeScreen } from "../screens/HomeScreen";
+import { AdminDashboardScreen } from "../screens/AdminDashboardScreen";
 import { supabase } from "../../lib/supabaseClient";
 import { BackendClient } from "../../services/api/index";
 import { useContacts } from "../../hooks/useContacts";
-import { ShieldAlert, Loader2 } from "lucide-react";
-
-// Lazy load secondary screens to improve initial load and rendering performance
-const ForgotPasswordScreen = React.lazy(() => import("../screens/ForgotPasswordScreen").then(m => ({ default: m.ForgotPasswordScreen })));
-const SettingsScreen = React.lazy(() => import("../screens/SettingsScreen").then(m => ({ default: m.SettingsScreen })));
-const NamaPanggilanScreen = React.lazy(() => import("../screens/NamaPanggilanScreen").then(m => ({ default: m.NamaPanggilanScreen })));
-const EmailScreen = React.lazy(() => import("../screens/EmailScreen").then(m => ({ default: m.EmailScreen })));
-const OtherAccountsScreen = React.lazy(() => import("../screens/OtherAccountsScreen").then(m => ({ default: m.OtherAccountsScreen })));
-const BayarVAScreen = React.lazy(() => import("../screens/BayarVAScreen").then(m => ({ default: m.BayarVAScreen })));
-const EcommerceScreen = React.lazy(() => import("../screens/EcommerceScreen").then(m => ({ default: m.EcommerceScreen })));
-const MerchantScreen = React.lazy(() => import("../screens/MerchantScreen").then(m => ({ default: m.MerchantScreen })));
-const FaucetScreen = React.lazy(() => import("../screens/FaucetScreen").then(m => ({ default: m.FaucetScreen })));
-const DepositQRScreen = React.lazy(() => import("../screens/DepositQRScreen").then(m => ({ default: m.DepositQRScreen })));
-const StablestakeScreen = React.lazy(() => import("../screens/StablestakeScreen").then(m => ({ default: m.StablestakeScreen })));
-const DepositOptionsScreen = React.lazy(() => import("../screens/DepositOptionsScreen").then(m => ({ default: m.DepositOptionsScreen })));
-const ReceiveVAScreen = React.lazy(() => import("../screens/ReceiveVAScreen").then(m => ({ default: m.ReceiveVAScreen })));
-const ReceiveQRISScreen = React.lazy(() => import("../screens/ReceiveQRISScreen").then(m => ({ default: m.ReceiveQRISScreen })));
-const LogoutScreen = React.lazy(() => import("../screens/LogoutScreen").then(m => ({ default: m.LogoutScreen })));
-const ArcBirdScreen = React.lazy(() => import("../screens/ArcBirdScreen").then(m => ({ default: m.ArcBirdScreen })));
-const InboxScreen = React.lazy(() => import("../screens/InboxScreen").then(m => ({ default: m.InboxScreen })));
-const AccountDetailScreen = React.lazy(() => import("../screens/AccountDetailScreen").then(m => ({ default: m.AccountDetailScreen })));
-const ReceiptScreen = React.lazy(() => import("../screens/ReceiptScreen").then(m => ({ default: m.ReceiptScreen })));
-const ManageFavoritesScreen = React.lazy(() => import("../screens/ManageFavoritesScreen").then(m => ({ default: m.ManageFavoritesScreen })));
-const ConnectEWalletScreen = React.lazy(() => import("../screens/ConnectEWalletScreen").then(m => ({ default: m.ConnectEWalletScreen })));
-const ScanQRScreen = React.lazy(() => import("../screens/ScanQRScreen").then(m => ({ default: m.ScanQRScreen })));
-const AIAgentScreen = React.lazy(() => import("../screens/AIAgentScreen").then(m => ({ default: m.AIAgentScreen })));
-const TransferScreen = React.lazy(() => import("../screens/TransferScreen").then(m => ({ default: m.TransferScreen })));
-const NewTransferScreen = React.lazy(() => import("../screens/NewTransferScreen").then(m => ({ default: m.NewTransferScreen })));
-const AmountInputScreen = React.lazy(() => import("../screens/AmountInputScreen").then(m => ({ default: m.AmountInputScreen })));
-const BatchTransferScreen = React.lazy(() => import("../screens/BatchTransferScreen").then(m => ({ default: m.BatchTransferScreen })));
-const WithdrawScreen = React.lazy(() => import("../screens/WithdrawScreen").then(m => ({ default: m.WithdrawScreen })));
-const BridgeScreen = React.lazy(() => import("../screens/BridgeScreen").then(m => ({ default: m.BridgeScreen })));
-const TransactionHistoryScreen = React.lazy(() => import("../screens/TransactionHistoryScreen").then(m => ({ default: m.TransactionHistoryScreen })));
-const AdminDashboardScreen = React.lazy(() => import("../screens/AdminDashboardScreen").then(m => ({ default: m.AdminDashboardScreen })));
+import {
+  ShieldAlert,
+  Home,
+  Mail,
+  Scan,
+  Settings,
+  LogOut,
+  Bot,
+  ChevronRight,
+  ShoppingCart,
+  Package,
+} from "lucide-react";
 
 const slideFadeVariants: Variants = {
   initial: {
@@ -104,12 +115,20 @@ export const ViewRouter = React.memo(
       balance,
       fetchBalance,
       fetchTransactions,
+      transactions,
+      readReceiptIds,
     } = useApp();
 
     const { realContacts } = useContacts();
 
     const onNavigate = React.useCallback(
-      (view: ViewState) => setViewState(view),
+      (view: ViewState) => {
+        if (view === "home" && window.innerWidth >= 1024) {
+          setViewState("transfer");
+        } else {
+          setViewState(view);
+        }
+      },
       [setViewState],
     );
 
@@ -176,465 +195,768 @@ export const ViewRouter = React.memo(
       );
     };
 
-    return (
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={viewState}
-          variants={slideFadeVariants}
-          initial="initial"
-          animate="animate"
-          exit="exit"
-          className="w-full h-full flex flex-col transform-gpu will-change-transform animate-in fade-in duration-300 ease-out"
-        >
-          <React.Suspense fallback={
-            <div className="w-full h-full flex flex-col items-center justify-center bg-slate-50">
-              <Loader2 className="w-8 h-8 text-slate-400 animate-spin" />
-              <p className="mt-4 text-[13px] font-medium text-slate-500">Loading module...</p>
+    const isAuthenticatedView =
+      registeredUser &&
+      ![
+        "splash",
+        "register",
+        "registerSuccess",
+        "password",
+        "forgotPassword",
+        "namaPanggilan",
+      ].includes(viewState);
+
+    const unreadCount = React.useMemo(() => {
+      if (!Array.isArray(transactions)) return 0;
+      return transactions.filter(
+        (tx) => (tx.status === "success" || tx.status === "failed") && !readReceiptIds.includes(tx.id)
+      ).length;
+    }, [transactions, readReceiptIds]);
+
+    const { cart: cartQuantities } = useStore();
+    const cartCount = React.useMemo(() => {
+      return Object.values(cartQuantities).reduce((a, b) => (a as number) + (b as number), 0) as number;
+    }, [cartQuantities]);
+
+    const [ecommerceInnerView, setEcommerceInnerView] = React.useState<"list" | "detail" | "checkout" | "success">("list");
+
+    React.useEffect(() => {
+      const handleViewChange = (e: Event) => {
+        const customEvent = e as CustomEvent<"list" | "detail" | "checkout" | "success">;
+        setEcommerceInnerView(customEvent.detail);
+      };
+
+      window.addEventListener("ecommerce-view-state-changed", handleViewChange);
+      return () => {
+        window.removeEventListener("ecommerce-view-state-changed", handleViewChange);
+      };
+    }, []);
+
+    const [isDesktop, setIsDesktop] = React.useState(false);
+    React.useEffect(() => {
+      const checkDesktop = () => setIsDesktop(window.innerWidth >= 1024);
+      checkDesktop();
+      window.addEventListener("resize", checkDesktop);
+      return () => window.removeEventListener("resize", checkDesktop);
+    }, []);
+
+    React.useEffect(() => {
+      if (viewState === "home" && isDesktop) {
+        setViewState("transfer");
+      }
+    }, [viewState, isDesktop, setViewState]);
+
+    const desktopFeatures = [
+      "transfer",
+      "newTransfer",
+      "amountInput",
+      "batchTransfer",
+      "receive",
+      "depositOptions",
+      "receiveVA",
+      "receiveQRIS",
+      "bayarVA",
+      "scanQR",
+      "swap",
+      "stablestake",
+      "bridge",
+      "mintNFT",
+      "transactionHistory",
+      "inbox",
+      "settings",
+      "namaPanggilan",
+      "email",
+      "otherAccounts",
+      "manageFavorites",
+      "receipt",
+    ];
+
+    const isDesktopFeatureView =
+      isDesktop && desktopFeatures.includes(viewState);
+    const motionKey = isDesktopFeatureView ? "home" : viewState;
+
+    const renderLayoutWrapper = (children: React.ReactNode) => {
+      if (!isAuthenticatedView) {
+        return <div className="w-full h-full flex flex-col">{children}</div>;
+      }
+
+      return (
+        <div className="flex w-full h-full bg-[#ecf5fc] text-left">
+          {/* Desktop Sidebar (lg) */}
+          <div className="hidden lg:flex w-[260px] flex-col bg-white border-r border-slate-200 shrink-0 h-full relative z-[100] p-6 text-left shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+            <div className="mb-8">
+              <h2 className="text-2xl font-black italic tracking-tight text-slate-800">
+                Lounge
+              </h2>
             </div>
-          }>
-            {viewState === "splash" && (
-            <LoginScreen
-              hasIdentity={!!registeredUser}
-              onShowToast={displayToast}
-              isLoading={isLoggingIn}
-              onLogin={async (email) => {
-                setLoginEmail(email);
-                setViewState("password");
-              }}
-              onRegister={() => setViewState("register")}
-            />
-          )}
+            <nav className="flex-1 flex flex-col gap-2">
+              <button
+                onClick={() => onNavigate(isDesktop ? "transfer" : "home")}
+                className={`flex items-center gap-3 px-4 py-3.5 rounded-xl ${(["home", ...desktopFeatures].includes(viewState) && !["inbox", "scanQR", "settings", "namaPanggilan", "email", "otherAccounts", "receipt"].includes(viewState)) || (viewState === "receipt" && receiptSource !== "inbox") ? "bg-slate-900 text-white shadow-[0_4px_12px_rgba(15,23,42,0.15)] shadow-slate-900/20" : "bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800"} font-bold transition-all text-left border-0 cursor-pointer active:scale-95`}
+              >
+                <Home size={20} />
+                <span className="text-[14px]">Home</span>
+              </button>
+              <button
+                onClick={() => onNavigate("inbox")}
+                className={`flex items-center gap-3 px-4 py-3.5 rounded-xl ${viewState === "inbox" || (viewState === "receipt" && receiptSource === "inbox") ? "bg-slate-900 text-white shadow-[0_4px_12px_rgba(15,23,42,0.15)] shadow-slate-900/20" : "bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800"} font-bold transition-all text-left border-0 relative cursor-pointer active:scale-95`}
+              >
+                <Mail size={20} />
+                <span className="text-[14px]">Inbox</span>
+                {unreadCount > 0 && (
+                  <span className="absolute right-4 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-black border border-white leading-none">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+              {(!platformConfig || platformConfig.scanQrEnabled !== false) && (
+                <button
+                  onClick={() => onNavigate("scanQR")}
+                  className={`flex items-center gap-3 px-4 py-3.5 rounded-xl ${viewState === "scanQR" ? "bg-slate-900 text-white shadow-[0_4px_12px_rgba(15,23,42,0.15)] shadow-slate-900/20" : "bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800"} font-bold transition-all text-left border-0 relative cursor-pointer active:scale-95`}
+                >
+                  <Scan size={20} />
+                  <span className="text-[14px]">Scan QR/Pay</span>
+                </button>
+              )}
+              <button
+                onClick={() => onNavigate("settings")}
+                className={`flex items-center gap-3 px-4 py-3.5 rounded-xl ${["settings", "namaPanggilan", "email", "otherAccounts"].includes(viewState) ? "bg-slate-900 text-white shadow-[0_4px_12px_rgba(15,23,42,0.15)] shadow-slate-900/20" : "bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800"} font-bold transition-all text-left border-0 relative cursor-pointer active:scale-95`}
+              >
+                <Settings size={20} />
+                <span className="text-[14px]">Settings</span>
+              </button>
 
-          {viewState === "register" && (
-            <RegisterWeb3Screen
-              onBack={() => setViewState("splash")}
-              onComplete={(data) => {
-                setRegisteredUser(data);
-                setViewState("registerSuccess");
-              }}
-            />
-          )}
+              <button
+                onClick={() => {
+                  onNavigate("ecommerce");
+                  setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent("ecommerce-navigate-list"));
+                  }, 50);
+                }}
+                className={`flex items-center gap-3 px-4 py-3.5 rounded-xl ${viewState === "ecommerce" ? "bg-slate-900 text-white shadow-[0_4px_12px_rgba(15,23,42,0.15)] shadow-slate-900/20" : "bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800"} font-bold transition-all text-left border-0 relative cursor-pointer active:scale-95`}
+              >
+                <Package size={20} />
+                <span className="text-[14px]">Marketplace</span>
+              </button>
 
-          {viewState === "registerSuccess" && (
-            <RegisterSuccessScreen
-              username={registeredUser?.username}
-              email={registeredUser?.email}
-              isVerified={registeredUser?.isVerified}
-              walletAddress={registeredUser?.walletAddress}
-              onContinue={() => {
-                if (registeredUser?.isVerified === false) {
-                  // Direct to splash/login if not verified
-                  setViewState("splash");
-                } else {
-                  setViewState("home");
-                }
-              }}
-            />
-          )}
+              {viewState === "ecommerce" && (
+                <div className="flex flex-col gap-1 pl-4 border-l-2 border-slate-100 ml-6 my-1 animate-in slide-in-from-top-2 duration-200">
+                  <button
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent("ecommerce-navigate-list"));
+                    }}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[13px] font-bold transition-all border-0 cursor-pointer text-left ${
+                      ecommerceInnerView !== "checkout"
+                        ? "bg-slate-100 text-slate-900"
+                        : "bg-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span>All Products</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent("ecommerce-navigate-checkout"));
+                    }}
+                    className={`flex items-center justify-between px-3 py-2 rounded-lg text-[13px] font-bold transition-all border-0 cursor-pointer text-left w-full ${
+                      ecommerceInnerView === "checkout"
+                        ? "bg-slate-100 text-slate-900"
+                        : "bg-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <ShoppingCart size={14} />
+                      <span>Shopping Cart</span>
+                    </span>
+                    {cartCount > 0 && (
+                      <span className="bg-emerald-500 text-white font-black text-[9px] px-2 py-0.5 rounded-full">
+                        {cartCount}
+                      </span>
+                    )}
+                  </button>
+                </div>
+              )}
+            </nav>
 
-          {viewState === "password" && (
-            <PasswordScreen
-              email={loginEmail}
-              onBack={() => setViewState("splash")}
-              isLoading={isLoggingIn}
-              onLogin={async (email, password) => {
-                setIsLoggingIn(true);
+            <div className="mt-auto">
+              {(!platformConfig || platformConfig.aiAgentEnabled !== false) && (
+                <div className="mb-4">
+                  <div
+                    className="bg-gradient-to-r from-indigo-50 to-blue-50 py-2.5 px-4 rounded-xl flex items-center justify-between gap-3 border border-indigo-100 relative cursor-pointer hover:bg-indigo-100/50 transition-colors w-full active:scale-95"
+                    onClick={() => onNavigate("aiAgent")}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="bg-white p-1.5 rounded-lg text-slate-800 shrink-0 border border-indigo-50 shadow-sm flex items-center justify-center w-[30px] h-[30px]">
+                        <Bot size={18} />
+                      </div>
+                      <span className="text-[14px] font-bold text-slate-800">
+                        Lounge Assistant
+                      </span>
+                    </div>
+                    <div className="bg-white rounded-full p-1 shadow-sm text-slate-800 shrink-0 border border-indigo-50 flex items-center justify-center w-5 h-5">
+                      <ChevronRight size={12} />
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div className="w-full h-[1px] bg-slate-100 mb-4"></div>
+              <button
+                onClick={() => onNavigate("logout")}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-slate-50 text-slate-600 font-bold hover:bg-red-50 hover:text-red-600 transition-all border-0 cursor-pointer active:scale-95"
+              >
+                <LogOut size={18} />
+                <span className="text-[14px]">Logout</span>
+              </button>
+            </div>
+          </div>
 
-                const { error } = await supabase.auth.signInWithPassword({
-                  email,
-                  password,
-                });
+          {/* Main Content Dashboard Container */}
+          <div className="flex-1 flex justify-center h-full relative w-full items-start bg-[#ecf5fc]">
+            <div className="w-full h-full lg:max-w-[1200px] flex flex-col relative overflow-hidden bg-white lg:border-x lg:border-slate-200/50 lg:shadow-xl font-sans">
+              {children}
+            </div>
+          </div>
+        </div>
+      );
+    };
 
-                if (error) {
-                  displayToast(error.message);
-                  setIsLoggingIn(false);
-                  return;
-                }
+    const activeViewComponent = (
+      <>
+        {viewState === "splash" && (
+          <LoginScreen
+            hasIdentity={!!registeredUser}
+            onShowToast={displayToast}
+            isLoading={isLoggingIn}
+            onLogin={async (email) => {
+              setLoginEmail(email);
+              setViewState("password");
+            }}
+            onRegister={() => setViewState("register")}
+          />
+        )}
 
-                // We NO LONGER call setViewState("home") here.
-                // The central handleUserSession in App.tsx will detect the new session,
-                // verify/provision the wallet, and then navigate to "home" securely.
-                // We keep setIsLoggingIn(true) so the loading spinner stays visible 
-                // until the transition happens from App.tsx.
-              }}
-              onForgotPassword={() => setViewState("forgotPassword")}
-            />
-          )}
+        {viewState === "register" && (
+          <RegisterWeb3Screen
+            onBack={() => setViewState("splash")}
+            onComplete={(data) => {
+              setRegisteredUser(data);
+              setViewState("registerSuccess");
+            }}
+          />
+        )}
 
-          {viewState === "forgotPassword" && (
-            <ForgotPasswordScreen 
-              onBack={() => setViewState("password")} 
-              initialEmail={loginEmail}
-            />
-          )}
-
-          {viewState === "settings" && (
-            <SettingsScreen
-              onBack={() => setViewState("home")}
-              onNamaPanggilan={() => setViewState("namaPanggilan")}
-              onEmail={() => setViewState("email")}
-              onShowToast={displayToast}
-            />
-          )}
-
-          {viewState === "namaPanggilan" && (
-            <NamaPanggilanScreen onBack={() => setViewState("settings")} />
-          )}
-
-          {viewState === "ecommerce" &&
-            (platformConfig && platformConfig.ecommerceEnabled === false ? (
-              renderLockedScreen(
-                "E-Commerce Marketplace Module",
-                "Marketplace and product purchase features are temporarily disabled by the System Administrator.",
-              )
-            ) : (
-              <EcommerceScreen onBack={() => setViewState("home")} />
-            ))}
-
-          {viewState === "merchant" &&
-            (platformConfig && platformConfig.merchantEnabled === false ? (
-              renderLockedScreen(
-                "F&B Merchant POS Module",
-                "Digital cashier features for merchant partners are temporarily disabled for regional restrictions.",
-              )
-            ) : (
-              <MerchantScreen onBack={() => setViewState("home")} />
-            ))}
-
-          {viewState === "faucet" &&
-            (platformConfig && platformConfig.faucetEnabled === false ? (
-              renderLockedScreen(
-                "Arc Testnet Faucet Claim",
-                "Free gas token distribution is temporarily closed by the Devnet Warden.",
-              )
-            ) : (
-              <FaucetScreen onBack={() => setViewState("home")} />
-            ))}
-
-          {viewState === "bayarVA" &&
-            (platformConfig && platformConfig.vaEnabled === false ? (
-              renderLockedScreen(
-                "Virtual Account (VA) Payment Code",
-                "VA bill payment service is temporarily suspended by Admin.",
-              )
-            ) : (
-              <BayarVAScreen onBack={() => setViewState("home")} />
-            ))}
-
-          {viewState === "email" && (
-            <EmailScreen onBack={() => setViewState("settings")} />
-          )}
-
-          {viewState === "otherAccounts" && (
-            <OtherAccountsScreen onBack={() => setViewState("home")} />
-          )}
-
-          {viewState === "swap" &&
-            (platformConfig && platformConfig.swapEnabled === false ? (
-              renderLockedScreen(
-                "USDC Swap Pool Feature",
-                "Asset exchange service is temporarily frozen by Admin for liquidity balancing.",
-              )
-            ) : (
-              <SwapScreen onBack={() => setViewState("home")} />
-            ))}
-
-          {viewState === "receive" && (
-            <DepositQRScreen onBack={() => setViewState("home")} />
-          )}
-
-          {viewState === "stablestake" &&
-            (platformConfig && platformConfig.stableStakeEnabled === false ? (
-              renderLockedScreen(
-                "Stablestake Deposit Yield",
-                "Staking pool is currently locked for native-USDC interest consolidation.",
-              )
-            ) : (
-              <StablestakeScreen onBack={() => setViewState("home")} />
-            ))}
-
-          {viewState === "depositOptions" && (
-            <DepositOptionsScreen
-              onBack={() => setViewState("home")}
-              onSelectUSDC={() => setViewState("receive")}
-              onSelectVA={() => setViewState("receiveVA")}
-              onSelectQRIS={() => setViewState("receiveQRIS")}
-              onSelectWithdraw={() => setViewState("withdraw")}
-              platformConfig={platformConfig}
-            />
-          )}
-
-          {viewState === "receiveVA" &&
-            (platformConfig && platformConfig.vaEnabled === false ? (
-              renderLockedScreen(
-                "Virtual Account (VA)",
-                "Bank Virtual Account deposits are currently out of service.",
-              )
-            ) : (
-              <ReceiveVAScreen onBack={() => setViewState("depositOptions")} />
-            ))}
-
-          {viewState === "receiveQRIS" &&
-            (platformConfig && platformConfig.qrisEnabled === false ? (
-               renderLockedScreen(
-                "Standard QRIS Deposit",
-                "QRIS payment code generation gateway is temporarily disabled by the payment processor.",
-              )
-            ) : (
-              <ReceiveQRISScreen
-                onBack={() => setViewState("depositOptions")}
-              />
-            ))}
-
-          {viewState === "logout" && (
-            <LogoutScreen
-              onBack={() => setViewState("home")}
-              onLogout={async () => {
-                await supabase.auth.signOut();
-              }}
-            />
-          )}
-
-          {viewState === "arcswap" &&
-            (platformConfig && platformConfig.swapEnabled === false ? (
-              renderLockedScreen(
-                "USDC Swap Pool Feature",
-                "Asset exchange service is temporarily frozen by Admin for liquidity balancing.",
-              )
-            ) : (
-              <SwapScreen onBack={() => setViewState("home")} />
-            ))}
-
-          {viewState === "arcbird" &&
-            (platformConfig && platformConfig.arcBirdEnabled === false ? (
-              renderLockedScreen(
-                "Arc Bird Game",
-                "Arc Bird Mini-App game is currently suspended for seasonal leaderboard updates.",
-              )
-            ) : (
-              <ArcBirdScreen onBack={() => setViewState("home")} />
-            ))}
-
-          {viewState === "inbox" && (
-            <InboxScreen
-              onBack={() => setViewState("home")}
-              onTransactionClick={(tx) => {
-                setSelectedTransaction(tx);
-                setReceiptSource("inbox");
-                setViewState("receipt");
-              }}
-            />
-          )}
-
-          {viewState === "accountDetail" && (
-            <AccountDetailScreen
-              userName={userName}
-              onBack={() => setViewState("home")}
-              onTransfer={() => setViewState("transfer")}
-              onReceive={() => setViewState("receive")}
-              onTransactionClick={(tx) => {
-                setSelectedTransaction(tx);
-                setReceiptSource("accountDetail");
-                setViewState("receipt");
-              }}
-            />
-          )}
-
-          {viewState === "receipt" && (
-            <ReceiptScreen onBack={() => setViewState(receiptSource)} />
-          )}
-
-          {viewState === "manageFavorites" && (
-            <ManageFavoritesScreen
-              initialSelected={selectedShortcuts}
-              initialAvailable={availableShortcuts}
-              onBack={() => setViewState("home")}
-              onSave={(selected, available) => {
-                setSelectedShortcuts(selected);
-                setAvailableShortcuts(available);
+        {viewState === "registerSuccess" && (
+          <RegisterSuccessScreen
+            username={registeredUser?.username}
+            email={registeredUser?.email}
+            isVerified={registeredUser?.isVerified}
+            walletAddress={registeredUser?.walletAddress}
+            onContinue={() => {
+              if (registeredUser?.isVerified === false) {
+                // Direct to splash/login if not verified
+                setViewState("splash");
+              } else {
                 setViewState("home");
-                displayToast("Settings saved successfully.");
+              }
+            }}
+          />
+        )}
+
+        {viewState === "password" && (
+          <PasswordScreen
+            email={loginEmail}
+            onBack={() => setViewState("splash")}
+            isLoading={isLoggingIn}
+            onLogin={async (email, password) => {
+              setIsLoggingIn(true);
+
+              const { data, error } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+              });
+
+              if (error) {
+                displayToast(error.message);
+                setIsLoggingIn(false);
+                return;
+              }
+
+              // Explicitly wait for wallet info to provide immediate feedback instead of hanging on the Loading screen
+              try {
+                if (data.session?.user) {
+                  const user = data.session.user;
+                  const response = await fetch(`/api/debug-wallet/${user.id}`);
+                  if (response.ok) {
+                    const walletInfo = await response.json();
+                    
+                    // Immediate store sync for fast transition
+                    const { setRegisteredUser } = useStore.getState();
+                    setRegisteredUser({
+                      username: user.user_metadata?.full_name || user.user_metadata?.username || "Arc User",
+                      email: user.email || "",
+                      isVerified: true,
+                      walletId: walletInfo.wallet_id,
+                      walletAddress: walletInfo.wallet_address,
+                      supabaseUid: user.id
+                    });
+                  }
+                }
+              } catch (e) {
+                console.warn("Could not pre-fetch wallet during login", e);
+              }
+
+              setIsLoggingIn(false);
+              setViewState("home");
+            }}
+            onForgotPassword={() => setViewState("forgotPassword")}
+          />
+        )}
+
+        {viewState === "forgotPassword" && (
+          <ForgotPasswordScreen
+            onBack={() => setViewState("password")}
+            initialEmail={loginEmail}
+          />
+        )}
+
+        {viewState === "settings" && (
+          <SettingsScreen
+            onBack={() => setViewState("home")}
+            onNamaPanggilan={() => setViewState("namaPanggilan")}
+            onEmail={() => setViewState("email")}
+            onShowToast={displayToast}
+          />
+        )}
+
+        {viewState === "namaPanggilan" && (
+          <NamaPanggilanScreen onBack={() => setViewState("settings")} />
+        )}
+
+        {viewState === "ecommerce" &&
+          (platformConfig && platformConfig.ecommerceEnabled === false ? (
+            renderLockedScreen(
+              "E-Commerce Marketplace Module",
+              "Marketplace and product purchase features are temporarily disabled by the System Administrator.",
+            )
+          ) : (
+            <EcommerceScreen onBack={() => setViewState("home")} isDesktop={isDesktop} />
+          ))}
+
+        {viewState === "merchant" &&
+          (platformConfig && platformConfig.merchantEnabled === false ? (
+            renderLockedScreen(
+              "F&B Merchant POS Module",
+              "Digital cashier features for merchant partners are temporarily disabled for regional restrictions.",
+            )
+          ) : (
+            <MerchantScreen onBack={() => setViewState("home")} />
+          ))}
+
+        {viewState === "faucet" &&
+          (platformConfig && platformConfig.faucetEnabled === false ? (
+            renderLockedScreen(
+              "Arc Testnet Faucet Claim",
+              "Free gas token distribution is temporarily closed by the Devnet Warden.",
+            )
+          ) : (
+            <FaucetScreen onBack={() => setViewState("home")} />
+          ))}
+
+        {viewState === "bayarVA" &&
+          (platformConfig && platformConfig.vaEnabled === false ? (
+            renderLockedScreen(
+              "Virtual Account (VA) Payment Code",
+              "VA bill payment service is temporarily suspended by Admin.",
+            )
+          ) : (
+            <BayarVAScreen onBack={() => setViewState("home")} />
+          ))}
+
+        {viewState === "email" && (
+          <EmailScreen onBack={() => setViewState("settings")} />
+        )}
+
+        {viewState === "otherAccounts" && (
+          <OtherAccountsScreen onBack={() => setViewState("home")} />
+        )}
+
+        {viewState === "swap" &&
+          (platformConfig && platformConfig.swapEnabled === false ? (
+            renderLockedScreen(
+              "USDC Swap Pool Feature",
+              "Asset exchange service is temporarily frozen by Admin for liquidity balancing.",
+            )
+          ) : (
+            <SwapScreen onBack={() => setViewState("home")} />
+          ))}
+
+        {viewState === "receive" && (
+          <DepositQRScreen onBack={() => setViewState("home")} />
+        )}
+
+        {viewState === "stablestake" &&
+          (platformConfig && platformConfig.stableStakeEnabled === false ? (
+            renderLockedScreen(
+              "Stablestake Deposit Yield",
+              "Staking pool is currently locked for native-USDC interest consolidation.",
+            )
+          ) : (
+            <StablestakeScreen onBack={() => setViewState("home")} />
+          ))}
+
+        {viewState === "depositOptions" && (
+          <DepositOptionsScreen
+            onBack={() => setViewState("home")}
+            onSelectUSDC={() => setViewState("receive")}
+            onSelectWithdraw={() => setViewState("withdraw")}
+            platformConfig={platformConfig}
+          />
+        )}
+
+        {viewState === "receiveVA" &&
+          (platformConfig && platformConfig.vaEnabled === false ? (
+            renderLockedScreen(
+              "Virtual Account (VA)",
+              "Bank Virtual Account deposits are currently out of service.",
+            )
+          ) : (
+            <ReceiveVAScreen onBack={() => setViewState("depositOptions")} />
+          ))}
+
+        {viewState === "receiveQRIS" &&
+          (platformConfig && platformConfig.qrisEnabled === false ? (
+            renderLockedScreen(
+              "Standard QRIS Deposit",
+              "QRIS payment code generation gateway is temporarily disabled by the payment processor.",
+            )
+          ) : (
+            <ReceiveQRISScreen onBack={() => setViewState("depositOptions")} />
+          ))}
+
+        {viewState === "logout" && (
+          <LogoutScreen
+            onBack={() => setViewState("home")}
+            onLogout={async () => {
+              await supabase.auth.signOut();
+            }}
+          />
+        )}
+
+        {viewState === "arcbird" &&
+          (platformConfig && platformConfig.arcBirdEnabled === false ? (
+            renderLockedScreen(
+              "Arc Bird Game",
+              "Arc Bird Mini-App game is currently suspended for seasonal leaderboard updates.",
+            )
+          ) : (
+            <ArcBirdScreen onBack={() => setViewState("home")} />
+          ))}
+
+        {viewState === "inbox" && (
+          <InboxScreen
+            onBack={() => setViewState("home")}
+            onTransactionClick={(tx) => {
+              setSelectedTransaction(tx);
+              setReceiptSource("inbox");
+              setViewState("receipt");
+            }}
+          />
+        )}
+
+        {viewState === "accountDetail" && (
+          <AccountDetailScreen
+            userName={userName}
+            onBack={() => setViewState("home")}
+            onTransfer={() => setViewState("transfer")}
+            onReceive={() => setViewState("receive")}
+            onTransactionClick={(tx) => {
+              setSelectedTransaction(tx);
+              setReceiptSource("accountDetail");
+              setViewState("receipt");
+            }}
+          />
+        )}
+
+        {viewState === "receipt" && (
+          <ReceiptScreen onBack={() => setViewState(receiptSource)} />
+        )}
+
+        {viewState === "manageFavorites" && (
+          <ManageFavoritesScreen
+            initialSelected={selectedShortcuts}
+            initialAvailable={availableShortcuts}
+            onBack={() => setViewState("home")}
+            onSave={(selected, available) => {
+              setSelectedShortcuts(selected);
+              setAvailableShortcuts(available);
+              setViewState("home");
+              displayToast("Settings saved successfully.");
+            }}
+          />
+        )}
+
+        {viewState === "connectEWallet" &&
+          (platformConfig &&
+          platformConfig.eWalletConnectionEnabled === false ? (
+            renderLockedScreen(
+              "e-Wallet Integration",
+              "Local e-Wallet balance withdrawal gateway is temporarily redirected by Admin.",
+            )
+          ) : (
+            <ConnectEWalletScreen onBack={() => setViewState("home")} />
+          ))}
+
+        {viewState === "scanQR" &&
+          (platformConfig && platformConfig.scanQrEnabled === false ? (
+            renderLockedScreen(
+              "QR Code Scanner",
+              "Backend camera scanning sensor is temporarily disabled for license upgrades.",
+            )
+          ) : (
+            <ScanQRScreen
+              onBack={() => setViewState("home")}
+              onScanResult={(contact) => {
+                setSelectedContact(contact);
+                setViewState("amountInput");
               }}
             />
-          )}
+          ))}
 
-          {viewState === "connectEWallet" &&
-            (platformConfig &&
-            platformConfig.eWalletConnectionEnabled === false ? (
-              renderLockedScreen(
-                "e-Wallet Integration",
-                "Local e-Wallet balance withdrawal gateway is temporarily redirected by Admin.",
-              )
-            ) : (
-              <ConnectEWalletScreen onBack={() => setViewState("home")} />
-            ))}
+        {viewState === "aiAgent" &&
+          (platformConfig && platformConfig.aiAgentEnabled === false ? (
+            renderLockedScreen(
+              "AI Agent Co-Pilot",
+              "Financial AI Assistant is temporarily disabled by admin for cognitive regulation adjustments.",
+            )
+          ) : (
+            <AIAgentScreen onBack={() => setViewState("home")} />
+          ))}
 
-          {viewState === "scanQR" &&
-            (platformConfig && platformConfig.scanQrEnabled === false ? (
-              renderLockedScreen(
-                "QR Code Scanner",
-                "Backend camera scanning sensor is temporarily disabled for license upgrades.",
-              )
-            ) : (
-              <ScanQRScreen
-                onBack={() => setViewState("home")}
-                onScanResult={(contact) => {
-                  setSelectedContact(contact);
-                  setViewState("amountInput");
-                }}
-              />
-            ))}
+        {viewState === "transfer" &&
+          (platformConfig && platformConfig.transferEnabled === false ? (
+            renderLockedScreen(
+              "Send Balance & Transfer",
+              "Peer-to-Peer transfers are temporarily closed due to network maintenance.",
+            )
+          ) : (
+            <TransferScreen
+              hideBack={isDesktop}
+              onBack={() => setViewState("home")}
+              onNewTransfer={() => setViewState("newTransfer")}
+              onSelectContact={(contact) => {
+                setSelectedContact(contact);
+                setViewState("amountInput");
+              }}
+              onBatchTransfer={() => setViewState("batchTransfer")}
+            />
+          ))}
 
-          {viewState === "aiAgent" &&
-            (platformConfig && platformConfig.aiAgentEnabled === false ? (
-              renderLockedScreen(
-                "AI Agent Co-Pilot",
-                "Financial AI Assistant is temporarily disabled by admin for cognitive regulation adjustments.",
-              )
-            ) : (
-              <AIAgentScreen onBack={() => setViewState("home")} />
-            ))}
-
-          {viewState === "transfer" &&
-            (platformConfig && platformConfig.transferEnabled === false ? (
-              renderLockedScreen(
-                "Send Balance & Transfer",
-                "Peer-to-Peer transfers are temporarily closed due to network maintenance.",
-              )
-            ) : (
-              <TransferScreen
-                onBack={() => setViewState("home")}
-                onNewTransfer={() => setViewState("newTransfer")}
-                onSelectContact={(contact) => {
-                  setSelectedContact(contact);
-                  setViewState("amountInput");
-                }}
-                onBatchTransfer={() => setViewState("batchTransfer")}
-              />
-            ))}
-
-          {viewState === "newTransfer" &&
-            (platformConfig && platformConfig.transferEnabled === false ? (
-              renderLockedScreen(
-                "Send Balance & Transfer",
-                "Peer-to-Peer transfers are temporarily closed due to network maintenance.",
-              )
-            ) : (
-              <NewTransferScreen
-                onBack={() => setViewState("transfer")}
-                onSelectContact={(contact) => {
-                  setSelectedContact(contact);
-                  setViewState("amountInput");
-                }}
-              />
-            ))}
-
-          {viewState === "amountInput" && selectedContact && (
-            <AmountInputScreen
-              contact={selectedContact}
+        {viewState === "newTransfer" &&
+          (platformConfig && platformConfig.transferEnabled === false ? (
+            renderLockedScreen(
+              "Send Balance & Transfer",
+              "Peer-to-Peer transfers are temporarily closed due to network maintenance.",
+            )
+          ) : (
+            <NewTransferScreen
               onBack={() => setViewState("transfer")}
-              onNext={async (amount, memo) => {
-                const numAmount = parseFloat(amount);
-                if (numAmount < 1) {
-                  displayToast("Minimum transfer amount is 1 USDC.");
-                  return;
-                }
-                const totalWithFee = numAmount + 0.10;
-                if (totalWithFee > balance) {
-                  displayToast(`Insufficient USDC balance. Need ${totalWithFee.toFixed(2)} USDC (includes 0.10 Platform Fee).`);
-                  return;
-                }
-
-                setTransferAmount(amount);
-                setTransferMemo(memo);
-                
-                try {
-                  await BackendClient.sendUnifiedBalance(
-                    numAmount,
-                    selectedContact.account,
-                    memo,
-                    selectedContact.name
-                  );
-
-                  await fetchBalance();
-                  await fetchTransactions();
-                  displayToast(`Transfer to ${selectedContact.name} initiated!`);
-                  setViewState("transfer");
-                } catch (error) {
-                  console.error(error);
-                  displayToast("Transfer failed. Please try again.");
-                }
+              onSelectContact={(contact) => {
+                setSelectedContact(contact);
+                setViewState("amountInput");
               }}
             />
-          )}
+          ))}
 
-          {viewState === "batchTransfer" &&
-            (platformConfig && platformConfig.batchTransferEnabled === false ? (
-              renderLockedScreen(
-                "Mass Transfer (Batch)",
-                "Instant multi-transfer is temporarily disabled for gas hoarding prevention.",
-              )
-            ) : (
-              <BatchTransferScreen
-                onBack={() => setViewState("transfer")}
-                onViewReceipt={(txId) => {
-                  setSelectedTransaction({ internal_ref: txId, type: "batchTransfer" } as any);
-                  setReceiptSource("home");
-                  setViewState("receipt");
-                  fetchTransactions();
-                }}
-                contacts={realContacts}
-              />
-            ))}
+        {viewState === "amountInput" && selectedContact && (
+          <AmountInputScreen
+            contact={selectedContact}
+            onBack={() => setViewState("transfer")}
+            onNext={async (amount, memo) => {
+              const numAmount = parseFloat(amount);
 
-          {viewState === "withdraw" &&
-            (platformConfig && platformConfig.withdrawEnabled === false ? (
-              renderLockedScreen(
-                "Withdraw Balance",
-                "USDC withdrawals outside the ecosystem are temporarily suspended for cash audit security.",
-              )
-            ) : (
-              <WithdrawScreen
-                onBack={() => setViewState("depositOptions")}
-                onSuccess={() => setViewState("home")}
-              />
-            ))}
+              // Dynamic Check: Minimum Transfer
+              const minTransfer = parseFloat(
+                platformConfig?.minTransferAmount || "1",
+              );
+              if (numAmount < minTransfer) {
+                displayToast(`Minimum transfer amount is ${minTransfer} USDC.`);
+                return;
+              }
 
-          {viewState === "bridge" &&
-            (platformConfig && platformConfig.bridgeEnabled === false ? (
-              renderLockedScreen(
-                "Cross-Chain CCTP Bridge",
-                "Circle USDC burn & mint bridge is temporarily disabled.",
-              )
-            ) : (
-              <BridgeScreen
-                onBack={() => setViewState("home")}
-                onSuccess={() => setViewState("home")}
-              />
-            ))}
+              // Dynamic Check: Fees
+              let fee = 0;
+              if (platformConfig?.withdrawFee) {
+                fee =
+                  parseFloat(
+                    platformConfig.withdrawFee.replace(/[^0-9.]/g, ""),
+                  ) || 0;
+              }
 
-          {viewState === "transactionHistory" && (
-            <TransactionHistoryScreen onBack={() => setViewState("home")} />
-          )}
+              const totalWithFee = numAmount + fee;
+              if (totalWithFee > balance) {
+                displayToast(
+                  `Insufficient USDC balance. Need ${totalWithFee.toFixed(2)} USDC ${fee > 0 ? `(includes ${fee.toFixed(2)} Platform Fee)` : ""}.`,
+                );
+                return;
+              }
 
-            {viewState === "adminDashboard" && (
-              <AdminDashboardScreen
-                onBack={() => setViewState("home")}
-                onNavigate={setViewState}
-              />
-            )}
-          </React.Suspense>
+              setTransferAmount(amount);
+              setTransferMemo(memo);
 
-          {viewState === "home" && (
-            <HomeScreen
-              userName={userName}
-              selectedShortcuts={selectedShortcuts}
-              onNavigate={onNavigate}
-              platformConfig={platformConfig}
+              try {
+                const result = await BackendClient.sendUnifiedBalance(
+                  numAmount,
+                  selectedContact.account,
+                  memo,
+                  selectedContact.name,
+                );
+
+                await fetchBalance();
+                await fetchTransactions();
+
+                const txData = {
+                  id: result.txId || `send_${Math.random().toString(36).substring(7)}`,
+                  amount: `-${numAmount}`,
+                  currency: "USDC",
+                  type: "transfer",
+                  status: "success",
+                  timestamp: new Date().toISOString(),
+                  metadata: {
+                    recipientName: selectedContact.name,
+                    destinationAddress: selectedContact.account,
+                    memo: memo,
+                    real: true,
+                    isAsync: true,
+                    platformFee: fee > 0 ? fee.toFixed(2) : undefined,
+                  }
+                };
+
+                setSelectedTransaction(txData as any);
+                setReceiptSource("transfer");
+                setViewState("receipt");
+
+                displayToast(`Transfer to ${selectedContact.name} initiated!`);
+              } catch (error) {
+                console.error(error);
+                displayToast("Transfer failed. Please try again.");
+              }
+            }}
+          />
+        )}
+
+        {viewState === "batchTransfer" &&
+          (platformConfig && platformConfig.batchTransferEnabled === false ? (
+            renderLockedScreen(
+              "Mass Transfer (Batch)",
+              "Instant multi-transfer is temporarily disabled for gas hoarding prevention.",
+            )
+          ) : (
+            <BatchTransferScreen
+              onBack={() => setViewState("transfer")}
+              onViewReceipt={(txId) => {
+                setSelectedTransaction({
+                  internal_ref: txId,
+                  type: "batchTransfer",
+                } as any);
+                setReceiptSource("home");
+                setViewState("receipt");
+                fetchTransactions();
+              }}
+              contacts={realContacts}
             />
-          )}
-        </motion.div>
-      </AnimatePresence>
+          ))}
+
+        {viewState === "withdraw" &&
+          (platformConfig && platformConfig.withdrawEnabled === false ? (
+            renderLockedScreen(
+              "Withdraw Balance",
+              "USDC withdrawals outside the ecosystem are temporarily suspended for cash audit security.",
+            )
+          ) : (
+            <WithdrawScreen
+              hideBack={isDesktop}
+              onBack={() => setViewState("depositOptions")}
+              onSuccess={() => {
+                fetchBalance();
+                fetchTransactions();
+                // No navigation to home - stay in withdraw or show success state within withdraw
+              }}
+            />
+          ))}
+
+        {viewState === "bridge" &&
+          (platformConfig && platformConfig.bridgeEnabled === false ? (
+            renderLockedScreen(
+              "Cross-Chain CCTP Bridge",
+              "Circle USDC burn & mint bridge is temporarily disabled.",
+            )
+          ) : (
+            <BridgeScreen
+              onBack={() => setViewState("home")}
+              onSuccess={() => {
+                fetchBalance();
+                fetchTransactions();
+                // Stay in feature
+              }}
+            />
+          ))}
+
+        {viewState === "transactionHistory" && (
+          <TransactionHistoryScreen onBack={() => setViewState("home")} />
+        )}
+
+        {viewState === "adminDashboard" && (
+          <AdminDashboardScreen
+            onBack={() => setViewState("home")}
+            onNavigate={setViewState}
+          />
+        )}
+
+        {viewState === "mintNFT" && (
+          <MintNFTScreen onBack={() => setViewState("home")} />
+        )}
+
+        {viewState === "home" && !isDesktopFeatureView && (
+          <HomeScreen
+            userName={userName}
+            selectedShortcuts={selectedShortcuts}
+            onNavigate={onNavigate}
+            platformConfig={platformConfig}
+            activeView={viewState}
+          />
+        )}
+      </>
+    );
+
+    return renderLayoutWrapper(
+      <>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={motionKey}
+            variants={slideFadeVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="w-full h-full flex flex-col transform-gpu will-change-transform animate-in fade-in duration-300 ease-out"
+          >
+            {isDesktopFeatureView ? (
+              <HomeScreen
+                userName={userName}
+                selectedShortcuts={selectedShortcuts}
+                onNavigate={onNavigate}
+                platformConfig={platformConfig}
+                activeView={viewState}
+                desktopRightColumn={
+                  <div className="w-full h-full relative flex-1 flex flex-col font-sans">
+                    {activeViewComponent}
+                  </div>
+                }
+              />
+            ) : (
+              activeViewComponent
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </>,
     );
   },
 );

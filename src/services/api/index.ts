@@ -48,20 +48,25 @@ export const BackendClient = {
   async updatePreferences(preferences: any) {
     const { registeredUser } = useStore.getState();
     if (!registeredUser?.supabaseUid) throw new Error("User not registered");
-    return apiRequest(`/api/preferences/${registeredUser.supabaseUid}`, "PUT", { preferences }, "Failed to update preferences");
+    return apiRequest(
+      `/api/preferences/${registeredUser.supabaseUid}`,
+      "PUT",
+      { preferences },
+      "Failed to update preferences",
+    );
   },
 
   async swapTokens(
     amount: number,
-    fromToken: string,
-    toToken: string,
+    fromToken: any,
+    toToken: any,
     tokenAddress: string,
   ) {
     const { registeredUser } = useStore.getState();
     if (!registeredUser?.supabaseUid) throw new Error("User not registered");
 
     console.log(
-      `[Adapter] Initiating swap: ${amount} ${fromToken} -> ${toToken}`,
+      `[Adapter] Initiating swap: ${amount} ${fromToken?.symbol} -> ${toToken?.symbol}`,
     );
 
     return apiRequest(
@@ -102,7 +107,7 @@ export const BackendClient = {
         amount,
         destinationAddress,
         memo,
-        recipientName
+        recipientName,
       },
       "Transfer failed",
     );
@@ -116,6 +121,11 @@ export const BackendClient = {
     destinationAddress: string,
     destinationDomain: number,
   ) {
+    if (amount <= 0) throw new Error("Invalid bridge amount");
+    if (!destinationAddress || !destinationAddress.startsWith("0x") || destinationAddress.length !== 42) {
+      throw new Error("Invalid destination address");
+    }
+
     const { registeredUser } = useStore.getState();
     if (!registeredUser?.supabaseUid) throw new Error("User not registered");
 
@@ -137,26 +147,21 @@ export const BackendClient = {
   },
 
   /**
-   * Bridges tokens between networks (General intent).
+   * Bridges tokens between networks (Unified intent).
    */
-  async bridgeToken(amount: number, fromNetwork: string, toNetwork: string) {
-    const { registeredUser } = useStore.getState();
-    if (!registeredUser?.supabaseUid) throw new Error("User not registered");
+  async bridgeToken(amount: number, destinationAddress: string, destinationDomain: number) {
+    return BackendClient.bridgeTokenCCTP(amount, destinationAddress, destinationDomain);
+  },
 
-    console.log(
-      `[Adapter] Initiating bridge: ${amount} from ${fromNetwork} to ${toNetwork}`,
-    );
-
+  /**
+   * Fetches user transactions.
+   */
+  async getTransactions(userId: string) {
     return apiRequest(
-      "/api/bridge/execute",
-      "POST",
-      {
-        userId: registeredUser.supabaseUid,
-        amount,
-        fromNetwork,
-        toNetwork,
-      },
-      "Bridge failed",
+      `/api/transactions/${userId}`,
+      "GET",
+      undefined,
+      "Failed to fetch transactions",
     );
   },
 
@@ -223,27 +228,14 @@ export const BackendClient = {
   },
 
   /**
-   * Helper to handle localStorage caching with TTL
+   * Helper to handle localStorage caching with TTL (Disabled for Server-First)
    */
   getCachedData(key: string, ttlMs: number) {
-    try {
-      const cached = localStorage.getItem(key);
-      if (!cached) return null;
-      const { data, timestamp } = JSON.parse(cached);
-      if (Date.now() - timestamp > ttlMs) {
-        localStorage.removeItem(key);
-        return null;
-      }
-      return data;
-    } catch (e) {
-      return null;
-    }
+    return null;
   },
 
   setCachedData(key: string, data: any) {
-    try {
-      localStorage.setItem(key, JSON.stringify({ data, timestamp: Date.now() }));
-    } catch (e) {}
+    // Disabled
   },
 
   /**
@@ -321,11 +313,19 @@ export const BackendClient = {
     if (!cleanAddr || !cleanAddr.startsWith("0x")) return null;
 
     const CACHE_KEY = `arc_token_metadata_${cleanAddr}`;
-    const cached = BackendClient.getCachedData(CACHE_KEY, 7 * 24 * 60 * 60 * 1000); // 7 days
+    const cached = BackendClient.getCachedData(
+      CACHE_KEY,
+      7 * 24 * 60 * 60 * 1000,
+    ); // 7 days
     if (cached) return cached;
 
     try {
-      const data = await apiRequest(`/api/tokens/resolve/${cleanAddr}`, "GET", undefined, "Failed to resolve token");
+      const data = await apiRequest(
+        `/api/tokens/resolve/${cleanAddr}`,
+        "GET",
+        undefined,
+        "Failed to resolve token",
+      );
       if (data) {
         BackendClient.setCachedData(CACHE_KEY, data);
       }
@@ -337,18 +337,56 @@ export const BackendClient = {
   },
 
   async saveImportedToken(userId: string, token: any) {
-    return apiRequest(`/api/tokens/import`, "POST", {
-      userId,
-      ...token
-    }, "Failed to save token to database");
+    return apiRequest(
+      `/api/tokens/import`,
+      "POST",
+      {
+        userId,
+        ...token,
+      },
+      "Failed to save token to database",
+    );
   },
 
   async getImportedTokens(userId: string) {
-    return apiRequest(`/api/tokens/imported/${userId}`, "GET", undefined, "Failed to fetch imported tokens");
+    return apiRequest(
+      `/api/tokens/imported/${userId}`,
+      "GET",
+      undefined,
+      "Failed to fetch imported tokens",
+    );
   },
 
   async removeImportedToken(userId: string, address: string) {
-    return apiRequest(`/api/tokens/imported/${userId}/${address}`, "DELETE", undefined, "Failed to delete token");
+    return apiRequest(
+      `/api/tokens/imported/${userId}/${address}`,
+      "DELETE",
+      undefined,
+      "Failed to delete token",
+    );
+  },
+
+  /**
+   * E-commerce Products
+   */
+  async getProducts() {
+    return apiRequest("/api/ecommerce/products", "GET");
+  },
+
+  async saveProduct(product: any) {
+    return apiRequest("/api/ecommerce/products", "POST", product);
+  },
+
+  async updateProduct(productId: string | number, updates: any) {
+    return apiRequest(`/api/ecommerce/products/${productId}`, "PUT", updates);
+  },
+
+  async fetchNFTs(userId: string) {
+    return apiRequest(`/api/transactions/nfts/${userId}`, "GET");
+  },
+
+  async deleteProduct(productId: string | number) {
+    return apiRequest(`/api/ecommerce/products/${productId}`, "DELETE");
   },
 
   /**
@@ -383,9 +421,24 @@ export const BackendClient = {
   },
 
   /**
-   * Returns the network configuration.
+   * Platform Configuration
    */
-  getNetworkConfig() {
-    return ARC_TESTNET;
+  async getPlatformConfigs() {
+    return apiRequest("/api/admin/config", "GET");
+  },
+
+  async savePlatformConfig(config: any) {
+    return apiRequest("/api/admin/config", "POST", config);
+  },
+
+  /**
+   * Audit Logs
+   */
+  async getAuditLogs() {
+    return apiRequest("/api/admin/transactions", "GET");
+  },
+
+  async getAdminStats() {
+    return apiRequest("/api/admin/stats", "GET");
   },
 };

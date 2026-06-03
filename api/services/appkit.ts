@@ -1,76 +1,75 @@
 import { AppKit, BridgeChain } from "@circle-fin/app-kit";
-import { createCircleWalletsAdapter, CircleWalletsAdapter } from "@circle-fin/adapter-circle-wallets";
-import * as crypto from "crypto";
-import { getSupabaseAdmin } from "../config/supabase.js";
+import {
+  createCircleWalletsAdapter,
+  CircleWalletsAdapter,
+} from "@circle-fin/adapter-circle-wallets";
 
 let appKitInstance: AppKit | null = null;
 let appKitAdapter: CircleWalletsAdapter | null = null;
 
-/**
- * Fetches the active Gas Fee Strategy from the database settings.
- */
-async function getGasFeeStrategy(): Promise<"SPONSORED" | "USER_PAID_USDC"> {
-  try {
-    const supabase = getSupabaseAdmin();
-    const { data } = await supabase
-      .from("app_settings")
-      .select("value")
-      .eq("key", "GAS_FEE_STRATEGY")
-      .maybeSingle();
-    return (data?.value as any) || "SPONSORED";
-  } catch (err) {
-    console.error("[AppKit Service] Failed to fetch gas strategy:", err);
-    return "SPONSORED";
+const getValidKitKey = () => {
+  let kitKey = process.env.KIT_KEY || process.env.VITE_KIT_KEY || null;
+  if (!kitKey) return null;
+
+  // Clean up if double-pasted or contains redundant prefixes
+  // Expected format: KIT_KEY:<id>:<secret>
+  if (kitKey.includes("KIT_KEY:") && (kitKey.match(/KIT_KEY:/g) || []).length > 1) {
+    const parts = kitKey.split("KIT_KEY:").filter(p => !!p.trim());
+    if (parts.length > 0) {
+      const segmentParts = parts[0].split(':').filter(p => !!p.trim());
+      if (segmentParts.length >= 2) {
+        return `KIT_KEY:${segmentParts[0]}:${segmentParts[1]}`;
+      }
+    }
   }
+  return kitKey;
 }
 
-/**
- * Helper to build the AppKit fee config based on the database GAS_FEE_STRATEGY.
- */
-async function getAppKitFeeConfig(): Promise<any> {
-  const strategy = await getGasFeeStrategy();
-  if (strategy === "SPONSORED") {
-    return {
-      type: "SPONSORED"
-    };
-  }
-  return {
-    type: "level",
-    config: {
-      feeLevel: "MEDIUM"
+const NATIVE_USDC_ARC = "0x3600000000000000000000000000000000000000";
+
+const normalizeToken = (token: any) => {
+  if (!token) return "USDC";
+  let addressOrSymbol = typeof token === 'object' ? (token.contractAddress || token.symbol) : token;
+  
+  if (typeof addressOrSymbol === 'string') {
+    if (addressOrSymbol.toLowerCase() === NATIVE_USDC_ARC.toLowerCase()) {
+      return "USDC";
     }
-  };
-}
+  }
+  return addressOrSymbol;
+};
 
 /**
  * Initializes the Server-Side App Kit using Developer Controlled Wallets.
  */
-export const getAppKit = () => {
-  if (appKitInstance) return { appKit: appKitInstance, adapter: appKitAdapter! };
+export const getAppKit = async () => {
+  if (appKitInstance)
+    return { appKit: appKitInstance, adapter: appKitAdapter! };
 
   const apiKey = process.env.CIRCLE_API_KEY;
   const entitySecret = process.env.CIRCLE_ENTITY_SECRET;
-  const kitKey = process.env.KIT_KEY;
 
-  if (!apiKey || !entitySecret) {
-    throw new Error("Missing Circle API keys for AppKit");
-  }
+  const kitKey = getValidKitKey();
 
-  if (!kitKey) {
-    throw new Error("Missing KIT_KEY in environment variables. Expected format: KIT_KEY:<keyId>:<keySecret>");
+  const { resolveWalletSetId } = await import("./circleClient");
+  const walletSetId = await resolveWalletSetId();
+
+  if (!apiKey || !entitySecret || !kitKey || !walletSetId) {
+    throw new Error(
+      "Missing Circle Configurations. Ensure CIRCLE_API_KEY, CIRCLE_ENTITY_SECRET, KIT_KEY, and CIRCLE_WALLET_SET_ID are set in environment variables."
+    );
   }
 
   const adapter = createCircleWalletsAdapter({
     apiKey,
     entitySecret,
     // @ts-ignore
-    walletSetId: process.env.CIRCLE_WALLET_SET_ID || "not-set"
+    walletSetId: walletSetId,
   } as any);
-  
+
   appKitAdapter = adapter;
- 
+
   appKitInstance = new AppKit({
-    kitKey,
     // @ts-ignore
     adapter,
   } as any);
@@ -84,27 +83,25 @@ export const getAppKit = () => {
 export async function executeAppKitSend(
   walletAddress: string,
   amount: number,
-  destinationAddress: string
+  destinationAddress: string,
 ) {
-  const { appKit, adapter } = getAppKit();
-  const kitKey = process.env.KIT_KEY;
-  const fee = await getAppKitFeeConfig();
-
-  const txHash = await appKit.send({
+  const { appKit, adapter } = await getAppKit();
+  const kitKey = getValidKitKey();
+  
+  const result = await appKit.send({
     from: {
       adapter,
       chain: "Arc_Testnet",
-      address: walletAddress
+      address: walletAddress,
     },
     to: destinationAddress,
     amount: amount.toString(),
-    token: "USDC",
-    fee,
+    token: normalizeToken("USDC"),
     config: {
-      kitKey
+      kitKey: kitKey as string,
     }
   } as any);
-  return txHash;
+  return result.txHash;
 }
 
 /**
@@ -114,31 +111,29 @@ export async function executeAppKitBridge(
   walletAddress: string,
   amount: number,
   destinationAddress: string,
-  targetChain: any 
+  targetChain: any,
 ) {
-  const { appKit, adapter } = getAppKit();
-  const kitKey = process.env.KIT_KEY;
-  const fee = await getAppKitFeeConfig();
-  
-  const txHash = await appKit.bridge({
+  const { appKit, adapter } = await getAppKit();
+  const kitKey = getValidKitKey();
+
+  const result = await appKit.bridge({
     from: {
       adapter,
       chain: "Arc_Testnet",
-      address: walletAddress
+      address: walletAddress,
     },
     to: {
       chain: targetChain,
       recipientAddress: destinationAddress,
-      useForwarder: true // Forwarder will mint implicitly if no destination adapter
+      useForwarder: true, // Forwarder will mint implicitly if no destination adapter
     },
     amount: amount.toString(),
-    token: "USDC",
-    fee,
+    token: normalizeToken("USDC"),
     config: {
-      kitKey
+      kitKey: kitKey as string,
     }
   } as any);
-  return txHash;
+  return result.steps?.find((s: any) => s.txHash)?.txHash || "bridge-successful";
 }
 
 /**
@@ -148,25 +143,23 @@ export async function executeAppKitSwap(
   walletAddress: string,
   amount: number,
   fromToken: any,
-  toToken: any
+  toToken: any,
 ) {
-  const { appKit, adapter } = getAppKit();
-  const kitKey = process.env.KIT_KEY;
-  const fee = await getAppKitFeeConfig();
-  
-  const txHash = await appKit.swap({
+  const { appKit, adapter } = await getAppKit();
+  const kitKey = getValidKitKey();
+
+  const result = await appKit.swap({
     from: {
       adapter,
       chain: "Arc_Testnet",
-      address: walletAddress
+      address: walletAddress,
     },
     amountIn: amount.toString(),
-    tokenIn: fromToken,
-    tokenOut: toToken,
-    fee,
+    tokenIn: normalizeToken(fromToken),
+    tokenOut: normalizeToken(toToken),
     config: {
-      kitKey
+      kitKey: kitKey as string,
     }
   } as any);
-  return txHash;
+  return result.txHash;
 }

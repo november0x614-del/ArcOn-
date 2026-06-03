@@ -33,34 +33,37 @@ export const ARC_TOKEN_REGISTRY: Record<string, ArcTokenMetadata> = {
     isNative: false,
   },
   "0xe9185f0c5f296ed1797aae4238d26ccabeadb86c": {
-     symbol: "USYC",
-     name: "Yield-bearing USDC",
-     decimals: 6,
-     contractAddress: "0xe9185F0c5F296Ed1797AaE4238D26CCaBEadb86C",
-     isNative: false,
+    symbol: "USYC",
+    name: "Yield-bearing USDC",
+    decimals: 6,
+    contractAddress: "0xe9185F0c5F296Ed1797AaE4238D26CCaBEadb86C",
+    isNative: false,
   },
   "0x07f1ea50e30d47376c0dfb3eb853fd40e3a8907a": {
-     symbol: "cirBTC",
-     name: "Circle Bitcoin",
-     decimals: 8,
-     contractAddress: "0x07f1ea50e30d47376c0dfb3eb853fd40e3a8907a",
-     logoUrl: "https://cryptologos.cc/logos/bitcoin-btc-logo.png",
-     isNative: false,
-  }
+    symbol: "cirBTC",
+    name: "Circle Bitcoin",
+    decimals: 8,
+    contractAddress: "0x07f1ea50e30d47376c0dfb3eb853fd40e3a8907a",
+    logoUrl: "https://cryptologos.cc/logos/bitcoin-btc-logo.png",
+    isNative: false,
+  },
 };
 
-export const syncTokenWithArcScan = (contractAddress: string | undefined, originalSymbol: string): ArcTokenMetadata | null => {
-  if (!contractAddress && originalSymbol !== 'ARC') return null;
-  
+export const syncTokenWithArcScan = (
+  contractAddress: string | undefined,
+  originalSymbol: string,
+): ArcTokenMetadata | null => {
+  if (!contractAddress && originalSymbol !== "ARC") return null;
+
   if (contractAddress) {
-      const key = contractAddress.toLowerCase();
-      if (ARC_TOKEN_REGISTRY[key]) {
-          return ARC_TOKEN_REGISTRY[key];
-      }
+    const key = contractAddress.toLowerCase();
+    if (ARC_TOKEN_REGISTRY[key]) {
+      return ARC_TOKEN_REGISTRY[key];
+    }
   }
 
   if (originalSymbol === "ARC" || contractAddress === "native") {
-      return ARC_TOKEN_REGISTRY["arc-native"];
+    return ARC_TOKEN_REGISTRY["arc-native"];
   }
 
   return null; // Not found in trusted registry

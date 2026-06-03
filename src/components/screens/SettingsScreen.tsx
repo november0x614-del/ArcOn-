@@ -27,11 +27,7 @@ export function SettingsScreen({
   onEmail,
   onShowToast,
 }: SettingsScreenProps) {
-  const {
-    network,
-    registeredUser,
-    language,
-  } = useStore();
+  const { network, registeredUser, language } = useStore();
 
   const handleNotImplemented = (featureInfo?: string) => {
     if (onShowToast) {
@@ -50,7 +46,9 @@ export function SettingsScreen({
           >
             <ArrowLeft size={20} className="text-white" />
           </button>
-          <h3 className="font-bold text-[16px] tracking-tight text-white ml-2">SETTINGS</h3>
+          <h3 className="font-bold text-[16px] tracking-tight text-white ml-2">
+            SETTINGS
+          </h3>
         </div>
       </div>
 
@@ -68,13 +66,21 @@ export function SettingsScreen({
               icon={<UserCircle size={20} className="text-slate-700" />}
               label="Username"
               badge={registeredUser?.username || "Not Set"}
-              onClick={() => handleNotImplemented("Username edit represents solid identity and is locked by default.")}
+              onClick={() =>
+                handleNotImplemented(
+                  "Username edit represents solid identity and is locked by default.",
+                )
+              }
             />
             <SettingItem
               icon={<Mail size={20} className="text-slate-700" />}
               label="Registered Email"
               badge={registeredUser?.email || "Not Set"}
-              onClick={() => handleNotImplemented("Email edit represents solid identity and is locked by default.")}
+              onClick={() =>
+                handleNotImplemented(
+                  "Email edit represents solid identity and is locked by default.",
+                )
+              }
             />
             <SettingItem
               icon={<Settings size={20} className="text-slate-700" />}
@@ -209,8 +215,8 @@ function SettingItem({
               badgeColor === "emerald"
                 ? "bg-emerald-50 text-emerald-600"
                 : badgeColor === "red"
-                ? "bg-red-50 text-red-600"
-                : "bg-slate-100 text-slate-600"
+                  ? "bg-red-50 text-red-600"
+                  : "bg-slate-100 text-slate-600"
             }`}
           >
             {badge}

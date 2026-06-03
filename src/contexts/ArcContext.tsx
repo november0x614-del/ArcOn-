@@ -6,6 +6,7 @@ import React, {
   useCallback,
 } from "react";
 import { createPublicClient, http, formatUnits } from "viem";
+import { useStore } from "../store/useStore";
 
 interface FeeEstimate {
   maxFeePerGas: bigint;
@@ -21,6 +22,14 @@ interface ArcContextType {
   rpcUrl: string;
   refreshBalance: () => Promise<void>;
   getFeeEstimate: (gasLimit?: bigint) => Promise<FeeEstimate | null>;
+  executeArcTransaction: (params: {
+    type: string;
+    metadata: {
+      name: string;
+      description: string;
+      image: string;
+    };
+  }) => Promise<{ success: boolean; txHash?: string }>;
 }
 
 const ARC_TESTNET_CONFIG = {
@@ -54,34 +63,17 @@ export const ArcProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [balance, setBalance] = useState("0.00");
-  const [address, setAddress] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const savedAddress = localStorage.getItem("arc_wallet_address");
-    const savedUserId = localStorage.getItem("arc_user_id");
-    if (savedAddress) setAddress(savedAddress);
-    if (savedUserId) setUserId(savedUserId);
-
-    // Listen for storage changes
-    const handleStorage = () => {
-      const addr = localStorage.getItem("arc_wallet_address");
-      const uid = localStorage.getItem("arc_user_id");
-      if (addr !== address) setAddress(addr);
-      if (uid !== userId) setUserId(uid);
-    };
-    window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
-  }, [address, userId]);
+  const registeredUser = useStore((state) => state.registeredUser);
+  const address = registeredUser?.walletAddress || null;
+  const userId = registeredUser?.supabaseUid || null;
 
   const refreshBalance = useCallback(async () => {
-    const addr = localStorage.getItem("arc_wallet_address");
-    if (!addr) return;
+    if (!address) return;
 
     try {
       // 1. Fetch balance in 18-decimal wei
       const balanceWei = await publicClient.getBalance({
-        address: addr as `0x${string}`,
+        address: address as `0x${string}`,
       });
 
       // 2. Format with 18 decimals
@@ -92,7 +84,7 @@ export const ArcProvider: React.FC<{ children: React.ReactNode }> = ({
 
       setBalance(displayFormatted);
       console.log(
-        `[ArcContext] Refreshing balance for ${addr}: ${displayFormatted} USDC`,
+        `[ArcContext] Refreshing balance for ${address}: ${displayFormatted} USDC`,
       );
     } catch (error) {
       console.error("Failed to fetch balance:", error);
@@ -144,6 +136,52 @@ export const ArcProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [address, refreshBalance]);
 
+  const executeArcTransaction = useCallback(async (params: {
+    type: string;
+    metadata: {
+      name: string;
+      description: string;
+      image: string;
+    };
+  }) => {
+    try {
+      if (!userId || !address) {
+        throw new Error("Local wallet credentials not found.");
+      }
+
+      console.log("[ArcContext] Initiating executeArcTransaction backend call:", params);
+      const response = await fetch("/api/nft/mint", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: userId,
+          walletAddress: address,
+          name: params.metadata.name,
+          description: params.metadata.description,
+          image: params.metadata.image,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Failed to mint NFT");
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        txHash: data.txHash || data.txId,
+      };
+    } catch (err: any) {
+      console.error("[ArcContext] executeArcTransaction failed:", err);
+      return {
+        success: false,
+      };
+    }
+  }, []);
+
   const value = {
     balance,
     address,
@@ -151,6 +189,7 @@ export const ArcProvider: React.FC<{ children: React.ReactNode }> = ({
     rpcUrl: ARC_TESTNET_CONFIG.rpcUrl,
     refreshBalance,
     getFeeEstimate,
+    executeArcTransaction,
   };
 
   return <ArcContext.Provider value={value}>{children}</ArcContext.Provider>;

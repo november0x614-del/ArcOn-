@@ -1,16 +1,9 @@
 import React from "react";
-import {
-  ArrowDownToLine,
-  QrCode,
-  ArrowUpToLine,
-  ArrowLeft,
-} from "lucide-react";
+import { ArrowUpToLine, ArrowLeft } from "lucide-react";
 
 interface DepositOptionsScreenProps {
   onBack: () => void;
   onSelectUSDC: () => void;
-  onSelectVA: () => void;
-  onSelectQRIS: () => void;
   onSelectWithdraw?: () => void;
   platformConfig?: any;
 }
@@ -18,18 +11,14 @@ interface DepositOptionsScreenProps {
 export function DepositOptionsScreen({
   onBack,
   onSelectUSDC,
-  onSelectVA,
-  onSelectQRIS,
   onSelectWithdraw,
   platformConfig,
 }: DepositOptionsScreenProps) {
-  const isVaEnabled = !platformConfig || platformConfig.vaEnabled !== false;
-  const isQrisEnabled = !platformConfig || platformConfig.qrisEnabled !== false;
   const isWithdrawEnabled =
     !platformConfig || platformConfig.withdrawEnabled !== false;
 
   return (
-    <div className="absolute inset-0 z-[60] bg-white flex flex-col animate-in slide-in-from-bottom duration-300">
+    <div className="absolute inset-0 z-[60] bg-[#ecf5fc] flex flex-col animate-in slide-in-from-bottom duration-300">
       {/* Header */}
       <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-between">
         <div className="flex items-center">
@@ -67,44 +56,6 @@ export function DepositOptionsScreen({
                 </p>
               </div>
             </button>
-
-            {isVaEnabled && (
-              <button
-                onClick={onSelectVA}
-                className="flex items-center gap-4 p-4 rounded-2xl border border-slate-100 hover:bg-slate-50 transition-all text-left bg-transparent cursor-pointer"
-              >
-                <div className="w-12 h-12 rounded-xl bg-emerald-500 flex items-center justify-center text-white shrink-0">
-                  <ArrowDownToLine size={24} />
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-bold text-[15px] text-slate-800">
-                    Virtual Account
-                  </h4>
-                  <p className="text-[11px] text-slate-400">
-                    Top-up via Bank Transfer (USDC)
-                  </p>
-                </div>
-              </button>
-            )}
-
-            {isQrisEnabled && (
-              <button
-                onClick={onSelectQRIS}
-                className="flex items-center gap-4 p-4 rounded-2xl border border-slate-100 hover:bg-slate-50 transition-all text-left bg-transparent cursor-pointer"
-              >
-                <div className="w-12 h-12 rounded-xl bg-rose-500 flex items-center justify-center text-white shrink-0">
-                  <QrCode size={24} />
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-bold text-[15px] text-slate-800">
-                    QRIS Receipt
-                  </h4>
-                  <p className="text-[11px] text-slate-400">
-                    Receive from m-Banking / e-Wallet
-                  </p>
-                </div>
-              </button>
-            )}
           </div>
         </div>
 
