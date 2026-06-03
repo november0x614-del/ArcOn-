@@ -358,94 +358,44 @@ router.post("/transfer/execute", async (req, res) => {
     const fee = parseFloat(config?.withdrawFee?.replace(/[^0-9.]/g, "") || "0");
     const sponsored = !!config?.gasSubsidyEnabled;
 
-    // Run execution in background (Non-blocking as required by user prompt)
-    const runSend = async () => {
-      try {
-        const { executeAppKitSend } = await import("../services/appkit.js");
-        const txHash = await executeAppKitSend(
-          userWallet.wallet_address,
-          parseFloat(amount),
-          destinationAddress,
-        );
-
-        await supabaseAdmin
-          .from("transactions")
-          .update({
-            tx_hash: txHash,
-            status: "success",
-          })
-          .eq("internal_ref", internalRef);
-          
-        await supabaseAdmin
-          .from("transaction_ledger")
-          .update({
-            tx_hash: txHash,
-            status: "COMPLETE",
-          })
-          .eq("circle_tx_id", internalRef);
-      } catch (err: any) {
-        console.error("Async send failed:", err);
-        await supabaseAdmin
-          .from("transactions")
-          .update({
-            status: "failed",
-            description: err.message || "Failed to execute transaction",
-          })
-          .eq("internal_ref", internalRef);
-          
-        await supabaseAdmin
-          .from("transaction_ledger")
-          .update({
-            status: "FAILED",
-            metadata: { error: err.message || "Failed to execute transaction" },
-          })
-          .eq("circle_tx_id", internalRef);
-      }
-    };
+    const { executeAtomicBatchTransfer } = await import("../services/circle.js");
     
-    // Add to pending queue in DB immediately (legacy for compatibility)
-    await supabaseAdmin.from("transactions").insert({
-      user_id: userId,
-      amount: `-${amount}`,
-      type: "transfer",
-      status: "pending",
-      internal_ref: internalRef,
-      metadata: {
-        recipientName: recipientName || "EVM Account",
-        destinationAddress,
-        memo,
-        real: true,
-        isAsync: true,
-        platformFee: fee,
-        gasSubsidy: sponsored,
-        sponsoredGas: sponsored,
-      },
-    });
+    // Using atomic service for single transfer as requested (blocking execution)
+    const result = await executeAtomicBatchTransfer(
+      supabaseAdmin,
+      userId,
+      [{
+        address: destinationAddress,
+        amount: amountNum,
+        name: recipientName || "EVM Account"
+      }],
+      fee
+    );
 
     // Write to the requested transaction_ledger
     await supabaseAdmin.from("transaction_ledger").insert({
       user_id: userId,
       tx_type: "SEND",
-      amount: amount,
+      amount: amountNum,
       destination_address: destinationAddress,
-      circle_tx_id: internalRef,
+      circle_tx_id: result.txId,
       status: "PENDING",
       metadata: {
         recipientName: recipientName || "EVM Account",
         memo,
+        platformFee: fee,
+        isAtomic: true
       },
     });
 
-    runSend().catch(err => console.error("Uncaught error in runSend:", err));
-
-    res.status(202).json({
-      message: "App Kit Send queued",
-      txId: internalRef,
+    res.status(200).json({
+      message: "Transfer initiated via Atomic Protocol",
+      txId: result.txId,
       status: "pending",
       memo: memo,
     });
   } catch (error: any) {
-    console.error("App Kit Send Error:", error);
+    console.error("Atomic Transfer Error:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -565,6 +515,12 @@ router.post("/payments/batch", async (req, res) => {
       : 0;
 
     const minTransfer = parseFloat(config?.minTransferAmount || "0.1");
+    if (recipientCount < 3) {
+      return res.status(400).json({
+        error: "Batch transfer memerlukan minimal 3 penerima. Untuk pengiriman tunggal, silakan gunakan fitur Transfer biasa.",
+      });
+    }
+
     if (Array.isArray(recipients)) {
       for (const r of recipients) {
         if (parseFloat(r.amount) < minTransfer) {

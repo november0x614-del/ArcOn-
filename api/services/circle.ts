@@ -520,14 +520,17 @@ export async function executeAtomicBatchTransfer(
     const circleTxId = response.data.id;
 
     // 4. Record the ATOMIC transaction
+    const isSingle = recipients.length === 1;
     const { error: dbError } = await supabaseAdmin.from("transactions").insert({
       user_id: userId,
       amount: `-${totalAmountWithFee.toFixed(2)}`,
-      type: "batchTransfer",
+      type: isSingle ? "transfer" : "batchTransfer",
       status: "pending",
       internal_ref: circleTxId,
       metadata: {
-        description: `Atomic Batch Transfer to ${recipients.length} recipients`,
+        description: isSingle 
+          ? `Transfer to ${recipients[0].name || recipients[0].address}` 
+          : `Atomic Batch Transfer to ${recipients.length} recipients`,
         recipients,
         platformFee,
         real: true,
