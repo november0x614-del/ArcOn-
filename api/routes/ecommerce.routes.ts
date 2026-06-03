@@ -75,6 +75,39 @@ router.post("/ecommerce/checkout-batch", async (req, res) => {
           }
         });
         if (nftError) console.error("NFT Registration Error:", nftError);
+
+        // Mark product as sold out if it's a unique NFT
+        await supabaseAdmin
+          .from("ecommerce_products")
+          .update({ stock: 0 })
+          .eq("id", item.productId);
+      }
+
+      // 1.1 Notify Merchant/Seller
+      const { data: sellerWallet } = await supabaseAdmin
+        .from("user_wallets")
+        .select("user_id")
+        .eq("wallet_address", item.merchantAddress)
+        .single();
+      
+      if (sellerWallet) {
+        await supabaseAdmin.from("inbox_messages").insert({
+          user_id: sellerWallet.user_id,
+          title: "Premium Product Sold!",
+          content: `Your product "${item.name}" has been purchased by ${buyerId.slice(0, 8)}. Settlement is being held in platform escrow for safety.`,
+          type: "receipt",
+          metadata: {
+            receipt_type: "MERCHANT_SALE",
+            invoice_number: invoiceNumber,
+            product_id: item.productId,
+            product_name: item.name,
+            amount: item.price,
+            buyer: buyerId,
+            status: "ESCROWED",
+            checkout_at: new Date().toISOString(),
+            action_required: "Go to Merchant Suite to settle funds"
+          }
+        });
       }
 
       return orderResult;
@@ -309,6 +342,24 @@ router.post("/ecommerce/products", async (req, res) => {
   try {
     const product = req.body;
     const supabaseAdmin = getSupabaseAdmin();
+
+    // Check for duplicate NFT listing
+    if (product.category === "NFT" || product.tx_hash) {
+      const { data: existingNFT } = await supabaseAdmin
+        .from("ecommerce_products")
+        .select("id")
+        .or(`name.eq.${product.name},tx_hash.eq.${product.tx_hash}`)
+        .eq("category", "NFT")
+        .maybeSingle();
+
+      if (existingNFT) {
+        return res.status(400).json({ 
+          error: "Duplicate Listing", 
+          message: "This NFT asset or name is already listed in your inventory." 
+        });
+      }
+    }
+
     const { data, error } = await supabaseAdmin
       .from("ecommerce_products")
       .insert(product)

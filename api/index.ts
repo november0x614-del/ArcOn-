@@ -5,6 +5,7 @@ import transactionRoutes from "./routes/transaction.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 import miscRoutes from "./routes/misc.routes.js";
 import ecommerceRoutes from "./routes/ecommerce.routes.js";
+import inboxRoutes from "./routes/inbox.routes.js";
 
 const app = express();
 app.set("trust proxy", 1); // Enable if you're behind a reverse proxy (Heroku, AWS, Nginx, or Google Cloud Run)
@@ -49,6 +50,9 @@ app.use("/", miscRoutes);
 
 app.use("/api", ecommerceRoutes);
 app.use("/", ecommerceRoutes);
+
+app.use("/api", inboxRoutes);
+app.use("/", inboxRoutes);
 
 // Export Express App
 export default app;

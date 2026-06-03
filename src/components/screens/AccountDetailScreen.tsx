@@ -56,7 +56,11 @@ export function AccountDetailScreen({
 }: AccountDetailScreenProps) {
   const [activeTab, setActiveTab] = useState<"history" | "asset">("history");
   const [assetSubTab, setAssetSubTab] = useState<"tokens" | "nfts">("tokens");
-  const { mintedNfts } = useStore();
+  const { mintedNfts, fetchMintedNfts } = useStore();
+
+  useEffect(() => {
+    fetchMintedNfts();
+  }, [fetchMintedNfts]);
 
   const [showUID, setShowUID] = useState(false);
   const {
@@ -647,13 +651,13 @@ export function AccountDetailScreen({
                   <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 mb-3 border border-slate-100/80">
                     <PackageOpen size={22} className="stroke-[1.5]" />
                   </div>
-                  <h4 className="font-bold text-[14px] text-slate-800 tracking-tight">Tidak Ada NFT</h4>
+                  <h4 className="font-bold text-[14px] text-slate-800 tracking-tight">No NFTs Found</h4>
                   <p className="text-[11px] text-slate-400 mt-1 max-w-[200px] leading-relaxed">
-                    Kamu belum memiliki NFT di dompet ini. Silakan cetak NFT baru!
+                    You don't have any NFTs in this wallet yet. Go ahead and mint your first asset!
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-4 pb-12 w-full">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pb-12 w-full">
                   {mintedNfts.map((nft, idx) => (
                     <motion.div
                       key={nft.id + idx}
@@ -666,7 +670,7 @@ export function AccountDetailScreen({
                       transition={{ type: "spring", stiffness: 400, damping: 25 }}
                       className="bg-white rounded-3xl border border-slate-200/50 overflow-hidden shadow-sm flex flex-col group cursor-pointer"
                     >
-                      <div className="h-32 w-full bg-slate-50 relative overflow-hidden">
+                      <div className="aspect-square w-full bg-slate-50 relative overflow-hidden">
                         <img
                           src={nft.image}
                           alt={nft.name}

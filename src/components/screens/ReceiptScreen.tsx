@@ -268,9 +268,9 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                   {!isSuccess 
                     ? "Transaction Failed" 
                     : (isDeposit && isBridge)
-                    ? "Dana berhasil dijembatani!"
+                    ? "Funds bridged successfully!"
                     : (isDeposit)
-                    ? `Anda menerima ${tx?.amount?.replace("-", "") || "0"} ${tx?.currency || "USDC"}`
+                    ? `You received ${tx?.amount?.replace("-", "") || "0"} ${tx?.currency || "USDC"}`
                     : "Transaction Successful"
                   }
                 </h3>
@@ -278,9 +278,9 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                   {!isSuccess 
                     ? "Reverted by network"
                     : (isDeposit && isBridge)
-                    ? `${tx?.amount?.replace("-", "") || "0"} ${tx?.currency || "USDC"} sukses diterima di jaringan ${((tx?.metadata as any)?.destinationDomain || "Arc") as string}`
+                    ? `${tx?.amount?.replace("-", "") || "0"} ${tx?.currency || "USDC"} received on ${((tx?.metadata as any)?.destinationDomain || "Arc") as string}`
                     : (isDeposit)
-                    ? `dari ${senderName || formatAddrShort(senderAddress)}`
+                    ? `from ${senderName || formatAddrShort(senderAddress)}`
                     : "Confirmed on Arc Testnet"
                   }
                 </span>
@@ -292,7 +292,7 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
               <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 flex flex-col overflow-hidden">
                 <div className="bg-slate-950 p-6 flex flex-col items-center justify-center relative overflow-hidden">
                   <div className="absolute inset-0 opacity-10 blur-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500"></div>
-                  <span className="text-[10px] font-black tracking-[0.2em] uppercase text-white/40 mb-2 z-10">Ringkasan Pembayaran Global</span>
+                  <span className="text-[10px] font-black tracking-[0.2em] uppercase text-white/40 mb-2 z-10">Global Payment Summary</span>
                   <div className="flex flex-col items-center z-10">
                      <span className="text-[12px] font-bold text-white/70 mb-1">{(tx?.metadata as any)?.invoice_number || "INV/20260604/HYBRID"}</span>
                      <span className="text-[24px] font-black text-white tracking-widest leading-none">${tx?.amount?.replace("-", "") || "0.00"} <span className="text-[12px] font-bold opacity-60">USDC</span></span>
@@ -318,7 +318,7 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                         <div className="w-6 h-6 bg-blue-50 rounded-lg flex items-center justify-center">
                            <Package size={14} className="text-blue-600" />
                         </div>
-                        <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-widest">1. Produk Fisik (RWA)</h4>
+                        <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-widest">1. Real World Assets (RWA)</h4>
                      </div>
                      
                      <div className="space-y-3">
@@ -356,7 +356,7 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                         <div className="w-6 h-6 bg-purple-50 rounded-lg flex items-center justify-center">
                            <ShieldCheck size={14} className="text-purple-600" />
                         </div>
-                        <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-widest">2. Aset Digital (NFT)</h4>
+                        <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-widest">2. Digital Assets (NFT)</h4>
                      </div>
                      
                      <div className="space-y-3">
@@ -387,26 +387,26 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                   {/* Perhitungan Rekonsiliasi Akhir */}
                   <div className="mt-4 bg-slate-900 rounded-3xl p-6 relative overflow-hidden">
                      <div className="absolute top-0 right-0 w-20 h-20 bg-white/5 rounded-bl-full"></div>
-                     <h4 className="text-[11px] font-black text-white/40 uppercase tracking-[0.2em] mb-4">Rekonsiliasi Akhir</h4>
+                     <h4 className="text-[11px] font-black text-white/40 uppercase tracking-[0.2em] mb-4">Final Reconciliation</h4>
                      <div className="space-y-3">
                         <div className="flex justify-between items-center text-[12px]">
-                           <span className="text-white/60 font-bold">Total Belanja RWA</span>
+                           <span className="text-white/60 font-bold">Total RWA Spending</span>
                            <span className="text-white font-black">${(tx?.metadata as any)?.reconciliation?.total_rwa?.toFixed(2)} USDC</span>
                         </div>
                         <div className="flex justify-between items-center text-[12px]">
-                           <span className="text-white/60 font-bold">Total Belanja NFT</span>
+                           <span className="text-white/60 font-bold">Total NFT Spending</span>
                            <span className="text-white font-black">${(tx?.metadata as any)?.reconciliation?.total_nft?.toFixed(2)} USDC</span>
                         </div>
                         <div className="flex justify-between items-center text-[12px]">
-                           <span className="text-white/60 font-bold">Ongkos Kirim Paket</span>
+                           <span className="text-white/60 font-bold">Shipping Fee</span>
                            <span className="text-white font-black">${(tx?.metadata as any)?.reconciliation?.total_shipping?.toFixed(2)} USDC</span>
                         </div>
                         <div className="flex justify-between items-center text-[12px]">
-                           <span className="text-white/60 font-bold">Biaya Gas Blockchain</span>
+                           <span className="text-white/60 font-bold">Blockchain Gas Fee</span>
                            <span className="text-emerald-400 font-black">${(tx?.metadata as any)?.reconciliation?.total_gas?.toFixed(4)} USDC</span>
                         </div>
                         <div className="pt-3 border-t border-white/10 flex justify-between items-center">
-                           <span className="text-[14px] font-black text-white uppercase tracking-wider">Total Dibayar</span>
+                           <span className="text-[14px] font-black text-white uppercase tracking-wider">Total Amount Paid</span>
                            <span className="text-[20px] font-black text-white">${tx?.amount?.replace("-", "") || "0.00"} USDC</span>
                         </div>
                      </div>
@@ -430,18 +430,18 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
               <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 flex flex-col overflow-hidden">
                 <div className="bg-slate-900 p-5 flex flex-col items-center justify-center relative overflow-hidden">
                   <div className="absolute inset-0 opacity-10 blur-xl bg-gradient-to-r from-blue-500 to-indigo-500"></div>
-                  <span className="text-[11px] font-black tracking-widest uppercase text-white/50 mb-1 z-10">Metode Transaksi</span>
+                  <span className="text-[11px] font-black tracking-widest uppercase text-white/50 mb-1 z-10">Transaction Method</span>
                   <span className="text-[20px] font-extrabold text-white tracking-widest z-10">
                     {(tx?.metadata as any)?.receipt_type === "BATCH_BUY" ? "BATCH BUY (CART)" : "PURCHASE"}
                   </span>
                 </div>
                 
                 <div className="p-6 flex flex-col gap-6">
-                  {/* 1. Data Ringkasan Induk (Master Data) */}
+                  {/* 1. Master Summary Data */}
                   <div className="flex flex-col gap-3">
-                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">1. Data Ringkasan Induk (Master Data)</h4>
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">1. Master Summary Data</h4>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">ID Transaksi (Parent TxID)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Transaction ID (Parent TxID)</span>
                       {hasHash ? (
                         <div className="flex items-center gap-1.5">
                           <button
@@ -457,11 +457,11 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                       )}
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Total Item</span>
+                      <span className="text-[12px] font-bold text-slate-400">Total Items</span>
                       <span className="text-[12px] font-bold text-slate-800">{(tx?.metadata as any)?.items?.length || 1} NFT</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Total Harga Barang</span>
+                      <span className="text-[12px] font-bold text-slate-400">Total Item Price</span>
                       <span className="text-[14px] font-black text-slate-900">{tx?.amount?.replace("-", "") || "0.00"} USDC</span>
                     </div>
                     <div className="pt-2 flex flex-col gap-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
@@ -474,15 +474,15 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                         <span className="text-[11px] font-bold text-slate-700">{(tx?.metadata as any)?.creatorRoyalty || "0.50"} USDC</span>
                       </div>
                       <div className="flex justify-between items-center border-t border-slate-200 mt-1 pt-1">
-                        <span className="text-[11px] font-bold text-slate-500">Biaya Jaringan (Gas Fee)</span>
+                        <span className="text-[11px] font-bold text-slate-500">Network Fee (Gas Fee)</span>
                         <span className="text-[11px] font-bold text-emerald-600">{(tx?.metadata as any)?.gasFee || "0.0012"} USDC</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* 2. Data Rincian Keranjang (Detail Sub-Transaksi) */}
+                  {/* 2. Cart Details */}
                   <div className="flex flex-col gap-3">
-                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">2. Data Rincian Keranjang</h4>
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">2. Cart Details</h4>
                     <div className="flex flex-col gap-3">
                       {((tx?.metadata as any)?.items || []).map((item: any, idx: number) => (
                         <div key={idx} className="bg-white border border-slate-100 rounded-2xl p-3 flex flex-col gap-3 shadow-sm relative overflow-hidden group">
@@ -507,11 +507,11 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                           
                           <div className="flex flex-col gap-2 pt-2 border-t border-slate-100">
                              <div className="flex justify-between items-center text-[11px]">
-                               <span className="text-slate-400 font-bold">Harga per Item</span>
+                               <span className="text-slate-400 font-bold">Item Price</span>
                                <span className="text-slate-800 font-black">{item.price} USDC</span>
                              </div>
                              <div className="flex justify-between items-center text-[10px]">
-                               <span className="text-slate-400 font-medium italic">Alamat Penjual Asal</span>
+                               <span className="text-slate-400 font-medium italic">Original Seller Address</span>
                                <span className="text-slate-500 font-mono">{formatAddrShort(item.merchantAddress || item.seller)}</span>
                              </div>
                           </div>
@@ -534,16 +534,16 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
               <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 flex flex-col overflow-hidden">
                 <div className="bg-[#581c87] p-5 flex flex-col items-center justify-center relative overflow-hidden">
                   <div className="absolute inset-0 opacity-20 blur-xl bg-gradient-to-r from-purple-500 to-pink-500"></div>
-                  <span className="text-[11px] font-black tracking-widest uppercase text-white/50 mb-1 z-10">Metode Transaksi</span>
+                  <span className="text-[11px] font-black tracking-widest uppercase text-white/50 mb-1 z-10">Transaction Method</span>
                   <span className="text-[20px] font-extrabold text-white tracking-widest z-10 uppercase">
                     NFT MINTING
                   </span>
                 </div>
                 
                 <div className="p-6 flex flex-col gap-6">
-                  {/* 1. Data Identitas NFT & Koleksi */}
+                  {/* 1. NFT Identity & Collection Data */}
                   <div className="flex flex-col gap-3">
-                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">1. Data Identitas NFT & Koleksi</h4>
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">1. NFT Identity & Collection Data</h4>
                     <div className="flex flex-col gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-2">
                        <div className="flex gap-4 items-center">
                           <div className="w-16 h-16 rounded-xl bg-white border border-slate-200 overflow-hidden shadow-sm shrink-0">
@@ -557,7 +557,7 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                     </div>
 
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">ID Transaksi (Hash)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Transaction ID (TxHash)</span>
                       <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => window.open(`https://testnet.arcscan.app/tx/${txHash}`, "_blank")}
@@ -569,7 +569,7 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                       </div>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Alamat Kontrak</span>
+                      <span className="text-[12px] font-bold text-slate-400">Contract Address</span>
                       <div className="flex items-center gap-1.5">
                         <span className="text-[12px] font-mono font-bold text-slate-700">
                           {formatAddrShort((tx?.metadata as any)?.nftContractAddress || "0x4aaa...2b5e")}
@@ -582,37 +582,37 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                       <span className="text-[12px] font-mono font-black text-slate-900">#{(tx?.metadata as any)?.tokenId || Math.floor(Math.random() * 8000 + 1000)}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Standar Token</span>
+                      <span className="text-[12px] font-bold text-slate-400">Token Standard</span>
                       <span className="text-[10px] font-black bg-purple-100 text-purple-700 px-2 py-0.5 rounded uppercase">ERC-721</span>
                     </div>
                   </div>
 
-                  {/* 2. Rincian Biaya & Pembayaran */}
+                  {/* 2. Costs & Payment Details */}
                   <div className="flex flex-col gap-3">
-                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">2. Rincian Biaya & Pembayaran</h4>
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">2. Costs & Payment Details</h4>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Harga Mint (Mint Price)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Mint Price</span>
                       <span className="text-[12px] font-bold text-slate-800">{(tx?.metadata as any)?.mintPrice || "5.00"} USDC</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Biaya Jaringan (Gas Fee)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Network Fee (Gas Fee)</span>
                       <span className="text-[12px] font-bold text-emerald-600">{(tx?.metadata as any)?.gasFee || "0.0082"} USDC</span>
                     </div>
                     <div className="flex justify-between items-center pt-2 border-t border-slate-100">
-                      <span className="text-[12px] font-black text-slate-900">Total Biaya</span>
+                      <span className="text-[12px] font-black text-slate-900">Total Costs</span>
                       <span className="text-[16px] font-black text-slate-900">5.0082 USDC</span>
                     </div>
                   </div>
 
-                  {/* 3. Informasi Kepemilikan & Cetakan */}
+                  {/* 3. Ownership & Mint Info */}
                   <div className="flex flex-col gap-3">
-                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">3. Informasi Kepemilikan</h4>
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">3. Ownership & Mint Info</h4>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Alamat Pencetak</span>
+                      <span className="text-[12px] font-bold text-slate-400">Minter Address</span>
                       <span className="text-[12px] font-mono font-bold text-slate-700">{formatAddrShort(myWalletAddress)}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Jumlah Cetakan</span>
+                      <span className="text-[12px] font-bold text-slate-400">Mint Quantity</span>
                       <span className="text-[12px] font-bold text-slate-800">1 Asset</span>
                     </div>
                   </div>
@@ -631,15 +631,15 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
               <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 flex flex-col overflow-hidden">
                 <div className="bg-slate-900 p-5 flex flex-col items-center justify-center relative overflow-hidden">
                   <div className="absolute inset-0 opacity-10 blur-xl bg-gradient-to-r from-blue-500 to-indigo-500"></div>
-                  <span className="text-[11px] font-black tracking-widest uppercase text-white/50 mb-1 z-10">Metode Transaksi</span>
+                  <span className="text-[11px] font-black tracking-widest uppercase text-white/50 mb-1 z-10">Transaction Method</span>
                   <span className="text-[20px] font-extrabold text-white tracking-widest z-10">SWAP</span>
                 </div>
                 <div className="p-6 flex flex-col gap-6">
-                  {/* 1. Data Identitas & Waktu */}
+                  {/* 1. Identity & Timestamp Data */}
                   <div className="flex flex-col gap-3">
-                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">1. Data Identitas & Waktu</h4>
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">1. Identity & Timestamp Data</h4>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">ID Transaksi (TxID)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Transaction ID (TxID)</span>
                       {hasHash ? (
                         <div className="flex items-center gap-1.5">
                           <button
@@ -655,50 +655,50 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                       )}
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Waktu Selesai</span>
+                      <span className="text-[12px] font-bold text-slate-400">Completion Time</span>
                       <span className="text-[12px] font-bold text-slate-800">{displayDate}</span>
                     </div>
                   </div>
 
-                  {/* 2. Rincian Konversi Aset */}
+                  {/* 2. Asset Conversion Details */}
                   <div className="flex flex-col gap-3">
-                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">2. Rincian Konversi Aset</h4>
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">2. Asset Conversion Details</h4>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Aset Keluar (Dari)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Outgoing Asset (From)</span>
                       <span className="text-[14px] font-black text-slate-900">{tx?.amount?.replace("-", "") || "0.00"} {tx?.metadata?.fromToken?.symbol || "USDC"}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Aset Masuk (Ke)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Incoming Asset (To)</span>
                       <span className="text-[14px] font-black text-emerald-600">
                         {swapRate && tx?.amount 
-                          ? "+" + (parseFloat(tx.amount.replace("-", "")) * swapRate).toFixed(4)
+                          ? "+" + (parseFloat(tx.amount.replace("-", "")) * swapRate).toFixed(2)
                           : "~"
                         } {tx?.metadata?.toToken?.symbol || ""}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Kurs Konversi (Rate)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Conversion Rate</span>
                       <span className="text-[12px] font-bold text-slate-700">
                         {swapRate 
-                          ? `1 ${tx?.metadata?.fromToken?.symbol || ""} = ${swapRate} ${tx?.metadata?.toToken?.symbol || ""}`
+                          ? `1 ${tx?.metadata?.fromToken?.symbol || ""} = ${swapRate.toFixed(2)} ${tx?.metadata?.toToken?.symbol || ""}`
                           : "Fetching rate..."}
                       </span>
                     </div>
                   </div>
 
-                  {/* 3. Data Pasar & Proteksi */}
+                  {/* 3. Market Data & Protection */}
                   <div className="flex flex-col gap-3">
-                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">3. Data Pasar & Proteksi</h4>
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">3. Market Data & Protection</h4>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Penyedia Rute</span>
+                      <span className="text-[12px] font-bold text-slate-400">Route Provider</span>
                       <span className="text-[12px] font-bold text-slate-800 bg-slate-100 px-2.5 py-1 rounded-md">Arc Network Swap</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Slippage Terpakai</span>
+                      <span className="text-[12px] font-bold text-slate-400">Applied Slippage</span>
                       <span className="text-[12px] font-bold text-slate-800">0.5% (Auto)</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Biaya Swap (Fee)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Swap Fee</span>
                       <span className="text-[12px] font-bold text-slate-800">{tx?.metadata?.platformFee || "0.00"} USDC</span>
                     </div>
                   </div>
@@ -708,15 +708,15 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
               <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 flex flex-col overflow-hidden">
                 <div className="bg-slate-900 p-5 flex flex-col items-center justify-center relative overflow-hidden">
                   <div className="absolute inset-0 opacity-10 blur-xl bg-gradient-to-r from-blue-500 to-indigo-500"></div>
-                  <span className="text-[11px] font-black tracking-widest uppercase text-white/50 mb-1 z-10">Metode Transaksi</span>
-                  <span className="text-[20px] font-extrabold text-white tracking-widest z-10">{isDeposit ? "KIRIM (MASUK)" : "TRANSFER (KELUAR)"}</span>
+                  <span className="text-[11px] font-black tracking-widest uppercase text-white/50 mb-1 z-10">Transaction Method</span>
+                  <span className="text-[20px] font-extrabold text-white tracking-widest z-10">{isDeposit ? "RECEIVE (INBOUND)" : "TRANSFER (OUTBOUND)"}</span>
                 </div>
                 <div className="p-6 flex flex-col gap-6">
-                  {/* 1. Data Identitas & Waktu */}
+                  {/* 1. Identity & Timestamp Data */}
                   <div className="flex flex-col gap-3">
-                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">1. Data Identitas & Waktu</h4>
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">1. Identity & Timestamp Data</h4>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">ID Transaksi (TxID)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Transaction ID (TxID)</span>
                       {hasHash ? (
                         <div className="flex items-center gap-1.5">
                           <button
@@ -732,39 +732,39 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                       )}
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Waktu Selesai</span>
+                      <span className="text-[12px] font-bold text-slate-400">Completion Time</span>
                       <span className="text-[12px] font-bold text-slate-800">{displayDate}</span>
                     </div>
                   </div>
 
-                  {/* 2. Informasi Pengirim & Penerima */}
+                  {/* 2. Sender & Receiver Information */}
                   <div className="flex flex-col gap-3">
-                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">2. Informasi Pengirim & Penerima</h4>
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">2. Sender & Receiver Information</h4>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Pengirim (Dari)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Sender (From)</span>
                       <span className="text-[12px] font-bold text-slate-800">
                         {senderName ? senderName : formatAddrShort(senderAddress)}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Penerima (Ke)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Receiver (To)</span>
                       <span className="text-[12px] font-bold text-slate-800">
                         {receiverName ? receiverName : formatAddrShort(receiverAddress)}
                       </span>
                     </div>
                   </div>
 
-                  {/* 3. Rincian Aset & Biaya */}
+                  {/* 3. Asset & Fee Details */}
                   <div className="flex flex-col gap-3">
-                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">3. Rincian Aset & Biaya</h4>
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">3. Asset & Fee Details</h4>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Jumlah Aset (Amount)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Asset Amount</span>
                       <span className="text-[14px] font-black text-slate-900">{tx?.amount?.replace("-", "") || "0.00"} {tx?.currency || "USDC"}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Biaya Jaringan (Fee)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Network Fee</span>
                       <span className="text-[12px] font-bold text-slate-800 text-right">
-                        {tx?.metadata?.platformFee ? `${tx.metadata.platformFee} USDC` : "Bebas Biaya (Disponsori)"}
+                        {tx?.metadata?.platformFee ? `${tx.metadata.platformFee} USDC` : "Free (Sponsored)"}
                       </span>
                     </div>
                   </div>
@@ -774,15 +774,15 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
               <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 flex flex-col overflow-hidden">
                 <div className="bg-slate-900 p-5 flex flex-col items-center justify-center relative overflow-hidden">
                   <div className="absolute inset-0 opacity-10 blur-xl bg-gradient-to-r from-blue-500 to-indigo-500"></div>
-                  <span className="text-[11px] font-black tracking-widest uppercase text-white/50 mb-1 z-10">Metode Transaksi</span>
+                  <span className="text-[11px] font-black tracking-widest uppercase text-white/50 mb-1 z-10">Transaction Method</span>
                   <span className="text-[20px] font-extrabold text-white tracking-widest z-10">BATCH TRANSFER</span>
                 </div>
                 <div className="p-6 flex flex-col gap-6">
-                  {/* 1. Data Ringkasan Induk (Master Data) */}
+                  {/* 1. Master Summary Data */}
                   <div className="flex flex-col gap-3">
-                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">1. Data Ringkasan Induk (Master Data)</h4>
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">1. Master Summary Data</h4>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">ID Transaksi (Batch TxID)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Transaction ID (Batch TxID)</span>
                       {hasHash ? (
                         <div className="flex items-center gap-1.5">
                           <button
@@ -798,53 +798,61 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                       )}
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Waktu Selesai</span>
+                      <span className="text-[12px] font-bold text-slate-400">Completion Time</span>
                       <span className="text-[12px] font-bold text-slate-800">{displayDate}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Total Alamat Tujuan</span>
+                      <span className="text-[12px] font-bold text-slate-400">Total Recipient Addresses</span>
                       <span className="text-[12px] font-bold text-slate-800">
-                        {tx?.metadata?.recipients ? (tx.metadata.recipients as any[]).length : "0"} Alamat
+                        {tx?.metadata?.recipients ? (tx.metadata.recipients as any[]).length : "0"} Addresses
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Total Dana Keluar</span>
+                      <span className="text-[12px] font-bold text-slate-400">Total Outbound Funds</span>
                       <span className="text-[14px] font-black text-slate-900">{tx?.amount?.replace("-", "") || "0.00"} {tx?.currency || "USDC"}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Total Biaya (Total Fee)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Total Fee</span>
                       <span className="text-[12px] font-bold text-slate-800 text-right">
-                        {tx?.metadata?.platformFee ? `${tx.metadata.platformFee} USDC` : "Bebas Biaya (Disponsori)"}
+                        {tx?.metadata?.platformFee ? `${tx.metadata.platformFee} USDC` : "Free (Sponsored)"}
                       </span>
                     </div>
                   </div>
 
-                  {/* 2. Data Rincian Penerima (Detail Sub-Transaksi) */}
+                  {/* 2. Recipient Details */}
                   <div className="flex flex-col gap-3">
-                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">2. Data Rincian Penerima (Detail Sub-Transaksi)</h4>
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">2. Recipient Details</h4>
                     {tx?.metadata?.recipients ? (
                       <div className="w-full bg-slate-50 rounded-2xl p-3 border border-slate-100 flex flex-col gap-2 relative">
                         {(tx.metadata.recipients as any[]).map((r, i) => (
-                          <div key={i} className="flex flex-col bg-white p-3 rounded-xl border border-slate-100 shadow-sm relative">
+                          <div key={i} className="flex flex-col bg-white p-3 rounded-xl border border-slate-100 shadow-sm relative overflow-hidden">
                             <span className="absolute top-2 right-2 text-[10px] font-bold uppercase tracking-wider bg-green-50 text-green-600 px-2 py-0.5 rounded-full border border-green-100">
-                               {isSuccess ? "Status: Sukses" : "Status: Gagal"}
+                               {isSuccess ? "Status: Success" : "Status: Failed"}
                             </span>
                             <div className="flex justify-between items-center mb-1">
-                               <span className="text-[11px] font-bold text-slate-500">Alamat Tujuan (To [{i + 1}])</span>
+                               <span className="text-[11px] font-bold text-slate-500">Destination Address (To [{i + 1}])</span>
                             </div>
                             <span className="text-[13px] font-bold text-slate-800 mb-1">{r.name || r.username || "Unknown"}</span>
-                            <span className="text-[11px] font-mono font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded w-fit mb-2">
-                               {r.address || "0x..."}
-                            </span>
+                            <div className="flex items-center justify-between gap-4 mb-2">
+                              <span className="text-[11px] font-mono font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg truncate flex-1 min-w-0">
+                                {r.address || "0x..."}
+                              </span>
+                              <button 
+                                onClick={() => handleCopy(r.address, "Address")}
+                                className="text-slate-400 hover:text-slate-900 bg-transparent border-0 cursor-pointer p-1 transition-colors shrink-0"
+                              >
+                                <Copy size={12} />
+                              </button>
+                            </div>
                             <div className="flex justify-between items-center border-t border-slate-100 pt-2 mt-1">
-                               <span className="text-[11px] font-bold text-slate-400">Nominal per Alamat</span>
+                               <span className="text-[11px] font-bold text-slate-400">Amount per Address</span>
                                <span className="text-[13px] font-black text-slate-900">{r.amount} USDC</span>
                             </div>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <span className="text-[12px] font-medium text-slate-500 italic text-center py-4 bg-slate-50 rounded-xl border border-slate-100">Data rincian alamat tidak tersedia.</span>
+                      <span className="text-[12px] font-medium text-slate-500 italic text-center py-4 bg-slate-50 rounded-xl border border-slate-100">Recipient detail data unavailable.</span>
                     )}
                   </div>
                 </div>
@@ -853,15 +861,15 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
               <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 flex flex-col overflow-hidden">
                 <div className="bg-slate-900 p-5 flex flex-col items-center justify-center relative overflow-hidden">
                   <div className="absolute inset-0 opacity-10 blur-xl bg-gradient-to-r from-blue-500 to-indigo-500"></div>
-                  <span className="text-[11px] font-black tracking-widest uppercase text-white/50 mb-1 z-10">Metode Transaksi</span>
+                  <span className="text-[11px] font-black tracking-widest uppercase text-white/50 mb-1 z-10">Transaction Method</span>
                   <span className="text-[20px] font-extrabold text-white tracking-widest z-10">CROSS-CHAIN TRANSFER</span>
                 </div>
                 <div className="p-6 flex flex-col gap-6">
-                  {/* 1. Data Identitas Ganda & Waktu */}
+                  {/* 1. Dual Identity & Timestamp Data */}
                   <div className="flex flex-col gap-3">
-                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">1. Data Identitas Ganda & Waktu</h4>
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">1. Dual Identity & Timestamp Data</h4>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">ID Transaksi Asal (Source)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Source Transaction ID (Source)</span>
                       {hasHash ? (
                         <div className="flex items-center gap-1.5">
                           <button
@@ -877,7 +885,7 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                       )}
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">ID Transaksi Tujuan (Dest)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Destination Transaction ID (Dest)</span>
                       {tx?.metadata?.destinationTxHash ? (
                         <div className="flex items-center gap-1.5">
                           <span className="text-[12px] font-mono font-bold text-blue-600">
@@ -894,55 +902,55 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                     </div>
                   </div>
 
-                  {/* 2. Rincian Jaringan (Rute Cross-Chain) */}
+                  {/* 2. Network Details (Cross-Chain Route) */}
                   <div className="flex flex-col gap-3">
-                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">2. Rincian Jaringan (Rute)</h4>
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">2. Network Details (Route)</h4>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Jaringan Asal (Source)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Source Network</span>
                       <span className="text-[12px] font-bold text-slate-800">
                         {((tx?.metadata as any)?.sourceDomain || "Arc") as string}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Jaringan Tujuan (Dest)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Destination Network</span>
                       <span className="text-[12px] font-bold text-slate-800">
                         {((tx?.metadata as any)?.destinationDomain || "Ethereum") as string}
                       </span>
                     </div>
                   </div>
 
-                  {/* 3. Rincian Aset & Konversi Nilai */}
+                  {/* 3. Asset Details & Value Conversion */}
                   <div className="flex flex-col gap-3">
-                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">3. Rincian Aset & Konversi</h4>
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">3. Asset Details & Conversion</h4>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Aset Dikirim (Deposited)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Asset Deposited</span>
                       <span className="text-[13px] font-black text-slate-900">{tx?.amount?.replace("-", "") || "0.00"} {tx?.currency || "USDC"}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Aset Diterima (Received)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Asset Received</span>
                       <span className="text-[13px] font-black text-green-600">
                         {tx?.amount?.replace("-", "") || "0.00"} {tx?.currency || "USDC"}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Kurs Jembatan (Bridge Rate)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Bridge Rate</span>
                       <span className="text-[12px] font-bold text-slate-800">1:1 (Pegged)</span>
                     </div>
                   </div>
 
-                  {/* 4. Rincian Biaya Multi-Jaringan */}
+                  {/* 4. Multi-Network Fee Details */}
                   <div className="flex flex-col gap-3">
-                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">4. Rincian Biaya Lintas Jaringan</h4>
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">4. Multi-Network Fee Breakdown</h4>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Biaya Jembatan (Protocol Fee)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Bridge Protocol Fee</span>
                       <span className="text-[12px] font-bold text-slate-800">
                          {tx?.metadata?.bridgeFee ? `${tx.metadata.bridgeFee} USDC` : "0.00 USDC"}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Biaya Gas Tujuan (Dest Gas)</span>
-                      <span className="text-[12px] font-bold text-slate-800">
-                         {tx?.metadata?.destinationGasFee ? `${tx.metadata.destinationGasFee} USDC` : "Bebas Biaya (Disponsori)"}
+                      <span className="text-[12px] font-bold text-slate-400">Destination Gas Fee</span>
+                      <span className="text-[12px] font-bold text-slate-800 text-right">
+                         {tx?.metadata?.destinationGasFee ? `${tx.metadata.destinationGasFee} USDC` : "Free (Sponsored)"}
                       </span>
                     </div>
                   </div>
@@ -952,15 +960,15 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
               <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 flex flex-col overflow-hidden">
                 <div className="bg-slate-900 p-5 flex flex-col items-center justify-center relative overflow-hidden">
                   <div className="absolute inset-0 opacity-10 blur-xl bg-gradient-to-r from-emerald-500 to-teal-500"></div>
-                  <span className="text-[11px] font-black tracking-widest uppercase text-white/50 mb-1 z-10">Metode Transaksi</span>
+                  <span className="text-[11px] font-black tracking-widest uppercase text-white/50 mb-1 z-10">Transaction Method</span>
                   <span className="text-[20px] font-extrabold text-white tracking-widest z-10">STAKE / DEPOSIT EARN</span>
                 </div>
                 <div className="p-6 flex flex-col gap-6">
-                  {/* 1. Status & Tipe Penguncian */}
+                  {/* 1. Status & Locking Type */}
                   <div className="flex flex-col gap-3">
-                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">1. Status & Tipe Penguncian</h4>
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">1. Status & Locking Type</h4>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">ID Transaksi (TxID)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Transaction ID (TxID)</span>
                       {hasHash ? (
                         <div className="flex items-center gap-1.5">
                           <button
@@ -976,59 +984,59 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                       )}
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Jenis Staking</span>
+                      <span className="text-[12px] font-bold text-slate-400">Staking Type</span>
                       <span className="text-[12px] font-bold text-slate-800">
                         {((tx?.metadata as any)?.stakeType as string) || "Flexible"}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Durasi Penguncian</span>
+                      <span className="text-[12px] font-bold text-slate-400">Lock Duration</span>
                       <span className="text-[12px] font-bold text-slate-800">
                         {((tx?.metadata as any)?.lockDuration as string) || "Flexible"}
                       </span>
                     </div>
                   </div>
 
-                  {/* 2. Proyeksi Keuntungan */}
+                  {/* 2. Projected Earnings */}
                   <div className="flex flex-col gap-3">
-                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">2. Proyeksi Keuntungan</h4>
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">2. Projected Earnings</h4>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Estimasi APY / APR</span>
+                      <span className="text-[12px] font-bold text-slate-400">Estimated APY / APR</span>
                       <span className="text-[12px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded">
                          {((tx?.metadata as any)?.apy as string) || "Est. APY 5.5%"}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Aset Berlangganan</span>
+                      <span className="text-[12px] font-bold text-slate-400">Subscribed Asset</span>
                       <span className="text-[13px] font-black text-slate-900">
                          {tx?.amount?.replace("-", "") || "0.00"} {tx?.currency || "USDC"}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Mata Uang Imbalan</span>
+                      <span className="text-[12px] font-bold text-slate-400">Reward Currency</span>
                       <span className="text-[12px] font-bold text-slate-800">
                          {((tx?.metadata as any)?.rewardToken as string) || tx?.currency || "USDC"}
                       </span>
                     </div>
                   </div>
 
-                  {/* 3. Jadwal Waktu Finansial */}
+                  {/* 3. Financial Timeline */}
                   <div className="flex flex-col gap-3">
-                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">3. Jadwal Waktu Finansial (Timeline)</h4>
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">3. Financial Timeline</h4>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Tanggal Mulai (Value Date)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Value Date (Start)</span>
                       <span className="text-[12px] font-bold text-slate-800">
-                        {((tx?.metadata as any)?.valueDate as string) || "H+1 setelah staking"}
+                        {((tx?.metadata as any)?.valueDate as string) || "H+1 after staking"}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Distribusi Imbalan</span>
+                      <span className="text-[12px] font-bold text-slate-400">Reward Distribution</span>
                       <span className="text-[12px] font-bold text-slate-800">
-                        {((tx?.metadata as any)?.distributionDate as string) || "Harian"}
+                        {((tx?.metadata as any)?.distributionDate as string) || "Daily"}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Tanggal Selesai (Maturity)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Maturity Date</span>
                       <span className="text-[12px] font-bold text-slate-800">
                         {((tx?.metadata as any)?.maturityDate as string) || "Flexible"}
                       </span>
@@ -1040,15 +1048,15 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
               <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 flex flex-col overflow-hidden">
                 <div className="bg-slate-900 p-5 flex flex-col items-center justify-center relative overflow-hidden">
                   <div className="absolute inset-0 opacity-10 blur-xl bg-gradient-to-r from-emerald-500 to-teal-500"></div>
-                  <span className="text-[11px] font-black tracking-widest uppercase text-white/50 mb-1 z-10">Metode Transaksi</span>
+                  <span className="text-[11px] font-black tracking-widest uppercase text-white/50 mb-1 z-10">Transaction Method</span>
                   <span className="text-[20px] font-extrabold text-white tracking-widest z-10">UNSTAKE / REDEEM</span>
                 </div>
                 <div className="p-6 flex flex-col gap-6">
-                  {/* 1. Identitas Transaksi */}
+                  {/* 1. Transaction Identity */}
                   <div className="flex flex-col gap-3">
-                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">1. Identitas Transaksi</h4>
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">1. Transaction Identity</h4>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">ID Transaksi (TxID)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Transaction ID (TxID)</span>
                       {hasHash ? (
                         <div className="flex items-center gap-1.5">
                           <button
@@ -1065,23 +1073,23 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                     </div>
                   </div>
 
-                  {/* 2. Rincian Penarikan Berhenti */}
+                  {/* 2. Withdrawal & Redemption Details */}
                   <div className="flex flex-col gap-3">
-                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">2. Rincian Penarikan Dana</h4>
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">2. Redemption & Withdrawal Details</h4>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Modal Ditarik (Principal)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Principal Amount</span>
                       <span className="text-[14px] font-black text-slate-900">
                          {((tx?.metadata as any)?.principalAmount as string) || `${tx?.amount?.replace("-", "") || "0.00"} ${tx?.currency || "USDC"}`}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Total Keuntungan (Reward)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Total Profit (Reward)</span>
                       <span className="text-[14px] font-black text-green-600">
                          +{((tx?.metadata as any)?.rewardAmount as string) || `0.00 ${((tx?.metadata as any)?.rewardToken as string) || tx?.currency || "USDC"}`}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Periode Pencairan (Unbonding)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Unbonding Period</span>
                       <span className="text-[12px] font-bold text-slate-800">
                         {((tx?.metadata as any)?.unbondingPeriod as string) || "Instant"}
                       </span>
@@ -1093,15 +1101,15 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
               <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 flex flex-col overflow-hidden">
                 <div className="bg-slate-900 p-5 flex flex-col items-center justify-center relative overflow-hidden">
                   <div className="absolute inset-0 opacity-10 blur-xl bg-gradient-to-r from-blue-500 to-indigo-500"></div>
-                  <span className="text-[11px] font-black tracking-widest uppercase text-white/50 mb-1 z-10">Metode Transaksi</span>
+                  <span className="text-[11px] font-black tracking-widest uppercase text-white/50 mb-1 z-10">Transaction Method</span>
                   <span className="text-[20px] font-extrabold text-white tracking-widest z-10">NFT MINTING</span>
                 </div>
                 <div className="p-6 flex flex-col gap-6">
-                  {/* 1. Data Identitas NFT & Koleksi */}
+                  {/* 1. NFT Identity & Collection Data */}
                   <div className="flex flex-col gap-3">
-                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">1. Data Identitas NFT & Koleksi</h4>
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">1. NFT Identity & Collection Data</h4>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">ID Transaksi (TxID)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Transaction ID (TxID)</span>
                       {hasHash ? (
                         <div className="flex items-center gap-1.5">
                           <button
@@ -1117,7 +1125,7 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                       )}
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Alamat Kontrak</span>
+                      <span className="text-[12px] font-bold text-slate-400">Contract Address</span>
                       <span className="text-[12px] font-bold text-slate-800 text-right font-mono">
                         {formatAddrShort((tx?.metadata as any)?.contractAddress || "")}
                       </span>
@@ -1129,41 +1137,41 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Standar Token</span>
+                      <span className="text-[12px] font-bold text-slate-400">Token Standard</span>
                       <span className="text-[12px] font-bold text-slate-800">
                         {((tx?.metadata as any)?.tokenStandard as string) || "ERC-721"}
                       </span>
                     </div>
                   </div>
 
-                  {/* 2. Rincian Biaya & Pembayaran */}
+                  {/* 2. Costs & Payment Details */}
                   <div className="flex flex-col gap-3">
-                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">2. Rincian Biaya & Pembayaran</h4>
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">2. Costs & Payment Details</h4>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Harga Mint (Mint Price)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Mint Price</span>
                       <span className="text-[12px] font-bold text-slate-800">
-                         {tx?.amount === "0" || !tx?.amount ? "Gratis (Free Mint)" : `${tx?.amount?.replace("-", "")} ${tx?.currency || "ETH"}`}
+                         {tx?.amount === "0" || !tx?.amount ? "Free Mint" : `${tx?.amount?.replace("-", "")} ${tx?.currency || "ETH"}`}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Biaya Jaringan (Gas Fee)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Network Fee (Gas Fee)</span>
                       <span className="text-[12px] font-bold text-slate-800 text-right">
                         {tx?.metadata?.platformFee ? `${tx.metadata.platformFee} USDC` : "0.00 USDC"}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Total Biaya</span>
+                      <span className="text-[12px] font-bold text-slate-400">Total Costs</span>
                       <span className="text-[13px] font-black text-slate-900">
                          {tx?.amount === "0" || !tx?.amount ? (tx?.metadata?.platformFee ? `${tx.metadata.platformFee} USDC` : "0.00 USDC") : `${tx?.amount?.replace("-", "")} ${tx?.currency || "ETH"}`}
                       </span>
                     </div>
                   </div>
 
-                  {/* 3. Informasi Kepemilikan & Cetakan */}
+                  {/* 3. Ownership & Mint Info */}
                   <div className="flex flex-col gap-3">
-                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">3. Informasi Kepemilikan & Cetakan</h4>
+                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-1 border-b border-slate-100 pb-2">3. Ownership & Mint Info</h4>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Alamat Pencetak (To)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Minter Address (To)</span>
                       <div className="flex items-center gap-1">
                         <span className="text-[10px] font-bold bg-green-50 text-green-600 px-1.5 py-0.5 rounded uppercase">Owner</span>
                         <span className="text-[12px] font-bold text-slate-800 font-mono">
@@ -1172,7 +1180,7 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                       </div>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-slate-400">Jumlah Cetakan (Qty)</span>
+                      <span className="text-[12px] font-bold text-slate-400">Mint Quantity (Qty)</span>
                       <span className="text-[12px] font-black text-slate-900">{((tx?.metadata as any)?.quantity as number) || 1} NFT</span>
                     </div>
                   </div>
@@ -1247,9 +1255,7 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                           className="text-slate-300 cursor-pointer"
                         />
                         <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-[220px] bg-slate-800 text-[10px] text-white p-2 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity text-center z-50">
-                          Karena menggunakan Account Abstraction (ERC-4337),
-                          pengirim (From) di Explorer adalah Paymaster/Bundler,
-                          bukan personal address Anda.
+                          Because it uses Account Abstraction (ERC-4337), the sender (From) in Explorer is the Paymaster/Bundler, not your personal address.
                           <div className="absolute left-1/2 -translate-x-1/2 top-full border-4 border-transparent border-t-slate-800"></div>
                         </div>
                       </div>
@@ -1327,8 +1333,8 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                   </div>
                   <p className="text-[10px] text-slate-400 font-medium italic">
                     {isBatch
-                      ? "*Termasuk efisiensi gas batch SCA dan biaya kemudahan platform."
-                      : "*Biaya eksekusi jaringan untuk transfer tunggal."}
+                      ? "*Includes SCA batch gas efficiency and platform convenience fees."
+                      : "*Network execution fee for individual transfer."}
                   </p>
                 </div>
               </div>

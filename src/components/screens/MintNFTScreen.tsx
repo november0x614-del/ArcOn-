@@ -24,8 +24,8 @@ export function MintNFTScreen({ onBack }: { onBack: () => void }) {
   const [nftName, setNftName] = useState("");
   const [nftDescription, setNftDescription] = useState("");
   const [txHash, setTxHash] = useState("");
-  const [selectedImage, setSelectedImage] = useState<string>("https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=300&auto=format&fit=crop");
-  const [imageLabel, setImageLabel] = useState<string>("Default Generative Image");
+  const [selectedImage, setSelectedImage] = useState<string>("");
+  const [imageLabel, setImageLabel] = useState<string>("Attach Asset Concept Image");
   
   // Cropper states
   const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -78,11 +78,12 @@ export function MintNFTScreen({ onBack }: { onBack: () => void }) {
 
         if (result.txHash === "pending") {
           addLog(`NFT Minting in Progress: ${nftName}`);
-          displayToast("Proses minting sedang berjalan di background!");
+          displayToast("Minting process is running in the background!");
         } else {
           addLog(`NFT Minted Successfully: ${nftName}`);
-          displayToast("Berhasil mencetak NFT baru!");
+          displayToast("Successfully minted new NFT!");
         }
+        
         setStep("success");
       } else {
         displayToast("Minting failed. Please try again.");
@@ -175,16 +176,14 @@ export function MintNFTScreen({ onBack }: { onBack: () => void }) {
                         <ImageIcon size={18} />
                       </div>
                       <div className="flex flex-col text-left">
-                        <span className="text-[13px] font-bold text-slate-700">{imageLabel}</span>
+                        <span className="text-[13px] font-bold text-slate-700 truncate max-w-[200px]">{imageLabel}</span>
                         <span className="text-[10px] text-slate-400 font-medium">
-                          {imageLabel === "Default Generative Image" 
-                            ? "Click to open device gallery" 
-                            : "Click to change image"}
+                          Click to select from device gallery
                         </span>
                       </div>
                     </div>
                     <span className="text-[10px] font-black text-blue-500 uppercase">
-                      {imageLabel === "Default Generative Image" ? "Selected" : "Custom"}
+                      Asset
                     </span>
                   </div>
 
@@ -367,6 +366,10 @@ export function MintNFTScreen({ onBack }: { onBack: () => void }) {
                <button
                 onClick={() => {
                   setNftName("");
+                  setNftDescription("");
+                  setSelectedImage("");
+                  setImageLabel("Attach Asset Concept Image");
+                  setTxHash("");
                   setStep("input");
                 }}
                 className="w-full py-4 bg-slate-900 text-white font-black text-[15px] rounded-[20px] shadow-xl shadow-slate-200 active:scale-[0.98] transition-all border-0 cursor-pointer"

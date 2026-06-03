@@ -153,15 +153,15 @@ export function EcommerceScreen({ onBack, isDesktop }: EcommerceScreenProps) {
   };
 
   const filteredProducts = products.filter(p => {
-    // Premium Constraint: Only show verified NFT assets in the marketplace
-    if (p.category !== "NFT") return false;
-    
     // Basic filtering based on stock - hide if out of stock
     if (p.stock <= 0) return false;
 
     const isNft = p.category === "NFT";
     const wantsNft = selectedCategoryTab === "Digital";
-    if (wantsNft !== isNft) return false;
+
+    // Show NFTs only in Digital tab, non-NFTs in other tabs
+    if (wantsNft && !isNft) return false;
+    if (!wantsNft && isNft) return false;
 
     return p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
            p.category.toLowerCase().includes(searchQuery.toLowerCase());
@@ -306,7 +306,7 @@ export function EcommerceScreen({ onBack, isDesktop }: EcommerceScreenProps) {
                         <span className="text-[11px] font-black text-blue-900 uppercase tracking-wider">Escrow Security Active</span>
                       </div>
                       <p className="text-[10px] text-blue-600 font-medium leading-relaxed">
-                        Dana Anda tertahan aman di platform treasury. Penjual akan menerima pembayaran setelah verifikasi NFT selesai.
+                        Your funds are held securely in the platform treasury. The seller will receive payment once the NFT verification is complete.
                       </p>
                     </div>
                   )}
@@ -677,7 +677,7 @@ export function EcommerceScreen({ onBack, isDesktop }: EcommerceScreenProps) {
                   </div>
 
                   {/* Right Column: Information Card */}
-                  <div className="w-full lg:col-span-7 bg-white rounded-[40px] lg:rounded-[32px] min-h-[400px] p-8 shadow-sm relative -mt-6 lg:-mt-0 border border-slate-100">
+                  <div className="w-full lg:col-span-7 bg-white rounded-[40px] lg:rounded-[32px] min-h-[400px] p-8 shadow-sm relative border border-slate-100">
                      <div className="flex justify-between items-start mb-8 gap-4">
                         <div className="flex-1">
                           <h2 className="text-[24px] sm:text-[28px] font-black text-slate-900 leading-tight mb-2 break-words">{selectedProduct?.name}</h2>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   ArrowLeft,
@@ -9,8 +9,13 @@ import {
   ArrowDownLeft,
   Info,
   Layers,
+  Bell,
+  MessageSquare,
+  DollarSign,
+  Receipt as ReceiptIcon,
 } from "lucide-react";
 import { useApp } from "../../contexts/AppContext";
+import { useStore } from "../../store/useStore";
 
 interface InboxScreenProps {
   onBack: () => void;
@@ -19,9 +24,14 @@ interface InboxScreenProps {
 
 export function InboxScreen({ onBack, onTransactionClick }: InboxScreenProps) {
   const { transactions, readReceiptIds, markAsRead } = useApp();
+  const { inboxMessages, fetchInboxMessages } = useStore();
   const [activeTab, setActiveTab] = useState<"receipts" | "notifications">(
     "receipts",
   );
+
+  useEffect(() => {
+    fetchInboxMessages();
+  }, [fetchInboxMessages]);
   const [selectedNotification, setSelectedNotification] = useState<{
     title: string;
     desc: string;
@@ -105,12 +115,14 @@ export function InboxScreen({ onBack, onTransactionClick }: InboxScreenProps) {
         {activeTab === "receipts" && (
           <ResiContent
             transactions={getReceipts()}
+            inboxMessages={inboxMessages}
             onTransactionClick={handleReceiptClick}
             readReceiptIds={readReceiptIds}
           />
         )}
         {activeTab === "notifications" && (
           <NotifikasiContent
+            inboxMessages={inboxMessages}
             onNotificationClick={(title, desc, date) =>
               setSelectedNotification({ title, desc, date })
             }
@@ -154,10 +166,12 @@ export function InboxScreen({ onBack, onTransactionClick }: InboxScreenProps) {
 
 function ResiContent({
   transactions,
+  inboxMessages = [],
   onTransactionClick,
   readReceiptIds = [],
 }: {
   transactions: any[];
+  inboxMessages?: any[];
   onTransactionClick?: (tx: any) => void;
   readReceiptIds?: string[];
 }) {
@@ -169,10 +183,26 @@ function ResiContent({
   
   const filterOptions = {
     status: ["All", "Success", "Failed"],
-    type: ["All", "Transfer", "Receive", "Swap", "Batch Transfer", "Mint NFT", "Purchase"]
+    type: ["All", "Transfer", "Receive", "Swap", "Batch Transfer", "Mint NFT", "Purchase", "Sales"]
   };
 
-  const visibleTransactions = transactions.filter((t) => {
+  // Convert inbox messages to receipt-like objects if they are of type 'receipt'
+  const convertedInbox = inboxMessages
+    .filter(msg => msg.type === "receipt" || msg.type === "settlement")
+    .map(msg => ({
+      id: msg.id,
+      title: msg.title,
+      type: msg.type === "settlement" ? "sales" : "purchase",
+      status: "success",
+      amount: msg.metadata?.amount || "0.00",
+      currency: "USDC",
+      metadata: msg.metadata,
+      isInbox: true
+    }));
+
+  const combinedItems = [...transactions, ...convertedInbox];
+
+  const visibleTransactions = combinedItems.filter((t) => {
     // Status check
     const statusMatch = filterState.status === "All" || 
       (filterState.status === "Success" && t.status === "success") ||
@@ -189,14 +219,15 @@ function ResiContent({
        "Swap": ["swap"],
        "Batch Transfer": ["batchTransfer"],
        "Mint NFT": ["mintNFT"],
-       "Purchase": ["purchase"]
+       "Purchase": ["purchase"],
+       "Sales": ["sales", "settlement"]
     };
 
     const targetTypes = typeMap[filterState.type] || [];
-    return targetTypes.some(type => t.type === type || t.title.toLowerCase().includes(filterState.type.toLowerCase()));
+    return targetTypes.some(type => t.type === type || t.title.toLowerCase().includes(filterState.type.toLowerCase()) || (t as any).isInbox && type === "sales");
   });
 
-  if (transactions.length === 0) {
+  if (combinedItems.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center p-8 mt-12 animate-in fade-in">
         <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-4">
@@ -341,12 +372,12 @@ function ResiContent({
                   icon={icon}
                   iconBgClass={iconBgClass}
                   title={tx.title}
-                  status={tx.status === "success" ? "Successful" : "Failed"}
+                  status={tx.status === "success" || tx.status === "COMPLETE" ? "Successful" : "Failed"}
                   amount={`${tx.amount} ${tx.currency}`}
                   onClick={() => onTransactionClick?.(tx)}
-                  isRead={isRead}
+                  isRead={isRead || (tx as any).isInbox}
                 />
-                {!isRead && (
+                {!isRead && !(tx as any).isInbox && (
                   <div className="absolute top-2 left-10 w-2 h-2 bg-slate-900 rounded-full border border-white z-20"></div>
                 )}
               </div>
@@ -419,20 +450,47 @@ function TransactionItem({
 
 function NotifikasiContent({
   onNotificationClick,
+  inboxMessages = [],
 }: {
   onNotificationClick?: (title: string, desc: string, date: string) => void;
+  inboxMessages?: any[];
 }) {
-  return (
-    <div className="flex flex-col items-center justify-center p-8 mt-12 animate-in fade-in duration-300">
-      <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-4">
-        <Info size={32} />
+  const notifications = inboxMessages.filter(m => m.type === "notification" || m.type === "system");
+
+  if (notifications.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 mt-12 animate-in fade-in duration-300">
+        <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-4">
+          <Info size={32} />
+        </div>
+        <h3 className="font-bold text-[16px] text-slate-800 mb-1">
+          No Notifications
+        </h3>
+        <p className="text-[13px] text-slate-500 text-center">
+          You don't have any new notifications.
+        </p>
       </div>
-      <h3 className="font-bold text-[16px] text-slate-800 mb-1">
-        No Notifications
-      </h3>
-      <p className="text-[13px] text-slate-500 text-center">
-        You don't have any new notifications.
-      </p>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3 px-4 py-6">
+      {notifications.map((msg) => (
+        <div
+          key={msg.id}
+          onClick={() => onNotificationClick?.(msg.title, msg.content, new Date(msg.created_at).toLocaleDateString())}
+          className="bg-white border border-slate-100 rounded-2xl p-4 flex gap-4 cursor-pointer hover:bg-slate-50 transition-colors shadow-sm"
+        >
+          <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
+            <Bell size={18} className="text-blue-600" />
+          </div>
+          <div className="flex flex-col gap-1 overflow-hidden">
+            <h5 className="font-bold text-[14px] text-slate-900 truncate">{msg.title}</h5>
+            <p className="text-[12px] text-slate-500 line-clamp-2">{msg.content}</p>
+            <span className="text-[10px] font-medium text-slate-400 mt-1">{new Date(msg.created_at).toLocaleDateString()}</span>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

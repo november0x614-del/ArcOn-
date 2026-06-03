@@ -95,6 +95,8 @@ interface AppState {
   updateProductStockAndSales: (productId: string | number, delta: number) => void;
   mintedNfts: MintedNFT[];
   fetchMintedNfts: () => Promise<void>;
+  inboxMessages: any[];
+  fetchInboxMessages: () => Promise<void>;
   favorites: any[];
   setFavorites: (favs: any[] | ((prev: any[]) => any[])) => void;
   deletedContactIds: string[];
@@ -131,6 +133,7 @@ export const useStore = create<AppState>()((set) => ({
       state.fetchPreferences();
       state.fetchPlatformConfig();
       state.fetchMintedNfts();
+      state.fetchInboxMessages();
     } else {
       set({
         readReceiptIds: [],
@@ -396,6 +399,20 @@ export const useStore = create<AppState>()((set) => ({
       set({ mintedNfts: Array.isArray(nfts) ? nfts : [] });
     } catch (e) {
       console.error("Failed to fetch NFTs from server", e);
+    }
+  },
+  inboxMessages: [],
+  fetchInboxMessages: async () => {
+    const user = useStore.getState().registeredUser;
+    if (!user?.supabaseUid) return;
+    try {
+      const response = await fetch(`/api/inbox/${user.supabaseUid}`);
+      if (response.ok) {
+        const data = await response.json();
+        set({ inboxMessages: Array.isArray(data) ? data : [] });
+      }
+    } catch (e) {
+      console.error("Failed to fetch inbox messages:", e);
     }
   },
   availableShortcuts: defaultAvailableShortcuts,

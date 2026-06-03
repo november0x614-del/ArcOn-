@@ -115,7 +115,7 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
       name: newProductName,
       price: priceNum,
       stock: stockNum,
-      image: newProductImage || "", // Remove hardcoded grocery image
+      image: newProductImage || "", 
       category: newProductCategory,
       sales: 0,
       desc: newProductDesc || "Secured product listed on Arc Testnet via Lounge Marketplace.",
@@ -123,6 +123,12 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
       seller_address: address,
       tx_hash: newProductTxHash
     };
+
+    // Check for duplicate listing locally first
+    if (products.some(p => (p.name === newProduct.name || (p.tx_hash && p.tx_hash === newProduct.tx_hash)) && p.category === newProduct.category && p.seller_address === address)) {
+      useStore.getState().displayToast("Duplicate Listing: This item or NFT is already in your inventory.");
+      return;
+    }
     
     try {
       await useStore.getState().saveProduct(newProduct);
@@ -212,7 +218,8 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
 
   const filteredProducts = products.filter(p => 
     p.seller_address?.toLowerCase() === address.toLowerCase() &&
-    p.name.toLowerCase().includes(searchQuery.toLowerCase())
+    p.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+    (p.category !== "NFT" || p.stock > 0) // Hide sold out NFTs from active inventory
   );
 
   // LDS Responsive Bottom Navigation for Mobile Devices
@@ -509,9 +516,15 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
                             {p.price} <span className="text-[10px] text-slate-400">USDC</span>
                          </span>
                          <div className="flex items-center gap-3">
-                            <span className="text-[10px] font-bold uppercase tracking-tight text-slate-400 flex items-center gap-1">
-                               <Package size={10} /> {p.stock}
-                            </span>
+                            {p.stock <= 0 ? (
+                               <span className="text-[10px] font-black uppercase tracking-tight text-rose-500 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-100">
+                                  Sold Out
+                               </span>
+                            ) : (
+                               <span className="text-[10px] font-bold uppercase tracking-tight text-slate-400 flex items-center gap-1">
+                                  <Package size={10} /> {p.stock}
+                               </span>
+                            )}
                             <span className="text-[10px] font-bold uppercase tracking-tight text-blue-500 flex items-center gap-1">
                                <TrendingUp size={10} /> {p.sales} Sold
                             </span>
@@ -701,10 +714,10 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
                 </div>
 
                 {/* Escrow Locks */}
-                <div className="bg-white p-6 rounded-[24px] border border-slate-100 shadow-sm text-left flex flex-col justify-between hover:shadow-md transition-all active:scale-[0.99] group">
+                 <div className="bg-white p-6 rounded-[24px] border border-slate-100 shadow-sm text-left flex flex-col justify-between hover:shadow-md transition-all active:scale-[0.99] group bg-gradient-to-br from-white to-blue-50/30">
                   <div className="flex items-center justify-between mb-4">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Escrow Locked</span>
-                    <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-blue-500 group-hover:text-white transition-all">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-blue-600">Total Escrow Protection</span>
+                    <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-all shadow-sm">
                       <Lock size={15} />
                     </div>
                   </div>
@@ -713,8 +726,12 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
                       {escrowedRevenue.toFixed(2)}
                     </h4>
                     <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mt-2">
-                      USDC Protected in Escrow
+                      USDC Waiting for Settlement
                     </span>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-slate-100/50 flex items-center gap-2">
+                     <ShieldCheck size={12} className="text-emerald-500" />
+                     <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Safe Platform Custody</span>
                   </div>
                 </div>
 
@@ -941,7 +958,7 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
                      <div className="bg-blue-50/40 p-4.5 rounded-2xl border border-blue-100/50 text-[12px] text-blue-800 leading-relaxed font-bold flex items-start gap-3">
                         <ShieldAlert size={16} className="text-blue-500 shrink-0 mt-0.5" />
                         <span>
-                          Biaya settlement gas ditalangi sepenuhnya oleh Wallet Server Controller menggunakan API Circle Gas Station. Toko Anda menerima laba utuh tanpa potongan testnet gas.
+                          Settlement gas fees are fully covered by the Wallet Server Controller using the Circle Gas Station API. Your store receives full profit without testnet gas deductions.
                         </span>
                      </div>
 
@@ -1075,10 +1092,10 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
                     {mintedNfts.filter(nft => !products.some(p => p.tx_hash === nft.txHash)).length === 0 ? (
                       <div className="bg-amber-50/50 rounded-2xl p-4 border border-amber-100 text-center space-y-2">
                         <p className="text-[12.5px] font-black text-amber-800 leading-snug">
-                          {mintedNfts.length === 0 ? "Kamu belum mencetak NFT apa pun" : "Semua NFT kamu sudah terdaftar di toko"}
+                          {mintedNfts.length === 0 ? "You haven't minted any NFTs yet" : "All your NFTs are already listed in the store"}
                         </p>
                         <p className="text-[10px] text-amber-600 font-bold uppercase tracking-wider">
-                          {mintedNfts.length === 0 ? "Silakan buka menu 'Mint NFT' utama terlebih dahulu!" : "Cek daftar inventory kamu!"}
+                          {mintedNfts.length === 0 ? "Visit the 'Mint NFT' section to create one!" : "Check your current inventory list!"}
                         </p>
                       </div>
                     ) : (
@@ -1129,7 +1146,7 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
                     type="text" 
                     value={newProductName}
                     onChange={(e) => setNewProductName(e.target.value)}
-                    placeholder="e.g. Fine Dark Roast, Avocado L1 NFT, dst."
+                    placeholder="e.g. Fine Dark Roast, Avocado L1 NFT, etc."
                     className="w-full bg-slate-50 border border-slate-150 focus:border-slate-300 focus:bg-white rounded-2xl px-4 py-3 text-[14px] font-bold text-slate-900 focus:outline-none focus:ring-4 focus:ring-slate-900/5 transition-all shadow-inner"
                   />
                 </div>

@@ -750,7 +750,9 @@ export function BatchTransferScreen({
 
             {/* Contacts List */}
             <div className="flex-1 overflow-y-auto px-5 py-2 divide-y divide-slate-100 scrollbar-hide">
-              {filteredModalContacts.map((contact) => {
+              {filteredModalContacts
+                .filter(contact => !recipients.some(r => r.address?.toLowerCase() === contact.number?.toLowerCase()))
+                .map((contact) => {
                 const isSelected = selectedQuickAddIds.includes(contact.id);
                 return (
                   <div
@@ -830,45 +832,30 @@ export function BatchTransferScreen({
                     selectedQuickAddIds.includes(c.id)
                   );
 
-                  if (newAmount) {
-                    // Instantly add to the recipient list with the preset amount
-                    const newItems = selectedContacts.map((contact) => {
-                      const fullAddr = contact.number;
-                      const formattedAddress = `${fullAddr.substring(0, 6)}...${fullAddr.substring(fullAddr.length - 4)}`;
+                  // Instantly add to the recipient list
+                  const newItems = selectedContacts.map((contact) => {
+                    const fullAddr = contact.number;
+                    const formattedAddress = `${fullAddr.substring(0, 6)}...${fullAddr.substring(fullAddr.length - 4)}`;
 
-                      return {
-                        id: `${fullAddr}-${Date.now()}-${Math.random()}`,
-                        address: fullAddr,
-                        displayAddress: formattedAddress,
-                        name: contact.name,
-                        amount: newAmount,
-                      };
-                    });
+                    return {
+                      id: `${fullAddr}-${Date.now()}-${Math.random()}`,
+                      address: fullAddr,
+                      displayAddress: formattedAddress,
+                      name: contact.name,
+                      amount: newAmount || "0", // Default to 0 if amount not preset
+                    };
+                  });
 
-                    setRecipients((prev) => [...prev, ...newItems]);
-                    setShowQuickAddModal(false);
-                    displayToast(
-                      `Berhasil menambahkan langsung ${selectedQuickAddIds.length} kontak ke daftar transfer batch!`
-                    );
-                  } else {
-                    // Fallback to populating the text area
-                    const selectedAddresses = selectedContacts
-                      .map((c) => c.number)
-                      .join(", ");
-
-                    setNewAddress((prev) =>
-                      prev ? `${prev}, ${selectedAddresses}` : selectedAddresses,
-                    );
-                    setShowQuickAddModal(false);
-                    displayToast(
-                      `Berhasil menyalin ${selectedQuickAddIds.length} alamat. Masukkan jumlah USDC untuk menambahkannya.`
-                    );
-                  }
+                  setRecipients((prev) => [...prev, ...newItems]);
+                  setShowQuickAddModal(false);
+                  displayToast(
+                    `Successfully added ${selectedQuickAddIds.length} contacts to your batch transfer list.`
+                  );
                 }}
                 disabled={selectedQuickAddIds.length === 0}
                 className="w-full bg-slate-900 border-0 hover:bg-slate-800 disabled:opacity-45 text-white py-4 rounded-full font-bold text-[15px] shadow-lg hover:shadow-xl transition-all active:scale-[0.98] cursor-pointer"
               >
-                Add Selected to Input ({selectedQuickAddIds.length})
+                Add Selected to Batch List ({selectedQuickAddIds.length})
               </button>
             </div>
           </div>
