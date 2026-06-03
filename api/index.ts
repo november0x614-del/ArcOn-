@@ -1,23 +1,10 @@
 import express from "express";
-import compression from "compression";
 import rateLimit from "express-rate-limit";
-import { getSupabaseAdmin, isUserBlocked } from "./config/supabase";
 import walletRoutes from "./routes/wallet.routes";
 import transactionRoutes from "./routes/transaction.routes";
 import adminRoutes from "./routes/admin.routes";
 import miscRoutes from "./routes/misc.routes";
 import ecommerceRoutes from "./routes/ecommerce.routes";
-
-// Re-export core services for server/other files that reference index
-export { getSupabaseAdmin, isUserBlocked };
-
-process.on("uncaughtException", (err) => {
-  console.error("Unhandled Exception:", err);
-});
-
-process.on("unhandledRejection", (reason, promise) => {
-  console.error("Unhandled Rejection at:", promise, "reason:", reason);
-});
 
 const app = express();
 app.set("trust proxy", 1); // Enable if you're behind a reverse proxy (Heroku, AWS, Nginx, or Google Cloud Run)
@@ -32,7 +19,6 @@ const apiLimiter = rateLimit({
 });
 
 // Middlewares
-app.use(compression()); // Compress all routes to optimize bandwidth and server load
 app.use(apiLimiter); // Apply rate limiter globally for API endpoints
 
 // For Circle's raw webhook, we use a custom verify callback in express.json() to capture the exact raw body Buffer on req.rawBody
