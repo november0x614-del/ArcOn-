@@ -19,7 +19,7 @@ async function getCirclePublicKey(
     {
       method: "GET",
       headers: {
-        Authorization: `Bearer ${process.env.CIRCLE_API_KEY}`,
+        Authorization: `Bearer ${process.env.CIRCLE_API_KEY?.trim()}`,
         "Content-Type": "application/json",
       },
     },

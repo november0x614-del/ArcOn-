@@ -5,8 +5,8 @@ import { initiateDeveloperControlledWalletsClient } from "@circle-fin/developer-
  * Ensures consistent configuration across the backend services.
  */
 export const getCircleClientInstance = () => {
-  const apiKey = process.env.CIRCLE_API_KEY;
-  const entitySecret = process.env.CIRCLE_ENTITY_SECRET;
+  const apiKey = process.env.CIRCLE_API_KEY?.trim();
+  const entitySecret = process.env.CIRCLE_ENTITY_SECRET?.trim();
 
   if (!apiKey || !entitySecret) {
     throw new Error(
@@ -27,7 +27,7 @@ export const circleApiFetch = async (
   endpoint: string,
   options: RequestInit = {},
 ) => {
-  const apiKey = process.env.CIRCLE_API_KEY;
+  const apiKey = process.env.CIRCLE_API_KEY?.trim();
   if (!apiKey) throw new Error("CIRCLE_API_KEY is required");
 
   const url = `https://api.circle.com${endpoint}`;

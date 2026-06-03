@@ -16,7 +16,8 @@ export function getSupabaseAdmin() {
       .replace(/\/rest\/v1\/?$/, "")
       .replace(/\/$/, "");
 
-    if (!cleanUrl || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+    if (!cleanUrl || !serviceRoleKey) {
       throw new Error(
         "Missing SUPABASE_URL / VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables.",
       );
@@ -24,7 +25,7 @@ export function getSupabaseAdmin() {
 
     supabaseAdminInstance = createClient(
       cleanUrl,
-      process.env.SUPABASE_SERVICE_ROLE_KEY,
+      serviceRoleKey,
       { auth: { autoRefreshToken: false, persistSession: false } },
     );
   }

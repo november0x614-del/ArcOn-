@@ -46,8 +46,8 @@ export const getAppKit = async () => {
   if (appKitInstance)
     return { appKit: appKitInstance, adapter: appKitAdapter! };
 
-  const apiKey = process.env.CIRCLE_API_KEY;
-  const entitySecret = process.env.CIRCLE_ENTITY_SECRET;
+  const apiKey = process.env.CIRCLE_API_KEY?.trim();
+  const entitySecret = process.env.CIRCLE_ENTITY_SECRET?.trim();
 
   const kitKey = getValidKitKey();
 
