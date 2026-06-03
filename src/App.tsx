@@ -88,10 +88,13 @@ export default function App() {
             } else {
               const errorData = await createRes.json();
               console.error("Auto-provisioning failed:", errorData);
+              const errMsg = errorData.error || errorData.message || JSON.stringify(errorData);
+              useStore.getState().displayToast(`Backend API Error: ${errMsg}`);
               // If it fails, we keep state empty and potentially show error later
             }
-          } catch (createErr) {
+          } catch (createErr: any) {
             console.error("System error during auto-provisioning:", createErr);
+            useStore.getState().displayToast(`Critical Error: Could not auto-provision wallet. Backend error: ${createErr.message || "Unknown"}`);
           }
         }
 
@@ -123,7 +126,6 @@ export default function App() {
           console.error(
             "Critical: User Logged In but No Wallet Found and Provisioning Failed.",
           );
-          useStore.getState().displayToast("Your account wallet could not be loaded. Missing Server Environment Variables (Vercel) or API Error.");
         }
 
       } catch (e) {

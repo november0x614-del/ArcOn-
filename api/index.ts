@@ -50,3 +50,5 @@ app.use("/", ecommerceRoutes);
 
 // Export Express App
 export default app;
+// @ts-ignore
+module.exports = app;

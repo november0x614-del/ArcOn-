@@ -11,14 +11,14 @@ let supabaseAdminInstance: any = null;
 
 export function getSupabaseAdmin() {
   if (!supabaseAdminInstance) {
-    const rawBackendUrl = process.env.VITE_SUPABASE_URL || "";
+    const rawBackendUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
     const cleanUrl = rawBackendUrl
       .replace(/\/rest\/v1\/?$/, "")
       .replace(/\/$/, "");
 
     if (!cleanUrl || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
       throw new Error(
-        "Missing VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables.",
+        "Missing SUPABASE_URL / VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables.",
       );
     }
 

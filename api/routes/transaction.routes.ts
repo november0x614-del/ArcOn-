@@ -14,13 +14,6 @@ import { logAuditEvent } from "../services/audit.js";
 import { getPlatformConfigs } from "./admin.routes.js";
 import * as crypto from "crypto";
 
-import {
-  executeAppKitSwap,
-  executeAppKitBridge,
-  executeAppKitSend,
-} from "../services/appkit.js";
-import { BridgeChain } from "@circle-fin/app-kit";
-
 const router = express.Router();
 
 async function getUserTodayTransferTotal(userId: string): Promise<number> {
@@ -211,6 +204,7 @@ router.post("/swap/execute", async (req, res) => {
     });
 
     try {
+      const { executeAppKitSwap, executeAppKitSend } = await import("../services/appkit.js");
       let txHash;
       let otcHash = null;
       try {
@@ -364,42 +358,10 @@ router.post("/transfer/execute", async (req, res) => {
     const fee = parseFloat(config?.withdrawFee?.replace(/[^0-9.]/g, "") || "0");
     const sponsored = !!config?.gasSubsidyEnabled;
 
-    // Add to pending queue in DB immediately (legacy for compatibility)
-    await supabaseAdmin.from("transactions").insert({
-      user_id: userId,
-      amount: `-${amount}`,
-      type: "transfer",
-      status: "pending",
-      internal_ref: internalRef,
-      metadata: {
-        recipientName: recipientName || "EVM Account",
-        destinationAddress,
-        memo,
-        real: true,
-        isAsync: true,
-        platformFee: fee,
-        gasSubsidy: sponsored,
-        sponsoredGas: sponsored,
-      },
-    });
-
-    // Write to the requested transaction_ledger
-    await supabaseAdmin.from("transaction_ledger").insert({
-      user_id: userId,
-      tx_type: "SEND",
-      amount: amount,
-      destination_address: destinationAddress,
-      circle_tx_id: internalRef,
-      status: "PENDING",
-      metadata: {
-        recipientName: recipientName || "EVM Account",
-        memo,
-      },
-    });
-
     // Run execution in background (Non-blocking as required by user prompt)
-    (async () => {
+    const runSend = async () => {
       try {
+        const { executeAppKitSend } = await import("../services/appkit.js");
         const txHash = await executeAppKitSend(
           userWallet.wallet_address,
           parseFloat(amount),
@@ -439,7 +401,42 @@ router.post("/transfer/execute", async (req, res) => {
           })
           .eq("circle_tx_id", internalRef);
       }
-    })();
+    };
+    
+    // Add to pending queue in DB immediately (legacy for compatibility)
+    await supabaseAdmin.from("transactions").insert({
+      user_id: userId,
+      amount: `-${amount}`,
+      type: "transfer",
+      status: "pending",
+      internal_ref: internalRef,
+      metadata: {
+        recipientName: recipientName || "EVM Account",
+        destinationAddress,
+        memo,
+        real: true,
+        isAsync: true,
+        platformFee: fee,
+        gasSubsidy: sponsored,
+        sponsoredGas: sponsored,
+      },
+    });
+
+    // Write to the requested transaction_ledger
+    await supabaseAdmin.from("transaction_ledger").insert({
+      user_id: userId,
+      tx_type: "SEND",
+      amount: amount,
+      destination_address: destinationAddress,
+      circle_tx_id: internalRef,
+      status: "PENDING",
+      metadata: {
+        recipientName: recipientName || "EVM Account",
+        memo,
+      },
+    });
+
+    runSend().catch(err => console.error("Uncaught error in runSend:", err));
 
     res.status(202).json({
       message: "App Kit Send queued",
@@ -743,10 +740,10 @@ router.post("/bridge/cctp", async (req, res) => {
     }
 
     // Convert destination domain to BridgeChain enum map
-    let targetChain = BridgeChain.Ethereum_Sepolia;
-    if (destinationDomain === 6) targetChain = BridgeChain.Base_Sepolia;
-    if (destinationDomain === 1) targetChain = BridgeChain.Avalanche_Fuji;
-    if (destinationDomain === 26) targetChain = BridgeChain.Arc_Testnet;
+    let targetChain: any = "Ethereum_Sepolia";
+    if (destinationDomain === 6) targetChain = "Base_Sepolia";
+    if (destinationDomain === 1) targetChain = "Avalanche_Fuji";
+    if (destinationDomain === 26) targetChain = "Arc_Testnet";
 
     const supabaseAdmin = getSupabaseAdmin();
     const { data: userWallet } = await supabaseAdmin
@@ -782,8 +779,9 @@ router.post("/bridge/cctp", async (req, res) => {
       metadata: { destinationDomain, targetChain: targetChain },
     });
 
-    (async () => {
+    const runBridge = async () => {
       try {
+        const { executeAppKitBridge } = await import("../services/appkit.js");
         const txHash = await executeAppKitBridge(
           userWallet.wallet_address,
           parseFloat(amount),
@@ -825,7 +823,9 @@ router.post("/bridge/cctp", async (req, res) => {
           })
           .eq("circle_tx_id", internalRef);
       }
-    })();
+    };
+    
+    runBridge().catch(err => console.error("Uncaught error in runBridge:", err));
 
     res.status(200).json({
       message: "CCTP Bridge via App Kit queued",
