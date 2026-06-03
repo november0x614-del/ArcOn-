@@ -1,10 +1,10 @@
 import express from "express";
 import rateLimit from "express-rate-limit";
-import walletRoutes from "./routes/wallet.routes";
-import transactionRoutes from "./routes/transaction.routes";
-import adminRoutes from "./routes/admin.routes";
-import miscRoutes from "./routes/misc.routes";
-import ecommerceRoutes from "./routes/ecommerce.routes";
+import walletRoutes from "./routes/wallet.routes.js";
+import transactionRoutes from "./routes/transaction.routes.js";
+import adminRoutes from "./routes/admin.routes.js";
+import miscRoutes from "./routes/misc.routes.js";
+import ecommerceRoutes from "./routes/ecommerce.routes.js";
 
 const app = express();
 app.set("trust proxy", 1); // Enable if you're behind a reverse proxy (Heroku, AWS, Nginx, or Google Cloud Run)

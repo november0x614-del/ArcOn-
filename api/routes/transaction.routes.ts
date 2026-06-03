@@ -1,24 +1,24 @@
 import express from "express";
-import { getSupabaseAdmin, isUserBlocked } from "../config/supabase";
+import { getSupabaseAdmin, isUserBlocked } from "../config/supabase.js";
 import {
   executeTransaction,
   executeAtomicBatchTransfer,
   ARC_USDC_TOKEN_ID,
-} from "../services/circle";
+} from "../services/circle.js";
 import {
   initiateOutboundBridge,
   finalizeInboundBridge,
-} from "../services/bridge";
-import { getCircleClientInstance } from "../services/circleClient";
-import { logAuditEvent } from "../services/audit";
-import { getPlatformConfigs } from "./admin.routes";
+} from "../services/bridge.js";
+import { getCircleClientInstance } from "../services/circleClient.js";
+import { logAuditEvent } from "../services/audit.js";
+import { getPlatformConfigs } from "./admin.routes.js";
 import * as crypto from "crypto";
 
 import {
   executeAppKitSwap,
   executeAppKitBridge,
   executeAppKitSend,
-} from "../services/appkit";
+} from "../services/appkit.js";
 import { BridgeChain } from "@circle-fin/app-kit";
 
 const router = express.Router();

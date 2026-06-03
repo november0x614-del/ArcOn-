@@ -21,7 +21,8 @@ function walk(dir) {
 const files = walk('./api');
 files.forEach((file) => {
   let content = fs.readFileSync(file, 'utf8');
-  content = content.replace(/\.js"/g, '"');
+  // replace relative imports to have .js at the end
+  content = content.replace(/from\s+['"](\..*?)(?:\.js)?['"]/g, 'from "$1.js"');
   fs.writeFileSync(file, content);
 });
 console.log('Fixed .js imports');
