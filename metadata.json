@@ -2,5 +2,7 @@
   "name": "Lounge",
   "description": "Lounge - A Web3 e-commerce SPA integrated with Circle Programmable Wallets via Arc App Kit, delivering a seamless Web2-like UX with server-side custodial custody.",
   "requestFramePermissions": ["camera", "microphone"],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

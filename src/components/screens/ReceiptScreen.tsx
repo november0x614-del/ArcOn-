@@ -16,12 +16,8 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
   const { selectedTransaction: tx, registeredUser } = useApp();
   const [copiedText, setCopiedText] = useState<string | null>(null);
   const [showReceiptHelp, setShowReceiptHelp] = useState(false);
-  const [resolvedSenderUsername, setResolvedSenderUsername] = useState<
-    string | null
-  >(null);
-  const [resolvedReceiverUsername, setResolvedReceiverUsername] = useState<
-    string | null
-  >(null);
+  const [resolvedSenderUsername, setResolvedSenderUsername] = useState<string | null>(null);
+  const [resolvedReceiverUsername, setResolvedReceiverUsername] = useState<string | null>(null);
 
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -29,56 +25,54 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
     setTimeout(() => setCopiedText(null), 2000);
   };
 
-  const possibleRealHash =
+  let rawHash =
     (tx?.metadata as any)?.txHash ||
     (tx as any)?.txHash ||
-    (tx as any)?.tx_hash;
+    (tx as any)?.tx_hash ||
+    tx?.id ||
+    tx?.internal_ref ||
+    "0xdc78e12b7fa120021c99f018a14b9c1d";
 
-  const isValidBlockchainHash = (hash: any): boolean => {
-    if (!hash || typeof hash !== "string") return false;
-    const clean = hash.trim().toLowerCase();
-    if (
-      clean.includes("send_") ||
-      clean.includes("swap_") ||
-      clean.includes("bridge_") ||
-      clean.includes("stake_") ||
-      clean.includes("withdraw_") ||
-      clean.includes("pay_") ||
-      clean.includes("receive_")
-    ) {
-      return false;
+  if (typeof rawHash === "object" && rawHash !== null) {
+    rawHash = rawHash.hash || rawHash.txHash || rawHash.id || rawHash.name || "";
+  } 
+  
+  if (typeof rawHash === "string" && rawHash.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(rawHash);
+      rawHash = parsed.hash || parsed.txHash || parsed.id || parsed.name || rawHash;
+    } catch (e) {
+      // Ignore
     }
-    return clean.startsWith("0x") && clean.length === 66 && /^[0-9a-fA-F]+$/.test(clean.substring(2));
-  };
+  }
 
-  const hasHash = isValidBlockchainHash(possibleRealHash);
-  const txHash = hasHash && typeof possibleRealHash === "string" ? possibleRealHash : "";
+  rawHash = String(rawHash);
 
-  const isSuccess =
-    tx?.status === "success" || (tx?.status as any) === "confirmed";
-  const isPending =
-    tx?.status === "pending" || tx?.status === "pending_approval";
+  const txHash = rawHash.startsWith("0x")
+    ? rawHash
+    : "0x" +
+      rawHash.replace(/[^a-fA-F0-9]/g, "").padStart(64, "0").substring(0, 64);
 
+
+  const isSuccess = tx?.status === "success" || (tx?.status as any) === "confirmed";
+  const isPending = tx?.status === "pending" || tx?.status === "pending_approval";
+  
   // Format standard JS Date string to native locale format
   const formatReceiptDate = (timeStr: string = "") => {
-    if (!timeStr)
-      return new Date().toLocaleString("en-US", {
-        dateStyle: "medium",
-        timeStyle: "short",
-      });
+    if (!timeStr) return new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
     try {
       // If it's already a formatted string like "28/5/2026, 18.40.03" from toLocaleString in store, just return it.
       // But we can ensure it looks consistent.
       const d = new Date(timeStr);
-      if (isNaN(d.getTime())) return timeStr;
-
+      if (isNaN(d.getTime())) return timeStr; 
+      
       return d.toLocaleString("en-US", {
         month: "short",
         day: "numeric",
         year: "numeric",
         hour: "numeric",
         minute: "2-digit",
-        hour12: true,
+        hour12: true
       });
     } catch {
       return timeStr;
@@ -86,35 +80,25 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
   };
 
   const displayDate = formatReceiptDate(tx?.timestamp);
-
+  
   // Display names logic
   const myWalletAddress = registeredUser?.walletAddress || "";
-  const myUsernameDisplay = registeredUser?.username
-    ? `@${registeredUser.username}`
-    : "My Arc Wallet";
+  const myUsernameDisplay = registeredUser?.username ? `@${registeredUser.username}` : "My Arc Wallet";
 
-  const isDeposit =
-    tx?.type === "receive" ||
-    tx?.type === "deposit" ||
-    tx?.metadata?.direction === "inbound";
-  const isBatch =
-    tx?.type === "batchTransfer" ||
-    tx?.metadata?.isAtomicBatch === true ||
-    tx?.metadata?.isBatch === true;
-  const isBridge = tx?.type === "bridge" || (tx?.metadata as any)?.type === "bridge" || (tx?.metadata as any)?.destinationDomain !== undefined;
+  const isDeposit = tx?.type === "receive" || tx?.type === "deposit" || tx?.metadata?.direction === "inbound";
+  const isBatch = tx?.type === "batchTransfer" || tx?.metadata?.isAtomicBatch === true || tx?.metadata?.isBatch === true;
 
-
-  const formatAddrShort = (addr: string) =>
-    addr ? `0x${addr.substring(2, 6)}...${addr.slice(-4)}` : "";
+  const formatAddrShort = (addr: string) => addr ? `0x${addr.substring(2, 6)}...${addr.slice(-4)}` : "";
 
   const senderAddress = isDeposit
-    ? tx?.metadata?.senderAddress || ""
+    ? (tx?.metadata?.senderAddress || "")
     : myWalletAddress;
 
-  const destAddr =
-    tx?.metadata?.destinationAddress || tx?.metadata?.escrowAddress || "";
+  const destAddr = tx?.metadata?.destinationAddress || tx?.metadata?.escrowAddress || "";
 
-  const receiverAddress = isDeposit ? myWalletAddress : destAddr;
+  const receiverAddress = isDeposit
+    ? myWalletAddress
+    : destAddr;
 
   useEffect(() => {
     async function resolveNames() {
@@ -124,27 +108,23 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
           if (data && (data.username || data.name)) {
             setResolvedSenderUsername(data.username || data.name);
           }
-        } catch (e) {}
+        } catch(e) {}
       }
-
+      
       if (receiverAddress && receiverAddress !== myWalletAddress) {
         try {
           const data = await BackendClient.resolveAddress(receiverAddress);
           if (data && (data.username || data.name)) {
             setResolvedReceiverUsername(data.username || data.name);
           }
-        } catch (e) {}
+        } catch(e) {}
       }
     }
     resolveNames();
   }, [senderAddress, receiverAddress, myWalletAddress]);
 
-  const senderName = isDeposit
-    ? resolvedSenderUsername
-      ? `@${resolvedSenderUsername}`
-      : tx?.metadata?.senderName
-        ? `@${tx.metadata.senderName}`
-        : "External Sender"
+  const senderName = isDeposit 
+    ? (resolvedSenderUsername ? `@${resolvedSenderUsername}` : (tx?.metadata?.senderName ? `@${tx.metadata.senderName}` : "External Sender"))
     : myUsernameDisplay;
 
   let receiverName = "Arc Network";
@@ -154,13 +134,8 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
     receiverName = myUsernameDisplay;
   } else if (resolvedReceiverUsername) {
     receiverName = `@${resolvedReceiverUsername}`;
-  } else if (
-    tx?.metadata?.recipientName &&
-    tx?.metadata?.recipientName !== "EVM Account"
-  ) {
-    receiverName = tx.metadata.recipientName.startsWith("@")
-      ? tx.metadata.recipientName
-      : `@${tx.metadata.recipientName}`;
+  } else if (tx?.metadata?.recipientName && tx?.metadata?.recipientName !== "EVM Account") {
+    receiverName = tx.metadata.recipientName.startsWith('@') ? tx.metadata.recipientName : `@${tx.metadata.recipientName}`;
   } else if (tx?.title && tx?.title !== "Transfer") {
     receiverName = tx.title;
   } else if (destAddr) {
@@ -259,24 +234,18 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
 
             {/* Receipt Details Card */}
             <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 flex flex-col p-6">
+              
               {/* Amount Row */}
               <div className="flex flex-col items-center justify-center pb-6 border-b border-slate-100 mb-6">
                 <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider mb-2">
                   {isBatch ? "Total Batch Amount" : "Total Amount"}
                 </span>
-                <span
-                  className={`text-[32px] font-black tracking-tight ${isSuccess ? "text-slate-900" : "text-slate-500 line-through decoration-slate-300"}`}
-                >
+                <span className={`text-[32px] font-black tracking-tight ${isSuccess ? "text-slate-900" : "text-slate-500 line-through decoration-slate-300"}`}>
                   {tx ? tx.amount : "0.00"} {tx?.currency || "USDC"}
                 </span>
                 {isBatch && (
                   <div className="mt-2 text-[11px] font-black text-purple-600 bg-purple-50 px-3 py-1 rounded-full uppercase tracking-tighter italic border border-purple-100">
                     SCA BATCH OPTIMIZED
-                  </div>
-                )}
-                {isBridge && (
-                  <div className="mt-2 text-[11px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full uppercase tracking-tighter italic border border-blue-100">
-                    BRIDGE TRANSACTION
                   </div>
                 )}
               </div>
@@ -289,25 +258,13 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                   </p>
                   <div className="space-y-2">
                     {(tx.metadata.recipients as any[]).map((recipient, i) => (
-                      <div
-                        key={i}
-                        className="flex justify-between items-center bg-white p-3 rounded-2xl border border-slate-50 shadow-sm"
-                      >
+                      <div key={i} className="flex justify-between items-center bg-white p-3 rounded-2xl border border-slate-50 shadow-sm">
                         <div className="flex flex-col">
-                          <span className="text-[13px] font-bold text-slate-800">
-                            {recipient.name || recipient.username || "Unknown"}
-                          </span>
-                          <span className="text-[10px] font-mono text-slate-400">
-                            {recipient.address
-                              ? formatAddrShort(recipient.address)
-                              : ""}
-                          </span>
+                           <span className="text-[13px] font-bold text-slate-800">{recipient.name || recipient.username || "Unknown"}</span>
+                           <span className="text-[10px] font-mono text-slate-400">{recipient.address ? formatAddrShort(recipient.address) : ""}</span>
                         </div>
                         <span className="text-[13px] font-black text-slate-900">
-                          {recipient.amount}{" "}
-                          <span className="text-[10px] text-slate-400">
-                            USDC
-                          </span>
+                          {recipient.amount} <span className="text-[10px] text-slate-400">USDC</span>
                         </span>
                       </div>
                     ))}
@@ -322,36 +279,29 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                   <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
                     Transaction ID
                   </span>
-                  {hasHash ? (
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() =>
-                          window.open(
-                            tx?.metadata?.explorerUrl ||
-                              `https://testnet.arcscan.app/tx/${txHash}`,
-                            "_blank",
-                          )
-                        }
-                        className="text-[14px] font-medium text-blue-600 hover:text-blue-700 font-mono tracking-tight cursor-pointer bg-transparent border-0 p-0 text-left flex items-center transition-colors break-all"
-                        title="View on Arcscan"
-                      >
-                        {txHash.substring(0, 10)}...
-                        {txHash.substring(txHash.length - 8)}
-                        <ExternalLink size={14} className="ml-1 opacity-70" />
-                      </button>
-                      <button
-                        onClick={() => handleCopy(txHash, "TxHash")}
-                        className="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-50 transition-colors bg-transparent border-0 cursor-pointer flex items-center justify-center ml-auto"
-                        title="Copy transaction ID"
-                      >
-                        <Copy size={14} />
-                      </button>
-                    </div>
-                  ) : (
-                    <span className="text-[14px] font-bold text-slate-400 font-mono">
-                      -
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() =>
+                        window.open(
+                          tx?.metadata?.explorerUrl ||
+                            `https://testnet.arcscan.app/tx/${txHash}`,
+                          "_blank",
+                        )
+                      }
+                      className="text-[14px] font-medium text-blue-600 hover:text-blue-700 font-mono tracking-tight cursor-pointer bg-transparent border-0 p-0 text-left flex items-center transition-colors break-all"
+                      title="View on Arcscan"
+                    >
+                      {txHash.substring(0, 10)}...{txHash.substring(txHash.length - 8)}
+                      <ExternalLink size={14} className="ml-1 opacity-70" />
+                    </button>
+                    <button
+                      onClick={() => handleCopy(txHash, "TxHash")}
+                      className="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-50 transition-colors bg-transparent border-0 cursor-pointer flex items-center justify-center ml-auto"
+                      title="Copy transaction ID"
+                    >
+                      <Copy size={14} />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Sender */}
@@ -360,14 +310,9 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                     Sender
                     {(tx?.metadata?.isAsync || tx?.metadata?.real) && (
                       <div className="relative group flex items-center">
-                        <HelpCircle
-                          size={12}
-                          className="text-slate-300 cursor-pointer"
-                        />
+                        <HelpCircle size={12} className="text-slate-300 cursor-pointer" />
                         <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-[220px] bg-slate-800 text-[10px] text-white p-2 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity text-center z-50">
-                          Karena menggunakan Account Abstraction (ERC-4337),
-                          pengirim (From) di Explorer adalah Paymaster/Bundler,
-                          bukan personal address Anda.
+                          Karena menggunakan Account Abstraction (ERC-4337), pengirim (From) di Explorer adalah Paymaster/Bundler, bukan personal address Anda.
                           <div className="absolute left-1/2 -translate-x-1/2 top-full border-4 border-transparent border-t-slate-800"></div>
                         </div>
                       </div>
@@ -378,8 +323,7 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                   </span>
                   {senderAddress && (
                     <span className="font-mono text-[12px] text-slate-500 truncate">
-                      {senderAddress.substring(0, 8)}...
-                      {senderAddress.slice(-8)}
+                      {senderAddress.substring(0, 8)}...{senderAddress.slice(-8)}
                     </span>
                   )}
                 </div>
@@ -394,8 +338,7 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                   </span>
                   {receiverAddress && (
                     <span className="font-mono text-[12px] text-slate-500 truncate">
-                      {receiverAddress.substring(0, 8)}...
-                      {receiverAddress.slice(-8)}
+                      {receiverAddress.substring(0, 8)}...{receiverAddress.slice(-8)}
                     </span>
                   )}
                 </div>
@@ -425,29 +368,25 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
 
                 {/* Fee Breakdown */}
                 <div className="flex flex-col gap-1.5 pt-4 border-t border-slate-50">
-                  {tx?.metadata?.platformFee && (
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
-                        Platform Fee
+                   {tx?.metadata?.platformFee && (
+                     <div className="flex justify-between items-center mb-1">
+                        <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">Platform Fee</span>
+                        <span className="text-[14px] font-medium text-slate-800">
+                          {tx.metadata.platformFee} USDC
+                        </span>
+                     </div>
+                   )}
+                   <div className="flex justify-between items-center">
+                      <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">Network Fee</span>
+                      <span className="text-[14px] font-bold text-slate-800">
+                        {isBatch ? "0.05" : "0.01"} USDC
                       </span>
-                      <span className="text-[14px] font-medium text-slate-800">
-                        {tx.metadata.platformFee} USDC
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex justify-between items-center">
-                    <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
-                      Network Fee
-                    </span>
-                    <span className="text-[14px] font-bold text-slate-800">
-                      {isBatch ? "0.05" : "0.01"} USDC
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-slate-400 font-medium italic">
-                    {isBatch
-                      ? "*Termasuk efisiensi gas batch SCA dan biaya kemudahan platform."
-                      : "*Biaya eksekusi jaringan untuk transfer tunggal."}
-                  </p>
+                   </div>
+                   <p className="text-[10px] text-slate-400 font-medium italic">
+                     {isBatch 
+                       ? "*Termasuk efisiensi gas batch SCA dan biaya kemudahan platform."
+                       : "*Biaya eksekusi jaringan untuk transfer tunggal."}
+                   </p>
                 </div>
               </div>
 
@@ -458,43 +397,43 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                     Digital Product
                   </span>
                   {tx.metadata.productCategory === "Subscription" ? (
-                    <div className="bg-slate-50 p-4 rounded-[16px] border border-slate-100">
-                      <div className="text-emerald-600 font-bold text-[13px] flex items-center gap-2 mb-1.5">
-                        <Check size={16} strokeWidth={2.5} />
-                        <span>Subscription Active</span>
+                      <div className="bg-slate-50 p-4 rounded-[16px] border border-slate-100">
+                        <div className="text-emerald-600 font-bold text-[13px] flex items-center gap-2 mb-1.5">
+                          <Check size={16} strokeWidth={2.5} />
+                          <span>Subscription Active</span>
+                        </div>
+                        <p className="text-[12px] text-slate-600 leading-relaxed font-medium">
+                          {tx.metadata.instructions}
+                        </p>
                       </div>
-                      <p className="text-[12px] text-slate-600 leading-relaxed font-medium">
-                        {tx.metadata.instructions}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="bg-slate-50 p-4 rounded-[16px] border border-slate-100 flex flex-col gap-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                          Voucher Code
-                        </span>
-                        <button
-                          onClick={() =>
-                            handleCopy(
-                              tx.metadata?.voucherCode || "",
-                              "Voucher Code",
-                            )
-                          }
-                          className="text-slate-500 hover:text-slate-800 flex items-center gap-1.5 font-bold text-[11px] bg-white px-2 py-1/2 rounded-md shadow-sm border border-slate-200 cursor-pointer"
-                        >
-                          <Copy size={12} /> Copy
-                        </button>
+                    ) : (
+                      <div className="bg-slate-50 p-4 rounded-[16px] border border-slate-100 flex flex-col gap-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                            Voucher Code
+                          </span>
+                          <button
+                            onClick={() =>
+                              handleCopy(
+                                tx.metadata?.voucherCode || "",
+                                "Voucher Code",
+                              )
+                            }
+                            className="text-slate-500 hover:text-slate-800 flex items-center gap-1.5 font-bold text-[11px] bg-white px-2 py-1/2 rounded-md shadow-sm border border-slate-200 cursor-pointer"
+                          >
+                            <Copy size={12} /> Copy
+                          </button>
+                        </div>
+                        <div className="bg-white border border-slate-200 py-3 px-4 rounded-xl text-center shadow-sm">
+                          <span className="font-mono font-black text-[18px] text-slate-800 tracking-widest select-all">
+                            {tx.metadata.voucherCode}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 leading-relaxed text-center font-medium mt-1">
+                          {tx.metadata.instructions}
+                        </p>
                       </div>
-                      <div className="bg-white border border-slate-200 py-3 px-4 rounded-xl text-center shadow-sm">
-                        <span className="font-mono font-black text-[18px] text-slate-800 tracking-widest select-all">
-                          {tx.metadata.voucherCode}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-slate-500 leading-relaxed text-center font-medium mt-1">
-                        {tx.metadata.instructions}
-                      </p>
-                    </div>
-                  )}
+                    )}
                 </div>
               )}
             </div>

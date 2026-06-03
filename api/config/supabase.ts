@@ -1,11 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
-import dotenv from "dotenv";
+import * as dotenv from "dotenv";
 
-try {
-  dotenv.config();
-} catch (e) {
-  console.warn("Dotenv load warning:", e);
-}
+dotenv.config();
 
 let supabaseAdminInstance: any = null;
 

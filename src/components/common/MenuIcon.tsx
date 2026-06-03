@@ -12,7 +12,6 @@ export interface MenuIconProps {
   isTextIcon?: boolean;
   textIcon?: string;
   onClick?: () => void;
-  isActive?: boolean;
 }
 
 export const MenuIcon = React.memo(function MenuIcon({
@@ -25,7 +24,6 @@ export const MenuIcon = React.memo(function MenuIcon({
   isTextIcon = false,
   textIcon = "",
   onClick,
-  isActive = false,
 }: MenuIconProps) {
   return (
     <div
@@ -33,10 +31,9 @@ export const MenuIcon = React.memo(function MenuIcon({
       onClick={onClick}
     >
       <div
-        className={`w-[52px] h-[52px] rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-110 shadow-sm
+        className={`w-[52px] h-[52px] rounded-full flex items-center justify-center transition-transform group-hover:scale-105 shadow-sm
         ${bgCircle ? bgCircle : "bg-slate-50 border border-slate-100"} 
         ${color}
-        ${isActive ? "shadow-[0_8px_20px_rgba(15,23,42,0.12)] -translate-y-1.5 scale-110 !bg-white border-slate-200" : ""}
       `}
       >
         {isTextIcon ? (

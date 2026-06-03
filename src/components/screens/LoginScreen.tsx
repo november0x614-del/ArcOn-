@@ -30,12 +30,8 @@ export function LoginScreen({
         <div className="absolute bottom-[-30px] left-[-30px] w-[150px] h-[150px] bg-blue-400/30 rounded-full blur-xl"></div>
 
         <div className="z-10 bg-white/20 p-4 rounded-3xl backdrop-blur-md mb-6 border border-white/30 shadow-[0_8px_32px_rgba(0,0,0,0.1)]">
-          <div className="bg-white rounded-2xl shadow-sm w-[80px] h-[80px] overflow-hidden">
-            <img
-              src="/logo.png"
-              alt="Logo"
-              className="w-full h-full object-cover"
-            />
+          <div className="bg-white text-slate-800 p-3 rounded-2xl shadow-sm">
+            <Wallet size={36} strokeWidth={2.5} />
           </div>
         </div>
 
@@ -56,54 +52,52 @@ export function LoginScreen({
       </div>
 
       {/* Bottom Area: Login Controls */}
-      <div className="flex-1 px-6 pt-8 pb-10 flex flex-col justify-end items-center bg-white">
-        <div className="w-full max-w-[500px] flex flex-col justify-end h-full">
-          <div className="flex flex-col gap-4">
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              disabled={isLoading}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-[#f8fafc] border-[1.5px] border-slate-200 rounded-2xl py-4 px-5 text-slate-800 text-[15px] font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-100/50 shadow-sm transition-all"
-            />
+      <div className="flex-1 px-6 pt-8 pb-10 flex flex-col justify-end bg-white">
+        <div className="flex flex-col gap-4">
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            disabled={isLoading}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full bg-[#f8fafc] border-[1.5px] border-slate-200 rounded-2xl py-4 px-5 text-slate-800 text-[15px] font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-100/50 shadow-sm transition-all"
+          />
 
-            <button
-              onClick={() => onLogin(email)}
-              disabled={isLoading || !email}
-              className={`w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl transition-all shadow-[0_8px_20px_rgba(63,162,246,0.25)] flex justify-center items-center gap-2 active:scale-[0.98] border-0 ${isLoading || !email ? "opacity-70 cursor-not-allowed" : ""}`}
-            >
-              {isLoading ? (
-                <Loader2 size={18} className="animate-spin" />
-              ) : (
-                <>
-                  Access Account <ChevronRight size={18} strokeWidth={2.5} />
-                </>
-              )}
-            </button>
+          <button
+            onClick={() => onLogin(email)}
+            disabled={isLoading || !email}
+            className={`w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl transition-all shadow-[0_8px_20px_rgba(63,162,246,0.25)] flex justify-center items-center gap-2 active:scale-[0.98] border-0 ${isLoading || !email ? "opacity-70 cursor-not-allowed" : ""}`}
+          >
+            {isLoading ? (
+              <Loader2 size={18} className="animate-spin" />
+            ) : (
+              <>
+                Access Account <ChevronRight size={18} strokeWidth={2.5} />
+              </>
+            )}
+          </button>
 
-            <button
-              onClick={handleRegisterClick}
-              disabled={isLoading}
-              className={`w-full font-bold py-4 rounded-2xl transition-all flex justify-center items-center active:scale-[0.98] border-0 bg-slate-100 hover:bg-slate-200 text-slate-800
-                ${isLoading ? "opacity-70 cursor-not-allowed" : ""}`}
-            >
-              Sign Up
-            </button>
-          </div>
-
-          <p className="text-[11px] text-center text-slate-400 font-medium mt-10 leading-relaxed">
-            By logging in or registering, you agree to our <br />
-            <span className="text-slate-800 cursor-pointer hover:underline">
-              Terms of Service
-            </span>{" "}
-            and{" "}
-            <span className="text-slate-800 cursor-pointer hover:underline">
-              Privacy Policy
-            </span>
-            .
-          </p>
+          <button
+            onClick={handleRegisterClick}
+            disabled={isLoading}
+            className={`w-full font-bold py-4 rounded-2xl transition-all flex justify-center items-center active:scale-[0.98] border-0 bg-slate-100 hover:bg-slate-200 text-slate-800
+              ${isLoading ? "opacity-70 cursor-not-allowed" : ""}`}
+          >
+            Sign Up
+          </button>
         </div>
+
+        <p className="text-[11px] text-center text-slate-400 font-medium mt-10 leading-relaxed">
+          By logging in or registering, you agree to our <br />
+          <span className="text-slate-800 cursor-pointer hover:underline">
+            Terms of Service
+          </span>{" "}
+          and{" "}
+          <span className="text-slate-800 cursor-pointer hover:underline">
+            Privacy Policy
+          </span>
+          .
+        </p>
       </div>
     </div>
   );

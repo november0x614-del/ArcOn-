@@ -1,7 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { useShallow } from "zustand/react/shallow";
-import { useStore } from "../../store/useStore";
 import { ViewState, ShortcutItem } from "../../types";
 import { useApp } from "../../contexts/AppContext";
 import { useArc } from "../../contexts/ArcContext";
@@ -31,9 +29,6 @@ import {
   RefreshCw,
   Box,
   Coins,
-  ChevronDown as ChevronDownIcon,
-  ChevronUp as ChevronUpIcon,
-  Plus,
 } from "lucide-react";
 
 export interface HomeScreenProps {
@@ -41,8 +36,6 @@ export interface HomeScreenProps {
   selectedShortcuts: ShortcutItem[];
   onNavigate: (view: ViewState) => void;
   platformConfig?: any;
-  desktopRightColumn?: React.ReactNode;
-  activeView?: ViewState;
 }
 
 export const HomeScreen = React.memo(
@@ -51,8 +44,6 @@ export const HomeScreen = React.memo(
     selectedShortcuts,
     onNavigate,
     platformConfig,
-    desktopRightColumn,
-    activeView,
   }: HomeScreenProps) => {
     const {
       transactions,
@@ -66,21 +57,7 @@ export const HomeScreen = React.memo(
       stopSyncPolling,
       isSyncing,
       lastSyncTime,
-    } = useStore(
-      useShallow((state) => ({
-        transactions: state.transactions,
-        visibleTokenCodes: state.visibleTokenCodes,
-        setVisibleTokenCodes: state.setVisibleTokenCodes,
-        fetchTransactions: state.fetchTransactions,
-        readReceiptIds: state.readReceiptIds,
-        displayToast: state.displayToast,
-        registeredUser: state.registeredUser,
-        startSyncPolling: state.startSyncPolling,
-        stopSyncPolling: state.stopSyncPolling,
-        isSyncing: state.isSyncing,
-        lastSyncTime: state.lastSyncTime,
-      })),
-    );
+    } = useApp();
 
     const { refreshBalance } = useArc();
 
@@ -94,7 +71,7 @@ export const HomeScreen = React.memo(
     }
 
     const unreadCount = transactions.filter(
-      (tx) => (tx.status === "success" || tx.status === "failed") && !readReceiptIds.includes(tx.id),
+      (tx) => !readReceiptIds.includes(tx.id),
     ).length;
 
     useEffect(() => {
@@ -114,7 +91,7 @@ export const HomeScreen = React.memo(
           startSyncPolling();
         }
       };
-
+      
       window.addEventListener("focus", handleFocus);
       document.addEventListener("visibilitychange", handleVisibilityChange);
 
@@ -122,15 +99,11 @@ export const HomeScreen = React.memo(
         // Only stop if the component is actually unmounting permanently
         // or let the global store handle session logic
         window.removeEventListener("focus", handleFocus);
-        document.removeEventListener(
-          "visibilitychange",
-          handleVisibilityChange,
-        );
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
       };
     }, []); // Run once on mount
 
     const [activeRekeningTab, setActiveRekeningTab] = useState(0);
-    const [otherAccountsExpanded, setOtherAccountsExpanded] = useState(false);
 
     const [currentPromoIndex, setCurrentPromoIndex] = useState(0);
     const promoScrollRef = useRef<HTMLDivElement>(null);
@@ -272,7 +245,7 @@ export const HomeScreen = React.memo(
         if (label === "Withdraw") {
           return platformConfig.withdrawEnabled !== false;
         }
-        if (label === "ATM" || label === "CCPT Bridge") {
+        if (label === "Bridge USDC") {
           return platformConfig.bridgeEnabled !== false;
         }
         if (label === "Staking Pool") {
@@ -349,34 +322,26 @@ export const HomeScreen = React.memo(
           >
             <div className="flex items-center gap-1">
               <div className="relative flex h-1.5 w-1.5">
-                <span
-                  className={`absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 ${isSyncing ? "animate-ping" : ""}`}
-                ></span>
-                <span
-                  className={`relative inline-flex rounded-full h-1.5 w-1.5 ${isSyncing ? "bg-emerald-400" : "bg-emerald-600"}`}
-                ></span>
+                <span className={`absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 ${isSyncing ? "animate-ping" : ""}`}></span>
+                <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${isSyncing ? "bg-emerald-400" : "bg-emerald-600"}`}></span>
               </div>
               <span className="text-[8px] font-bold text-emerald-400 uppercase tracking-wider leading-none">
                 {isSyncing ? "Syncing..." : "In Sync"}
               </span>
             </div>
             <span className="text-[7px] text-white/60 font-medium mt-0.5">
-              {lastSyncTime
-                ? `Last update: ${lastSyncTime.toLocaleTimeString()}`
-                : "Arc Network Testnet"}
+              {lastSyncTime ? `Last update: ${lastSyncTime.toLocaleTimeString()}` : "Arc Network Testnet"}
             </span>
           </a>
         </header>
 
         {/* Scrollable Main Content */}
         <div className="flex-1 overflow-y-auto pb-[140px] pt-0 scrollbar-hide z-20 md:px-4 lg:px-6 relative">
-          <div className="flex flex-col lg:grid lg:grid-cols-12 lg:gap-6 mt-4">
+          <div className="flex flex-col lg:grid lg:grid-cols-12 lg:gap-6">
             {/* Left Column for Desktop */}
             <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-3">
-              {/* Wrapping Accounts & Favorites for precise height alignment with Right Column feature popup on Desktop */}
-              <div className="flex flex-col gap-3 shrink-0">
-                {/* Accounts Section */}
-                <section className="bg-white rounded-[24px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] mx-4 lg:mx-0 border border-slate-50/50">
+              {/* Accounts Section */}
+              <section className="bg-white rounded-[24px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] mx-4 lg:mx-0 border border-slate-50/50 mt-4">
                 <div className="flex justify-between items-center mb-3">
                   <h2 className="text-[17px] font-bold text-slate-800 tracking-tight">
                     Accounts
@@ -455,60 +420,68 @@ export const HomeScreen = React.memo(
                     </motion.div>
                   )}
 
-                    {/* Real Recent Orders Section removed per user request */}
-                  </AnimatePresence>
-
-                <div className="mt-1 px-1">
-                  <button
-                    onClick={() => setOtherAccountsExpanded(!otherAccountsExpanded)}
-                    className="w-full text-center text-slate-700 hover:text-slate-900 text-[12.5px] font-bold py-2 hover:bg-slate-50/80 rounded-xl transition-all active:scale-[0.98] flex justify-center items-center gap-2 border-[1.5px] border-slate-100 bg-white shadow-sm mt-2 cursor-pointer"
-                  >
-                    <span>Other Personal Savings & Checking</span>
-                    {otherAccountsExpanded ? (
-                      <ChevronUpIcon size={14} className="text-slate-500 transition-transform duration-300" />
-                    ) : (
-                      <ChevronDownIcon size={14} className="text-slate-500 transition-transform duration-300" />
-                    )}
-                  </button>
-
-                  <AnimatePresence>
-                    {otherAccountsExpanded && (
+                  {/* Real Recent Orders Section */}
+                  {activeTabs[activeRekeningTab]?.name === "My Wallet" &&
+                    transactions.filter((t) => t.type === "payment").length >
+                      0 && (
                       <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.25, ease: "easeInOut" }}
-                        className="overflow-hidden"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="mt-2 mx-4 lg:mx-0 flex flex-col gap-3"
                       >
-                        <div className="pt-3 pb-1 flex flex-col gap-2 animate-in fade-in duration-300">
-                          <div
-                            onClick={() => displayToast("In Development")}
-                            className="bg-white border-[1.5px] border-dashed border-slate-200 hover:border-slate-300 hover:bg-slate-50/50 rounded-2xl p-4 flex items-center justify-between transition-all cursor-pointer group active:scale-[0.99] shadow-sm"
+                        <div className="flex justify-between items-center px-1">
+                          <h3 className="text-[14px] font-bold text-slate-800">
+                            Recent Marketplace Orders
+                          </h3>
+                          <button
+                            onClick={() => onNavigate("transactionHistory")}
+                            className="text-[11px] font-bold text-blue-600"
                           >
-                            <div className="flex items-center gap-3 text-left">
-                              <div className="w-10 h-10 rounded-xl bg-slate-50 group-hover:bg-slate-100 flex items-center justify-center text-slate-500 group-hover:text-slate-800 border-[1.5px] border-slate-100 transition-colors shrink-0">
-                                <Plus size={18} strokeWidth={2.5} />
+                            See All
+                          </button>
+                        </div>
+                        <div className="bg-white rounded-2xl p-4 border border-slate-100 space-y-3">
+                          {transactions
+                            .filter((t) => t.type === "payment")
+                            .slice(0, 2)
+                            .map((tx) => (
+                              <div
+                                key={tx.id}
+                                className="flex justify-between items-center py-1 border-b border-slate-50 last:border-0 pb-3 last:pb-0"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="w-9 h-9 bg-slate-100 rounded-lg flex items-center justify-center text-slate-800">
+                                    <ShoppingBag size={18} />
+                                  </div>
+                                  <div className="text-left">
+                                    <p className="text-[13px] font-bold text-slate-900">
+                                      {tx.metadata?.recipientName || "Order"}
+                                    </p>
+                                    <p className="text-[10px] text-slate-500">
+                                      {tx.timestamp}
+                                    </p>
+                                  </div>
+                                </div>
+                                <span className="text-[13px] font-mono font-black text-slate-900">
+                                  {tx.amount} USDC
+                                </span>
                               </div>
-                              <div className="flex flex-col">
-                                <span className="font-bold text-slate-800 text-[13.5px] tracking-tight">Connect New Account</span>
-                                <span className="text-[10px] text-slate-400 mt-0.5">Link an external wallet or savings account</span>
-                              </div>
-                            </div>
-                            <div className="text-right shrink-0">
-                              <span className="text-[10px] font-extrabold text-slate-700 bg-slate-50 border border-slate-100 px-2 py-0.5 rounded-md tracking-wider uppercase">
-                                ADD
-                              </span>
-                            </div>
-                          </div>
+                            ))}
                         </div>
                       </motion.div>
                     )}
-                  </AnimatePresence>
-                </div>
+                </AnimatePresence>
+
+                <button
+                  onClick={() => onNavigate("otherAccounts")}
+                  className="w-full text-center text-slate-800 text-[12px] font-bold mt-1 py-1.5 hover:bg-slate-100 rounded-lg transition-colors flex justify-center items-center gap-1.5 opacity-90 border-0 bg-transparent"
+                >
+                  Other Personal Savings & Checking <PlusCircleIcon size={14} />
+                </button>
               </section>
 
               {/* Favorite Transactions Section */}
-              <section className="bg-white rounded-[24px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] mb-3 lg:mb-0 mx-4 lg:mx-0 border border-slate-50/50 lg:flex-1 lg:flex lg:flex-col justify-start">
+              <section className="bg-white rounded-[24px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] mb-3 lg:mb-0 mx-4 lg:mx-0 border border-slate-50/50">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-[17px] font-bold text-slate-800 tracking-tight">
                     Favorite Transactions
@@ -523,60 +496,52 @@ export const HomeScreen = React.memo(
 
                 <div className="grid grid-cols-4 gap-y-5 gap-x-2">
                   {filteredShortcuts
-                    .filter((item) => item.label !== "DApp Browser" && item.label !== "Transaction History" && item.label !== "Unified balance")
-                    .map((item) => {
-                      let mappedView = "";
-                      if (
-                        item.label === "Transfer USDC On-chain" ||
-                        item.label === "Transfer USDC"
-                      )
-                        mappedView = "transfer";
-                      if (
-                        item.label === "Receive USDC" ||
-                        item.label === "Request Payment"
-                      )
-                        mappedView = "receive";
-                      if (item.label === "Pay with USDC") mappedView = "scanQR";
-                      if (
-                        item.label === "Native Wallet Swap" ||
-                        item.label === "Swap USDC"
-                      )
-                        mappedView = "swap";
-                      if (item.label === "Deposit/Withdraw")
-                        mappedView = "depositOptions";
-                      if (item.label === "Pay/VA") mappedView = "bayarVA";
-                      if (item.label === "DApp Browser")
-                        mappedView = "ecommerce";
-                      if (item.label === "Staking Pool")
-                        mappedView = "stablestake";
-                      if (item.label === "Withdraw") mappedView = "withdraw";
-                      if (item.label === "ATM" || item.label === "CCPT Bridge") mappedView = "bridge";
-                      if (item.label === "Mint NFT") mappedView = "mintNFT";
-                      if (item.label === "Security & Limits")
-                        mappedView = "settings";
-                      if (item.label === "Transaction History")
-                        mappedView = "transactionHistory";
-
-                      return (
-                        <MenuIcon
-                          key={item.id}
-                          icon={item.icon}
-                          label={item.label}
-                          color={item.color}
-                          bgCircle={item.bgCircle}
-                          badge={item.badge}
-                          badgeColor={item.badgeColor}
-                          isTextIcon={item.isTextIcon}
-                          textIcon={item.textIcon}
-                          isActive={
-                            (activeView as string) === mappedView && mappedView !== ""
-                          }
-                          onClick={() => {
-                            if (mappedView) onNavigate(mappedView as any);
-                          }}
-                        />
-                      );
-                    })}
+                    .filter((item) => item.label !== "DApp Browser")
+                    .map((item) => (
+                      <MenuIcon
+                        key={item.id}
+                        icon={item.icon}
+                        label={item.label}
+                        color={item.color}
+                        bgCircle={item.bgCircle}
+                        badge={item.badge}
+                        badgeColor={item.badgeColor}
+                        isTextIcon={item.isTextIcon}
+                        textIcon={item.textIcon}
+                        onClick={() => {
+                          if (
+                            item.label === "Transfer USDC On-chain" ||
+                            item.label === "Transfer USDC"
+                          )
+                            onNavigate("transfer");
+                          if (item.label === "Receive USDC")
+                            onNavigate("receive");
+                          if (item.label === "Request Payment")
+                            onNavigate("receive");
+                          if (item.label === "Pay with USDC")
+                            onNavigate("scanQR");
+                          if (
+                            item.label === "Native Wallet Swap" ||
+                            item.label === "Swap USDC"
+                          )
+                            onNavigate("swap");
+                          if (item.label === "Deposit/Withdraw")
+                            onNavigate("depositOptions");
+                          if (item.label === "Pay/VA") onNavigate("bayarVA");
+                          if (item.label === "DApp Browser")
+                            onNavigate("ecommerce");
+                          if (item.label === "Staking Pool")
+                            onNavigate("stablestake");
+                          if (item.label === "Withdraw") onNavigate("withdraw");
+                          if (item.label === "Bridge USDC")
+                            onNavigate("bridge");
+                          if (item.label === "Security & Limits")
+                            onNavigate("settings");
+                          if (item.label === "Transaction History")
+                            onNavigate("transactionHistory");
+                        }}
+                      />
+                    ))}
                 </div>
 
                 {registeredUser?.email ===
@@ -606,7 +571,7 @@ export const HomeScreen = React.memo(
                 {(!platformConfig ||
                   platformConfig.aiAgentEnabled !== false) && (
                   <div
-                    className="lg:hidden mt-6 bg-gradient-to-r from-indigo-50 to-blue-50 py-3 px-4 rounded-xl flex items-center justify-between gap-3 border border-indigo-100 relative cursor-pointer hover:bg-indigo-100/50 transition-colors"
+                    className="mt-6 bg-gradient-to-r from-indigo-50 to-blue-50 py-3 px-4 rounded-xl flex items-center justify-between gap-3 border border-indigo-100 relative cursor-pointer hover:bg-indigo-100/50 transition-colors"
                     onClick={() => onNavigate("aiAgent")}
                   >
                     {/* Tooltip triangle */}
@@ -617,7 +582,7 @@ export const HomeScreen = React.memo(
                       </div>
                       <div className="flex flex-col text-left">
                         <span className="text-[13px] font-bold text-slate-800">
-                          Lounge Assistant
+                          Ask AI Assistant
                         </span>
                         <span className="text-[11.5px] text-slate-500">
                           Help you manage your wallet
@@ -630,7 +595,6 @@ export const HomeScreen = React.memo(
                   </div>
                 )}
               </section>
-              </div>
 
               {/* Special For You (Promo Banner) */}
               <section className="bg-white rounded-[24px] overflow-hidden shadow-sm mb-4 lg:mb-0 mx-4 lg:mx-0 pb-4 border border-x-transparent border-t-transparent border-b-slate-50 relative z-10 lg:mt-8">
@@ -698,245 +662,177 @@ export const HomeScreen = React.memo(
                   ))}
                 </div>
               </section>
-
-              {/* Moved Bottom Sections inside Left Column */}
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 relative z-10 w-full mb-8">
-                <div className="flex flex-col gap-6 w-full max-w-[500px] mx-auto lg:max-w-none">
-                  {/* Dapps */}
-                  {/* External DApps */}
-                  {(!platformConfig ||
-                    platformConfig.swapEnabled !== false ||
-                    platformConfig.arcBirdEnabled !== false ||
-                    platformConfig.stableStakeEnabled !== false) && (
-                    <section className="bg-white rounded-[24px] p-5 shadow-sm mb-4 lg:mb-0 mx-4 lg:mx-0 text-left">
-                      <div className="flex justify-between items-center mb-4">
-                        <div className="flex flex-col">
-                          <h2 className="text-[17px] font-bold text-slate-800 tracking-tight font-sans">
-                            External DApps
-                          </h2>
-                          <p className="text-[10px] text-slate-400 mt-0.5 leading-tight max-w-[200px]">
-                            Connect to decentralized applications on the Arc
-                            Network securely.
-                          </p>
-                        </div>
-                        <button className="text-slate-400 hover:text-slate-600 transition-colors bg-transparent border-0 p-1">
-                          <Search size={18} strokeWidth={2.5} />
-                        </button>
-                      </div>
-
-                      <div className="flex flex-col gap-3">
-                        {/* ArcSwap */}
-                        {(!platformConfig ||
-                          platformConfig.swapEnabled !== false) && (
-                          <div
-                            onClick={() => {
-                              // Show a toast message to simulate opening an external browser
-                              displayToast(
-                                "Opening external web browser to ArcSwap...",
-                              );
-                            }}
-                            className="flex items-center gap-3.5 p-3 rounded-2xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-all active:scale-[0.98]"
-                          >
-                            <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-white shrink-0 shadow-sm">
-                              <RefreshCw size={20} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                <h4 className="font-bold text-[14px] text-slate-800 font-sans">
-                                  ArcSwap DEX
-                                </h4>
-                                <span className="text-[9px] font-semibold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded font-sans">
-                                  DEX
-                                </span>
-                              </div>
-                              <p className="text-[13px] text-slate-400 truncate mt-0.5 font-sans">
-                                Swap USDC with Arc Native Tokens
-                              </p>
-                            </div>
-                            <ChevronRight
-                              size={16}
-                              className="text-slate-400"
-                            />
-                          </div>
-                        )}
-
-                        {/* ArcBird Mini-Game */}
-                        {(!platformConfig ||
-                          platformConfig.arcBirdEnabled !== false) && (
-                          <div
-                            onClick={() => {
-                              onNavigate("arcbird");
-                            }}
-                            className="flex items-center gap-3.5 p-3 rounded-2xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-all active:scale-[0.98]"
-                          >
-                            <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-purple-500 to-indigo-600 flex items-center justify-center text-white shrink-0 shadow-sm">
-                              <Gamepad2 size={20} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                <h4 className="font-bold text-[14px] text-slate-800 font-sans">
-                                  ArcBird Arcade
-                                </h4>
-                                <span className="text-[9px] font-semibold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded font-sans">
-                                  Gaming
-                                </span>
-                              </div>
-                              <p className="text-[13px] text-slate-400 truncate mt-0.5 font-sans">
-                                Tap to Jump & earn USDC rewards
-                              </p>
-                            </div>
-                            <ChevronRight
-                              size={16}
-                              className="text-slate-400"
-                            />
-                          </div>
-                        )}
-
-                        {/* StableStake Vault */}
-                        {(!platformConfig ||
-                          platformConfig.stableStakeEnabled !== false) && (
-                          <div
-                            onClick={() => {
-                              onNavigate("stablestake");
-                            }}
-                            className="flex items-center gap-3.5 p-3 rounded-2xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-all active:scale-[0.98]"
-                          >
-                            <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-500 flex items-center justify-center text-white shrink-0 shadow-sm">
-                              <ShieldCheck size={20} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                <h4 className="font-bold text-[14px] text-slate-800 font-sans">
-                                  StableStake Vault
-                                </h4>
-                                <span className="text-[9px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded font-sans">
-                                  Yield & DeFi
-                                </span>
-                              </div>
-                              <p className="text-[13px] text-slate-400 truncate mt-0.5 font-sans">
-                                Stake stablecoins & earn USDC yield
-                              </p>
-                            </div>
-                            <ChevronRight
-                              size={16}
-                              className="text-slate-400"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </section>
-                  )}
-                </div>
-
-                <div className="flex flex-col gap-6 w-full max-w-[500px] mx-auto lg:max-w-none">
-                  <section className="bg-white rounded-[24px] p-5 shadow-sm mx-4 lg:mx-0 mb-4 lg:mb-0">
-                    <div className="mb-4 text-left flex justify-between items-start">
-                      <div>
-                        <h2 className="text-[17px] font-bold text-slate-800 tracking-tight">
-                          Token Markets
-                        </h2>
-                        <p className="text-xs text-slate-400 mt-1">
-                          Live data feed from pyth.network
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => setShowManageMarketModal(true)}
-                        className="text-slate-800 p-2 hover:bg-slate-100 rounded-full transition-all active:scale-95 border-0 bg-transparent"
-                      >
-                        <Settings2 size={18} strokeWidth={2} />
-                      </button>
-                    </div>
-
-                    <div className="flex items-center gap-2 mb-4 text-slate-800 font-bold text-sm bg-slate-100 px-3 py-1.5 rounded-lg w-fit">
-                      <TrendingUp size={16} /> Volume
-                    </div>
-
-                    <div className="flex flex-col gap-4">
-                      <AnimatePresence>
-                        {marketTokens
-                          .filter((t) => visibleTokenCodes.includes(t.code))
-                          .map((token) => (
-                            <motion.div
-                              key={token.code}
-                              layout
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              exit={{ opacity: 0 }}
-                            >
-                              <StockRow
-                                code={token.code}
-                                name={token.name}
-                                price={formatPrice(token.price)}
-                                change={formatChange(
-                                  token.change,
-                                  token.isDown,
-                                )}
-                                percent={`${token.percent > 0 ? "+" : ""}${token.percent.toFixed(2)}%`}
-                                isDown={token.isDown}
-                              />
-                            </motion.div>
-                          ))}
-                      </AnimatePresence>
-                    </div>
-
-                    <p className="text-[10px] text-slate-400 mt-5 leading-relaxed bg-slate-50 p-2 rounded-lg text-left">
-                      Data protected by Circle Programmable Wallets infra.
-                    </p>
-                  </section>
-
-                  {/* Developer Services (Mobile Only) */}
-                  {(!platformConfig ||
-                    platformConfig.merchantEnabled !== false ||
-                    platformConfig.faucetEnabled !== false) && (
-                    <section className="bg-white rounded-[24px] p-5 shadow-sm mx-4 lg:mx-0 mb-8 lg:mb-0 lg:hidden">
-                      <h2 className="text-[17px] font-bold text-slate-800 tracking-tight mb-4 text-left">
-                        Services
-                      </h2>
-                      <div
-                        className={`grid ${!platformConfig || (platformConfig.merchantEnabled !== false && platformConfig.faucetEnabled !== false) ? "grid-cols-2" : "grid-cols-1"} gap-3`}
-                      >
-                        {(!platformConfig ||
-                          platformConfig.merchantEnabled !== false) && (
-                          <ProductCard
-                            title="Merchant Dashboard"
-                            desc="Manage your stock"
-                            icon={<Box size={20} className="text-slate-600" />}
-                            onClick={() => onNavigate("merchant")}
-                          />
-                        )}
-                        {(!platformConfig ||
-                          platformConfig.faucetEnabled !== false) && (
-                          <ProductCard
-                            title="Testnet Faucet"
-                            desc="Claim USDC Gas Token."
-                            icon={
-                              <Coins size={20} className="text-slate-600" />
-                            }
-                            onClick={() => onNavigate("faucet")}
-                          />
-                        )}
-                      </div>
-                    </section>
-                  )}
-                </div>
-              </div>
             </div>
 
             {/* Right Column for Desktop */}
-            <div className="lg:col-span-5 xl:col-span-4 hidden lg:flex relative z-20 flex-col gap-6">
-              {desktopRightColumn && (
-                <div className="rounded-[24px] bg-white shadow-[0_8px_30px_rgb(0,0,0,0.08)] overflow-hidden border border-slate-100 w-full max-w-[500px] mx-auto relative z-20 flex flex-col">
-                  {desktopRightColumn}
-                </div>
+            <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-4">
+              {/* Dapps */}
+              {/* External DApps */}
+              {(!platformConfig ||
+                platformConfig.swapEnabled !== false ||
+                platformConfig.arcBirdEnabled !== false ||
+                platformConfig.stableStakeEnabled !== false) && (
+                <section className="bg-white rounded-[24px] p-5 shadow-sm mb-4 lg:mb-0 mx-4 lg:mx-0 text-left">
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-[17px] font-bold text-slate-800 tracking-tight font-sans">
+                      External DApps
+                    </h2>
+                    <button className="text-slate-400 hover:text-slate-600 transition-colors bg-transparent border-0 p-1">
+                      <Search size={18} strokeWidth={2.5} />
+                    </button>
+                  </div>
+
+                  <div className="flex flex-col gap-3">
+                    {/* ArcSwap */}
+                    {(!platformConfig ||
+                      platformConfig.swapEnabled !== false) && (
+                      <div
+                        onClick={() => {
+                          onNavigate("arcswap");
+                        }}
+                        className="flex items-center gap-3.5 p-3 rounded-2xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-all active:scale-[0.98]"
+                      >
+                        <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-white shrink-0 shadow-sm">
+                          <RefreshCw size={20} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <h4 className="font-bold text-[14px] text-slate-800 font-sans">
+                              ArcSwap DEX
+                            </h4>
+                            <span className="text-[9px] font-semibold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded font-sans">
+                              DEX
+                            </span>
+                          </div>
+                          <p className="text-[13px] text-slate-400 truncate mt-0.5 font-sans">
+                            Swap USDC with Arc Native Tokens
+                          </p>
+                        </div>
+                        <ChevronRight size={16} className="text-slate-400" />
+                      </div>
+                    )}
+
+                    {/* ArcBird Mini-Game */}
+                    {(!platformConfig ||
+                      platformConfig.arcBirdEnabled !== false) && (
+                      <div
+                        onClick={() => {
+                          onNavigate("arcbird");
+                        }}
+                        className="flex items-center gap-3.5 p-3 rounded-2xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-all active:scale-[0.98]"
+                      >
+                        <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-purple-500 to-indigo-600 flex items-center justify-center text-white shrink-0 shadow-sm">
+                          <Gamepad2 size={20} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <h4 className="font-bold text-[14px] text-slate-800 font-sans">
+                              ArcBird Arcade
+                            </h4>
+                            <span className="text-[9px] font-semibold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded font-sans">
+                              Gaming
+                            </span>
+                          </div>
+                          <p className="text-[13px] text-slate-400 truncate mt-0.5 font-sans">
+                            Tap to Jump & earn USDC rewards
+                          </p>
+                        </div>
+                        <ChevronRight size={16} className="text-slate-400" />
+                      </div>
+                    )}
+
+                    {/* StableStake Vault */}
+                    {(!platformConfig ||
+                      platformConfig.stableStakeEnabled !== false) && (
+                      <div
+                        onClick={() => {
+                          onNavigate("stablestake");
+                        }}
+                        className="flex items-center gap-3.5 p-3 rounded-2xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-all active:scale-[0.98]"
+                      >
+                        <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-500 flex items-center justify-center text-white shrink-0 shadow-sm">
+                          <ShieldCheck size={20} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <h4 className="font-bold text-[14px] text-slate-800 font-sans">
+                              StableStake Vault
+                            </h4>
+                            <span className="text-[9px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded font-sans">
+                              Yield & DeFi
+                            </span>
+                          </div>
+                          <p className="text-[13px] text-slate-400 truncate mt-0.5 font-sans">
+                            Stake stablecoins & earn USDC yield
+                          </p>
+                        </div>
+                        <ChevronRight size={16} className="text-slate-400" />
+                      </div>
+                    )}
+                  </div>
+                </section>
               )}
 
-              {/* Developer Services (Desktop Only) */}
+              {/* Live Token Price Feed */}
+              <section className="bg-white rounded-[24px] p-5 shadow-sm mx-4 lg:mx-0 mb-4 lg:mb-0">
+                <div className="mb-4 text-left flex justify-between items-start">
+                  <div>
+                    <h2 className="text-[17px] font-bold text-slate-800 tracking-tight">
+                      Token Markets
+                    </h2>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Live data feed from pyth.network
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowManageMarketModal(true)}
+                    className="text-slate-800 p-2 hover:bg-slate-100 rounded-full transition-all active:scale-95 border-0 bg-transparent"
+                  >
+                    <Settings2 size={18} strokeWidth={2} />
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2 mb-4 text-slate-800 font-bold text-sm bg-slate-100 px-3 py-1.5 rounded-lg w-fit">
+                  <TrendingUp size={16} /> Volume
+                </div>
+
+                <div className="flex flex-col gap-4">
+                  <AnimatePresence>
+                    {marketTokens
+                      .filter((t) => visibleTokenCodes.includes(t.code))
+                      .map((token) => (
+                        <motion.div
+                          key={token.code}
+                          layout
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                        >
+                          <StockRow
+                            code={token.code}
+                            name={token.name}
+                            price={formatPrice(token.price)}
+                            change={formatChange(token.change, token.isDown)}
+                            percent={`${token.percent > 0 ? "+" : ""}${token.percent.toFixed(2)}%`}
+                            isDown={token.isDown}
+                          />
+                        </motion.div>
+                      ))}
+                  </AnimatePresence>
+                </div>
+
+                <p className="text-[10px] text-slate-400 mt-5 leading-relaxed bg-slate-50 p-2 rounded-lg text-left">
+                  Data protected by Circle Programmable Wallets infra.
+                </p>
+              </section>
+
+              {/* Developer Services */}
               {(!platformConfig ||
                 platformConfig.merchantEnabled !== false ||
                 platformConfig.faucetEnabled !== false) && (
-                <section className="bg-white rounded-[24px] p-5 shadow-sm w-full max-w-[500px] mx-auto hidden lg:block">
+                <section className="bg-white rounded-[24px] p-5 shadow-sm mx-4 lg:mx-0 mb-8 lg:mb-0">
                   <h2 className="text-[17px] font-bold text-slate-800 tracking-tight mb-4 text-left">
-                    Services
+                    Developer Services
                   </h2>
                   <div
                     className={`grid ${!platformConfig || (platformConfig.merchantEnabled !== false && platformConfig.faucetEnabled !== false) ? "grid-cols-2" : "grid-cols-1"} gap-3`}
@@ -944,8 +840,8 @@ export const HomeScreen = React.memo(
                     {(!platformConfig ||
                       platformConfig.merchantEnabled !== false) && (
                       <ProductCard
-                        title="Merchant Dashboard"
-                        desc="Manage your stock"
+                        title="Merchant"
+                        desc="On-chain USDC integration."
                         icon={<Box size={20} className="text-slate-600" />}
                         onClick={() => onNavigate("merchant")}
                       />
@@ -968,7 +864,7 @@ export const HomeScreen = React.memo(
 
         {/* Aesthetic Bottom Navigation Wrapper with Cutout Notch */}
         <div
-          className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none lg:hidden"
+          className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none"
           style={{ filter: "drop-shadow(0 -5px 15px rgba(0,0,0,0.06))" }}
         >
           {/* The Masked White Nav Bar */}
@@ -988,7 +884,7 @@ export const HomeScreen = React.memo(
             <NavItem icon={<Home size={22} />} label="Home" active />
             <NavItem
               icon={<Mail size={22} />}
-              label="Inbox"
+              label="Messages"
               onClick={() => onNavigate("inbox")}
               badge={
                 unreadCount > 0 ? (
@@ -1034,79 +930,67 @@ export const HomeScreen = React.memo(
         {/* Deposit/Withdraw Initial Modal */}
 
         {/* Manage Token Markets Modal */}
-        <AnimatePresence>
-          {showManageMarketModal && (
-            <div className="absolute inset-0 z-[200] flex items-center justify-center p-4">
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
-                onClick={() => setShowManageMarketModal(false)}
-              />
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9, y: 15 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, y: 15 }}
-                transition={{ type: "spring", duration: 0.4, bounce: 0.2 }}
-                className="bg-white rounded-[32px] p-6 w-full max-w-[340px] relative z-10 shadow-2xl flex flex-col"
-              >
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="font-black text-[18px] text-slate-800">
-                    Manage Markets
-                  </h3>
-                  <button
-                    onClick={() => setShowManageMarketModal(false)}
-                    className="w-8 h-8 flex items-center justify-center bg-slate-100 rounded-full text-slate-500 hover:text-red-500 transition-colors border-0 pointer-events-auto cursor-pointer"
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
-
-                <p className="text-xs text-slate-500 mb-6 leading-relaxed">
-                  Select the tokens you want to display on the live market feed
-                  home page.
-                </p>
-
-                <div className="flex flex-col gap-3 max-h-[300px] overflow-y-auto pr-1 scrollbar-hide">
-                  {marketTokens.map((token) => (
-                    <div
-                      key={token.code}
-                      className="flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100/50 rounded-2xl cursor-pointer transition-all active:scale-[0.98] group border border-slate-100"
-                      onClick={() => toggleTokenVisibility(token.code)}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm font-black text-slate-800 text-xs border border-blue-50">
-                          {token.code.slice(0, 2)}
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="font-bold text-[14px] text-slate-800 leading-none mb-1">
-                            {token.code}
-                          </span>
-                          <span className="text-[10px] text-slate-400 font-medium">
-                            {token.name}
-                          </span>
-                        </div>
-                      </div>
-                      <div
-                        className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${visibleTokenCodes.includes(token.code) ? "bg-slate-900 text-white shadow-lg shadow-blue-200" : "bg-white border-2 border-slate-200 text-transparent"}`}
-                      >
-                        <Check size={14} strokeWidth={4} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
+        {showManageMarketModal && (
+          <div className="absolute inset-0 z-[200] flex items-center justify-center p-4 animate-in fade-in duration-200">
+            <div
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+              onClick={() => setShowManageMarketModal(false)}
+            ></div>
+            <div className="bg-white rounded-[32px] p-6 w-full max-w-[340px] relative z-10 animate-in slide-in-from-bottom-8 duration-300 shadow-2xl flex flex-col">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="font-black text-[18px] text-slate-800">
+                  Manage Markets
+                </h3>
                 <button
                   onClick={() => setShowManageMarketModal(false)}
-                  className="w-full bg-slate-900 text-white font-black py-4 rounded-2xl text-[14px] transition-all hover:bg-slate-800 active:scale-[0.95] mt-8 shadow-xl shadow-slate-900/10 cursor-pointer border-0"
+                  className="w-8 h-8 flex items-center justify-center bg-slate-100 rounded-full text-slate-500 hover:text-red-500 transition-colors border-0"
                 >
-                  Save Configuration
+                  <X size={18} />
                 </button>
-              </motion.div>
+              </div>
+
+              <p className="text-xs text-slate-500 mb-6 leading-relaxed">
+                Select the tokens you want to display on the live market feed home page.
+              </p>
+
+              <div className="flex flex-col gap-3 max-h-[300px] overflow-y-auto pr-1 scrollbar-hide">
+                {marketTokens.map((token) => (
+                  <div
+                    key={token.code}
+                    className="flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100/50 rounded-2xl cursor-pointer transition-all active:scale-[0.98] group border border-slate-100"
+                    onClick={() => toggleTokenVisibility(token.code)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm font-black text-slate-800 text-xs border border-blue-50">
+                        {token.code.slice(0, 2)}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-bold text-[14px] text-slate-800 leading-none mb-1">
+                          {token.code}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-medium">
+                          {token.name}
+                        </span>
+                      </div>
+                    </div>
+                    <div
+                      className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${visibleTokenCodes.includes(token.code) ? "bg-slate-900 text-white shadow-lg shadow-blue-200" : "bg-white border-2 border-slate-200 text-transparent"}`}
+                    >
+                      <Check size={14} strokeWidth={4} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setShowManageMarketModal(false)}
+                className="w-full bg-slate-900 text-white font-black py-4 rounded-2xl text-[14px] transition-all hover:bg-[#328fdc] active:scale-[0.95] mt-8 shadow-xl shadow-blue-500/20"
+              >
+                Save Configuration
+              </button>
             </div>
-          )}
-        </AnimatePresence>
+          </div>
+        )}
       </div>
     );
   },

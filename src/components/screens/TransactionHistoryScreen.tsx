@@ -11,8 +11,6 @@ import {
   ShoppingBag,
   X,
   Search,
-  Layers,
-  Hexagon,
 } from "lucide-react";
 import { useApp } from "../../contexts/AppContext";
 import { ARC_TESTNET } from "../../lib/arcConfig";
@@ -40,15 +38,12 @@ export function TransactionHistoryScreen({
       case "withdraw":
         return <ArrowUpRight size={20} className="text-red-500" />;
       case "transfer":
-        return <ArrowUpRight size={20} className="text-orange-500" />;
       case "batchTransfer":
-        return <Layers size={20} className="text-indigo-500" />;
+        return <ArrowUpRight size={20} className="text-orange-500" />;
       case "purchase":
         return <ShoppingBag size={20} className="text-purple-500" />;
       case "swap":
         return <RefreshCw size={20} className="text-slate-600" />;
-      case "bridge":
-        return <Hexagon size={20} className="text-blue-500" />;
       default:
         return <Receipt size={20} className="text-slate-500" />;
     }
@@ -61,15 +56,12 @@ export function TransactionHistoryScreen({
       case "withdraw":
         return "bg-red-50 border-red-100";
       case "transfer":
-        return "bg-orange-50 border-orange-100";
       case "batchTransfer":
-        return "bg-indigo-50 border-indigo-100";
+        return "bg-orange-50 border-orange-100";
       case "purchase":
         return "bg-purple-50 border-purple-100";
       case "swap":
         return "bg-slate-100 border-slate-200";
-      case "bridge":
-        return "bg-blue-50 border-blue-100";
       default:
         return "bg-slate-50 border-slate-100";
     }
@@ -106,7 +98,7 @@ export function TransactionHistoryScreen({
   }, [transactions, searchQuery]);
 
   return (
-    <div className="w-full h-full bg-[#ecf5fc] relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
+    <div className="w-full h-full bg-[#f8fafc] relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
       {/* Header */}
       <div className="flex flex-col px-4 pt-6 pb-4 bg-slate-900 shadow-md relative z-10 w-full shrink-0">
         <div className="flex items-center justify-between mb-4">
@@ -136,7 +128,7 @@ export function TransactionHistoryScreen({
             className="w-full bg-white/10 border border-white/10 rounded-2xl py-2.5 pl-10 pr-4 text-white text-[13px] font-medium placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all"
           />
           {searchQuery && (
-            <button
+            <button 
               onClick={() => setSearchQuery("")}
               className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-white"
             >
@@ -153,9 +145,7 @@ export function TransactionHistoryScreen({
             {filteredAndGroupedTransactions.length === 0 ? (
               <div className="flex flex-col items-center justify-center p-12 text-center text-slate-400 mt-20">
                 <Clock size={48} className="mb-4 opacity-50" />
-                <p className="font-medium">
-                  No results found matching your search.
-                </p>
+                <p className="font-medium">No results found matching your search.</p>
               </div>
             ) : (
               filteredAndGroupedTransactions.map(([date, txs]) => (
@@ -181,9 +171,8 @@ export function TransactionHistoryScreen({
                               {tx.title}
                             </h3>
                             <p className="text-[11px] text-slate-500 mt-0.5 font-medium">
-                              {tx.timestamp.split(",")[1]?.trim() ||
-                                tx.timestamp}{" "}
-                              • {tx.type}
+                              {tx.timestamp.split(",")[1]?.trim() || tx.timestamp} •{" "}
+                              {tx.type}
                             </p>
                           </div>
                         </div>
@@ -238,10 +227,7 @@ export function TransactionHistoryScreen({
               <div
                 className={`text-[36px] font-black font-sans tracking-tight my-2 ${selectedTx.amount.startsWith("+") ? "text-emerald-500" : "text-slate-900"}`}
               >
-                {selectedTx.amount}{" "}
-                <span className="text-[14px] font-bold text-slate-400">
-                  {selectedTx.currency}
-                </span>
+                {selectedTx.amount} <span className="text-[14px] font-bold text-slate-400">{selectedTx.currency}</span>
               </div>
 
               {selectedTx.status === "failed" ? (
@@ -268,66 +254,42 @@ export function TransactionHistoryScreen({
               )}
 
               {/* Batch Recipients Breakdown in History Detail */}
-              {(selectedTx.type === "batchTransfer" ||
-                selectedTx.metadata?.isAtomicBatch) &&
-                selectedTx.metadata?.recipients && (
-                  <div className="w-full bg-slate-50 rounded-2xl p-4 mt-8 border border-slate-100 text-left">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 px-1">
-                      Distribution Summary
-                    </p>
-                    <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1 custom-scrollbar">
-                      {(selectedTx.metadata.recipients as any[]).map(
-                        (recipient, i) => (
-                          <div
-                            key={i}
-                            className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-50 shadow-sm"
-                          >
-                            <div className="flex flex-col">
-                              <span className="text-[12px] font-bold text-slate-800">
-                                {recipient.name ||
-                                  recipient.username ||
-                                  "Unknown"}
-                              </span>
-                              <span className="text-[9px] font-mono text-slate-400">
-                                0x...{recipient.address?.slice(-6)}
-                              </span>
-                            </div>
-                            <span className="text-[12px] font-black text-slate-900">
-                              {recipient.amount}{" "}
-                              <span className="text-[9px] text-slate-400">
-                                USDC
-                              </span>
-                            </span>
-                          </div>
-                        ),
-                      )}
-                    </div>
+              {(selectedTx.type === "batchTransfer" || selectedTx.metadata?.isAtomicBatch) && selectedTx.metadata?.recipients && (
+                <div className="w-full bg-slate-50 rounded-2xl p-4 mt-8 border border-slate-100 text-left">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 px-1">
+                    Distribution Summary
+                  </p>
+                  <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1 custom-scrollbar">
+                    {(selectedTx.metadata.recipients as any[]).map((recipient, i) => (
+                      <div key={i} className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-50 shadow-sm">
+                        <div className="flex flex-col">
+                           <span className="text-[12px] font-bold text-slate-800">{recipient.name || recipient.username || "Unknown"}</span>
+                           <span className="text-[9px] font-mono text-slate-400">0x...{recipient.address?.slice(-6)}</span>
+                        </div>
+                        <span className="text-[12px] font-black text-slate-900">
+                          {recipient.amount} <span className="text-[9px] text-slate-400">USDC</span>
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                )}
+                </div>
+              )}
 
               <div className="w-full h-px bg-slate-50 my-8"></div>
 
               <div className="w-full space-y-4 px-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">
-                    Type
-                  </span>
-                  <span className="text-[14px] font-bold text-slate-700 capitalize">
-                    {selectedTx.type}
-                  </span>
+                  <span className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">Type</span>
+                  <span className="text-[14px] font-bold text-slate-700 capitalize">{selectedTx.type}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">
-                    Blockchain Ref
-                  </span>
+                  <span className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">Blockchain Ref</span>
                   <span className="text-[12px] font-mono font-bold text-slate-800 bg-slate-50 px-2 py-1 rounded">
                     {selectedTx.id.substring(0, 12)}...
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">
-                    Execution Date
-                  </span>
+                  <span className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">Execution Date</span>
                   <span className="text-[13px] font-bold text-slate-800">
                     {selectedTx.timestamp}
                   </span>
@@ -342,9 +304,7 @@ export function TransactionHistoryScreen({
                     </span>
                     <div className="flex items-center gap-1.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                      <span className="text-[10px] font-bold text-emerald-500">
-                        Live
-                      </span>
+                      <span className="text-[10px] font-bold text-emerald-500">Live</span>
                     </div>
                   </div>
                   <p className="text-[10px] text-slate-400 font-mono text-left opacity-80 select-all break-all leading-relaxed">

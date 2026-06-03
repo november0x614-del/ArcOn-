@@ -6,20 +6,17 @@ import {
   Transaction,
   SourceAccount,
   ImportedToken,
-  Product,
-  MintedNFT,
 } from "../types";
 import {
   defaultSelectedShortcuts,
   defaultAvailableShortcuts,
 } from "../components/screens/ManageFavoritesScreen";
 import { BackendClient } from "../services/api";
-// MOCK_PRODUCTS removed for Server-First compliance
 
-export type TransactionFilter = "All" | "Received" | "Sent" | "Swaps" | "Bridge";
+export type TransactionFilter = "All" | "Received" | "Sent" | "Swaps";
 
 interface AppState {
-  // ... existing state definitions ...
+// ... existing state definitions ...
   viewState: ViewState;
   setViewState: (state: ViewState) => void;
   receiptSource: ViewState;
@@ -81,27 +78,6 @@ interface AppState {
   setSourceAccount: (account: SourceAccount) => void;
   logs: string[];
   addLog: (log: string) => void;
-  products: Product[];
-  setProducts: (products: Product[]) => void;
-  fetchProducts: () => Promise<void>;
-  saveProduct: (product: any) => Promise<void>;
-  removeProduct: (productId: string | number) => Promise<void>;
-  cart: Record<string, number>;
-  setCart: (cart: Record<string, number>) => void;
-  addToCart: (productId: string | number) => void;
-  removeFromCart: (productId: string | number) => void;
-  clearCart: () => void;
-  updateProductStockAndSales: (productId: string | number, delta: number) => void;
-  mintedNfts: MintedNFT[];
-  fetchMintedNfts: () => Promise<void>;
-  favorites: any[];
-  setFavorites: (favs: any[] | ((prev: any[]) => any[])) => void;
-  deletedContactIds: string[];
-  setDeletedContactIds: (ids: string[] | ((prev: string[]) => string[])) => void;
-  arcbirdHighscore: number;
-  setArcbirdHighscore: (score: number) => void;
-  savePreferences: (updates?: any) => Promise<void>;
-  fetchPreferences: () => Promise<void>;
   resetState: () => void;
 }
 
@@ -123,23 +99,7 @@ export const useStore = create<AppState>()((set) => ({
   setRegisteredUser: (user) => {
     set({ registeredUser: user });
     if (user?.supabaseUid) {
-      const state = useStore.getState();
-      state.fetchImportedTokens();
-      state.fetchProducts();
-      state.fetchPreferences();
-      state.fetchPlatformConfig();
-      state.fetchMintedNfts();
-    } else {
-      set({
-        readReceiptIds: [],
-        selectedShortcuts: defaultSelectedShortcuts,
-        mintedNfts: [],
-        favorites: [],
-        deletedContactIds: [],
-        arcbirdHighscore: 0,
-        products: [],
-        platformConfig: null,
-      });
+      useStore.getState().fetchImportedTokens();
     }
   },
 
@@ -157,9 +117,9 @@ export const useStore = create<AppState>()((set) => ({
     try {
       const data = await BackendClient.getBalance();
       const newBalance = data.balance || 0;
-
+      
       const state = useStore.getState();
-
+      
       // Calculate PnL locally based on current transactions
       let totalDeposit = 0;
       state.transactions.forEach((tx) => {
@@ -170,20 +130,11 @@ export const useStore = create<AppState>()((set) => ({
       });
 
       const pnlValue = totalDeposit > 0 ? newBalance - totalDeposit : 0;
-      const pnlPercentage =
-        totalDeposit > 0 ? (pnlValue / totalDeposit) * 100 : 0;
+      const pnlPercentage = totalDeposit > 0 ? (pnlValue / totalDeposit) * 100 : 0;
 
       // Only update if balance changed to save renders
-      if (
-        state.balance !== newBalance ||
-        state.allBalances.length !== (data.allBalances?.length || 0)
-      ) {
-        set({
-          balance: newBalance,
-          allBalances: data.allBalances || [],
-          pnlValue,
-          pnlPercentage,
-        });
+      if (state.balance !== newBalance || state.allBalances.length !== (data.allBalances?.length || 0)) {
+        set({ balance: newBalance, allBalances: data.allBalances || [], pnlValue, pnlPercentage });
       }
     } catch (error: any) {
       // Errors handled inside apiRequest usually
@@ -204,7 +155,7 @@ export const useStore = create<AppState>()((set) => ({
       const url = `/api/transactions/${user.supabaseUid}`;
       const response = await fetch(url);
       if (!response.ok) return;
-
+      
       const text = await response.text();
       if (!text) return;
       const dbTransactions = JSON.parse(text);
@@ -212,20 +163,12 @@ export const useStore = create<AppState>()((set) => ({
 
       const transactions: Transaction[] = dbTransactions.map((tx: any) => {
         const rawAmount = parseFloat(tx.amount) || 0;
-        const direction =
-          tx.metadata?.direction ||
-          (tx.type === "receive" || tx.type === "deposit"
-            ? "inbound"
-            : "outbound");
+        const direction = tx.metadata?.direction || (tx.type === "receive" || tx.type === "deposit" ? "inbound" : "outbound");
         const sign = direction === "inbound" ? "+" : "-";
-
+        
         let title = tx.type.charAt(0).toUpperCase() + tx.type.slice(1);
         if (tx.type === "receive") title = "Inbound Transfer";
-        if (tx.type === "bridge")
-          title =
-            direction === "inbound"
-              ? "CCTP Inbound Bridge"
-              : "CCTP Outbound Bridge";
+        if (tx.type === "bridge") title = direction === "inbound" ? "CCTP Inbound Bridge" : "CCTP Outbound Bridge";
 
         return {
           id: tx.id || tx.internal_ref,
@@ -236,23 +179,21 @@ export const useStore = create<AppState>()((set) => ({
           timestamp: new Date(tx.created_at).toLocaleString(),
           status: tx.status,
           txHash: tx.tx_hash || tx.metadata?.txHash || tx.internal_ref,
-          explorerUrl:
-            tx.metadata?.explorerUrl ||
-            (tx.tx_hash || tx.internal_ref
-              ? `https://testnet.arcscan.app/tx/${tx.tx_hash || tx.internal_ref}`
-              : undefined),
+          explorerUrl: tx.metadata?.explorerUrl || (tx.tx_hash || tx.internal_ref ? `https://testnet.arcscan.app/tx/${tx.tx_hash || tx.internal_ref}` : undefined),
           metadata: tx.metadata,
         };
       });
 
       const state = useStore.getState();
+      
+      // Skip update if length and all transaction statuses are same
+      const isIdentical = state.transactions.length === transactions.length && 
+                          state.transactions.every((tx, idx) => 
+                            tx.id === transactions[idx]?.id && 
+                            tx.status === transactions[idx]?.status
+                          );
 
-      // Skip update if length and first/last ID are same (basic heuristic for "identitcal")
-      if (
-        state.transactions.length === transactions.length &&
-        state.transactions[0]?.id === transactions[0]?.id &&
-        state.transactions[0]?.status === transactions[0]?.status
-      ) {
+      if (isIdentical) {
         return;
       }
 
@@ -280,15 +221,11 @@ export const useStore = create<AppState>()((set) => ({
         set({ lastSyncTime: new Date() });
       } catch (err) {}
 
-      const hasPending = useStore
-        .getState()
-        .transactions.some(
-          (tx) => tx.status === "pending" || tx.status === "pending_approval",
-        );
-
+      const hasPending = useStore.getState().transactions.some(tx => tx.status === "pending" || tx.status === "pending_approval");
+      
       // Industrial standard: Relaxed polling unless something is happening
       const nextDelay = hasPending ? 3000 : 20000; // 20s if idle, 3s if pending
-
+      
       if (useStore.getState().isSyncing && activePollSessionId === sessionId) {
         setTimeout(poll, nextDelay);
       }
@@ -309,23 +246,17 @@ export const useStore = create<AppState>()((set) => ({
   setVisibleTokenCodes: (codes) => set({ visibleTokenCodes: codes }),
   readReceiptIds: [],
   markAsRead: (id) =>
-    set((state) => {
-      if (state.readReceiptIds.includes(id)) return state;
-      const newList = [...state.readReceiptIds, id];
-      useStore.getState().savePreferences({ readReceiptIds: newList });
-      return { readReceiptIds: newList };
-    }),
+    set((state) => ({
+      readReceiptIds: state.readReceiptIds.includes(id)
+        ? state.readReceiptIds
+        : [...state.readReceiptIds, id],
+    })),
 
   importedTokens: [],
   importToken: async (token) => {
     const state = useStore.getState();
     const uppercaseSymbol = token.symbol.toUpperCase();
-    if (
-      state.importedTokens.some(
-        (t) => t.symbol.toUpperCase() === uppercaseSymbol,
-      )
-    )
-      return;
+    if (state.importedTokens.some((t) => t.symbol.toUpperCase() === uppercaseSymbol)) return;
 
     // Local update
     set((state) => ({ importedTokens: [...state.importedTokens, token] }));
@@ -333,10 +264,7 @@ export const useStore = create<AppState>()((set) => ({
     // Sync to backend
     if (state.registeredUser?.supabaseUid) {
       try {
-        await BackendClient.saveImportedToken(
-          state.registeredUser.supabaseUid,
-          token,
-        );
+        await BackendClient.saveImportedToken(state.registeredUser.supabaseUid, token);
       } catch (e) {
         console.error("Failed to sync imported token to database", e);
       }
@@ -344,24 +272,17 @@ export const useStore = create<AppState>()((set) => ({
   },
   removeToken: async (symbol) => {
     const state = useStore.getState();
-    const tokenToRemove = state.importedTokens.find(
-      (t) => t.symbol.toUpperCase() === symbol.toUpperCase(),
-    );
-
+    const tokenToRemove = state.importedTokens.find(t => t.symbol.toUpperCase() === symbol.toUpperCase());
+    
     // Local updates
     set((state) => ({
-      importedTokens: state.importedTokens.filter(
-        (t) => t.symbol.toUpperCase() !== symbol.toUpperCase(),
-      ),
+      importedTokens: state.importedTokens.filter((t) => t.symbol.toUpperCase() !== symbol.toUpperCase()),
     }));
 
     // Sync to backend
     if (state.registeredUser?.supabaseUid && tokenToRemove?.contractAddress) {
       try {
-        await BackendClient.removeImportedToken(
-          state.registeredUser.supabaseUid,
-          tokenToRemove.contractAddress,
-        );
+        await BackendClient.removeImportedToken(state.registeredUser.supabaseUid, tokenToRemove.contractAddress);
       } catch (e) {
         console.error("Failed to remove imported token from database", e);
       }
@@ -382,20 +303,7 @@ export const useStore = create<AppState>()((set) => ({
   },
 
   selectedShortcuts: defaultSelectedShortcuts,
-  setSelectedShortcuts: (shortcuts) => {
-    set({ selectedShortcuts: shortcuts });
-    useStore.getState().savePreferences({ selectedShortcuts: shortcuts });
-  },
-  fetchMintedNfts: async () => {
-    const user = useStore.getState().registeredUser;
-    if (!user?.supabaseUid) return;
-    try {
-      const nfts = await BackendClient.fetchNFTs(user.supabaseUid);
-      set({ mintedNfts: Array.isArray(nfts) ? nfts : [] });
-    } catch (e) {
-      console.error("Failed to fetch NFTs from server", e);
-    }
-  },
+  setSelectedShortcuts: (shortcuts) => set({ selectedShortcuts: shortcuts }),
   availableShortcuts: defaultAvailableShortcuts,
   setAvailableShortcuts: (shortcuts) => set({ availableShortcuts: shortcuts }),
   selectedContact: null,
@@ -415,13 +323,23 @@ export const useStore = create<AppState>()((set) => ({
   network: "ARC TESTNET",
   setNetwork: (net) => set({ network: net }),
   platformConfig: null,
-  setPlatformConfig: (config) => {
-    set({ platformConfig: config });
-  },
+  setPlatformConfig: (config) => set({ platformConfig: config }),
   fetchPlatformConfig: async () => {
+    // Try localStorage first
     try {
-      const data = await BackendClient.getPlatformConfigs();
-      set({ platformConfig: data });
+      const cached = localStorage.getItem("arc_platform_config");
+      if (cached) {
+        set({ platformConfig: JSON.parse(cached) });
+      }
+    } catch (e) {}
+
+    try {
+      const res = await fetch("/api/admin/config");
+      if (res.ok) {
+        const data = await res.json();
+        set({ platformConfig: data });
+        localStorage.setItem("arc_platform_config", JSON.stringify(data));
+      }
     } catch (e) {}
   },
   walletConnectSessions: 0,
@@ -443,167 +361,6 @@ export const useStore = create<AppState>()((set) => ({
         `[${new Date().toLocaleTimeString()}] ${log}`,
       ],
     })),
-  products: [],
-  setProducts: (products) => {
-    set({ products });
-  },
-  fetchProducts: async () => {
-    try {
-      const products = await BackendClient.getProducts();
-      set({ products: Array.isArray(products) ? products : [] });
-    } catch (e) {
-      set({ products: [] });
-    }
-  },
-  saveProduct: async (product) => {
-    try {
-      const saved = await BackendClient.saveProduct(product);
-      set((state) => ({ products: [saved, ...state.products] }));
-    } catch (e) {
-      console.error("[Store] saveProduct failed:", e);
-      // Re-fetch to ensure sync with server
-      useStore.getState().fetchProducts();
-    }
-  },
-  removeProduct: async (productId) => {
-    try {
-      await BackendClient.deleteProduct(productId);
-      set((state) => ({
-        products: state.products.filter((p) => String(p.id) !== String(productId)),
-      }));
-    } catch (e) {
-      console.error("[Store] removeProduct failed:", e);
-      useStore.getState().fetchProducts();
-    }
-  },
-  cart: {},
-  setCart: (cart) => {
-    set({ cart });
-    useStore.getState().savePreferences(); // savePreferences takes state from store
-  },
-  addToCart: (productId) =>
-    set((state) => {
-      const idStr = String(productId);
-      const newCart = {
-        ...state.cart,
-        [idStr]: (state.cart[idStr] || 0) + 1,
-      };
-      // We rely on effects or manual save if needed, but savePreferences reads everything.
-      setTimeout(() => useStore.getState().savePreferences(), 0);
-      return { cart: newCart };
-    }),
-  removeFromCart: (productId) =>
-    set((state) => {
-      const idStr = String(productId);
-      const newCart = { ...state.cart };
-      if (newCart[idStr] > 1) {
-        newCart[idStr] -= 1;
-      } else {
-        delete newCart[idStr];
-      }
-      setTimeout(() => useStore.getState().savePreferences(), 0);
-      return { cart: newCart };
-    }),
-  clearCart: () => {
-    set({ cart: {} });
-    setTimeout(() => useStore.getState().savePreferences(), 0);
-  },
-  updateProductStockAndSales: (productId, delta) => {
-    set((state) => {
-      const idStr = String(productId);
-      const updated = state.products.map((p) => {
-        if (String(p.id) === idStr) {
-          const qty = typeof delta === "number" ? delta : 0;
-          const updatedProduct = {
-            ...p,
-            stock: Math.max(0, p.stock - qty),
-            sales: p.sales + qty,
-          };
-          // Push to backend (Sync point)
-          BackendClient.updateProduct(idStr, {
-            stock: updatedProduct.stock,
-            sales: updatedProduct.sales,
-          }).catch((err) => console.error("Stock update failed on server:", err));
-          return updatedProduct;
-        }
-        return p;
-      });
-      return { products: updated };
-    });
-  },
-  mintedNfts: [],
-  setMintedNfts: (nfts) => {
-    set({ mintedNfts: nfts });
-  },
-  addMintedNft: (nft) =>
-    set((state) => {
-      const newList = [nft, ...state.mintedNfts];
-      return { mintedNfts: newList };
-    }),
-  favorites: [],
-  setFavorites: (favorites) => {
-    set((state) => {
-      const newList =
-        typeof favorites === "function" ? favorites(state.favorites) : favorites;
-      useStore.getState().savePreferences({ favorites: newList });
-      return { favorites: newList };
-    });
-  },
-  deletedContactIds: [],
-  setDeletedContactIds: (ids) => {
-    set((state) => {
-      const newList =
-        typeof ids === "function" ? ids(state.deletedContactIds) : ids;
-      useStore.getState().savePreferences({ deletedContactIds: newList });
-      return { deletedContactIds: newList };
-    });
-  },
-  arcbirdHighscore: 0,
-  setArcbirdHighscore: (score) => {
-    set({ arcbirdHighscore: score });
-    useStore.getState().savePreferences({ arcbirdHighscore: score });
-  },
-  savePreferences: async (updates) => {
-    const state = useStore.getState();
-    const user = state.registeredUser;
-    if (!user?.supabaseUid) return;
-    
-    // If no specific updates, collect all preference state
-    const finalUpdates = updates || {
-      favorites: state.favorites,
-      deletedContactIds: state.deletedContactIds,
-      arcbirdHighscore: state.arcbirdHighscore,
-      readReceiptIds: state.readReceiptIds,
-      selectedShortcuts: state.selectedShortcuts,
-      cart: state.cart,
-    };
-    
-    try {
-      await BackendClient.updatePreferences(finalUpdates);
-    } catch (e) {
-      console.error("Failed to sync preferences to backend", e);
-    }
-  },
-  fetchPreferences: async () => {
-    const user = useStore.getState().registeredUser;
-    if (!user?.supabaseUid) return;
-    try {
-      const prefs = await BackendClient.getPreferences();
-      if (prefs) {
-        set({
-          favorites: prefs.favorites || [],
-          deletedContactIds: prefs.deletedContactIds || [],
-          arcbirdHighscore: prefs.arcbirdHighscore || 0,
-          mintedNfts: prefs.mintedNfts || [],
-          readReceiptIds: prefs.readReceiptIds || [],
-          selectedShortcuts: prefs.selectedShortcuts || defaultSelectedShortcuts,
-          cart: prefs.cart || {},
-        });
-      }
-    } catch (e) {
-      console.error("Failed to fetch preferences from backend", e);
-    }
-  },
   resetState: () =>
     set({
       viewState: "splash",

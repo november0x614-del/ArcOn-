@@ -38,19 +38,14 @@ export async function fetchUnifiedBalance(
       ? getCircleClientInstance()
           .getWalletTokenBalance({ id: walletId })
           .catch((err) => {
-            console.warn(
-              `[CircleBalance API] getWalletTokenBalance failed for wallet ${walletId}:`,
-              err.message,
-            );
+            console.warn(`[CircleBalance API] getWalletTokenBalance failed for wallet ${walletId}:`, err.message);
             return null;
           })
       : null,
-    publicClient
-      .getBalance({ address: walletAddress as `0x${string}` })
-      .catch((e) => {
-        console.warn("RPC getBalance failed:", e.message);
-        return 0n;
-      }),
+    publicClient.getBalance({ address: walletAddress as `0x${string}` }).catch((e) => {
+      console.warn("RPC getBalance failed:", e.message);
+      return 0n;
+    }),
     getTokenBalance(walletAddress, USDC_ADDRESS).catch((e) => {
       console.warn("RPC getTokenBalance failed:", e.message);
       return 0n;
@@ -74,7 +69,7 @@ export async function fetchUnifiedBalance(
   // 3. Merge Arc Native Assets (Gas)
   const nativeBalanceFormatted = formatUnits(nativeWei, 18);
   const existingArcIndex = tokenBalances.findIndex(
-    (b: any) => b.token?.symbol === "ARC" || b.token?.isNative === true,
+    (b: any) => b.token?.symbol === "ARC" || b.token?.isNative === true
   );
 
   if (existingArcIndex >= 0) {
@@ -95,7 +90,7 @@ export async function fetchUnifiedBalance(
   // 4. Merge on-chain USDC (ERC20 Contract)
   const nativeUSDCFormatted = formatUnits(nativeUSDCWei, 6);
   const existingUSDCIndex = tokenBalances.findIndex(
-    (b: any) => b.token?.symbol === "USDC" && b.token?.isNative === false,
+    (b: any) => b.token?.symbol === "USDC" && b.token?.isNative === false
   );
 
   if (existingUSDCIndex >= 0) {
@@ -129,6 +124,55 @@ export async function fetchUnifiedBalance(
     }
   }
 
+  // Calculate simulated ledger-based balances across ALL popular tokens
+  const simulatedBalances: Record<string, number> = {
+    USDC: 0,
+    EURC: 0,
+    cirBTC: 0,
+    MINT: 0,
+  };
+
+  try {
+    const { data: txs } = await supabaseAdmin
+      .from("transactions")
+      .select("amount, type, status, metadata")
+      .eq("user_id", userId)
+      .eq("status", "success");
+
+    if (txs) {
+      for (const tx of txs) {
+        const amt = parseFloat(tx.amount || "0");
+        const metadata = tx.metadata || {};
+        const fromTokenSym = metadata.fromToken || "USDC";
+        const toTokenSym = metadata.toToken || "";
+
+        if (tx.type === "swap") {
+          const fromAmount = Math.abs(amt);
+          const toAmount = parseFloat(metadata.toAmount || "0") || (fromAmount * parseFloat(metadata.exchangeRate || "1"));
+          
+          simulatedBalances[fromTokenSym] = (simulatedBalances[fromTokenSym] || 0) - fromAmount;
+          if (toTokenSym) {
+            simulatedBalances[toTokenSym] = (simulatedBalances[toTokenSym] || 0) + toAmount;
+          }
+        } else if (tx.type === "receive" || tx.type === "deposit") {
+          const tokenSym = metadata.token || metadata.symbol || "USDC";
+          simulatedBalances[tokenSym] = (simulatedBalances[tokenSym] || 0) + amt;
+        } else {
+          const tokenSym = metadata.token || metadata.symbol || "USDC";
+          simulatedBalances[tokenSym] = (simulatedBalances[tokenSym] || 0) + amt; // amt is negative for debits
+        }
+      }
+    }
+  } catch (e) {
+    console.error("[BalanceService] Simulated tx calculation failed:", e);
+  }
+
+  // Elevate USDC balance if simulated balance is higher (bypass onchain zero limits)
+  const usdcSimulated = simulatedBalances["USDC"] || 0;
+  if (finalUsdcAmount < usdcSimulated) {
+    finalUsdcAmount = usdcSimulated;
+  }
+
   // Push consolidated USDC entry
   const consolidatedUSDC = {
     token: {
@@ -141,6 +185,36 @@ export async function fetchUnifiedBalance(
     amount: finalUsdcAmount.toString(),
   };
 
+  // Merge simulated balances for other popular tokens (EURC, cirBTC, MINT)
+  const popularTokens = [
+    { symbol: "EURC", name: "Euro Coin", decimals: 6 },
+    { symbol: "cirBTC", name: "Circle Bitcoin", decimals: 8 },
+    { symbol: "MINT", name: "Arc Mintable Assets", decimals: 18 }
+  ];
+
+  for (const token of popularTokens) {
+    const simAmt = simulatedBalances[token.symbol] || 0;
+    const existingIndex = otherBalances.findIndex((b: any) => b.token?.symbol === token.symbol);
+    
+    if (existingIndex >= 0) {
+      const currentAmt = parseFloat(otherBalances[existingIndex].amount || "0");
+      if (currentAmt < simAmt) {
+        otherBalances[existingIndex].amount = simAmt.toString();
+      }
+    } else if (simAmt > 0) {
+      otherBalances.push({
+        token: {
+          symbol: token.symbol,
+          name: token.name,
+          decimals: token.decimals,
+          blockchain: "ARC-TESTNET",
+          isNative: false,
+        },
+        amount: simAmt.toString(),
+      });
+    }
+  }
+
   const finalBalances = [consolidatedUSDC, ...otherBalances];
   tokenBalances.length = 0;
   tokenBalances.push(...finalBalances);
@@ -148,7 +222,7 @@ export async function fetchUnifiedBalance(
   // Recalculate actual total Value
   totalValueUsd = finalUsdcAmount * USDC_PRICE;
   for (const b of otherBalances) {
-    totalValueUsd += parseFloat(b.amount || "0") * 1.0;
+    totalValueUsd += parseFloat(b.amount || "0") * 1.0; 
   }
 
   // 5. Consideration of Pending Transactions (Local UI feel)

@@ -1,4 +1,4 @@
-import app from "./api/index.js";
+import app, { getSupabaseAdmin } from "./api/index.js";
 import path from "path";
 import express from "express";
 import { createServer as createViteServer } from "vite";
@@ -22,8 +22,7 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), "dist");
-    // Leverage browser caching for static assets to reduce server load
-    app.use(express.static(distPath, { maxAge: "1y" }));
+    app.use(express.static(distPath));
     app.get("*", (_req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });

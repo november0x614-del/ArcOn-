@@ -6,9 +6,7 @@ export function useArcScanToken(contractAddress?: string, symbol?: string) {
 
   useEffect(() => {
     // Check local registry first
-    const localMatch = symbol
-      ? syncTokenWithArcScan(contractAddress, symbol)
-      : null;
+    const localMatch = symbol ? syncTokenWithArcScan(contractAddress, symbol) : null;
     if (localMatch?.logoUrl) {
       setLogoUrl(localMatch.logoUrl);
       return;
@@ -19,13 +17,11 @@ export function useArcScanToken(contractAddress?: string, symbol?: string) {
     }
 
     let isMounted = true;
-
+    
     // Fetch dynamically from Arcscan API
     const fetchFromExplorer = async () => {
       try {
-        const res = await fetch(
-          `https://testnet.arcscan.app/api/v2/tokens/${contractAddress}`,
-        );
+        const res = await fetch(`https://testnet.arcscan.app/api/v2/tokens/${contractAddress}`);
         if (!res.ok) return;
         const data = await res.json();
         if (isMounted && data?.icon_url) {
@@ -35,9 +31,9 @@ export function useArcScanToken(contractAddress?: string, symbol?: string) {
         // Silently fail if not found
       }
     };
-
+    
     fetchFromExplorer();
-
+    
     return () => {
       isMounted = false;
     };

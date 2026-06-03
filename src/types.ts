@@ -37,7 +37,6 @@ export type ViewState =
   | "arcbird"
   | "withdraw"
   | "bridge"
-  | "mintNFT"
   | "batchTransfer"
   | "adminDashboard";
 
@@ -111,29 +110,6 @@ export interface Transaction {
     recipients?: any[];
     platformFee?: number;
   };
-}
-
-export interface Product {
-  id: string | number;
-  name: string;
-  price: number | string;
-  stock: number;
-  image: string;
-  category: string;
-  sales: number;
-  desc?: string;
-  dateLabel?: string;
-  seller_address?: string;
-  created_at?: string;
-}
-
-export interface MintedNFT {
-  id: string;
-  name: string;
-  description?: string;
-  image: string;
-  timestamp: string;
-  txHash: string;
 }
 
 export interface Contact {

@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { ArrowLeft, Gamepad2, Trophy } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { useStore } from "../../store/useStore";
 
 interface ArcBirdScreenProps {
   onBack: () => void;
 }
 
 export function ArcBirdScreen({ onBack }: ArcBirdScreenProps) {
-  const { arcbirdHighscore: highScore, setArcbirdHighscore: saveHighScore } =
-    useStore();
   const [gameScore, setGameScore] = useState<number>(0);
+  const [highScore, setHighScore] = useState<number>(
+    localStorage.getItem("arcbird_highscore")
+      ? parseInt(localStorage.getItem("arcbird_highscore")!)
+      : 142,
+  );
   const [gameTimeLeft, setGameTimeLeft] = useState<number>(15);
   const [isGameActive, setIsGameActive] = useState<boolean>(false);
   const [floatingTexts, setFloatingTexts] = useState<
@@ -26,7 +28,8 @@ export function ArcBirdScreen({ onBack }: ArcBirdScreenProps) {
     } else if (gameTimeLeft === 0) {
       setIsGameActive(false);
       if (gameScore > highScore) {
-        saveHighScore(gameScore);
+        setHighScore(gameScore);
+        localStorage.setItem("arcbird_highscore", gameScore.toString());
       }
     }
     return () => clearInterval(interval);

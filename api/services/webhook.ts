@@ -61,13 +61,7 @@ export async function verifyAndProcessWebhook(
     const signatureBuffer = Buffer.from(signature, "base64");
 
     // Standardize body for signature verification to support both raw buffers and pre-parsed bodies
-    const rawBodyBuffer =
-      (req as any).rawBody ||
-      (Buffer.isBuffer(req.body)
-        ? req.body
-        : Buffer.from(
-            typeof req.body === "string" ? req.body : JSON.stringify(req.body),
-          ));
+    const rawBodyBuffer = (req as any).rawBody || (Buffer.isBuffer(req.body) ? req.body : Buffer.from(typeof req.body === "string" ? req.body : JSON.stringify(req.body)));
 
     if (algorithm === "ED25519") {
       isVerified = crypto.verify(
@@ -117,43 +111,35 @@ export async function verifyAndProcessWebhook(
 
     const type = payload.notificationType;
     const data = payload.notification;
-    console.log(`Webhook received: ${type}, transactionType: ${data?.transactionType}`);
+    console.log(`Webhook received: ${type}`);
 
-    const isInbound = type === "transactions.inbound" || data?.transactionType === "INBOUND";
-    const isOutbound = (
-      type === "transfers.updated" ||
-      type === "transfers.created" ||
+    if (
+      type === "transfers.updated" || 
+      type === "transfers.created" || 
       type === "contractExecutions.updated" ||
-      type === "transactions.outbound" ||
       type === "transactions.updated"
-    ) && !isInbound;
-
-    if (isOutbound) {
+    ) {
       const transfer = data;
       const internalRef = transfer.id;
 
       // Arc Deterministic Finality: Arc transactions are immutable after 1 confirmation
-      // Circle marks COMPLETE when fully settled, we align with that.
-      const txStatus = transfer.status || transfer.state;
-      const isFailed = txStatus === "FAILED";
-      const newStatus =
-        txStatus === "COMPLETE"
+      // Circle marks COMPLETE when fully settled, but CONFIRMED is enough for Web3 UX.
+      const isFailed = transfer.status === "FAILED" || transfer.status === "CANCELLED";
+      const isSuccess = transfer.status === "COMPLETE" || transfer.status === "CONFIRMED";
+      
+      const newStatus = isSuccess
           ? "success"
           : isFailed
             ? "failed"
             : "pending";
 
       // Arc hardening: extract txHash if available
-      const txHash =
-        transfer.transactionHash || data.txHash || data.transactionHash;
+      const txHash = transfer.transactionHash || transfer.txHash || data.txHash || data.transactionHash || data.txId;
 
       // Extract error details if failed
       let errorMessage = null;
       if (isFailed) {
-        errorMessage = interpretCircleError(
-          transfer.errorReason,
-          transfer.errorDetails,
-        );
+        errorMessage = interpretCircleError(transfer.errorReason, transfer.errorDetails);
       }
 
       // First fetch the existing transaction to update its metadata
@@ -162,24 +148,20 @@ export async function verifyAndProcessWebhook(
         .select("metadata")
         .eq("internal_ref", internalRef)
         .single();
-
-      const updatedMetadata = existingTx?.metadata
-        ? {
-            ...existingTx.metadata,
+        
+      const updatedMetadata = existingTx?.metadata 
+        ? { 
+            ...existingTx.metadata, 
             txHash: txHash || existingTx.metadata.txHash,
-            errorReason: isFailed
-              ? transfer.errorReason
-              : existingTx.metadata.errorReason,
-            errorDetails: isFailed
-              ? transfer.errorDetails
-              : existingTx.metadata.errorDetails,
-            errorMessage: errorMessage || existingTx.metadata.errorMessage,
-          }
-        : {
-            txHash,
+            errorReason: isFailed ? transfer.errorReason : existingTx.metadata.errorReason,
+            errorDetails: isFailed ? transfer.errorDetails : existingTx.metadata.errorDetails,
+            errorMessage: errorMessage || existingTx.metadata.errorMessage
+          } 
+        : { 
+            txHash, 
             errorReason: isFailed ? transfer.errorReason : null,
             errorDetails: isFailed ? transfer.errorDetails : null,
-            errorMessage,
+            errorMessage 
           };
 
       const { error } = await supabaseAdmin
@@ -187,34 +169,22 @@ export async function verifyAndProcessWebhook(
         .update({ status: newStatus, metadata: updatedMetadata })
         .eq("internal_ref", internalRef);
 
-      // Ledger equivalent update
-      await supabaseAdmin
-        .from("transaction_ledger")
-        .update({
-          status: newStatus === "success" ? "COMPLETE" : newStatus === "failed" ? "FAILED" : "PENDING",
-          tx_hash: txHash,
-        })
-        .eq("circle_tx_id", internalRef);
-
       if (error) {
         console.error("Supabase update error:", error);
       } else {
         console.log(`Transaction ${internalRef} updated to ${newStatus}`);
       }
-    } else if (isInbound) {
+    } else if (type === "transactions.inbound") {
       console.log("Processing inbound transaction:", JSON.stringify(data));
       const {
         id,
         amounts,
-        amount,
         destinationAddress,
         sourceAddress,
         createDate,
         txHash,
-        transactionType
       } = data;
-      
-      const amountValue = amounts?.[0] || amount || 0;
+      const amountValue = amounts[0]; // Take the first amount (USDC)
 
       // Arc Hardening: Memo Parsing
       // In a real exchange, we would check the 'memo' field if provided via a Memo contract
@@ -222,15 +192,6 @@ export async function verifyAndProcessWebhook(
       console.log(
         `[Webhook] Inbound transaction ${id} has memo: ${memo || "none"}`,
       );
-
-      // E-Commerce Database Hook for Escrow
-      if (memo && memo.startsWith("ORDER-")) {
-        console.log(`[Webhook] Order Escrow Payment Detected for ${memo}, upgrading status to ESCROWED`);
-        await supabaseAdmin
-          .from("ecommerce_orders")
-          .update({ status: "ESCROWED", tx_hash: txHash || "pending" })
-          .eq("memo", memo);
-      }
 
       const { data: walletData, error: walletError } = await supabaseAdmin
         .from("user_wallets")
@@ -245,20 +206,6 @@ export async function verifyAndProcessWebhook(
       });
 
       if (walletData && !walletError) {
-        // Arc Hardening: Idempotency check to prevent duplicate inbound receipts
-        const { data: existingTx } = await supabaseAdmin
-          .from("transactions")
-          .select("id")
-          .eq("internal_ref", id)
-          .maybeSingle();
-
-        if (existingTx) {
-          console.log(
-            `[Webhook] Inbound transaction ${id} already processed. Skipping duplicate insert.`,
-          );
-          return res.status(200).send("Accepted");
-        }
-
         const { error } = await supabaseAdmin.from("transactions").insert({
           user_id: walletData.id,
           amount: amountValue,
@@ -271,20 +218,6 @@ export async function verifyAndProcessWebhook(
             destinationAddress,
             txHash,
             finality: "deterministic",
-            memo: memo || null,
-          },
-        });
-
-        await supabaseAdmin.from("transaction_ledger").insert({
-          user_id: walletData.id,
-          tx_type: "RECEIVE", 
-          amount: amountValue,
-          destination_address: destinationAddress,
-          circle_tx_id: id,
-          tx_hash: txHash,
-          status: "COMPLETE",
-          metadata: {
-            sourceAddress,
             memo: memo || null,
           },
         });

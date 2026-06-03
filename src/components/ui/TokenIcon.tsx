@@ -8,12 +8,7 @@ interface TokenIconProps {
   color?: string; // fallback color
 }
 
-export function TokenIcon({
-  contractAddress,
-  symbol,
-  className = "",
-  color = "bg-slate-800",
-}: TokenIconProps) {
+export function TokenIcon({ contractAddress, symbol, className = "", color = "bg-slate-800" }: TokenIconProps) {
   const { logoUrl } = useArcScanToken(contractAddress, symbol);
 
   return (
@@ -21,9 +16,9 @@ export function TokenIcon({
       className={`rounded-full flex items-center justify-center text-white font-bold shadow-inner relative overflow-hidden shrink-0 ${color} ${className}`}
     >
       {logoUrl ? (
-        <img
-          src={logoUrl}
-          alt={symbol}
+        <img 
+          src={logoUrl} 
+          alt={symbol} 
           className="w-full h-full object-contain z-20"
           referrerPolicy="no-referrer"
         />

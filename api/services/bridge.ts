@@ -103,11 +103,11 @@ export async function initiateOutboundBridge(
     contractAddress: USDC_ADDRESS,
     abiFunctionSignature: "approve(address,uint256)",
     abiParameters: [TOKEN_MESSENGER, amountBigInt.toString()],
-    fee: {
-      type: "level",
-      config: {
-        feeLevel: "MEDIUM",
-      },
+    fee: { 
+      type: "level", 
+      config: { 
+        feeLevel: "MEDIUM" 
+      } 
     },
   });
 
@@ -115,9 +115,7 @@ export async function initiateOutboundBridge(
 
   // Step 1.5: Wait for Approve Transaction to Complete
   if (approveTx.data?.id) {
-    console.log(
-      `[BridgeService] Awaiting approval confirmation for transaction ID: ${approveTx.data.id}`,
-    );
+    console.log(`[BridgeService] Awaiting approval confirmation for transaction ID: ${approveTx.data.id}`);
     await waitForCircleTxComplete(approveTx.data.id);
     console.log(`[BridgeService] Approval transaction confirmed successfully.`);
   }
@@ -136,11 +134,11 @@ export async function initiateOutboundBridge(
       recipientBytes32,
       USDC_ADDRESS,
     ],
-    fee: {
-      type: "level",
-      config: {
-        feeLevel: "MEDIUM",
-      },
+    fee: { 
+      type: "level", 
+      config: { 
+        feeLevel: "MEDIUM" 
+      } 
     },
   });
 
@@ -155,41 +153,35 @@ export async function initiateOutboundBridge(
  */
 async function waitForCircleTxComplete(txId: string): Promise<string> {
   const client = getCircleClientInstance();
-
-  for (let i = 0; i < 30; i++) {
-    // Max 30 attempts (~2 minutes)
+  
+  for (let i = 0; i < 30; i++) { // Max 30 attempts (~2 minutes)
     try {
       const response = await client.getTransaction({ id: txId });
       const transaction = response.data?.transaction as any;
       const status = transaction?.status;
       const txHash = transaction?.txHash;
-
-      console.log(
-        `[BridgeService] Polling Transaction ${txId}: status = ${status}, txHash = ${txHash}`,
-      );
-
+      
+      console.log(`[BridgeService] Polling Transaction ${txId}: status = ${status}, txHash = ${txHash}`);
+      
       if (status === "COMPLETE") {
         return txHash || "";
       }
-
+      
       if (status === "FAILED") {
         throw new Error(
           `Circle Transaction ${txId} failed on-chain: ${
-            response.data?.transaction?.errorDetails ||
-            "Unknown execution revert"
-          }`,
+            response.data?.transaction?.errorDetails || "Unknown execution revert"
+          }`
         );
       }
     } catch (err: any) {
-      console.warn(
-        `[BridgeService] Attempt ${i + 1} to get transaction ${txId} details failed:`,
-        err.message,
-      );
+      console.warn(`[BridgeService] Attempt ${i + 1} to get transaction ${txId} details failed:`, err.message);
     }
-
+    
     // Wait 4 seconds between polls
     await new Promise((resolve) => setTimeout(resolve, 4000));
   }
-
+  
   throw new Error(`Circle Transaction ${txId} timeout waiting for completion.`);
 }
+

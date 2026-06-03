@@ -22,28 +22,11 @@ export function AmountInputScreen({
   onBack,
   onNext,
 }: AmountInputScreenProps) {
-  const {
-    registeredUser,
-    balance,
-    allBalances,
-    transferAmount,
-    transferMemo,
-    platformConfig,
-  } = useStore();
+  const { registeredUser, balance, allBalances, transferAmount, transferMemo } = useStore();
   const { getFeeEstimate } = useArc();
   const [amount, setAmount] = useState(
     transferAmount && transferAmount !== "0" ? transferAmount : "",
   );
-
-  // Extract configuration values
-  const minTransfer = platformConfig?.minTransferAmount
-    ? parseFloat(platformConfig.minTransferAmount.toString().replace(/[^0-9.]/g, "")) || 0.1
-    : 0.1;
-  const platformFee = platformConfig?.withdrawFee
-    ? parseFloat(platformConfig.withdrawFee.replace(/[^0-9.]/g, "")) || 0
-    : 0;
-  const dailyLimit = parseFloat(platformConfig?.dailyTransferLimit || "5000");
-
   const [memo, setMemo] = useState(transferMemo || "");
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSourceSelect, setShowSourceSelect] = useState(false);
@@ -75,222 +58,137 @@ export function AmountInputScreen({
   const sources = [currentSource];
 
   const numericAmount = amount ? parseFloat(amount) : 0;
-
-  // Format displayName based on contact.name
-  const displayName = React.useMemo(() => {
-    const name = contact.name || "";
-    if (name.toUpperCase().startsWith("USER_0X")) {
-      const addrHex = name.substring(5); // removes USER_
-      return addrHex.toLowerCase();
-    }
-    return name;
-  }, [contact.name]);
-
-  // Clean initials rendering to display a beautiful generic Wallet/User vector icon for numeric/hex fallback avatars
-  const isDigitOnly = /^\d+$/.test(contact.initials || "");
-  const avatarEl = React.useMemo(() => {
-    if (isDigitOnly || displayName.startsWith("0x")) {
-      return (
-        <div className="w-[64px] h-[64px] shadow-sm rounded-full bg-slate-100 flex items-center justify-center text-slate-500 mb-4 border-2 border-white shrink-0">
-          <svg className="w-7 h-7 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-          </svg>
-        </div>
-      );
-    }
-    return (
-      <div className="w-[64px] h-[64px] shadow-sm rounded-full bg-slate-900 flex items-center justify-center font-bold text-white text-[20px] shrink-0 mb-4 border-2 border-white">
-        {contact.initials}
-      </div>
-    );
-  }, [contact.initials, isDigitOnly, displayName]);
-
-  const confirmAvatarEl = React.useMemo(() => {
-    if (isDigitOnly || displayName.startsWith("0x")) {
-      return (
-        <div className="w-[46px] h-[46px] rounded-full bg-slate-100 flex items-center justify-center text-slate-500 border border-slate-200 shrink-0">
-          <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-          </svg>
-        </div>
-      );
-    }
-    return (
-      <div className="w-[46px] h-[46px] rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-750 border border-slate-100 shrink-0 text-[13px]">
-        {contact.initials}
-      </div>
-    );
-  }, [contact.initials, isDigitOnly, displayName]);
-
+  
   // Accurate USDC Balance check for Arc Testnet
   const usdcData = allBalances.find((b) => b.token?.symbol === "USDC");
   const actualUSDC = usdcData ? parseFloat(usdcData.amount) : 0;
-
+  
   // Total needed (including platform fee)
-  const totalRequired = numericAmount + platformFee;
+  const totalRequired = numericAmount + 0.10;
   const hasEnough = actualUSDC >= totalRequired;
-  const isWithinLimit = numericAmount <= dailyLimit;
 
   return (
-    <div className="w-full h-full bg-[#ecf5fc] relative flex flex-col z-50">
+    <div className="w-full h-full bg-white relative flex flex-col z-50">
       {/* Header */}
-      <div className="flex justify-center bg-slate-900 shadow-md relative z-10 w-full shrink-0">
-        <div className="flex items-center px-4 pt-6 pb-3 w-full max-w-[500px] justify-center relative">
-          <button
-            onClick={onBack}
-            className="absolute left-4 p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
-          >
-            <ArrowLeft size={20} className="text-white" />
-          </button>
-          <h2 className="font-bold text-[16px] text-white">INPUT AMOUNT</h2>
-        </div>
+      <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full justify-center">
+        <button
+          onClick={onBack}
+          className="absolute left-4 p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
+        >
+          <ArrowLeft size={20} className="text-white" />
+        </button>
+        <h2 className="font-bold text-[16px] text-white">INPUT AMOUNT</h2>
       </div>
 
-      <div className="flex-1 overflow-y-auto w-full pb-32 p-5 bg-[#ecf5fc]">
-        <div className="w-full max-w-[500px] mx-auto flex flex-col relative w-full h-full">
-          {/* Recipient Card - Updated Design */}
-          <div className="bg-white rounded-[32px] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 mb-8 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-500">
-            {avatarEl}
-            <h2 className={`text-slate-900 font-bold text-[18px] tracking-tight leading-tight text-center ${displayName.startsWith("0x") ? "font-mono lowercase" : "uppercase"}`}>
-              {displayName}
-            </h2>
-            <div className="mt-2 px-4 py-1.5 bg-slate-50 rounded-full border border-slate-100">
-              <p className="text-slate-500 text-[12px] font-bold tracking-tight text-center flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                {contact.bank || contact.network} - {contact.account && contact.account.startsWith("0x") && contact.account.length > 15 ? `${contact.account.substring(0, 8)}...${contact.account.substring(contact.account.length - 6)}` : contact.account}
-              </p>
+      <div className="flex-1 overflow-y-auto w-full pb-32 p-5 bg-[#f8fafc]">
+        {/* Recipient Card - Updated Design */}
+        <div className="bg-white rounded-[32px] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 mb-8 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-500">
+          <div className="w-[64px] h-[64px] shadow-sm rounded-full bg-slate-900 flex items-center justify-center font-bold text-white text-[22px] shrink-0 mb-4 border-4 border-slate-50">
+            {contact.initials}
+          </div>
+          <h2 className="text-slate-900 font-black text-[18px] uppercase tracking-tight leading-tight text-center">
+            {contact.name}
+          </h2>
+          <div className="mt-2 px-4 py-1.5 bg-slate-50 rounded-full border border-slate-100">
+             <p className="text-slate-500 text-[12px] font-bold tracking-tight text-center flex items-center gap-1.5">
+               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+               {contact.bank || contact.network} - {contact.account}
+             </p>
+          </div>
+        </div>
+
+        {/* Input box */}
+        <div className="bg-white rounded-[28px] p-6 shadow-sm border border-slate-100 mb-6 relative space-y-4">
+          <label className="text-[12px] font-bold text-slate-400 uppercase tracking-wider block">
+            Transfer Amount
+          </label>
+          <div className="flex items-center justify-between pb-1 relative">
+            <input
+              type="number"
+              inputMode="decimal"
+              placeholder="0"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="text-[36px] font-black w-2/3 outline-none text-slate-800 focus:text-slate-900 bg-transparent placeholder-slate-200"
+            />
+            {amount && (
+              <button
+                onClick={() => setAmount("")}
+                className="absolute right-20 w-[24px] h-[24px] bg-slate-200 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-300 transition-colors z-20 top-1/2 -translate-y-1/2"
+              >
+                <X size={14} strokeWidth={2.5} />
+              </button>
+            )}
+            <div className="flex items-center gap-2 bg-slate-100 rounded-full py-1.5 px-3 border border-slate-200 h-9 shrink-0">
+              <span className="font-bold text-[14px] text-slate-800 tracking-tight">USDC</span>
             </div>
           </div>
-
-          {/* Input box */}
-          <div className="bg-white rounded-[28px] p-6 shadow-sm border border-slate-100 mb-6 relative space-y-4">
-            <label className="text-[12px] font-bold text-slate-400 uppercase tracking-wider block">
-              Transfer Amount
-            </label>
-            <div className="flex items-center justify-between pb-1 relative">
-              <input
-                type="number"
-                inputMode="decimal"
-                placeholder="0"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="text-[26px] font-bold tracking-tight w-2/3 outline-none text-slate-800 focus:text-slate-900 bg-transparent placeholder-slate-300"
-              />
-              {amount && (
-                <button
-                  onClick={() => setAmount("")}
-                  className="absolute right-20 w-[24px] h-[24px] bg-slate-200 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-300 transition-colors z-20 top-1/2 -translate-y-1/2"
-                >
-                  <X size={14} strokeWidth={2.5} />
-                </button>
-              )}
-              <div className="flex items-center gap-2 bg-slate-100 rounded-full py-1.5 px-3 border border-slate-200 h-9 shrink-0">
-                <span className="font-bold text-[14px] text-slate-800 tracking-tight">
-                  USDC
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between mt-2 pt-3 border-t border-slate-100">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[11px] text-slate-500 font-medium font-sans text-left">
-                  Balance: {actualUSDC.toFixed(2)} USDC
-                </span>
-                <span
-                  className={`text-[10px] font-sans text-left ${amount && numericAmount < minTransfer ? "text-red-500 font-bold" : "text-slate-400 font-medium"}`}
-                >
-                  Min. Transfer: {minTransfer} USDC
-                </span>
-                <span
-                  className={`text-[10px] font-sans text-left ${numericAmount > dailyLimit ? "text-red-500 font-bold" : "text-slate-400 font-medium"}`}
-                >
-                  Daily Limit: {dailyLimit.toFixed(2)} USDC
-                </span>
-              </div>
-              <button
-                onClick={() =>
-                  setAmount(
-                    actualUSDC >= platformFee
-                      ? (actualUSDC - platformFee).toFixed(2)
-                      : "0",
-                  )
-                }
+          
+          <div className="flex items-center justify-between mt-2 pt-3 border-t border-slate-100">
+            <span className="text-[12px] text-slate-500 font-medium">
+              USDC Balance: {actualUSDC.toFixed(2)} USDC
+            </span>
+            <button
+                onClick={() => setAmount(actualUSDC >= 0.1 ? (actualUSDC - 0.1).toFixed(2) : "0")}
                 className="text-[11px] font-bold bg-slate-200 text-slate-700 px-2.5 py-1 rounded-md hover:bg-slate-300 transition-colors cursor-pointer border-none"
               >
                 MAX
               </button>
-            </div>
           </div>
+        </div>
 
-          {/* Memo Input */}
-          <div className="bg-white rounded-[20px] shadow-sm border border-slate-200 mb-6 p-4">
-            {!isEditingMemo && !memo ? (
-              <button
-                onClick={() => setIsEditingMemo(true)}
-                className="flex items-center justify-center w-full gap-2 text-slate-600 font-medium text-[13px] hover:text-slate-900 transition-colors py-1 cursor-pointer border-0 bg-transparent"
-              >
-                <Edit3 size={15} className="text-slate-400" /> Add Memo
-                (Optional)
-              </button>
-            ) : (
-              <div className="w-full flex flex-col gap-2 relative">
-                <div className="flex justify-between items-center z-10 w-full bg-white relative">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest leading-none">
-                    Memo
-                  </span>
-                  <button
-                    onClick={() => {
-                      setMemo("");
-                      setIsEditingMemo(false);
-                    }}
-                    className="text-slate-400 hover:text-slate-600 cursor-pointer border-0 bg-transparent inline-flex leading-none pt-0 pb-0"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-                <input
-                  type="text"
-                  autoFocus={isEditingMemo}
-                  value={memo}
-                  onChange={(e) => setMemo(e.target.value)}
-                  placeholder="Ex: Payment for groceries"
-                  className="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl outline-none text-slate-700 text-[14px] font-medium"
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Action Button */}
-          <div className="mt-8">
+        {/* Memo Input */}
+        <div className="bg-white rounded-[20px] shadow-sm border border-slate-200 mb-6 p-4">
+          {!isEditingMemo && !memo ? (
             <button
-              onClick={() => setShowConfirm(true)}
-              disabled={
-                !amount ||
-                numericAmount < minTransfer ||
-                !hasEnough ||
-                !isWithinLimit
-              }
-              className={`w-full py-4 rounded-full font-bold text-[15px] transition-all flex items-center justify-center gap-2 border-[1.5px]
+              onClick={() => setIsEditingMemo(true)}
+              className="flex items-center justify-center w-full gap-2 text-slate-600 font-medium text-[13px] hover:text-slate-900 transition-colors py-1 cursor-pointer border-0 bg-transparent"
+            >
+              <Edit3 size={15} className="text-slate-400" /> Add Memo (Optional)
+            </button>
+          ) : (
+            <div className="w-full flex flex-col gap-2 relative">
+              <div className="flex justify-between items-center z-10 w-full bg-white relative">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest leading-none">
+                  Memo
+                </span>
+                <button
+                  onClick={() => {
+                    setMemo("");
+                    setIsEditingMemo(false);
+                  }}
+                  className="text-slate-400 hover:text-slate-600 cursor-pointer border-0 bg-transparent inline-flex leading-none pt-0 pb-0"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+              <input
+                type="text"
+                autoFocus={isEditingMemo}
+                value={memo}
+                onChange={(e) => setMemo(e.target.value)}
+                placeholder="Ex: Payment for groceries"
+                className="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl outline-none text-slate-700 text-[14px] font-medium"
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Action Button */}
+        <div className="mt-8">
+          <button
+            onClick={() => setShowConfirm(true)}
+            disabled={!amount || numericAmount < 1 || !hasEnough}
+            className={`w-full py-4 rounded-full font-bold text-[15px] transition-all flex items-center justify-center gap-2
               ${
-                !amount || numericAmount < minTransfer
-                  ? "bg-slate-100 text-slate-400 border-transparent shadow-none cursor-not-allowed"
-                  : !hasEnough
-                    ? "bg-red-50 text-red-500 border-red-100 shadow-none cursor-not-allowed"
-                    : numericAmount > dailyLimit
-                      ? "bg-amber-50 text-amber-600 border-amber-100 cursor-not-allowed shrink-0"
-                      : "bg-slate-900 text-white border-transparent shadow-lg hover:bg-slate-800 active:scale-[0.98]"
+                amount && numericAmount >= 1 && hasEnough
+                  ? "bg-slate-900 text-white shadow-lg hover:bg-slate-800 active:scale-[0.98]"
+                  : "bg-slate-100 text-slate-400 shadow-none cursor-not-allowed"
               }
             `}
-            >
-              {numericAmount > dailyLimit
-                ? "Over Limit"
-                : !hasEnough
-                  ? "Insufficient Balance"
-                  : amount && numericAmount < minTransfer
-                    ? `Min. Transfer is ${minTransfer} USDC`
-                    : "Review Transfer"}
-            </button>
-          </div>
+          >
+            Review Transfer
+          </button>
         </div>
       </div>
 
@@ -313,13 +211,15 @@ export function AmountInputScreen({
             <div className="px-5 pb-6 overflow-y-auto pt-5 flex-1 block">
               {/* Contact Preview */}
               <div className="flex items-center gap-4 mb-8 text-left">
-                {confirmAvatarEl}
+                <div className="w-[46px] h-[46px] rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600 text-[15px] shrink-0">
+                  {contact.initials}
+                </div>
                 <div className="flex flex-col overflow-hidden gap-[2px]">
-                  <span className={`font-bold text-[15px] text-slate-800 tracking-tight truncate ${displayName.startsWith("0x") ? "font-mono lowercase" : "uppercase"}`}>
-                    {displayName}
+                  <span className="font-extrabold text-[15px] text-slate-800 uppercase tracking-tight truncate">
+                    {contact.name}
                   </span>
                   <span className="text-slate-500 text-[13px] truncate">
-                    {contact.bank || contact.network} - {contact.account && contact.account.startsWith("0x") && contact.account.length > 15 ? `${contact.account.substring(0, 8)}...${contact.account.substring(contact.account.length - 6)}` : contact.account}
+                    {contact.bank || contact.network} - {contact.account}
                   </span>
                 </div>
               </div>
@@ -352,7 +252,7 @@ export function AmountInputScreen({
                         Platform Fee
                       </span>
                       <span className="text-slate-900 font-bold text-[14px]">
-                        {platformFee.toFixed(2)} USDC
+                        0.10 USDC
                       </span>
                     </div>
                     <div className="flex justify-between items-center mt-1">
@@ -360,13 +260,12 @@ export function AmountInputScreen({
                         <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>{" "}
                         Network Gas (Sponsored)
                       </span>
-                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md w-fit">
+                      <span className="text-emerald-600 font-bold text-[12px]">
                         Free
                       </span>
                     </div>
                     <p className="text-[10px] text-slate-500 leading-tight mt-2 border-t border-slate-200/50 pt-2">
-                      Platform fees are used for application operation. Your
-                      network gas fee is sponsored by Arc Gas Station.
+                       Platform fees are used for application operation. Your network gas fee is sponsored by Arc Gas Station.
                     </p>
                   </div>
                 ) : (
@@ -401,31 +300,34 @@ export function AmountInputScreen({
                 disabled={isSending}
                 onClick={async () => {
                   setIsSending(true);
+                  if (selectedSource.isArc && numericAmount > 100) {
+                    // Bio verification handler space
+                  }
                   await onNext(amount, memo);
                   setIsSending(false);
                 }}
-                className="w-full bg-slate-900 hover:bg-slate-800 text-white py-[16px] rounded-full flex justify-between px-6 items-center transition-all shadow-[0_4px_14px_rgba(15,23,42,0.3)] active:scale-[0.98] border-0 cursor-pointer"
+                className={`w-full text-white py-[14px] rounded-full flex justify-between px-6 items-center transition-all ${selectedSource.isArc ? "bg-slate-900 hover:bg-slate-800 shadow-[0_4px_14px_rgba(63,162,246,0.4)]" : "bg-slate-900 hover:bg-slate-800 shadow-lg"} ${isSending ? "opacity-90" : ""}`}
               >
-                <div className="flex items-center gap-3">
-                  {isSending ? (
+                <span className="font-bold text-[15px]">
+                  {isSending ? "Initiating Transfer..." : "Continue Transfer"}
+                </span>
+                <div className="flex items-center gap-2">
+                  {!isSending && (
+                    <>
+                      <span className="font-bold text-[16px]">
+                        {selectedSource.isArc
+                          ? `${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(numericAmount)} USDC`
+                          : `Rp ${new Intl.NumberFormat("id-ID").format(numericAmount + (numericAmount >= 100000 ? 0 : 6500))}`}
+                      </span>
+                      <div className="bg-white/20 p-1 rounded-full flex shrink-0 border-0">
+                        <ArrowRight size={16} strokeWidth={3} />
+                      </div>
+                    </>
+                  )}
+                  {isSending && (
                     <div className="w-5 h-5 border-[2.5px] border-white/20 border-t-white rounded-full animate-spin"></div>
-                  ) : null}
-                  <span className="font-bold text-[15px]">
-                    {isSending ? "Initiating Transfer..." : "Continue Transfer"}
-                  </span>
+                  )}
                 </div>
-                {!isSending && (
-                  <div className="flex items-center gap-3">
-                    <span className="font-extrabold text-[16px] tracking-tight">
-                      {selectedSource.isArc
-                        ? `${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(numericAmount)} USDC`
-                        : `Rp ${new Intl.NumberFormat("id-ID").format(numericAmount + (numericAmount >= 100000 ? 0 : 6500))}`}
-                    </span>
-                    <div className="bg-white/20 p-1.5 rounded-full border-0 flex items-center justify-center shadow-inner">
-                      <ArrowRight size={18} strokeWidth={3} />
-                    </div>
-                  </div>
-                )}
               </button>
             </div>
           </div>
@@ -471,7 +373,7 @@ export function AmountInputScreen({
                     )}
                   </div>
                   <span className="text-slate-500 text-[13px] tracking-wide font-medium text-left w-full block">
-                    {src.account && src.account.startsWith("0x") && src.account.length > 15 ? `${src.account.substring(0, 8)}...${src.account.substring(src.account.length - 6)}` : src.account}
+                    {src.account}
                   </span>
                   <span
                     className={`font-bold text-[14px] mt-2 text-left w-full block ${src.isArc ? "text-slate-800" : "text-[#008fcd]"}`}
