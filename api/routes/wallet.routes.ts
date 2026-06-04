@@ -230,12 +230,12 @@ router.get("/preferences/:userId", async (req, res) => {
 
     try {
       const { data, error } = await supabaseAdmin.auth.admin.getUserById(userId);
-      const user = data?.user;
-      if (!error && user && user.user_metadata?.preferences) {
-        preferences = user.user_metadata.preferences;
+
+      if (!error && data?.user?.user_metadata?.preferences) {
+        preferences = data.user.user_metadata.preferences;
       }
     } catch (authErr) {
-      console.warn("[Preferences] auth.admin.getUserById failed, returning default preferences:", authErr);
+      console.warn("[Preferences] auth direct query failed, returning default preferences:", authErr);
     }
 
     res.json(preferences);
@@ -256,9 +256,10 @@ router.put("/preferences/:userId", async (req, res) => {
 
     let currentMetadata: any = {};
     try {
-      const { data } = await supabaseAdmin.auth.admin.getUserById(userId);
-      const user = data?.user;
-      currentMetadata = user?.user_metadata || {};
+      const { data, error } = await supabaseAdmin.auth.admin.getUserById(userId);
+      if (!error && data?.user) {
+        currentMetadata = data.user.user_metadata || {};
+      }
     } catch (_) {}
 
     const newMetadata = {
@@ -270,11 +271,15 @@ router.put("/preferences/:userId", async (req, res) => {
     };
 
     try {
-      await supabaseAdmin.auth.admin.updateUserById(userId, {
+      const { error: updateErr } = await supabaseAdmin.auth.admin.updateUserById(userId, {
         user_metadata: newMetadata,
       });
+
+      if (updateErr) {
+        console.error("[Preferences] Failed to update user metadata via auth.admin:", updateErr);
+      }
     } catch (updateErr) {
-      console.warn("[Preferences] Failed to update user metadata via auth.admin:", updateErr);
+      console.error("[Preferences] Failed to update user metadata via auth.admin catch:", updateErr);
     }
     res.json({ success: true, preferences: newMetadata.preferences });
   } catch (error: any) {
