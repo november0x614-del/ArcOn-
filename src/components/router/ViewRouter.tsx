@@ -140,38 +140,28 @@ export const ViewRouter = React.memo(
     const [transferSuccessData, setTransferSuccessData] = React.useState<any>(null);
 
     React.useEffect(() => {
-      // Only fetch config if user is at least partially logged in or already at home
-      const shouldFetch = registeredUser !== null || viewState === "home";
-      if (!shouldFetch) return;
+      // Only fetch config if user is logged in
+      if (!registeredUser) return;
 
-      const controller = new AbortController();
       const loadConfig = async () => {
         try {
-          const res = await fetch("/api/admin/config", {
-            signal: controller.signal,
+          const data = await BackendClient.getPlatformConfigs();
+          // Only update if data is actually different to avoid unnecessary re-renders
+          setPlatformConfig((prev: any) => {
+            if (JSON.stringify(prev) === JSON.stringify(data)) return prev;
+            return data;
           });
-          if (res.ok) {
-            const data = await res.json();
-            // Only update if data is actually different to avoid unnecessary re-renders
-            setPlatformConfig((prev: any) => {
-              if (JSON.stringify(prev) === JSON.stringify(data)) return prev;
-              return data;
-            });
-          }
         } catch (err: any) {
-          if (err.name !== "AbortError") {
-            console.debug("Transient config fetch failure:", err.message);
-          }
+          console.debug("Transient config fetch failure:", err.message);
         }
       };
 
       loadConfig();
       const interval = setInterval(loadConfig, 15000);
       return () => {
-        controller.abort();
         clearInterval(interval);
       };
-    }, [registeredUser, viewState]);
+    }, [registeredUser]);
 
     const renderLockedScreen = (title: string, description: string) => {
       return (

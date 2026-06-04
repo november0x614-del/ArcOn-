@@ -27,6 +27,7 @@ contract LoungeHub is Ownable, ReentrancyGuard {
 
     event OrderCreated(bytes32 indexed orderId, address buyer, uint256 amount);
     event SettlementExecuted(bytes32 indexed orderId, uint256 merchantAmount, uint256 platformFee);
+    event OrderRefunded(bytes32 indexed orderId, address buyer, uint256 refundedAmount);
 
     constructor(address _usdc, address _treasury) Ownable(msg.sender) {
         usdc = IERC20(_usdc);
@@ -63,5 +64,17 @@ contract LoungeHub is Ownable, ReentrancyGuard {
         usdc.transfer(treasury, order.platformFee);
         
         emit SettlementExecuted(orderId, order.amount, order.platformFee);
+    }
+
+    function refund(bytes32 orderId) external onlyOwner nonReentrant {
+        Order storage order = orders[orderId];
+        require(!order.settled, "Settled");
+        require(order.buyer != address(0), "Order does not exist");
+        order.settled = true;
+        
+        uint256 totalRefund = order.amount + order.platformFee;
+        require(usdc.transfer(order.buyer, totalRefund), "Refund transfer failed");
+        
+        emit OrderRefunded(orderId, order.buyer, totalRefund);
     }
 }

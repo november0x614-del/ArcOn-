@@ -18,6 +18,7 @@ import {
   ExternalLink
 } from "lucide-react";
 import { useStore } from "../../store/useStore";
+import { supabase } from "../../lib/supabaseClient";
 
 interface EcommerceScreenProps {
   onBack: () => void;
@@ -201,9 +202,16 @@ export function EcommerceScreen({ onBack, isDesktop }: EcommerceScreenProps) {
 
       const cartItems = products.filter(p => (cartQuantities[p.id] || 0) > 0);
 
+      const sessionResult = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+      const token = sessionResult?.data?.session?.access_token;
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
       const response = await fetch("/api/ecommerce/checkout-batch", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           buyerId: registeredUser?.supabaseUid,
           totalAmount: totalToPay,

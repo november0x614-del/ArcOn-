@@ -222,20 +222,29 @@ router.get("/balance/:userId/tokens", async (req, res) => {
 router.get("/preferences/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
-    const {
-      data: { user },
-      error,
-    } = await getSupabaseAdmin().auth.admin.getUserById(userId);
-    if (error || !user)
-      return res.status(404).json({ error: "User not found" });
-    res.json(
-      user.user_metadata?.preferences || {
-        favorites: [],
-        deletedContactIds: [],
-      },
-    );
+    const supabaseAdmin = getSupabaseAdmin();
+    let preferences = {
+      favorites: [],
+      deletedContactIds: [],
+    };
+
+    try {
+      const { data, error } = await supabaseAdmin.auth.admin.getUserById(userId);
+      const user = data?.user;
+      if (!error && user && user.user_metadata?.preferences) {
+        preferences = user.user_metadata.preferences;
+      }
+    } catch (authErr) {
+      console.warn("[Preferences] auth.admin.getUserById failed, returning default preferences:", authErr);
+    }
+
+    res.json(preferences);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error("Fetch preferences outer error:", error);
+    res.json({
+      favorites: [],
+      deletedContactIds: [],
+    });
   }
 });
 
@@ -243,21 +252,30 @@ router.put("/preferences/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
     const { preferences } = req.body;
+    const supabaseAdmin = getSupabaseAdmin();
 
-    const {
-      data: { user },
-    } = await getSupabaseAdmin().auth.admin.getUserById(userId);
+    let currentMetadata: any = {};
+    try {
+      const { data } = await supabaseAdmin.auth.admin.getUserById(userId);
+      const user = data?.user;
+      currentMetadata = user?.user_metadata || {};
+    } catch (_) {}
+
     const newMetadata = {
-      ...user?.user_metadata,
+      ...currentMetadata,
       preferences: {
-        ...(user?.user_metadata?.preferences || {}),
+        ...(currentMetadata.preferences || {}),
         ...preferences,
       },
     };
 
-    await getSupabaseAdmin().auth.admin.updateUserById(userId, {
-      user_metadata: newMetadata,
-    });
+    try {
+      await supabaseAdmin.auth.admin.updateUserById(userId, {
+        user_metadata: newMetadata,
+      });
+    } catch (updateErr) {
+      console.warn("[Preferences] Failed to update user metadata via auth.admin:", updateErr);
+    }
     res.json({ success: true, preferences: newMetadata.preferences });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

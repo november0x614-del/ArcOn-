@@ -132,14 +132,27 @@ export function AdminDashboardScreen({
   const [pinInput, setPinInput] = useState("");
   const [pinError, setPinError] = useState(false);
 
-  const handleVerifyPin = () => {
-    // Dynamically check against the fetched platform configuration
-    const correctPin = platformConfig?.adminPin || "123456";
-    if (pinInput === correctPin) {
-      setIsAdminAuthorized(true);
-      setPinError(false);
-      fetchData();
-    } else {
+  const handleVerifyPin = async () => {
+    try {
+      const response = await fetch("/api/admin/verify-pin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin: pinInput }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setIsAdminAuthorized(true);
+          setPinError(false);
+          fetchData();
+          return;
+        }
+      }
+      setPinError(true);
+      setPinInput("");
+      setTimeout(() => setPinError(false), 2000);
+    } catch (err) {
+      console.error("PIN verification error", err);
       setPinError(true);
       setPinInput("");
       setTimeout(() => setPinError(false), 2000);
@@ -268,7 +281,7 @@ export function AdminDashboardScreen({
         setBatchBaseFeeInput(data.batchBaseFee || "0.15 USDC");
         setBatchPerRecipientFeeInput(data.batchPerRecipientFee || "0.02 USDC");
         setTreasuryWalletInput(data.treasuryWalletAddress || "");
-        setAdminPinInputConfig(data.adminPin || "123456");
+        setAdminPinInputConfig("");
       }
     } catch (err) {
       console.error(err);

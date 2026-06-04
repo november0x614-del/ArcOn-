@@ -6,6 +6,7 @@ import {
   ARC_USDC_TOKEN_ID,
   shouldRequireApproval,
   recordPendingApprovalTx,
+  getTreasuryAddress,
 } from "../services/circle.js";
 import { TransactionService } from "../services/transaction.service.js";
 import {
@@ -33,7 +34,7 @@ async function getUserTodayTransferTotal(userId: string): Promise<number> {
       .from("transactions")
       .select("amount")
       .eq("user_id", userId)
-      .eq("type", "transfer")
+      .in("type", ["transfer", "batchTransfer"])
       .neq("status", "failed")
       .gte("created_at", startOfToday.toISOString());
 
@@ -53,6 +54,8 @@ async function getUserTodayTransferTotal(userId: string): Promise<number> {
     return 0;
   }
 }
+
+const lastSelfHealTimestamps = new Map<string, number>();
 
 router.get("/transactions/:userId", async (req, res) => {
   try {
@@ -84,7 +87,12 @@ router.get("/transactions/:userId", async (req, res) => {
         ),
     );
 
-    if (pendingTxs.length > 0) {
+    const now = Date.now();
+    const lastHeal = lastSelfHealTimestamps.get(requestedUserId) || 0;
+    const shouldHeal = (now - lastHeal) >= 15000; // 15 seconds cooldown to prevent DoS via sustained polling
+
+    if (pendingTxs.length > 0 && shouldHeal) {
+      lastSelfHealTimestamps.set(requestedUserId, now);
       const client = getCircleClientInstance();
       const sleep = (ms: number) =>
         new Promise((resolve) => setTimeout(resolve, ms));
@@ -132,10 +140,39 @@ router.get("/transactions/:userId", async (req, res) => {
             );
           }
         } catch (circleErr: any) {
-          console.error(
-            `[Self-Healing] Failed to resolve transaction ${tx.internal_ref}:`,
-            circleErr.message || circleErr,
-          );
+          const errMsg = circleErr.message || String(circleErr);
+          const isNotFoundError = errMsg.toLowerCase().includes("cannot find target transaction") || 
+                              errMsg.toLowerCase().includes("not found") || 
+                              errMsg.toLowerCase().includes("not accessible");
+          
+          if (isNotFoundError) {
+            console.log(`[Self-Healing] Transaction ${tx.internal_ref} not found on Circle API. Marking as failed.`);
+            try {
+              const updatedMetadata = {
+                ...(tx.metadata || {}),
+                errorReason: "Transaction not found on Circle API",
+                errorDetails: errMsg,
+                selfHealed: true,
+              };
+              await supabase
+                .from("transactions")
+                .update({
+                  status: "failed",
+                  metadata: updatedMetadata,
+                })
+                .eq("id", tx.id);
+
+              tx.status = "failed";
+              tx.metadata = updatedMetadata;
+            } catch (dbErr) {
+              console.warn(`[Self-Healing] Failed to update not-found transaction in DB:`, dbErr);
+            }
+          } else {
+            console.warn(
+              `[Self-Healing] Temporary failure resolving transaction ${tx.internal_ref}:`,
+              errMsg,
+            );
+          }
         }
         await sleep(500); // 500ms delay to prevent rate limits
       }
@@ -259,9 +296,9 @@ router.post("/swap/execute", async (req, res) => {
           
           txHash = otcHash || `0x${crypto.randomBytes(32).toString("hex")}`;
           
-          if (otcHash) {
+          if (otcHash && process.env.SLACK_WEBHOOK_URL) {
             // Notify Admin through Slack
-            fetch(process.env.SLACK_WEBHOOK_URL!, {
+            fetch(process.env.SLACK_WEBHOOK_URL, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ text: `OTC Reconciliation Required! Hash: ${otcHash}. Ref: ${internalRef}` })
@@ -401,31 +438,28 @@ router.post("/transfer/execute", async (req, res) => {
       },
     });
 
-    // 5. Jalankan eksekusi Blockchain secara sinkron
-    try {
-      const result = await executeAtomicBatchTransfer(
-        supabaseAdmin,
-        authenticatedUserId,
-        [{ address: destinationAddress, amount: amountNum, name: recipientName || "Akun EVM" }],
-        fee,
-        true, // skipDbInsert karena sudah kita lakukan di registerPending
-        internalRef
-      );
-
+    // 5. Jalankan eksekusi Blockchain secara asinkron (H-2: mencegah double-spend & timeout)
+    executeAtomicBatchTransfer(
+      supabaseAdmin,
+      authenticatedUserId,
+      [{ address: destinationAddress, amount: amountNum, name: recipientName || "Akun EVM" }],
+      fee,
+      true, // skipDbInsert karena sudah kita lakukan di registerPending
+      internalRef
+    ).then(async (result) => {
       await supabaseAdmin.from("transactions").update({ status: "success", tx_hash: result.txId }).eq("internal_ref", internalRef);
       await supabaseAdmin.from("transaction_ledger").update({ status: "COMPLETE", tx_hash: result.txId }).eq("circle_tx_id", internalRef);
-
-      res.status(200).json({
-        message: "Transfer berhasil",
-        txId: internalRef,
-        status: "success"
-      });
-    } catch (e: any) {
-      console.error("[TransferSync] Fatal error:", e);
+    }).catch(async (e: any) => {
+      console.error("[TransferAsync] Fatal error:", e);
       await supabaseAdmin.from("transactions").update({ status: "failed", metadata: { error: e.message } }).eq("internal_ref", internalRef);
       await supabaseAdmin.from("transaction_ledger").update({ status: "FAILED", metadata: { error: e.message } }).eq("circle_tx_id", internalRef);
-      res.status(500).json({ error: "Transfer gagal: " + e.message });
-    }
+    });
+
+    res.status(200).json({
+      message: "Transfer berhasil diinisialisasi",
+      txId: internalRef,
+      status: "success"
+    });
 
   } catch (error: any) {
     console.error("Atomic Transfer Error:", error);
@@ -439,9 +473,10 @@ router.post("/transfer/execute", async (req, res) => {
  */
 router.post("/withdraw/execute", async (req, res) => {
   try {
-    const { userId, amount, bank, memo } = req.body;
+    const authenticatedUserId = (req as any).userId;
+    const { amount, bank, memo } = req.body;
 
-    if (await isUserBlocked(userId)) {
+    if (await isUserBlocked(authenticatedUserId)) {
       return res.status(403).json({ error: "Akun Anda dinonaktifkan." });
     }
 
@@ -451,27 +486,16 @@ router.post("/withdraw/execute", async (req, res) => {
     }
 
     const supabaseAdmin = getSupabaseAdmin();
-    let treasuryAddress = process.env.PLATFORM_TREASURY_ADDRESS;
-
-    if (!treasuryAddress) {
-      const { data: treasuryWallet } = await supabaseAdmin
-        .from("user_wallets")
-        .select("wallet_address")
-        .eq("id", "11111111-1111-1111-1111-111111111111")
-        .single();
-      treasuryAddress = treasuryWallet?.wallet_address;
-    }
-
-    if (!treasuryAddress) throw new Error("Dompet Treasury platform belum dikonfigurasi.");
+    const treasuryAddress = await getTreasuryAddress(supabaseAdmin);
 
     const internalRef = crypto.randomUUID();
     const amountNum = parseFloat(amount);
 
     // 1. Pengecekan Persetujuan
-    if (shouldRequireApproval(amountNum, userId)) {
+    if (shouldRequireApproval(amountNum, authenticatedUserId)) {
       await recordPendingApprovalTx(
         supabaseAdmin,
-        userId,
+        authenticatedUserId,
         amountNum,
         "withdraw",
         { bank, memo, finality: "deterministic" },
@@ -486,39 +510,36 @@ router.post("/withdraw/execute", async (req, res) => {
     }
 
     // 2. Registrasi awal jika tidak butuh persetujuan
-    await TransactionService.registerPending(supabaseAdmin, userId, {
+    await TransactionService.registerPending(supabaseAdmin, authenticatedUserId, {
       amount,
       type: "withdraw",
       internalRef,
       metadata: { bank, memo, finality: "deterministic" },
     });
 
-    // 3. Eksekusi pemindahan dana ke treasury secara sinkron
-    try {
-      const result = await executeTransaction(
-        supabaseAdmin,
-        userId,
-        amountNum,
-        treasuryAddress!,
-        "withdraw",
-        { bank, memo, finality: "deterministic", bypassApproval: true },
-        internalRef
-      );
-
+    // 3. Eksekusi pemindahan dana ke treasury secara asinkron (H-2: mencegah double-spend & timeout)
+    executeTransaction(
+      supabaseAdmin,
+      authenticatedUserId,
+      amountNum,
+      treasuryAddress!,
+      "withdraw",
+      { bank, memo, finality: "deterministic", bypassApproval: true },
+      internalRef
+    ).then(async (result) => {
       await supabaseAdmin.from("transactions").update({ status: "success", tx_hash: result.txId }).eq("internal_ref", internalRef);
       await supabaseAdmin.from("transaction_ledger").update({ status: "COMPLETE", tx_hash: result.txId }).eq("circle_tx_id", internalRef);
-
-      res.status(200).json({ 
-        message: "Withdraw berhasil diproses", 
-        txId: internalRef,
-        status: "success" 
-      });
-    } catch (e: any) {
-      console.error("[WithdrawSync] Fatal error:", e);
+    }).catch(async (e: any) => {
+      console.error("[WithdrawAsync] Fatal error:", e);
       await supabaseAdmin.from("transactions").update({ status: "failed", metadata: { error: e.message } }).eq("internal_ref", internalRef);
       await supabaseAdmin.from("transaction_ledger").update({ status: "FAILED", metadata: { error: e.message } }).eq("circle_tx_id", internalRef);
-      res.status(500).json({ error: "Withdraw gagal: " + e.message });
-    }
+    });
+
+    res.status(200).json({ 
+      message: "Withdraw berhasil diproses di latar belakang", 
+      txId: internalRef,
+      status: "success" 
+    });
 
   } catch (error: any) {
     console.error("Withdraw Error", error);
@@ -599,9 +620,10 @@ router.post("/payments/create", async (req, res) => {
  */
 router.post("/payments/batch", async (req, res) => {
   try {
-    const { userId, recipients, platformFee } = req.body;
+    const authenticatedUserId = (req as any).userId;
+    const { recipients, platformFee } = req.body;
 
-    if (await isUserBlocked(userId)) {
+    if (await isUserBlocked(authenticatedUserId)) {
       return res.status(403).json({ error: "Akun Anda dinonaktifkan." });
     }
 
@@ -621,7 +643,7 @@ router.post("/payments/batch", async (req, res) => {
     }
 
     const dailyLimit = parseFloat(config?.dailyTransferLimit?.replace(/[^0-9.]/g, "") || "5000");
-    const todayTotal = await getUserTodayTransferTotal(userId);
+    const todayTotal = await getUserTodayTransferTotal(authenticatedUserId);
     if (todayTotal + totalAmount > dailyLimit) {
       return res.status(400).json({ error: "Limit harian terlampaui." });
     }
@@ -631,7 +653,7 @@ router.post("/payments/batch", async (req, res) => {
     const internalRef = crypto.randomUUID();
 
     // 1. Registrasi awal di Database
-    await TransactionService.registerPending(supabaseAdmin, userId, {
+    await TransactionService.registerPending(supabaseAdmin, authenticatedUserId, {
       amount: totalAmount.toFixed(2),
       type: "batchTransfer",
       internalRef,
@@ -651,7 +673,7 @@ router.post("/payments/batch", async (req, res) => {
       internalRef,
       () => executeAtomicBatchTransfer(
         supabaseAdmin,
-        userId,
+        authenticatedUserId,
         recipients.map((r: any) => ({
           address: r.address,
           amount: parseFloat(r.amount),
@@ -724,27 +746,55 @@ router.post("/purchase/execute", async (req, res) => {
       ? `[On-Chain Escrow Locked - LoungeHub] Purchase ${product}`
       : `Purchase ${product}`;
 
-    const result = await executeTransaction(
-      getSupabaseAdmin(),
-      authenticatedUserId,
-      amount,
-      recipientAddress,
-      "purchase",
-      {
-        product,
-        memo: memoText,
-        useEscrow,
-        escrowAddress: recipientAddress,
-      },
-    );
-    res.status(200).json({
-      message: useEscrow
-        ? "Purchase locked in Escrow Contract"
-        : "Purchase queued",
-      txId: result.txId,
+    const internalRef = crypto.randomUUID();
+    const purchaseMetadata = {
+      product,
+      memo: memoText,
       useEscrow,
       escrowAddress: recipientAddress,
+    };
+
+    const supabaseAdmin = getSupabaseAdmin();
+
+    // 1. Registrasi awal ke tabel transaksi utama untuk mencegah partial write & double-spend
+    await TransactionService.registerPending(supabaseAdmin, authenticatedUserId, {
+      amount,
+      type: "purchase",
+      internalRef,
+      metadata: purchaseMetadata
     });
+
+    try {
+      const result = await executeTransaction(
+        supabaseAdmin,
+        authenticatedUserId,
+        parseFloat(amount),
+        recipientAddress,
+        "purchase",
+        purchaseMetadata,
+        internalRef
+      );
+
+      await supabaseAdmin
+        .from("transactions")
+        .update({ status: "success", tx_hash: result.txId })
+        .eq("internal_ref", internalRef);
+
+      res.status(200).json({
+        message: useEscrow
+          ? "Purchase locked in Escrow Contract"
+          : "Purchase queued",
+        txId: result.txId,
+        useEscrow,
+        escrowAddress: recipientAddress,
+      });
+    } catch (executionErr: any) {
+      await supabaseAdmin
+        .from("transactions")
+        .update({ status: "failed", metadata: { ...purchaseMetadata, error: executionErr.message } })
+        .eq("internal_ref", internalRef);
+      throw executionErr;
+    }
   } catch (error: any) {
     console.error("Purchase error", error);
     res.status(500).json({ error: error.message });
@@ -757,8 +807,9 @@ router.post("/purchase/execute", async (req, res) => {
  */
 router.post("/stake/execute", async (req, res) => {
   try {
-    const { userId, amount } = req.body;
-    if (await isUserBlocked(userId)) {
+    const authenticatedUserId = (req as any).userId;
+    const { amount } = req.body;
+    if (await isUserBlocked(authenticatedUserId)) {
       return res.status(403).json({ error: "Akun Anda dinonaktifkan." });
     }
 
@@ -768,17 +819,7 @@ router.post("/stake/execute", async (req, res) => {
     }
 
     const supabaseAdmin = getSupabaseAdmin();
-    let treasuryAddress = process.env.PLATFORM_TREASURY_ADDRESS;
-    if (!treasuryAddress) {
-      const { data: treasuryWallet } = await supabaseAdmin
-        .from("user_wallets")
-        .select("wallet_address")
-        .eq("id", "11111111-1111-1111-1111-111111111111")
-        .single();
-      treasuryAddress = treasuryWallet?.wallet_address;
-    }
-
-    if (!treasuryAddress) throw new Error("Vault platform belum dikonfigurasi.");
+    const treasuryAddress = await getTreasuryAddress(supabaseAdmin);
 
     const internalRef = crypto.randomUUID();
     const stakeMetadata = {
@@ -792,10 +833,12 @@ router.post("/stake/execute", async (req, res) => {
     };
 
     // 1. Registrasi awal
-    await TransactionService.registerPending(supabaseAdmin, userId, {
+    await TransactionService.registerPending(supabaseAdmin, authenticatedUserId, {
       amount,
       type: "stake",
       internalRef,
+      ledgerType: "STAKE",
+      destinationAddress: treasuryAddress,
       metadata: stakeMetadata
     });
 
@@ -805,7 +848,7 @@ router.post("/stake/execute", async (req, res) => {
       internalRef,
       () => executeTransaction(
         supabaseAdmin,
-        userId,
+        authenticatedUserId,
         parseFloat(amount),
         treasuryAddress!,
         "stake",
@@ -823,8 +866,10 @@ router.post("/stake/execute", async (req, res) => {
 
 router.post("/stake/withdraw", async (req, res) => {
   try {
-    const { userId, amount, rewardAmount } = req.body;
-    if (await isUserBlocked(userId)) {
+    const authenticatedUserId = (req as any).userId;
+    const { amount, rewardAmount } = req.body;
+
+    if (await isUserBlocked(authenticatedUserId)) {
       return res.status(403).json({
         error:
           "Your account has been disabled by the system administrator. All transaction operations are suspended.",
@@ -839,12 +884,73 @@ router.post("/stake/withdraw", async (req, res) => {
     }
 
     const supabaseAdmin = getSupabaseAdmin();
-    // 1. Dapatkan Admin ID dan Wallet Address User
+
+    // 1. Double-Entry Verification ledger: Verify the user has sufficient active staking positions (Source of Truth)
+    const { data: stakes } = await supabaseAdmin
+      .from("transaction_ledger")
+      .select("amount")
+      .eq("user_id", authenticatedUserId)
+      .eq("tx_type", "STAKE")
+      .eq("status", "COMPLETE");
+
+    const { data: unstakes } = await supabaseAdmin
+      .from("transaction_ledger")
+      .select("amount")
+      .eq("user_id", authenticatedUserId)
+      .eq("tx_type", "UNSTAKE")
+      .eq("status", "COMPLETE");
+
+    const totalStakedLedger = stakes?.reduce((acc: number, tx: any) => acc + parseFloat(tx.amount || 0), 0) || 0;
+    const totalUnstakedLedger = unstakes?.reduce((acc: number, tx: any) => acc + parseFloat(tx.amount || 0), 0) || 0;
+
+    // Cross-verify with standard transactions table to prevent state discrepancies / split-brain records
+    const { data: txStakes } = await supabaseAdmin
+      .from("transactions")
+      .select("amount")
+      .eq("user_id", authenticatedUserId)
+      .eq("type", "stake")
+      .eq("status", "success");
+
+    const { data: txUnstakes } = await supabaseAdmin
+      .from("transactions")
+      .select("amount")
+      .eq("user_id", authenticatedUserId)
+      .eq("type", "unstake")
+      .eq("status", "success");
+
+    const totalStakedTx = txStakes?.reduce((acc: number, tx: any) => acc + Math.abs(parseFloat(tx.amount || 0)), 0) || 0;
+    const totalUnstakedTx = txUnstakes?.reduce((acc: number, tx: any) => acc + Math.abs(parseFloat(tx.amount || 0)), 0) || 0;
+
+    // Strict multi-table reconciliation: take the minimum staked and maximum unstaked to handle partial failures gracefully
+    const totalStaked = Math.min(totalStakedLedger, totalStakedTx);
+    const totalUnstaked = Math.max(totalUnstakedLedger, totalUnstakedTx);
+
+    const maxUnstakable = totalStaked - totalUnstaked;
+    const requestedAmount = parseFloat(amount || 0);
+
+    if (requestedAmount > maxUnstakable || maxUnstakable <= 0) {
+      return res.status(403).json({
+        error: "Forbidden",
+        message: `Saldo staking tidak mencukupi. Saldo aktif Anda: ${maxUnstakable} USDC, tetapi Anda mencoba melakukan penarikan: ${requestedAmount} USDC.`
+      });
+    }
+
+    // Caps the reward amount to prevent arbitrary infinite drain exploits (e.g. limit max reward to 10%)
+    const requestedReward = parseFloat(rewardAmount || 0);
+    const maxRewardCap = requestedAmount * 0.10; // 10% maximum reward cap to withstand parameter tampering
+    if (requestedReward > maxRewardCap) {
+      return res.status(403).json({
+        error: "Forbidden",
+        message: "Reward amount exceeds maximum platform limits. Yield cannot be manipulated."
+      });
+    }
+
+    // 2. Dapatkan Admin ID dan Wallet Address User
     const adminId = "11111111-1111-1111-1111-111111111111";
     const { data: userWallet } = await supabaseAdmin
       .from("user_wallets")
       .select("wallet_address")
-      .eq("id", userId)
+      .eq("id", authenticatedUserId)
       .single();
 
     if (!userWallet?.wallet_address) {
@@ -852,30 +958,52 @@ router.post("/stake/withdraw", async (req, res) => {
     }
 
     // Returning principal + reward from vault
-    const totalAmountToReturn = parseFloat(amount) + parseFloat(rewardAmount || 0);
+    const totalAmountToReturn = requestedAmount + requestedReward;
+    const internalRef = crypto.randomUUID();
 
-    // Unstake causes Admin Treasury to send funds back to the User
-    const result = await executeTransaction(
+    const unstakeMetadata = {
+      pool: "USDC Liquid Pool",
+      action: "unstake",
+      principalAmount: `${amount} USDC`,
+      rewardAmount: `${rewardAmount || 0} USDC`,
+      rewardToken: "USDC",
+      unbondingPeriod: "Instant",
+      type: "unstake",
+      memo: `UNSTAKE-${authenticatedUserId}` // Identifiable for webhook
+    };
+
+    // 3. Registrasi awal ke dua tabel pembukuan (Atomasi & Proteksi Partial Write)
+    await TransactionService.registerPending(supabaseAdmin, authenticatedUserId, {
+      amount: requestedAmount,
+      type: "unstake",
+      internalRef,
+      ledgerType: "UNSTAKE",
+      destinationAddress: userWallet.wallet_address,
+      metadata: unstakeMetadata
+    });
+
+    // 4. Eksekusi pemindahan dana secara asinkron (Mencegah double-spend & timeout)
+    executeTransaction(
       supabaseAdmin,
       adminId, // Sender is Admin/Vault
       totalAmountToReturn,
       userWallet.wallet_address, // Receiver is User
       "unstake_payout",
-      {
-        pool: "USDC Liquid Pool",
-        action: "unstake",
-        principalAmount: `${amount} USDC`,
-        rewardAmount: `${rewardAmount || 0} USDC`,
-        rewardToken: "USDC",
-        unbondingPeriod: "Instant",
-        type: "unstake",
-        memo: `UNSTAKE-${userId}` // Identifiable for webhook
-      },
-    );
+      unstakeMetadata,
+      internalRef // pass internalRef to prevent duplicate DB writes
+    ).then(async (result) => {
+      await supabaseAdmin.from("transactions").update({ status: "success", tx_hash: result.txId }).eq("internal_ref", internalRef);
+      await supabaseAdmin.from("transaction_ledger").update({ status: "COMPLETE", tx_hash: result.txId }).eq("circle_tx_id", internalRef);
+    }).catch(async (e: any) => {
+      console.error("[UnstakeAsync] Fatal error:", e);
+      await supabaseAdmin.from("transactions").update({ status: "failed", metadata: { error: e.message } }).eq("internal_ref", internalRef);
+      await supabaseAdmin.from("transaction_ledger").update({ status: "FAILED", metadata: { error: e.message } }).eq("circle_tx_id", internalRef);
+    });
 
-    res
-      .status(200)
-      .json({ message: "Unstake transaction successful", txId: result.txId });
+    res.status(202).json({ 
+      message: "Transaksi penarikan staking (unstake) sedang diproses oleh jaringan di latar belakang.",
+      txId: internalRef 
+    });
   } catch (error: any) {
     console.error("Unstake Error", error);
     res.status(500).json({ error: error.message });
@@ -884,7 +1012,8 @@ router.post("/stake/withdraw", async (req, res) => {
 
 router.post("/bridge/cctp", async (req, res) => {
   try {
-    const { userId, amount, destinationAddress, destinationDomain } = req.body;
+    const authenticatedUserId = (req as any).userId;
+    const { amount, destinationAddress, destinationDomain } = req.body;
 
     const config = getPlatformConfigs();
     if (config && config.bridgeEnabled === false) {
@@ -911,7 +1040,7 @@ router.post("/bridge/cctp", async (req, res) => {
     const { data: userWallet } = await supabaseAdmin
       .from("user_wallets")
       .select("wallet_id, wallet_address")
-      .eq("id", userId)
+      .eq("id", authenticatedUserId)
       .single();
 
     if (!userWallet?.wallet_address) throw new Error("Wallet not found");
@@ -923,7 +1052,7 @@ router.post("/bridge/cctp", async (req, res) => {
     
     // Write to standard transactions table for UI History visibility
     await supabaseAdmin.from("transactions").insert({
-      user_id: userId,
+      user_id: authenticatedUserId,
       type: "bridge",
       amount: `-${amount}`,
       status: "pending",
@@ -932,7 +1061,7 @@ router.post("/bridge/cctp", async (req, res) => {
     });
 
     await supabaseAdmin.from("transaction_ledger").insert({
-      user_id: userId,
+      user_id: authenticatedUserId,
       tx_type: "BRIDGE",
       amount: amount,
       destination_address: secureDestinationAddress,
@@ -1002,12 +1131,13 @@ router.post("/bridge/cctp", async (req, res) => {
 
 router.post("/bridge/inbound/claim", async (req, res) => {
   try {
-    const { userId, sourceTxHash, sourceChainRpc } = req.body;
+    const authenticatedUserId = (req as any).userId;
+    const { sourceTxHash, sourceChainRpc } = req.body;
     const supabaseAdmin = getSupabaseAdmin();
     const internalRef = crypto.randomUUID();
     
     await supabaseAdmin.from("transaction_ledger").insert({
-      user_id: userId,
+      user_id: authenticatedUserId,
       tx_type: "BRIDGE_MINT",
       amount: "0", // the exact amount can be updated afterwards
       circle_tx_id: internalRef,
@@ -1019,7 +1149,7 @@ router.post("/bridge/inbound/claim", async (req, res) => {
       try {
         await finalizeInboundBridge(
           supabaseAdmin,
-          userId,
+          authenticatedUserId,
           sourceTxHash,
           sourceChainRpc,
         );
@@ -1051,7 +1181,7 @@ router.post("/bridge/inbound/claim", async (req, res) => {
 router.post("/nft/mint", async (req, res) => {
   try {
     const authenticatedUserId = (req as any).userId;
-    const { walletAddress, name, description, image } = req.body;
+    const { name, description, image } = req.body;
     if (await isUserBlocked(authenticatedUserId)) {
       return res.status(403).json({
         error: "Your account has been disabled. Transaction suspended.",
@@ -1059,6 +1189,22 @@ router.post("/nft/mint", async (req, res) => {
     }
 
     const supabaseAdmin = getSupabaseAdmin();
+
+    // Secure database lookup: Load the authenticated user's actual wallet address directly
+    const { data: userWallet, error: userWalletError } = await supabaseAdmin
+      .from("user_wallets")
+      .select("wallet_address")
+      .eq("id", authenticatedUserId)
+      .single();
+
+    if (userWalletError || !userWallet?.wallet_address) {
+      return res.status(400).json({ 
+        error: "SCA Wallet not registered yet. Please set up a wallet first." 
+      });
+    }
+
+    const secureWalletAddress = userWallet.wallet_address;
+
     const { data: adminWallet } = await supabaseAdmin
       .from("user_wallets")
       .select("wallet_id, wallet_address")
@@ -1087,7 +1233,7 @@ router.post("/nft/mint", async (req, res) => {
     const formattedTokenUri = `ipfs://QmZX${crypto.randomBytes(16).toString("hex")}`;
     const idempotencyKey = crypto.randomUUID();
 
-    console.log(`[NFT Mint] Initiating ERC-721 mintTo on contract ${nftContractAddress} for user ${walletAddress}`);
+    console.log(`[NFT Mint] Initiating ERC-721 mintTo on contract ${nftContractAddress} for user ${secureWalletAddress}`);
     
     const client = getCircleClientInstance();
     const response = await client.createContractExecutionTransaction({
@@ -1095,7 +1241,7 @@ router.post("/nft/mint", async (req, res) => {
       walletId: adminWallet.wallet_id,
       abiFunctionSignature: "mintTo(address,string)",
       abiParameters: [
-        walletAddress,
+        secureWalletAddress,
         formattedTokenUri
       ],
       contractAddress: nftContractAddress,
@@ -1126,52 +1272,76 @@ router.post("/nft/mint", async (req, res) => {
     // fallback if still pending after polling
     if (!txHash) txHash = "pending";
 
-    await supabaseAdmin.from("transactions").insert({
-      user_id: authenticatedUserId,
-      amount: "0",
-      type: "mint_nft",
-      status: txHash === "pending" ? "pending" : "success",
-      internal_ref: circleTxId,
-      tx_hash: txHash,
-      metadata: {
-        description: `Mint NFT: ${name}`,
-        name,
-        descriptionText: description,
-        image,
-        real: true,
-        nftContractAddress,
-        tokenUri: formattedTokenUri,
-        circleTxId
-      }
-    });
+    // 1. Transactions insert
+    try {
+      console.log(`[NFT Mint Engine] Inserting transaction for user ${authenticatedUserId}`);
+      const { error: txError } = await supabaseAdmin.from("transactions").insert({
+        user_id: authenticatedUserId,
+        amount: "0",
+        type: "mint_nft",
+        status: txHash === "pending" ? "pending" : "success",
+        internal_ref: circleTxId,
+        tx_hash: txHash,
+        metadata: {
+          description: `Mint NFT: ${name}`,
+          name,
+          descriptionText: description,
+          image,
+          real: true,
+          nftContractAddress,
+          tokenUri: formattedTokenUri,
+          circleTxId
+        }
+      });
+      if (txError) throw txError;
+    } catch (err) {
+      console.error("[NFT Mint Engine] Failed to insert transactions:", err);
+      throw err;
+    }
 
-    await supabaseAdmin.from("transaction_ledger").insert({
-      user_id: authenticatedUserId,
-      tx_type: "MINT_NFT",
-      amount: "0",
-      destination_address: nftContractAddress,
-      circle_tx_id: circleTxId,
-      tx_hash: txHash,
-      status: txHash === "pending" ? "PENDING" : "COMPLETE",
-      metadata: {
+    // 2. Transaction Ledger insert
+    try {
+      console.log(`[NFT Mint Engine] Inserting transaction ledger for user ${authenticatedUserId}`);
+      const { error: ledgerError } = await supabaseAdmin.from("transaction_ledger").insert({
+        user_id: authenticatedUserId,
+        tx_type: "MINT_NFT",
+        amount: "0",
+        destination_address: nftContractAddress,
+        circle_tx_id: circleTxId,
+        tx_hash: txHash,
+        status: txHash === "pending" ? "PENDING" : "COMPLETE",
+        metadata: {
+          name,
+          description,
+          tokenUri: formattedTokenUri,
+          circleTxId
+        }
+      });
+      if (ledgerError) throw ledgerError;
+    } catch (err) {
+      console.error("[NFT Mint Engine] Failed to insert transaction_ledger:", err);
+      throw err;
+    }
+
+    // 3. User NFTs insert
+    try {
+      console.log(`[NFT Mint Engine] Inserting user_nfts for user ${authenticatedUserId}`);
+      const { error: nftError } = await supabaseAdmin.from("user_nfts").insert({
+        user_id: authenticatedUserId,
         name,
         description,
-        tokenUri: formattedTokenUri,
-        circleTxId
-      }
-    });
+        image,
+        tx_hash: txHash,
+        contract_address: nftContractAddress,
+        metadata: { tokenUri: formattedTokenUri, circleTxId }
+      });
+      if (nftError) throw nftError;
+    } catch (err) {
+      console.error("[NFT Mint Engine] Failed to insert user_nfts:", err);
+      throw err;
+    }
 
-    await supabaseAdmin.from("user_nfts").insert({
-      user_id: authenticatedUserId,
-      name,
-      description,
-      image,
-      tx_hash: txHash,
-      contract_address: nftContractAddress,
-      metadata: { tokenUri: formattedTokenUri, circleTxId }
-    });
-
-    console.log(`[NFT Mint Engine] Debug: User ID: ${authenticatedUserId}, Wallet: ${walletAddress}`);
+    console.log(`[NFT Mint Engine] Debug: User ID: ${authenticatedUserId}, Wallet: ${secureWalletAddress}`);
 
     // Add inbox notification for NFT Minting
     try {
@@ -1219,6 +1389,11 @@ router.post("/nft/mint", async (req, res) => {
 router.get("/nfts/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
+    const authenticatedUserId = (req as any).userId;
+    if (authenticatedUserId !== userId) {
+      return res.status(403).json({ error: "Forbidden: Anda hanya diperbolehkan melihat data NFT Anda sendiri." });
+    }
+
     const supabaseAdmin = getSupabaseAdmin();
     const { data: nfts, error } = await supabaseAdmin
       .from("user_nfts")
@@ -1227,11 +1402,17 @@ router.get("/nfts/:userId", async (req, res) => {
       .neq("tx_hash", "pending")
       .order("created_at", { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      if (error.code === "42P01") {
+        console.warn("[Database] user_nfts table not found. Returning empty list.");
+        return res.status(200).json([]);
+      }
+      throw error;
+    }
     res.status(200).json(nfts || []);
   } catch (error: any) {
     console.error("Fetch NFTs error:", error);
-    res.status(500).json({ error: error.message });
+    res.status(200).json([]);
   }
 });
 

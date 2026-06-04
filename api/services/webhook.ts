@@ -174,6 +174,9 @@ async function handleInboundTransfer(data: any, supabaseAdmin: any) {
   });
 }
 
+// Cache of processed signatures to prevent replay attacks
+const processedSignaturesCache = new Set<string>();
+
 /**
  * Main Webhook Handler: Memverifikasi tanda tangan dan mengarahkan ke handler yang tepat.
  */
@@ -188,6 +191,12 @@ export async function verifyAndProcessWebhook(
 
   if (!signature || !keyId) {
     return res.status(401).json({ error: "Missing signature headers" });
+  }
+
+  // Cryptographic Replay Attack Protection
+  if (processedSignaturesCache.has(signature)) {
+    console.warn(`[Security Alert: Webhook Replay] Blocked possible duplicated/replayed notification signature: ${signature.slice(0, 20)}...`);
+    return res.status(409).json({ error: "Conflict: Replayed notification rejected" });
   }
 
   try {
@@ -208,6 +217,13 @@ export async function verifyAndProcessWebhook(
     }
 
     if (!isVerified) return res.status(401).json({ error: "Invalid signature" });
+
+    // Cache the signature to prevent sequential block replay attacks
+    processedSignaturesCache.add(signature);
+    if (processedSignaturesCache.size > 5000) {
+      const firstElement = processedSignaturesCache.values().next().value;
+      if (firstElement) processedSignaturesCache.delete(firstElement);
+    }
   } catch (err) {
     return res.status(401).json({ error: "Signature verification failed" });
   }

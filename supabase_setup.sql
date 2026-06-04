@@ -21,6 +21,7 @@ CREATE TABLE public.profiles (
     full_name TEXT,
     username TEXT UNIQUE,
     avatar_url TEXT,
+    role TEXT DEFAULT 'user' CHECK (role IN ('user', 'admin')),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

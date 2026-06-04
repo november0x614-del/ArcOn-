@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { useApp } from "../../contexts/AppContext";
 import { useStore } from "../../store/useStore";
+import { supabase } from "../../lib/supabaseClient";
 import { motion, AnimatePresence } from "motion/react";
 import { SafeProductImage } from "../common/SafeProductImage";
 
@@ -192,12 +193,21 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
       
       const adminSecret = (typeof process !== "undefined" && process?.env?.ADMIN_SECRET) || "123456";
       
+      const sessionResult = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+      const token = sessionResult?.data?.session?.access_token;
+      
+      const headers: Record<string, string> = { 
+        "Content-Type": "application/json",
+        "x-admin-secret": adminSecret
+      };
+      
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
       const response = await fetch("/api/ecommerce/release-escrow", {
         method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "x-admin-secret": adminSecret
-        },
+        headers,
         body: JSON.stringify({
           orderId: sale.id, // Only orderId is submitted. Server fetches seller_address & amount authoritatively.
         }),

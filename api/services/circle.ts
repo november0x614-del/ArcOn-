@@ -70,6 +70,25 @@ async function getGasFeeStrategy(): Promise<"SPONSORED" | "USER_PAID_USDC"> {
   }
 }
 
+/**
+ * Mengambil alamat wallet Treasury Platform dari env atau data backup di database.
+ */
+export async function getTreasuryAddress(supabaseAdmin: any): Promise<string> {
+  let treasuryAddress = process.env.PLATFORM_TREASURY_ADDRESS;
+  if (!treasuryAddress) {
+    const { data } = await supabaseAdmin
+      .from("user_wallets")
+      .select("wallet_address")
+      .eq("id", "11111111-1111-1111-1111-111111111111")
+      .single();
+    treasuryAddress = data?.wallet_address;
+  }
+  if (!treasuryAddress) {
+    throw new Error("Platform Treasury wallet address is not configured.");
+  }
+  return treasuryAddress;
+}
+
 export async function getTokenDetails(tokenId: string) {
   try {
     const response = await circleApiFetch(`/v1/w3s/tokens/${tokenId}`);
@@ -423,15 +442,7 @@ export async function executeAtomicBatchTransfer(
 
   // A. Add platform fee transfer if applicable
   if (platformFee > 0) {
-    let treasuryAddress = process.env.PLATFORM_TREASURY_ADDRESS;
-    if (!treasuryAddress) {
-      const { data: treasuryWallet } = await supabaseAdmin
-        .from("user_wallets")
-        .select("wallet_address")
-        .eq("id", "11111111-1111-1111-1111-111111111111")
-        .single();
-      treasuryAddress = treasuryWallet?.wallet_address;
-    }
+    const treasuryAddress = await getTreasuryAddress(supabaseAdmin);
 
     if (treasuryAddress) {
       const feeAtomic = BigInt(

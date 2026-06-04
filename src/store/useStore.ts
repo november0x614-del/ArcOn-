@@ -206,13 +206,7 @@ export const useStore = create<AppState>()((set) => ({
     if (!user?.supabaseUid) return;
 
     try {
-      const url = `/api/transactions/${user.supabaseUid}`;
-      const response = await fetch(url);
-      if (!response.ok) return;
-
-      const text = await response.text();
-      if (!text) return;
-      const dbTransactions = JSON.parse(text);
+      const dbTransactions = await BackendClient.getTransactions(user.supabaseUid);
       if (!Array.isArray(dbTransactions)) return;
 
       const transactions: Transaction[] = dbTransactions.map((tx: any) => {

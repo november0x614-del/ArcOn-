@@ -4,18 +4,29 @@ import { publicClient, getTokenMetadata } from "../services/arcViem.js";
 import { verifyAndProcessWebhook } from "../services/webhook.js";
 import { getSupabaseAdmin } from "../config/supabase.js";
 import { getTokenDetails, executeTransaction } from "../services/circle.js";
+import { fetchUnifiedBalance } from "../services/balance.js";
 import { requireUserAuth } from "../middleware/userAuth.js";
+import rateLimit from "express-rate-limit";
 import * as crypto from "crypto";
 
 const router = express.Router();
 
+// Define specialized rate limiters to mitigate DoS and Gemini quota exhaustion
+const authCleanupLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5, // limit each IP to 5 cleanup requests per hour
+  message: { error: "Terlalu banyak permintaan pembersihan akun. Silakan coba lagi nanti." },
+});
+
+const chatLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30, // limit each IP or user to 30 requests per 15 minutes
+  message: { error: "Terlalu banyak pesan ke asisten AI (Rate Limit). Silakan coba lagi nanti." },
+});
+
 router.get("/health", (_req, res) => {
   res.json({
     status: "ok",
-    circle_keys: {
-      api_key: !!process.env.CIRCLE_API_KEY,
-      entity_secret: !!process.env.CIRCLE_ENTITY_SECRET,
-    },
   });
 });
 
@@ -38,21 +49,47 @@ router.get("/rates", async (req, res) => {
 
 router.post("/faucet/claim", requireUserAuth, async (req, res) => {
   try {
-    const { address, userId } = req.body;
-    if (!address) return res.status(400).json({ error: "Address required" });
-
+    const authenticatedUserId = (req as any).userId;
     const supabaseAdmin = getSupabaseAdmin();
-    const adminId = "11111111-1111-1111-1111-111111111111";
 
+    // 1. Resolve user's actual wallet address from user_wallets to prevent parameter tampering
+    const { data: userWallet } = await supabaseAdmin
+      .from("user_wallets")
+      .select("wallet_address")
+      .eq("id", authenticatedUserId)
+      .maybeSingle();
+
+    if (!userWallet || !userWallet.wallet_address) {
+      return res.status(400).json({ error: "SCA Wallet not registered yet. Please create a wallet in the wallet setup section." });
+    }
+
+    const secureAddress = userWallet.wallet_address;
+
+    // 2. Cooldown check: Limit claims to once per 24 hours
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { data: recentClaims } = await supabaseAdmin
+      .from("transactions")
+      .select("id")
+      .eq("user_id", authenticatedUserId)
+      .eq("type", "receive")
+      .gte("created_at", twentyFourHoursAgo);
+
+    if (recentClaims && recentClaims.length > 0) {
+      return res.status(429).json({ 
+        error: "Limits exceeded",
+        message: "You can only claim 100 USDC from the faucet once every 24 hours to prevent abuse."
+      });
+    }
+
+    const adminId = "11111111-1111-1111-1111-111111111111";
     let txHash: string = crypto.randomUUID();
     
     // Attempt actual Circle transfer from Platform Treasury Account
-    // Jika gagal, error akan dilempar dan ditangkap oleh catch block di baris 95
     const result = await executeTransaction(
       supabaseAdmin,
       adminId,
       100, // 100 USDC
-      address,
+      secureAddress,
       "faucet_distribution",
       {
         memo: "USDC Faucet Distribution",
@@ -65,22 +102,20 @@ router.post("/faucet/claim", requireUserAuth, async (req, res) => {
     }
 
     // Always ensure database is updated to credit user
-    if (userId) {
-      await getSupabaseAdmin()
-        .from("transactions")
-        .insert({
-          user_id: userId,
-          amount: "100.00",
-          type: "receive",
-          status: "success",
-          internal_ref: txHash,
-          metadata: {
-            from: "Arc Treasury",
-            token: "USDC",
-            note: "USDC Testnet Faucet Distribution",
-          },
-        });
-    }
+    await getSupabaseAdmin()
+      .from("transactions")
+      .insert({
+        user_id: authenticatedUserId,
+        amount: "100.00",
+        type: "receive",
+        status: "success",
+        internal_ref: txHash,
+        metadata: {
+          from: "Arc Treasury",
+          token: "USDC",
+          note: "USDC Testnet Faucet Distribution",
+        },
+      });
 
     res.json({
       success: true,
@@ -189,9 +224,15 @@ router.get("/tokens/imported", requireUserAuth, async (req, res) => {
       .select("*")
       .eq("user_id", userId);
 
-    if (error) throw error;
+    if (error) {
+      if (error.code === "42P01") {
+        console.warn("[Database] user_tokens table not found. Returning empty list.");
+        return res.json([]);
+      }
+      throw error;
+    }
     res.json(
-      data.map((t: any) => ({
+      (data || []).map((t: any) => ({
         symbol: t.symbol,
         name: t.name,
         contractAddress: t.contract_address,
@@ -199,7 +240,8 @@ router.get("/tokens/imported", requireUserAuth, async (req, res) => {
       })),
     );
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error("Get imported tokens error:", error);
+    res.json([]);
   }
 });
 
@@ -236,9 +278,44 @@ router.get("/tokens/:id", async (req, res) => {
   }
 });
 
-router.post("/chat", async (req, res) => {
+router.post("/chat", chatLimiter, requireUserAuth, async (req, res) => {
   try {
-    const { message, history, localContext } = req.body;
+    const { message, history } = req.body;
+    const authenticatedUserId = (req as any).userId;
+    const supabase = getSupabaseAdmin();
+    
+    // Mitigate prompt injection: Fetch real, authenticated balance and transaction history in server context
+    let realServerContext = "";
+    try {
+      const { data: userWallet } = await supabase
+        .from("user_wallets")
+        .select("*")
+        .eq("id", authenticatedUserId)
+        .single();
+        
+      if (userWallet && userWallet.wallet_address) {
+        const balances = await fetchUnifiedBalance(authenticatedUserId, userWallet, supabase);
+        const usdcBal = balances.allBalances?.find((b: any) => b.token?.symbol === "USDC")?.amount || "0";
+        const arcBal = balances.allBalances?.find((b: any) => b.token?.symbol === "ARC")?.amount || "0";
+
+        const { data: recentTxs } = await supabase
+          .from("transactions")
+          .select("amount, type, status, created_at")
+          .eq("user_id", authenticatedUserId)
+          .order("created_at", { ascending: false })
+          .limit(5);
+          
+        realServerContext = `
+* User Wallet Address: ${userWallet.wallet_address}
+* User USDC Balance: ${usdcBal} USDC
+* User ARC Gas Balance: ${arcBal} ARC
+* Recent Verified Transactions:
+${recentTxs?.map(tx => `- Type: ${tx.type}, Amount: ${tx.amount}, Status: ${tx.status}, Date: ${tx.created_at}`).join("\n") || "No recent transactions found."}
+`;
+      }
+    } catch (e: any) {
+      console.warn("[ChatServerContext] Failed to load server-side context:", e);
+    }
 
     const ai = new GoogleGenAI({
       apiKey: process.env.GEMINI_API_KEY,
@@ -247,17 +324,20 @@ router.post("/chat", async (req, res) => {
       },
     });
 
+    const parsedHistory = Array.isArray(history) ? history.slice(-15) : []; // restrict history window size
+    const sanitizedMessage = typeof message === "string" ? message.slice(0, 1000) : ""; // limit input character length
+
     const contents = `
 You are Lounge AI Agent, a helpful virtual assistant for Lounge and Arc Testnet Wallet.
 You help users with USDC transactions on Arc Testnet, wallet management, checking transaction history (simulated context), and troubleshooting web3 payments.
 
-System State / Local Context (Latest data):
-${localContext || "No current state context available."}
+System State / Authenticated Server Context (Latest data):
+${realServerContext || "No current state context available."}
 
 User History Context:
-${history.map((msg: any) => `${msg.sender}: ${msg.text}`).join("\n")}
+${parsedHistory.map((msg: any) => `${msg.sender}: ${msg.text}`).join("\n")}
 
-New User Message: ${message}
+New User Message: ${sanitizedMessage}
 
 Please respond concisely and helpfully in Indonesian. Use the system state context to answer questions about balances or recent transactions directly.
 `;
@@ -276,7 +356,7 @@ Please respond concisely and helpfully in Indonesian. Use the system state conte
   }
 });
 
-router.post("/auth/cleanup-unconfirmed", async (req, res) => {
+router.post("/auth/cleanup-unconfirmed", authCleanupLimiter, async (req, res) => {
   try {
     const { email, username } = req.body;
     if (!email || !username) {
@@ -340,7 +420,11 @@ router.post("/auth/cleanup-unconfirmed", async (req, res) => {
 router
   .route("/circle/webhook")
   .options((req, res) => {
-    res.setHeader("Access-Control-Allow-Origin", "*");
+    const origin = req.headers.origin;
+    const allowedOrigins = [process.env.APP_URL].filter(Boolean) as string[];
+    if (origin && (allowedOrigins.includes(origin) || origin.startsWith("http://localhost:") || origin.startsWith("https://localhost:"))) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+    }
     res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
     res.setHeader(
       "Access-Control-Allow-Headers",
@@ -357,7 +441,11 @@ router
     });
   })
   .post(async (req, res) => {
-    res.setHeader("Access-Control-Allow-Origin", "*");
+    const origin = req.headers.origin;
+    const allowedOrigins = [process.env.APP_URL].filter(Boolean) as string[];
+    if (origin && (allowedOrigins.includes(origin) || origin.startsWith("http://localhost:") || origin.startsWith("https://localhost:"))) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+    }
     await verifyAndProcessWebhook(req, res, getSupabaseAdmin());
   });
 

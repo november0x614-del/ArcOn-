@@ -1,4 +1,5 @@
 import express from "express";
+import bcrypt from "bcryptjs";
 import { getSupabaseAdmin } from "../config/supabase.js";
 import { requireUserAuth } from "../middleware/userAuth.js";
 import { authenticateAdmin } from "../middleware/adminAuth.js";
@@ -25,27 +26,7 @@ import { logAdminAction } from "../services/audit.js";
 
 const router = express.Router();
 
-// Publicly reachable routes that rely on dashboard PIN auth (temporary fix for monitoring)
-router.get("/otc/treasury-balance", async (req, res) => {
-  try {
-    const config = getPlatformConfigs();
-    const treasuryAddress = config.treasuryWalletAddress;
-    
-    if (!treasuryAddress) {
-      return res.status(500).json({ error: "Treasury address not configured in Platform Settings" });
-    }
-
-    const balanceRaw = await getTokenBalance(treasuryAddress, USDC_ADDRESS);
-    const balance = formatUnits(balanceRaw, 6);
-
-    res.json({ address: treasuryAddress, balance });
-  } catch (error: any) {
-    console.error("Failed to fetch treasury balance:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-
+// Helper isValidEVMAddress moves up if needed, but we keep it here without public router.get
 
 export function isValidEVMAddress(address: string): boolean {
   return /^0x[a-fA-F0-9]{40}$/.test(address);
@@ -136,10 +117,20 @@ async function syncConfigsFromDB() {
     } else {
       // First time initialization in DB if empty
       console.log("[SyncConfig] No config found in DB, seeding defaults...");
+    }
+
+    // Securely hash the admin pincode if it is in plaintext
+    const defaultPin = process.env.ADMIN_PIN || platformConfigs.adminPin || "123456";
+    if (!defaultPin.startsWith("$2a$")) {
+      console.log("[SyncConfig] Upgrading Admin PIN to secure bcrypt hash...");
+      platformConfigs.adminPin = bcrypt.hashSync(defaultPin, 10);
+      // Persist the upgraded hashed config back to Supabase
       await supabase.from("app_settings").upsert(
         { key: "PLATFORM_CONFIGS", value: platformConfigs },
         { onConflict: "key" }
       );
+    } else {
+      platformConfigs.adminPin = defaultPin;
     }
 
     // Run safe validations after configurations are loaded
@@ -151,6 +142,9 @@ async function syncConfigsFromDB() {
 
 // Initial sync
 syncConfigsFromDB();
+
+// Protect all endpoints behind user authentication
+router.use(requireUserAuth);
 
 router.post("/init", async (_req, res) => {
   try {
@@ -195,14 +189,64 @@ export function getPlatformConfigs() {
   return platformConfigs;
 }
 
-router.get("/config", async (_req, res) => {
-  // Ensure we are synced (or we could just fetch from DB directly here for 100% certainty)
-  res.json(platformConfigs);
+router.get("/config", async (req, res) => {
+  // Scrub adminPin for ALL responses to ensure high-severity security audit compliance
+  const filteredConfigs = { ...platformConfigs };
+  delete (filteredConfigs as any).adminPin;
+  res.json(filteredConfigs);
+});
+
+router.post("/verify-pin", async (req, res) => {
+  try {
+    const { pin } = req.body;
+    if (!pin) {
+      return res.status(400).json({ error: "PIN is required" });
+    }
+
+    const storedPin = platformConfigs.adminPin || "123456";
+    let isCorrect = false;
+
+    if (storedPin.startsWith("$2a$")) {
+      isCorrect = bcrypt.compareSync(pin, storedPin);
+    } else {
+      isCorrect = pin === storedPin;
+      // Upgrade plaintext pin in cache/storage instantly
+      platformConfigs.adminPin = bcrypt.hashSync(storedPin, 10);
+      const supabase = getSupabaseAdmin();
+      await supabase.from("app_settings").upsert(
+        { key: "PLATFORM_CONFIGS", value: platformConfigs },
+        { onConflict: "key" }
+      ).catch((err: any) => console.error("Auto upgrade PIN error:", err));
+    }
+
+    res.json({ success: isCorrect });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Protect all administrative endpoints below
-router.use(requireUserAuth);
 router.use(authenticateAdmin);
+
+// Treasury balance route protected under admin authentication
+router.get("/otc/treasury-balance", async (req, res) => {
+  try {
+    const config = getPlatformConfigs();
+    const treasuryAddress = config.treasuryWalletAddress;
+    
+    if (!treasuryAddress) {
+      return res.status(500).json({ error: "Treasury address not configured in Platform Settings" });
+    }
+
+    const balanceRaw = await getTokenBalance(treasuryAddress, USDC_ADDRESS);
+    const balance = formatUnits(balanceRaw, 6);
+
+    res.json({ address: treasuryAddress, balance });
+  } catch (error: any) {
+    console.error("Failed to fetch treasury balance:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 router.get("/debug/inbox/:userId", async (req, res) => {
   try {
@@ -233,23 +277,35 @@ router.get("/debug/profiles", authenticateAdmin, async (req, res) => {
 
 router.post("/config", async (req, res) => {
   try {
-    const newConfig = { ...platformConfigs, ...req.body };
+    const updatedBody = { ...req.body };
+    // Check if new adminPin is provided
+    if (updatedBody.adminPin) {
+      if (!updatedBody.adminPin.startsWith("$2a$")) {
+        updatedBody.adminPin = bcrypt.hashSync(updatedBody.adminPin, 10);
+      }
+    } else {
+      updatedBody.adminPin = platformConfigs.adminPin;
+    }
+
     const supabase = getSupabaseAdmin();
     
     // Save to Supabase
     const { error } = await supabase.from("app_settings").upsert(
-      { key: "PLATFORM_CONFIGS", value: newConfig },
+      { key: "PLATFORM_CONFIGS", value: updatedBody },
       { onConflict: "key" }
     );
 
     if (error) throw error;
 
     // Update local cache
-    platformConfigs = newConfig;
+    platformConfigs = updatedBody;
+
+    const returnedConfig = { ...platformConfigs };
+    delete (returnedConfig as any).adminPin;
 
     res.json({
       message: "Config updated and persisted successfully",
-      config: platformConfigs,
+      config: returnedConfig,
     });
   } catch (error: any) {
     console.error("[ConfigUpdate] Failed:", error);
@@ -257,7 +313,7 @@ router.post("/config", async (req, res) => {
   }
 });
 
-router.get("/users", async (_req, res) => {
+router.get("/users", authenticateAdmin, async (_req, res) => {
   try {
     const supabase = getSupabaseAdmin();
     console.log("[AdminUsers] Starting fetch...");

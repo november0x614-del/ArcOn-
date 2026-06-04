@@ -692,8 +692,7 @@ export function ConfigTab({
                 <button
                   disabled={
                     saving ||
-                    adminPinInput.length !== 6 ||
-                    adminPinInput === config.adminPin
+                    adminPinInput.length !== 6
                   }
                   onClick={() => onSave({ adminPin: adminPinInput })}
                   className="px-6 bg-slate-900 text-white rounded-2xl font-black text-[12px] uppercase tracking-wider hover:bg-slate-800 active:scale-95 transition-all shadow-lg shadow-slate-200 disabled:opacity-30"

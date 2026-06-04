@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import { createPublicClient, http, formatUnits } from "viem";
 import { useStore } from "../store/useStore";
+import { supabase } from "../lib/supabaseClient";
 
 interface FeeEstimate {
   maxFeePerGas: bigint;
@@ -150,11 +151,21 @@ export const ArcProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       console.log("[ArcContext] Initiating executeArcTransaction backend call:", params);
+      
+      const sessionResult = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+      const token = sessionResult?.data?.session?.access_token;
+      
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
       const response = await fetch("/api/nft/mint", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify({
           userId: userId,
           walletAddress: address,

@@ -25,13 +25,13 @@ app.use(apiLimiter); // Apply rate limiter globally for API endpoints
 // For Circle's raw webhook, we use a custom verify callback in express.json() to capture the exact raw body Buffer on req.rawBody
 app.use(
   express.json({
-    limit: "50mb",
+    limit: "2mb",
     verify: (req: any, _res, buf) => {
       req.rawBody = buf;
     },
   }),
 );
-app.use(express.urlencoded({ limit: "50mb", extended: true }));
+app.use(express.urlencoded({ limit: "2mb", extended: true }));
 
 // API Group Routing - Refactored for industry standard MVC pattern
 // Mounted exclusively under '/api' to reduce the attack surface and secure API routes.

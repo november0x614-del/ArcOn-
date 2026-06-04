@@ -1,7 +1,7 @@
 import express from "express";
 import crypto from "crypto";
 import { getSupabaseAdmin } from "../config/supabase.js";
-import { executeTransaction, executeReleaseEscrow, shouldRequireApproval, recordPendingApprovalTx } from "../services/circle.js";
+import { executeTransaction, executeReleaseEscrow, shouldRequireApproval, recordPendingApprovalTx, getTreasuryAddress } from "../services/circle.js";
 import { TransactionService } from "../services/transaction.service.js";
 import { requireUserAuth } from "../middleware/userAuth.js";
 import { authenticateAdmin } from "../middleware/adminAuth.js";
@@ -54,17 +54,7 @@ router.post("/ecommerce/checkout-batch", requireUserAuth, async (req, res) => {
       0
     );
 
-    let treasuryAddress = process.env.PLATFORM_TREASURY_ADDRESS;
-    if (!treasuryAddress) {
-      const { data: treasuryWallet } = await supabaseAdmin
-        .from("user_wallets")
-        .select("wallet_address")
-        .eq("id", "11111111-1111-1111-1111-111111111111")
-        .single();
-      treasuryAddress = treasuryWallet?.wallet_address;
-    }
-
-    if (!treasuryAddress) throw new Error("Platform Treasury belum dikonfigurasi.");
+    const treasuryAddress = await getTreasuryAddress(supabaseAdmin);
 
     const orderBatchId = crypto.randomUUID();
     const orderMemo = memo || `BATCH-${orderBatchId.slice(0, 8)}`;
@@ -189,7 +179,7 @@ router.post("/ecommerce/checkout-batch", requireUserAuth, async (req, res) => {
 /**
  * 2. Release Escrow & Split Payment
  */
-router.post("/ecommerce/release-escrow", authenticateAdmin, async (req, res) => {
+router.post("/ecommerce/release-escrow", requireUserAuth, authenticateAdmin, async (req, res) => {
   try {
     const { orderId } = req.body;
     if (!orderId) {
@@ -255,7 +245,7 @@ router.post("/ecommerce/release-escrow", authenticateAdmin, async (req, res) => 
 /**
  * 3. Fetch Admin Escrow Queue
  */
-router.get("/ecommerce/admin/escrows", authenticateAdmin, async (req, res) => {
+router.get("/ecommerce/admin/escrows", requireUserAuth, authenticateAdmin, async (req, res) => {
   try {
     const supabaseAdmin = getSupabaseAdmin();
     // Gunakan relasi dengan users untuk mendapatkan nama buyer if possible, here using direct query
@@ -329,10 +319,36 @@ router.get("/ecommerce/products", async (req, res) => {
   }
 });
 
-router.post("/ecommerce/products", async (req, res) => {
+router.post("/ecommerce/products", requireUserAuth, async (req, res) => {
   try {
     const product = req.body;
+    const authenticatedUserId = (req as any).userId;
     const supabaseAdmin = getSupabaseAdmin();
+
+    // Securely retrieve the user's registered wallet address to prevent address spoofing
+    const { data: userWallet } = await supabaseAdmin
+      .from("user_wallets")
+      .select("wallet_address")
+      .eq("id", authenticatedUserId)
+      .maybeSingle();
+
+    if (!userWallet || !userWallet.wallet_address) {
+      return res.status(403).json({
+        error: "Forbidden",
+        message: "You must set up a wallet before you can list products on the marketplace."
+      });
+    }
+
+    // Force or validate that user lists with their own seller address
+    if (product.seller_address && product.seller_address.toLowerCase() !== userWallet.wallet_address.toLowerCase()) {
+      return res.status(403).json({
+        error: "Forbidden",
+        message: "Seller address mismatch. You can only list products using your own verified wallet address."
+      });
+    }
+
+    // Auto-populate to guarantee correctness
+    product.seller_address = userWallet.wallet_address;
 
     // Check for duplicate NFT listing
     if (product.category === "NFT" || product.tx_hash) {
@@ -374,11 +390,54 @@ router.post("/ecommerce/products", async (req, res) => {
   }
 });
 
-router.put("/ecommerce/products/:id", async (req, res) => {
+router.put("/ecommerce/products/:id", requireUserAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
+    const authenticatedUserId = (req as any).userId;
     const supabaseAdmin = getSupabaseAdmin();
+
+    // 1. Fetch current product
+    const { data: currentProduct, error: fetchErr } = await supabaseAdmin
+      .from("ecommerce_products")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (fetchErr || !currentProduct) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    // 2. Determine admin role
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("role")
+      .eq("id", authenticatedUserId)
+      .single();
+
+    const isAdmin = profile?.role === "admin";
+
+    // 3. If not admin, check if their wallet address matches currentProduct.seller_address
+    if (!isAdmin) {
+      const { data: userWallet } = await supabaseAdmin
+        .from("user_wallets")
+        .select("wallet_address")
+        .eq("id", authenticatedUserId)
+        .single();
+
+      if (!userWallet || !userWallet.wallet_address || userWallet.wallet_address.toLowerCase() !== currentProduct.seller_address?.toLowerCase()) {
+        return res.status(403).json({
+          error: "Forbidden",
+          message: "You do not have permission to modify this product listing."
+        });
+      }
+    }
+
+    // Prevent tampering with seller_address during update
+    if (!isAdmin && updates.seller_address) {
+      delete updates.seller_address;
+    }
+
     const { data, error } = await supabaseAdmin
       .from("ecommerce_products")
       .update(updates)
@@ -393,10 +452,48 @@ router.put("/ecommerce/products/:id", async (req, res) => {
   }
 });
 
-router.delete("/ecommerce/products/:id", async (req, res) => {
+router.delete("/ecommerce/products/:id", requireUserAuth, async (req, res) => {
   try {
     const { id } = req.params;
+    const authenticatedUserId = (req as any).userId;
     const supabaseAdmin = getSupabaseAdmin();
+
+    // 1. Fetch current product
+    const { data: currentProduct, error: fetchErr } = await supabaseAdmin
+      .from("ecommerce_products")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (fetchErr || !currentProduct) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    // 2. Determine admin role
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("role")
+      .eq("id", authenticatedUserId)
+      .single();
+
+    const isAdmin = profile?.role === "admin";
+
+    // 3. If not admin, check ownership
+    if (!isAdmin) {
+      const { data: userWallet } = await supabaseAdmin
+        .from("user_wallets")
+        .select("wallet_address")
+        .eq("id", authenticatedUserId)
+        .single();
+
+      if (!userWallet || !userWallet.wallet_address || userWallet.wallet_address.toLowerCase() !== currentProduct.seller_address?.toLowerCase()) {
+        return res.status(403).json({
+          error: "Forbidden",
+          message: "You do not have permission to delete this product listing."
+        });
+      }
+    }
+
     const { error } = await supabaseAdmin
       .from("ecommerce_products")
       .delete()
@@ -412,7 +509,7 @@ router.delete("/ecommerce/products/:id", async (req, res) => {
 /**
  * 6. NFT Minting Management
  */
-router.post("/ecommerce/mint-nft", async (req, res) => {
+router.post("/ecommerce/mint-nft", requireUserAuth, authenticateAdmin, async (req, res) => {
   try {
     const { productId, merchantAddress, metadataUri } = req.body;
     const supabaseAdmin = getSupabaseAdmin();

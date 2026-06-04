@@ -68,21 +68,32 @@ export class TransactionService {
   ) {
     try {
       const result = await executionFn();
+      const finalTxId = result.txId || internalRef;
       
       // Jika ID dari Circle berbeda dengan ID internal kita, update referensinya
       if (result.txId && result.txId !== internalRef) {
         await supabase
           .from("transactions")
-          .update({ internal_ref: result.txId })
+          .update({ internal_ref: result.txId, status: "success", tx_hash: result.txId })
           .eq("internal_ref", internalRef);
         
         await supabase
           .from("transaction_ledger")
-          .update({ circle_tx_id: result.txId })
+          .update({ circle_tx_id: result.txId, status: "COMPLETE", tx_hash: result.txId })
+          .eq("circle_tx_id", internalRef);
+      } else {
+        await supabase
+          .from("transactions")
+          .update({ status: "success", tx_hash: finalTxId })
+          .eq("internal_ref", internalRef);
+        
+        await supabase
+          .from("transaction_ledger")
+          .update({ status: "COMPLETE", tx_hash: finalTxId })
           .eq("circle_tx_id", internalRef);
       }
 
-      if (onSuccess) await onSuccess(result.txId);
+      if (onSuccess) await onSuccess(finalTxId);
       
     } catch (err: any) {
       console.error(`[TransactionService] Async Execution Error untuk ${internalRef}:`, err.message);
