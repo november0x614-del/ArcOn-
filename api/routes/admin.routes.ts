@@ -204,6 +204,33 @@ router.get("/config", async (_req, res) => {
 router.use(requireUserAuth);
 router.use(authenticateAdmin);
 
+router.get("/debug/inbox/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { data, error } = await getSupabaseAdmin()
+      .from("inbox_messages")
+      .select("*")
+      .eq("user_id", userId);
+    if (error) throw error;
+    res.json(data);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get("/debug/profiles", authenticateAdmin, async (req, res) => {
+  try {
+    const { data, error } = await getSupabaseAdmin()
+      .from("profiles")
+      .select("id, username, role")
+      .limit(10);
+    if (error) throw error;
+    res.json(data);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.post("/config", async (req, res) => {
   try {
     const newConfig = { ...platformConfigs, ...req.body };

@@ -22,11 +22,12 @@ router.get("/inbox", async (req, res) => {
       .order("created_at", { ascending: false });
 
     if (error) {
-       console.warn("[InboxRoute] Table inbox_messages might not exist yet:", error.message);
+       console.error("[InboxRoute] Database error fetching messages:", error);
        if (error.code === '42P01') return res.json([]);
        throw error;
     }
 
+    console.log(`[InboxRoute] Successfully fetched ${data?.length || 0} messages for user ${userId}`);
     res.json(data || []);
   } catch (error: any) {
     console.error("[InboxRoute] Error fetching messages (Full Error):", JSON.stringify(error, null, 2));

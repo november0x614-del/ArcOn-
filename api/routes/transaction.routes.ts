@@ -54,14 +54,19 @@ async function getUserTodayTransferTotal(userId: string): Promise<number> {
   }
 }
 
-router.get("/transactions", async (req, res) => {
+router.get("/transactions/:userId", async (req, res) => {
   try {
     const authenticatedUserId = (req as any).userId;
+    const requestedUserId = req.params.userId;
+    // Security check: ensure the token belongs to the user whose transactions are being fetched
+    if (authenticatedUserId !== requestedUserId) {
+        return res.status(403).json({ error: "Forbidden: Security validation failed (ID mismatch)" });
+    }
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from("transactions")
       .select("*")
-      .eq("user_id", authenticatedUserId)
+      .eq("user_id", requestedUserId)
       .order("created_at", { ascending: false });
 
     if (error) throw error;
@@ -1045,8 +1050,9 @@ router.post("/bridge/inbound/claim", async (req, res) => {
 
 router.post("/nft/mint", async (req, res) => {
   try {
-    const { userId, walletAddress, name, description, image } = req.body;
-    if (await isUserBlocked(userId)) {
+    const authenticatedUserId = (req as any).userId;
+    const { walletAddress, name, description, image } = req.body;
+    if (await isUserBlocked(authenticatedUserId)) {
       return res.status(403).json({
         error: "Your account has been disabled. Transaction suspended.",
       });
@@ -1121,7 +1127,7 @@ router.post("/nft/mint", async (req, res) => {
     if (!txHash) txHash = "pending";
 
     await supabaseAdmin.from("transactions").insert({
-      user_id: userId,
+      user_id: authenticatedUserId,
       amount: "0",
       type: "mint_nft",
       status: txHash === "pending" ? "pending" : "success",
@@ -1140,7 +1146,7 @@ router.post("/nft/mint", async (req, res) => {
     });
 
     await supabaseAdmin.from("transaction_ledger").insert({
-      user_id: userId,
+      user_id: authenticatedUserId,
       tx_type: "MINT_NFT",
       amount: "0",
       destination_address: nftContractAddress,
@@ -1156,7 +1162,7 @@ router.post("/nft/mint", async (req, res) => {
     });
 
     await supabaseAdmin.from("user_nfts").insert({
-      user_id: userId,
+      user_id: authenticatedUserId,
       name,
       description,
       image,
@@ -1165,26 +1171,38 @@ router.post("/nft/mint", async (req, res) => {
       metadata: { tokenUri: formattedTokenUri, circleTxId }
     });
 
+    console.log(`[NFT Mint Engine] Debug: User ID: ${authenticatedUserId}, Wallet: ${walletAddress}`);
+
     // Add inbox notification for NFT Minting
-    await supabaseAdmin.from("inbox_messages").insert({
-      user_id: userId,
-      title: "NFT Successfully Minted",
-      content: `Your asset "${name}" has been successfully minted on the Arc Network.`,
-      type: "receipt",
-      metadata: {
-        type: "mint",
-        txId: circleTxId || txHash,
-        txHash: txHash,
-        name,
-        description,
-        image,
-        nftContractAddress,
-        tokenUri: formattedTokenUri,
-        mintPrice: "5.00",
-        gasFee: "0.0082",
-        tokenId: Math.floor(Math.random() * 8000 + 1000).toString()
+    try {
+      console.log(`[NFT Mint Engine] Attempting to insert inbox message for user ${authenticatedUserId}`);
+      const { error: inboxError } = await supabaseAdmin.from("inbox_messages").insert({
+        user_id: authenticatedUserId,
+        title: "NFT Successfully Minted",
+        content: `Your asset "${name}" has been successfully minted on the Arc Network.`,
+        type: "receipt",
+        metadata: {
+          type: "mint",
+          txId: circleTxId || txHash,
+          txHash: txHash,
+          name,
+          description,
+          image,
+          nftContractAddress,
+          tokenUri: formattedTokenUri,
+          mintPrice: "5.00",
+          gasFee: "0.0082",
+          tokenId: Math.floor(Math.random() * 8000 + 1000).toString()
+        }
+      });
+      if (inboxError) {
+        console.error("[NFT Mint Engine] Failed to insert inbox message:", inboxError);
+      } else {
+        console.log("[NFT Mint Engine] Successfully inserted inbox message");
       }
-    });
+    } catch (inboxErr) {
+      console.error("[NFT Mint Engine] Exception inserting inbox message:", inboxErr);
+    }
 
     res.status(200).json({ 
       success: true, 
