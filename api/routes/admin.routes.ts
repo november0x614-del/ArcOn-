@@ -1,5 +1,6 @@
 import express from "express";
 import { getSupabaseAdmin } from "../config/supabase.js";
+import { requireUserAuth } from "../middleware/userAuth.js";
 import { authenticateAdmin } from "../middleware/adminAuth.js";
 import { getTokenBalance, USDC_ADDRESS } from "../services/arcViem.js";
 import { formatUnits } from "viem";
@@ -46,6 +47,39 @@ router.get("/otc/treasury-balance", async (req, res) => {
 
 
 
+export function isValidEVMAddress(address: string): boolean {
+  return /^0x[a-fA-F0-9]{40}$/.test(address);
+}
+
+function runFailFastCheck() {
+  const isProd = process.env.NODE_ENV === "production";
+  
+  if (isProd) {
+    const envTreasury = process.env.PLATFORM_TREASURY_ADDRESS;
+    if (!envTreasury) {
+      console.error("❌ [CRITICAL FAIL-FAST] PLATFORM_TREASURY_ADDRESS environment variable is missing on production startup.");
+      process.exit(1);
+    }
+    if (!isValidEVMAddress(envTreasury)) {
+      console.error(`❌ [CRITICAL FAIL-FAST] PLATFORM_TREASURY_ADDRESS "${envTreasury}" is not a valid EVM address.`);
+      process.exit(1);
+    }
+    
+    if (platformConfigs.useLoungeHubEscrow === true) {
+      const escrowAddr = platformConfigs.loungeHubContractAddress;
+      if (!escrowAddr || !isValidEVMAddress(escrowAddr)) {
+        console.error(`❌ [CRITICAL FAIL-FAST] Escalation Escrow is enabled in production, but loungeHubContractAddress "${escrowAddr}" is invalid.`);
+        process.exit(1);
+      }
+    }
+    console.log("✅ [FAIL-FAST CHECK] Production platform safety validations passed successfully.");
+  } else {
+    if (!platformConfigs.treasuryWalletAddress || !isValidEVMAddress(platformConfigs.treasuryWalletAddress)) {
+      console.warn("⚠️ [Config Warning] TreasuryWalletAddress is omitted or invalid. Defaulting to development mock address.");
+    }
+  }
+}
+
 let platformConfigs = {
   swapFee: "0.15%",
   withdrawFee: "0.00 USDC",
@@ -76,7 +110,7 @@ let platformConfigs = {
   arcBirdEnabled: true,
   backupPhraseEnabled: true,
   adminPin: "123456",
-  useLoungeHubEscrow: false,
+  useLoungeHubEscrow: process.env.NODE_ENV === "production" ? true : false,
   loungeHubContractAddress: "0x8F3Cf9D0eAcC841cA4E8D77fDeFfD15C9C0A74D4",
   treasuryWalletAddress: process.env.PLATFORM_TREASURY_ADDRESS || "0x98A16172aACc841cA4E8D77fDeFfD15C9C0A7400",
 };
@@ -107,6 +141,9 @@ async function syncConfigsFromDB() {
         { onConflict: "key" }
       );
     }
+
+    // Run safe validations after configurations are loaded
+    runFailFastCheck();
   } catch (err) {
     console.error("[SyncConfig] Critical failure:", err);
   }
@@ -162,6 +199,10 @@ router.get("/config", async (_req, res) => {
   // Ensure we are synced (or we could just fetch from DB directly here for 100% certainty)
   res.json(platformConfigs);
 });
+
+// Protect all administrative endpoints below
+router.use(requireUserAuth);
+router.use(authenticateAdmin);
 
 router.post("/config", async (req, res) => {
   try {
@@ -320,19 +361,43 @@ router.post("/users/:userId/sweep-funds", async (req, res) => {
       return res.status(400).json({ error: "User wallet has zero balance, nothing to sweep." });
     }
 
-    const result = await executeTransaction(
-      supabase,
+    // Create a transaction in "pending_approval" status for multi-step approval
+    const { data: pendingTx, error: dbError } = await supabase
+      .from("transactions")
+      .insert({
+        user_id: userId,
+        amount: `-${balanceNum.toFixed(2)}`,
+        type: "sweep",
+        status: "pending_approval",
+        internal_ref: crypto.randomUUID(),
+        metadata: {
+          description: `[Butuh Persetujuan] Pemindahan (Sweep) ${balanceNum.toFixed(2)} USDC ke Treasury`,
+          real: true,
+          destinationAddress: treasuryAddress,
+          requestedAt: new Date().toISOString(),
+        },
+      })
+      .select()
+      .single();
+
+    if (dbError) throw dbError;
+
+    // Log the actions immutably
+    await logAdminAction(
+      "11111111-1111-1111-1111-111111111111",
+      "USER_SWEEP_REQUEST_INITIATED",
       userId,
-      balanceNum,
-      treasuryAddress,
-      "sweep",
-      { memo: "Manual admin sweep", bypassApproval: true }
+      {
+        amount: balanceNum,
+        treasuryAddress,
+        pendingTxId: pendingTx.id
+      }
     );
 
-    // Update their Supabase balance to reflect 0 instantly locally as well, though the webhook might re-sync it
-    await supabase.from("user_wallets").update({ balance: 0 }).eq("id", userId);
-
-    res.json({ message: `Successfully swept ${balanceNum} USDC to Treasury.`, txId: result.txId });
+    res.json({
+      message: `Permintaan pemindahan dana (sweep) sebesar ${balanceNum} USDC berhasil diajukan dan masuk ke antrean persetujuan (pending approval) demi keamanan.`,
+      txId: pendingTx.id,
+    });
   } catch (error: any) {
     console.error("Manual Sweep Error:", error);
     res.status(500).json({ error: error.message });
@@ -394,66 +459,79 @@ router.delete("/users/:userId", async (req, res) => {
     }
 
     const supabase = getSupabaseAdmin();
-    const config = getPlatformConfigs();
-    const treasuryAddress = config.treasuryWalletAddress;
 
-    // PRE-DELETE HOOK: Sweep Wallet
-    if (treasuryAddress) {
-      const { data: walletData } = await supabase
-        .from("user_wallets")
-        .select("wallet_address")
-        .eq("id", userId)
-        .maybeSingle();
+    // Verify if they have a wallet address and check its balance
+    const { data: walletData } = await supabase
+      .from("user_wallets")
+      .select("wallet_address")
+      .eq("id", userId)
+      .maybeSingle();
 
-      if (walletData?.wallet_address) {
-        try {
-          const balanceRaw = await getTokenBalance(walletData.wallet_address as `0x${string}`, USDC_ADDRESS);
-          const balanceNum = parseFloat(formatUnits(balanceRaw, 6)); // Ensure it's in USDC decimals
-          
-          if (balanceNum > 0) {
-            console.log(`[Pre-Delete Hook] Sweeping ${balanceNum} USDC from ${walletData.wallet_address} to ${treasuryAddress}`);
-            await executeTransaction(
-              supabase,
-              userId,
-              balanceNum,
-              treasuryAddress,
-              "sweep",
-              { memo: "Pre-delete hook sweep", bypassApproval: true }
-            );
-          } else {
-            console.log(`[Pre-Delete Hook] Wallet ${walletData.wallet_address} balance is 0. No sweep needed.`);
-          }
-        } catch (sweepError) {
-          // Failure to sweep shouldn't necessarily block deletion in a Dev environment, 
-          // but we log it as critical.
-          console.error("[Pre-Delete Hook] Sweep failed, but proceeding with deletion:", sweepError);
-        }
+    let balanceNum = 0;
+    if (walletData?.wallet_address) {
+      try {
+        const balanceRaw = await getTokenBalance(walletData.wallet_address as `0x${string}`, USDC_ADDRESS);
+        balanceNum = parseFloat(formatUnits(balanceRaw, 6)); // Ensure it's in USDC decimals
+      } catch (err) {
+        console.error("Error retrieving user balance during check:", err);
       }
     }
 
-    // ON DELETE CASCADE: Hard Delete User
-    const { error: deleteError } = await supabase.auth.admin.deleteUser(userId);
-    if (deleteError) throw deleteError;
-
-    // Manual cleanup for tables just in case FK ON DELETE CASCADE isn't enabled
-    await supabase.from("user_wallets").delete().eq("id", userId);
-    await supabase.from("profiles").delete().eq("id", userId);
-
-    try {
-      await supabase.from("audit_logs").insert({
-        user_id: "11111111-1111-1111-1111-111111111111", // Admin Action
-        action: "HARD_DELETE_USER",
-        metadata: { deleted_target: userId, timestamp: new Date().toISOString() },
+    // Protect active deposits/balances from hard deletion or automatic sweeping
+    if (balanceNum > 0) {
+      // FREEZE & SOFT-DELETE Instead of Hard-Delete
+      const { error: blockError } = await supabase.auth.admin.updateUserById(userId, {
+        ban_duration: "876000h", // Lock user auth for 100 years
+        user_metadata: { deleted: true, blocked: true, status: "frozen_for_manual_review" },
       });
-    } catch (auditErr) {
-      console.warn("Could not insert into audit_logs table", auditErr);
+
+      if (blockError) throw blockError;
+
+      // Log immutable admin action to transaction ledger
+      await logAdminAction(
+        "11111111-1111-1111-1111-111111111111",
+        "USER_DELETION_BLOCKED_AND_FROZEN",
+        userId,
+        {
+          balance: balanceNum,
+          reason: "User has non-zero wallet balance. Hard deletion aborted for asset protection. Account frozen.",
+          timestamp: new Date().toISOString()
+        }
+      );
+
+      return res.json({
+        message: "Pengguna memiliki saldo aktif. Hard-delete dibatalkan demi keamanan dana. Akun pengguna berhasil dibekukan (soft-delete + freeze) untuk evaluasi manual. Sweep dana hanya dapat dilakukan lewat persetujuan multi-langkah.",
+        status: "frozen",
+        balance: balanceNum
+      });
     }
 
+    // Default Flow: Soft delete users who have 0 balance or no wallet
+    const { error: softDeleteError } = await supabase.auth.admin.updateUserById(userId, {
+      ban_duration: "876000h",
+      user_metadata: { deleted: true, blocked: true, status: "archived" },
+    });
+
+    if (softDeleteError) throw softDeleteError;
+
+    // Log the action to transaction ledger (audit log)
+    await logAdminAction(
+      "11111111-1111-1111-1111-111111111111",
+      "USER_SOFT_DELETED",
+      userId,
+      {
+        balance: 0,
+        reason: "User soft-deleted / archived.",
+        timestamp: new Date().toISOString()
+      }
+    );
+
     res.json({
-      message: "Pengguna berhasil dihapus sepenuhnya beserta saldo dompet (Hard Delete + Auto Sweep).",
+      message: "Pengguna berhasil dinonaktifkan (Soft-Delete) dan status diubah menjadi Archived.",
+      status: "archived"
     });
   } catch (error: any) {
-    console.error("Failed to hard delete user:", error);
+    console.error("Failed to soft delete user:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -526,8 +604,6 @@ router.get("/stats", async (_req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
-router.use(authenticateAdmin);
 
 router.get("/transactions", async (req, res) => {
   try {

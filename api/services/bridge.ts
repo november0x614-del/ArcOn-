@@ -113,28 +113,69 @@ export async function initiateOutboundBridge(
 
   console.log(`[BridgeService] Approval sent: ${approveTx.data?.id}`);
 
-  // Step 1.5: Wait for Approve Transaction to Complete
-  if (approveTx.data?.id) {
-    console.log(
-      `[BridgeService] Awaiting approval confirmation for transaction ID: ${approveTx.data.id}`,
-    );
-    await waitForCircleTxComplete(approveTx.data.id);
-    console.log(`[BridgeService] Approval transaction confirmed successfully.`);
-  }
+  // Step 2: Hentikan polling, simpan ke database dengan status APPROVE_SUBMITTED
+  // Webhook akan menangani kelanjutan (initiateBurn) setelah approval selesai.
+  await supabaseAdmin.from("transactions").insert({
+    user_id: userId,
+    amount: `-${amount.toFixed(2)}`,
+    type: "bridge_outbound_approval",
+    status: "APPROVE_SUBMITTED",
+    internal_ref: approveTx.data?.id,
+    metadata: {
+      destinationDomain,
+      destinationAddress,
+      amount,
+      burnParams: {
+        amount: amountBigInt.toString(),
+        destinationDomain,
+        destinationAddress: formatRecipientForCCTP(destinationAddress),
+        token: USDC_ADDRESS,
+      },
+      isBridgeApproval: true,
+      requestedAt: new Date().toISOString(),
+    },
+  });
 
-  // Step 2: depositForBurn
-  const recipientBytes32 = formatRecipientForCCTP(destinationAddress);
+  return {
+    approveTxId: approveTx.data?.id,
+    status: "APPROVE_SUBMITTED",
+  };
+}
+
+/**
+ * Execute Burn transaction after Approval webhook fires.
+ */
+export async function executeBridgeBurn(
+  supabaseAdmin: any,
+  internalRef: string,
+) {
+  const { data: tx } = await supabaseAdmin
+    .from("transactions")
+    .select("*")
+    .eq("internal_ref", internalRef)
+    .single();
+  
+  if (!tx || !tx.metadata.isBridgeApproval) return;
+  
+  const { wallet_address } = await supabaseAdmin
+    .from("user_wallets")
+    .select("wallet_address")
+    .eq("id", tx.user_id)
+    .single();
+
+  const client = getCircleClientInstance();
+  const { burnParams } = tx.metadata;
 
   const burnTx = await client.createContractExecutionTransaction({
     idempotencyKey: crypto.randomUUID(),
-    walletId: walletData.wallet_id as string,
+    walletId: tx.user_id, // Assuming walletId is userId here based on previous code
     contractAddress: TOKEN_MESSENGER,
     abiFunctionSignature: "depositForBurn(uint256,uint32,bytes32,address)",
     abiParameters: [
-      amountBigInt.toString(),
-      destinationDomain.toString(),
-      recipientBytes32,
-      USDC_ADDRESS,
+      burnParams.amount,
+      burnParams.destinationDomain,
+      burnParams.destinationAddress,
+      burnParams.token,
     ],
     fee: {
       type: "level",
@@ -143,16 +184,24 @@ export async function initiateOutboundBridge(
       },
     },
   });
-
-  return {
-    approveTxId: approveTx.data?.id,
-    burnTxId: burnTx.data?.id,
-  };
+  
+  await supabaseAdmin
+    .from("transactions")
+    .update({
+      status: "BURN_SUBMITTED",
+      internal_ref: burnTx.data?.id,
+      metadata: {
+        ...tx.metadata,
+        burnTxId: burnTx.data?.id,
+      }
+    })
+    .eq("internal_ref", internalRef);
 }
 
 /**
  * Polls Circle API until the transaction with the specified ID is complete.
  */
+// (Keep this function if it's used elsewhere, but remove from initiateOutboundBridge)
 async function waitForCircleTxComplete(txId: string): Promise<string> {
   const client = getCircleClientInstance();
 

@@ -14,6 +14,7 @@ import {
   LogOut,
   Mail,
   Settings,
+  User,
   ChevronRight,
   Settings2,
   Wallet,
@@ -505,7 +506,7 @@ export const HomeScreen = React.memo(
                   </button>
                 </div>
 
-                <div className={`${isDesktop ? "grid grid-cols-5 gap-y-7 gap-x-4 max-w-[560px] mx-auto" : "grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-y-5 gap-x-2"} justify-items-center w-full`}>
+                <div className={`${isDesktop ? "grid grid-cols-5 gap-y-7 gap-x-12 xl:gap-x-16 max-w-[680px] mx-auto" : "grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-y-5 gap-x-5"} justify-items-center w-full`}>
                   {filteredShortcuts
                     .filter((item) => item.label !== "DApp Browser" && item.label !== "Transaction History" && item.label !== "Unified balance")
                     .map((item) => {
@@ -911,7 +912,7 @@ export const HomeScreen = React.memo(
             {isDesktop && (
               <div className="col-span-5 xl:col-span-4 flex relative z-20 flex-col gap-6 w-full lg:max-w-[500px]">
                 {desktopRightColumn && (
-                  <div className="rounded-[24px] bg-white shadow-[0_8px_30px_rgb(0,0,0,0.08)] overflow-hidden border border-slate-100 w-full max-w-[500px] mx-auto relative z-20 flex flex-col h-[680px]">
+                  <div className="rounded-[24px] bg-white shadow-[0_8px_30px_rgb(0,0,0,0.08)] overflow-hidden w-full max-w-[500px] mx-auto relative z-20 flex flex-col h-[680px]">
                     {desktopRightColumn}
                   </div>
                 )}
@@ -991,8 +992,8 @@ export const HomeScreen = React.memo(
                 <div className="w-[50px] md:w-[60px] shrink-0"></div>
               )}
               <NavItem
-                icon={<Settings size={22} />}
-                label="Settings"
+                icon={<User size={22} />}
+                label="Profil"
                 onClick={() => onNavigate("settings")}
               />
               <NavItem

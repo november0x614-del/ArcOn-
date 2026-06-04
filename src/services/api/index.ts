@@ -1,18 +1,31 @@
 import { useStore } from "../../store/useStore";
 import { ARC_TESTNET } from "../../lib/arcConfig";
+import { supabase } from "../../lib/supabaseClient";
 
 /**
  * Helper for making API requests with error handling.
  */
-async function apiRequest(
+export async function apiRequest(
   endpoint: string,
   method: "GET" | "POST" | "PUT" | "DELETE",
   body?: any,
   errorMessage: string = "Request failed",
 ) {
+  // Retrieve the dynamic Supabase JWT access token for security verification
+  const sessionResult = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+  const token = sessionResult?.data?.session?.access_token;
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const config: any = {
     method,
-    headers: { "Content-Type": "application/json" },
+    headers,
   };
   if (body) config.body = JSON.stringify(body);
 
@@ -334,18 +347,18 @@ export const BackendClient = {
     );
   },
 
-  async getImportedTokens(userId: string) {
+  async getImportedTokens() {
     return apiRequest(
-      `/api/tokens/imported/${userId}`,
+      `/api/tokens/imported`,
       "GET",
       undefined,
       "Failed to fetch imported tokens",
     );
   },
 
-  async removeImportedToken(userId: string, address: string) {
+  async removeImportedToken(address: string) {
     return apiRequest(
-      `/api/tokens/imported/${userId}/${address}`,
+      `/api/tokens/imported/${address}`,
       "DELETE",
       undefined,
       "Failed to delete token",
@@ -428,8 +441,8 @@ export const BackendClient = {
   /**
    * Inbox Notifications
    */
-  async getInboxMessages(userId: string) {
-    return apiRequest(`/api/inbox/${userId}`, "GET");
+  async getInboxMessages() {
+    return apiRequest(`/api/inbox`, "GET", undefined, "Failed to fetch inbox messages");
   },
 
   async markMessageAsRead(messageId: string) {

@@ -47,7 +47,7 @@ export function SettingsScreen({
             <ArrowLeft size={20} className="text-white" />
           </button>
           <h3 className="font-bold text-[16px] tracking-tight text-white ml-2">
-            SETTINGS
+            PROFIL
           </h3>
         </div>
       </div>

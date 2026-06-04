@@ -190,27 +190,30 @@ export function MerchantScreen({ onBack }: MerchantScreenProps) {
     try {
       setProcessingRelease(sale.id);
       
+      const adminSecret = (typeof process !== "undefined" && process?.env?.ADMIN_SECRET) || "123456";
+      
       const response = await fetch("/api/ecommerce/release-escrow", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-admin-secret": adminSecret
+        },
         body: JSON.stringify({
-          orderId: sale.id,
-          sellerAddress: address,
-          totalAmount: sale.amount,
+          orderId: sale.id, // Only orderId is submitted. Server fetches seller_address & amount authoritatively.
         }),
       });
 
       const data = await response.json();
       
       if (response.ok) {
-        setRecentSales((prev) => prev.map((s) => s.id === sale.id ? { ...s, status: data.details?.status || "RELEASED" } : s));
-        useStore.getState().displayToast(`Escrow funds settled successfully to store!`);
+        setRecentSales((prev) => prev.map((s) => s.id === sale.id ? { ...s, status: data.details?.status || "PROCESSING_RELEASE" } : s));
+        useStore.getState().displayToast(`Settle dana escrow berhasil diajukan! Menunggu konfirmasi final blockchain Arc-Testnet.`);
       } else {
-        useStore.getState().displayToast(data.message || "Failed to settle funds");
+        useStore.getState().displayToast(data.error || data.message || "Gagal mencairkan dana escrow");
       }
     } catch (err: any) {
       console.error(err);
-      useStore.getState().displayToast("Failed to finalize settlement due to network error");
+      useStore.getState().displayToast("Gagal melakukan pencairan dana escrow karena gangguan jaringan.");
     } finally {
       setProcessingRelease(null);
     }

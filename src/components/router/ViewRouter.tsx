@@ -51,6 +51,7 @@ import {
   Mail,
   Scan,
   Settings,
+  User,
   LogOut,
   Bot,
   ChevronRight,
@@ -330,8 +331,8 @@ export const ViewRouter = React.memo(
                 onClick={() => onNavigate("settings")}
                 className={`flex items-center gap-3 px-4 py-3.5 rounded-xl ${["settings", "namaPanggilan", "email", "otherAccounts"].includes(viewState) ? "bg-slate-900 text-white shadow-[0_4px_12px_rgba(15,23,42,0.15)] shadow-slate-900/20" : "bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800"} font-bold transition-all text-left border-0 relative cursor-pointer active:scale-95`}
               >
-                <Settings size={20} />
-                <span className="text-[14px]">Settings</span>
+                <User size={20} />
+                <span className="text-[14px]">Profil</span>
               </button>
 
               <button
@@ -492,7 +493,11 @@ export const ViewRouter = React.memo(
               try {
                 if (data.session?.user) {
                   const user = data.session.user;
-                  const response = await fetch(`/api/debug-wallet/${user.id}`);
+                  const headers: Record<string, string> = { "Content-Type": "application/json" };
+                  if (data.session?.access_token) {
+                    headers["Authorization"] = `Bearer ${data.session.access_token}`;
+                  }
+                  const response = await fetch(`/api/debug-wallet/${user.id}`, { headers });
                   if (response.ok) {
                     const walletInfo = await response.json();
                     

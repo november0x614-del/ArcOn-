@@ -57,9 +57,20 @@ export function RegisterWeb3Screen({
     verifiedUsername: string,
   ) => {
     try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (authSession?.access_token) {
+        headers["Authorization"] = `Bearer ${authSession.access_token}`;
+      } else {
+        const sessionResult = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+        const tkn = sessionResult?.data?.session?.access_token;
+        if (tkn) {
+          headers["Authorization"] = `Bearer ${tkn}`;
+        }
+      }
+
       const response = await fetch("/api/wallets/create", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ userId }),
       });
 

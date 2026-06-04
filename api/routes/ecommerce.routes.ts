@@ -1,8 +1,10 @@
 import express from "express";
 import crypto from "crypto";
 import { getSupabaseAdmin } from "../config/supabase.js";
-import { executeTransaction, executeReleaseEscrow } from "../services/circle.js";
+import { executeTransaction, executeReleaseEscrow, shouldRequireApproval, recordPendingApprovalTx } from "../services/circle.js";
 import { TransactionService } from "../services/transaction.service.js";
+import { requireUserAuth } from "../middleware/userAuth.js";
+import { authenticateAdmin } from "../middleware/adminAuth.js";
 
 const router = express.Router();
 
@@ -14,10 +16,43 @@ const router = express.Router();
  * Memungkinkan pembelian beberapa produk sekaligus dari merchant yang berbeda
  * dalam satu kali pembayaran aman (Escrow).
  */
-router.post("/ecommerce/checkout-batch", async (req, res) => {
+router.post("/ecommerce/checkout-batch", requireUserAuth, async (req, res) => {
   try {
-    const { buyerId, items, totalAmount, memo } = req.body;
+    // SECURITY: Ambil buyerId langsung dari sesi user terverifikasi
+    const buyerId = (req as any).userId; 
+    const { items, memo } = req.body;
     const supabaseAdmin = getSupabaseAdmin();
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: "Item list is required." });
+    }
+
+    // SECURITY: Ambil harga dan detail merchant dari Database (Authority)
+    const productIds = items.map((i: any) => i.productId);
+    const { data: products, error: productError } = await supabaseAdmin
+      .from("ecommerce_products")
+      .select("id, price, merchant_address, name")
+      .in("id", productIds);
+
+    if (productError || !products || products.length !== items.length) {
+      return res.status(400).json({ error: "One or more products could not be found." });
+    }
+
+    // Reconstruct items with verified data
+    const reconstructedItems = items.map((item: any) => {
+      const product = products.find((p) => p.id === item.productId);
+      return {
+        ...item,
+        name: product!.name,
+        price: parseFloat(product!.price),
+        merchantAddress: product!.merchant_address,
+      };
+    });
+
+    const totalAmount = reconstructedItems.reduce(
+      (sum: number, item: any) => sum + item.price * (item.quantity || 1),
+      0
+    );
 
     let treasuryAddress = process.env.PLATFORM_TREASURY_ADDRESS;
     if (!treasuryAddress) {
@@ -38,13 +73,13 @@ router.post("/ecommerce/checkout-batch", async (req, res) => {
     const internalRef = crypto.randomUUID();
 
     // 1. Registrasi Pesanan di Database (Instan)
-    const orderPromises = items.map(async (item: any) => {
+    const orderPromises = reconstructedItems.map(async (item: any) => {
       return supabaseAdmin.from("ecommerce_orders").insert({
         buyer_id: buyerId,
         seller_address: item.merchantAddress,
         product_id: item.productId?.toString(),
         product_name: item.name,
-        amount: parseFloat(item.price) * (item.quantity || 1),
+        amount: item.price * (item.quantity || 1),
         status: "PENDING_ESCROW",
         memo: orderMemo,
         batch_id: orderBatchId
@@ -53,29 +88,15 @@ router.post("/ecommerce/checkout-batch", async (req, res) => {
     await Promise.all(orderPromises);
 
     // 2. Registrasi Transaksi Finansial (Instan)
-    await TransactionService.registerPending(supabaseAdmin, buyerId, {
-      amount: totalAmount,
-      type: "payment",
-      internalRef,
-      metadata: {
-        description: `Pembayaran Checkout #${invoiceNumber}`,
-        invoiceNumber,
-        batchId: orderBatchId,
-        itemsCount: items.length
-      }
-    });
+    // Cek apakah butuh persetujuan sebelum mendaftarkan pendings
+    const shippingFee = reconstructedItems.some((i: any) => i.category !== "NFT") ? 15.00 : 0;
+    const finalAmount = totalAmount + shippingFee;
 
-    // 3. Eksekusi Pembayaran di Latar Belakang (Async)
-    const shippingFee = items.some((i: any) => i.category !== "NFT") ? 15.00 : 0;
-    
-    TransactionService.executeAsync(
-      supabaseAdmin,
-      internalRef,
-      () => executeTransaction(
+    if (shouldRequireApproval(finalAmount, buyerId)) {
+      await recordPendingApprovalTx(
         supabaseAdmin,
         buyerId,
-        parseFloat(totalAmount) + shippingFee,
-        treasuryAddress!,
+        finalAmount,
         "payment",
         {
           memo: orderMemo,
@@ -83,22 +104,82 @@ router.post("/ecommerce/checkout-batch", async (req, res) => {
           batch_id: orderBatchId,
           receipt_type: "BATCH_CHECKOUT"
         },
-        internalRef
-      ),
-      async (finalTxId) => {
-        // Setelah berhasil di blockchain, update sisa metadata di tabel order
-        await supabaseAdmin
-          .from("ecommerce_orders")
-          .update({ tx_hash: finalTxId })
-          .eq("batch_id", orderBatchId);
-      }
-    ).catch(e => console.error("[CheckoutAsync] Fatal error:", e));
+        internalRef,
+        treasuryAddress!
+      );
 
-    res.status(202).json({ 
-      message: "Proses pembayaran aman (Escrow) sedang berjalan", 
-      txId: internalRef,
-      invoiceNumber 
+      return res.status(202).json({
+        message: "Transaksi ini memerlukan persetujuan admin.",
+        txId: internalRef,
+        status: "pending_approval"
+      });
+    }
+
+    // Jika tidak butuh persetujuan, lanjut flow normal
+    await TransactionService.registerPending(supabaseAdmin, buyerId, {
+      amount: totalAmount.toString(),
+      type: "payment",
+      internalRef,
+      metadata: {
+        description: `Pembayaran Checkout #${invoiceNumber}`,
+        invoiceNumber,
+        batchId: orderBatchId,
+        itemsCount: reconstructedItems.length
+      }
     });
+
+    // 3. Eksekusi Pembayaran secara sinkron (Await)                
+    try {
+      const result = await executeTransaction(
+        supabaseAdmin,
+        buyerId,
+        finalAmount,
+        treasuryAddress!,
+        "payment",
+        {
+          memo: orderMemo,
+          invoice_number: invoiceNumber,
+          batch_id: orderBatchId,
+          receipt_type: "BATCH_CHECKOUT",
+          bypassApproval: true // Sudah dicek di atas
+        },
+        internalRef
+      );
+
+      // Setelah berhasil di blockchain, update sisa metadata di tabel order dan status
+      await supabaseAdmin
+        .from("ecommerce_orders")
+        .update({ tx_hash: result.txId, status: "ESCROWED" }) // Update ke ESCROWED
+        .eq("batch_id", orderBatchId);
+      
+      await supabaseAdmin
+        .from("transactions")
+        .update({ status: "success", tx_hash: result.txId })
+        .eq("internal_ref", internalRef);
+
+      res.status(200).json({ 
+        message: "Pembayaran berhasil dan escrow terkunci", 
+        txId: result.txId,
+        invoiceNumber 
+      });
+
+    } catch (e: any) {
+      console.error("[CheckoutSync] Fatal error:", e);
+      
+      // Update status database sebagai gagal
+      await supabaseAdmin
+        .from("transactions")
+        .update({ status: "failed", metadata: { error: e.message } })
+        .eq("internal_ref", internalRef);
+      
+      await supabaseAdmin
+        .from("ecommerce_orders")
+        .update({ status: "failed_escrow" })
+        .eq("batch_id", orderBatchId);
+
+      res.status(500).json({ error: "Checkout gagal: " + e.message });
+    }
+
   } catch (error: any) {
     console.error("Batch Checkout Error:", error);
     res.status(500).json({ error: error.message });
@@ -108,14 +189,43 @@ router.post("/ecommerce/checkout-batch", async (req, res) => {
 /**
  * 2. Release Escrow & Split Payment
  */
-router.post("/ecommerce/release-escrow", async (req, res) => {
+router.post("/ecommerce/release-escrow", authenticateAdmin, async (req, res) => {
   try {
-    const { sellerAddress, totalAmount, orderId } = req.body;
+    const { orderId } = req.body;
+    if (!orderId) {
+      return res.status(400).json({ error: "Missing required orderId in request body." });
+    }
+
     const supabaseAdmin = getSupabaseAdmin();
 
-    const amountFloat = parseFloat(totalAmount);
+    // Secure database lookup: Load order details entirely from Supabase (server-side authority)
+    const { data: order, error: orderError } = await supabaseAdmin
+      .from("ecommerce_orders")
+      .select("*")
+      .eq("id", orderId)
+      .single();
+
+    if (orderError || !order) {
+      console.error(`[ReleaseEscrow] Order lookup failed:`, orderError);
+      return res.status(404).json({ error: "Order not found inside database." });
+    }
+
+    // Safety validation: Only order with exactly ESCROWED status can proceed
+    if (order.status !== "ESCROWED") {
+      return res.status(400).json({
+        error: `Invalid workflow transition. Only orders with status 'ESCROWED' are eligible for release. Current state is: '${order.status}'`
+      });
+    }
+
+    const sellerAddress = order.seller_address;
+    const amountFloat = parseFloat(order.amount);
+
+    if (!sellerAddress || isNaN(amountFloat) || amountFloat <= 0) {
+      return res.status(400).json({ error: "Order database record contains invalid seller address or amount." });
+    }
     
     // Execute real transfer on Circle SDK (Treasury -> Seller)
+    // The status becomes PROCESSING_RELEASE during this step and is finalized as RELEASED inside the webhook channel.
     const result = await executeReleaseEscrow(
       supabaseAdmin,
       sellerAddress,
@@ -124,15 +234,15 @@ router.post("/ecommerce/release-escrow", async (req, res) => {
     );
 
     res.status(200).json({
-      message: "Escrow Split Payment Success. Payout executed on Arc Testnet via Circle.",
+      message: "Escrow Split Payment processing. Payout transaction successfully initiated on Arc Testnet via Circle.",
       details: {
         order_id: orderId,
         tx_hash: result.txId,
         seller_receives: `${result.sellerReceive.toFixed(2)} USDC`,
         platform_fee: `${result.platformFee.toFixed(2)} USDC`,
         seller_address: sellerAddress,
-        status: "RELEASED",
-        smart_contract_execution: "SUCCESS (Real Transfer Executed)"
+        status: "PROCESSING_RELEASE",
+        smart_contract_execution: "PENDING_BLOCKCHAIN_CONFIRMATION"
       }
     });
 
@@ -145,7 +255,7 @@ router.post("/ecommerce/release-escrow", async (req, res) => {
 /**
  * 3. Fetch Admin Escrow Queue
  */
-router.get("/ecommerce/admin/escrows", async (req, res) => {
+router.get("/ecommerce/admin/escrows", authenticateAdmin, async (req, res) => {
   try {
     const supabaseAdmin = getSupabaseAdmin();
     // Gunakan relasi dengan users untuk mendapatkan nama buyer if possible, here using direct query

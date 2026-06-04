@@ -1,14 +1,18 @@
 import express from "express";
 import { getSupabaseAdmin } from "../config/supabase.js";
+import { requireUserAuth } from "../middleware/userAuth.js";
 
 const router = express.Router();
 
+// Enforce authentication on all inbox endpoints
+router.use(requireUserAuth);
+
 /**
- * Fetch all inbox messages for a specific user
+ * Fetch all inbox messages for the authenticated user
  */
-router.get("/inbox/:userId", async (req, res) => {
+router.get("/inbox", async (req, res) => {
   try {
-    const { userId } = req.params;
+    const userId = (req as any).userId;
     const supabase = getSupabaseAdmin();
 
     const { data, error } = await supabase
@@ -18,8 +22,6 @@ router.get("/inbox/:userId", async (req, res) => {
       .order("created_at", { ascending: false });
 
     if (error) {
-       // Code 42P01 means table does not exist. We handle it by returning empty array
-       // to avoid breaking the UI for users who haven't run the SQL migration yet.
        console.warn("[InboxRoute] Table inbox_messages might not exist yet:", error.message);
        if (error.code === '42P01') return res.json([]);
        throw error;

@@ -36,9 +36,16 @@ export default function App() {
         let walletInfo: any = null;
         let isProvisioning = false;
 
+        const sessionResult = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+        const token = sessionResult?.data?.session?.access_token;
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+
         // 1. Initial check for existing wallet
         try {
-          const response = await fetch(`/api/debug-wallet/${user.id}`);
+          const response = await fetch(`/api/debug-wallet/${user.id}`, { headers });
           if (response.ok) {
             walletInfo = await response.json();
           }
@@ -71,7 +78,7 @@ export default function App() {
             );
             const createRes = await fetch("/api/wallets/create", {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers,
               body: JSON.stringify({ userId: user.id }),
             });
 

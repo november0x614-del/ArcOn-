@@ -34,25 +34,13 @@ app.use(
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 // API Group Routing - Refactored for industry standard MVC pattern
-// We mount all routers on both '/api' and '/' root paths to prevent 405/404 errors on Vercel
-// in case Vercel's Serverless Gateway strips the '/api' prefix before passing to Express.
+// Mounted exclusively under '/api' to reduce the attack surface and secure API routes.
 app.use("/api", walletRoutes);
-app.use("/", walletRoutes);
-
 app.use("/api", transactionRoutes);
-app.use("/", transactionRoutes);
-
 app.use("/api/admin", adminRoutes);
-app.use("/admin", adminRoutes);
-
 app.use("/api", miscRoutes);
-app.use("/", miscRoutes);
-
 app.use("/api", ecommerceRoutes);
-app.use("/", ecommerceRoutes);
-
 app.use("/api", inboxRoutes);
-app.use("/", inboxRoutes);
 
 // Export Express App
 export default app;

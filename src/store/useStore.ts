@@ -364,7 +364,6 @@ export const useStore = create<AppState>()((set) => ({
     if (state.registeredUser?.supabaseUid && tokenToRemove?.contractAddress) {
       try {
         await BackendClient.removeImportedToken(
-          state.registeredUser.supabaseUid,
           tokenToRemove.contractAddress,
         );
       } catch (e) {
@@ -377,7 +376,7 @@ export const useStore = create<AppState>()((set) => ({
     if (!user?.supabaseUid) return;
 
     try {
-      const tokens = await BackendClient.getImportedTokens(user.supabaseUid);
+      const tokens = await BackendClient.getImportedTokens();
       if (Array.isArray(tokens)) {
         set({ importedTokens: tokens });
       }
@@ -406,7 +405,7 @@ export const useStore = create<AppState>()((set) => ({
     const user = useStore.getState().registeredUser;
     if (!user?.supabaseUid) return;
     try {
-      const data = await BackendClient.getInboxMessages(user.supabaseUid);
+      const data = await BackendClient.getInboxMessages();
       set({ inboxMessages: Array.isArray(data) ? data : [] });
     } catch (e: any) {
       console.warn("[Store] Failed to fetch inbox messages (Expected if table missing):", e.message);

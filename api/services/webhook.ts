@@ -51,11 +51,18 @@ async function handleOutboundTransfer(transfer: any, supabaseAdmin: any) {
   // 1. Ambil data transaksi lama untuk mempertahankan metadata
   const { data: existingTx } = await supabaseAdmin
     .from("transactions")
-    .select("status, metadata, type, user_id, amount")
+    .select("status, metadata, type, user_id, amount, internal_ref")
     .eq("internal_ref", internalRef)
     .maybeSingle();
 
   if (!existingTx) return;
+  
+  // Deteksi Bridge Approval Complete
+  if (existingTx.metadata?.isBridgeApproval && isComplete && existingTx.status !== "success") {
+    console.log(`[Webhook:Bridge] Approval confirmed ${internalRef}, triggering burn...`);
+    const { executeBridgeBurn } = await import("./bridge.js");
+    await executeBridgeBurn(supabaseAdmin, internalRef);
+  }
 
   // Keamanan: Jangan update jika status di DB sudah "success"
   if (existingTx.status === "success" && newStatus !== "success") return;
@@ -91,6 +98,24 @@ async function handleOutboundTransfer(transfer: any, supabaseAdmin: any) {
       tx_hash: txHash,
     })
     .eq("circle_tx_id", internalRef);
+
+  // 4. Jika tipe transaksinya adalah "escrow_release_payout", sesuaikan status ecommerce_orders secara real-time berdasarkan blockchain finality
+  if (existingTx.type === "escrow_release_payout" && existingTx.metadata?.orderId) {
+    const orderId = existingTx.metadata.orderId;
+    if (isComplete) {
+      console.log(`[Webhook] Pelepasan Escrow Sukses untuk Pesanan ${orderId}. Memperbarui status pesanan menjadi RELEASED di database.`);
+      await supabaseAdmin
+        .from("ecommerce_orders")
+        .update({ status: "RELEASED" })
+        .eq("id", orderId);
+    } else if (isFailed) {
+      console.warn(`[Webhook Warning] Pelepasan Escrow Gagal untuk Pesanan ${orderId}. Mengembalikan status pesanan menjadi ESCROWED agar aman.`);
+      await supabaseAdmin
+        .from("ecommerce_orders")
+        .update({ status: "ESCROWED" })
+        .eq("id", orderId);
+    }
+  }
 }
 
 /**

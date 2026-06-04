@@ -15,6 +15,43 @@ import * as crypto from "crypto";
 import { getSupabaseAdmin } from "../config/supabase.js";
 
 /**
+ * Mencatat transaksi yang memerlukan persetujuan admin ke database.
+ */
+export async function recordPendingApprovalTx(
+  supabaseAdmin: any,
+  userId: string,
+  amount: number,
+  type: string,
+  metadata: any,
+  internalRef: string,
+  destinationAddress: string
+) {
+  const { data: pendingTx, error: dbError } = await supabaseAdmin
+    .from("transactions")
+    .insert({
+      user_id: userId,
+      amount: `-${amount.toFixed(2)}`,
+      type: type,
+      status: "pending_approval",
+      internal_ref: internalRef,
+      metadata: {
+        ...metadata,
+        description: `[Butuh Persetujuan] ${metadata.memo || (type === "transfer" ? `Kirim ke ${destinationAddress}` : "Pemindahan Treasury")}`,
+        real: true,
+        destinationAddress: destinationAddress,
+        isHighValue: true,
+        requestedAt: new Date().toISOString(),
+      },
+    })
+    .select()
+    .single();
+
+  if (dbError) throw dbError;
+
+  return pendingTx;
+}
+
+/**
  * Fungsi ini bertugas mengambil strategi biaya gas (SPONSORED atau USER_PAID).
  * Digunakan untuk menentukan apakah aplikasi yang menanggung biaya transaksi (Gas Station).
  */
@@ -147,6 +184,13 @@ export const ARC_USDC_TOKEN_ID = "15dc2b5d-0994-58b0-bf8c-3a0501148ee8";
 export const HIGH_VALUE_THRESHOLD = 500; // USDC threshold for mandatory admin approval
 
 /**
+ * Memeriksa apakah transaksi memerlukan persetujuan admin.
+ */
+export function shouldRequireApproval(amount: number, userId: string): boolean {
+  return amount >= HIGH_VALUE_THRESHOLD && userId !== "11111111-1111-1111-1111-111111111111";
+}
+
+/**
  * Interprets Circle errorReason and errorDetails into human-readable messages.
  * Based on Circle Documentation: Transaction States and Errors.
  */
@@ -251,54 +295,8 @@ export async function executeTransaction(
     );
   }
 
-  // --- ANTREAN PERSETUJUAN UNTUK NILAI TINGGI ---
-  const isBypass = metadata?.bypassApproval === true;
-  if (
-    !isBypass &&
-    amount >= HIGH_VALUE_THRESHOLD &&
-    userId !== "11111111-1111-1111-1111-111111111111"
-  ) {
-    // Simpan ke database dengan status pending_approval
-    const { data: pendingTx, error: dbError } = await supabaseAdmin
-      .from("transactions")
-      .insert({
-        user_id: userId,
-        amount: `-${amount.toFixed(2)}`,
-        type: type,
-        status: "pending_approval",
-        internal_ref: internalRef || crypto.randomUUID(),
-        metadata: {
-          ...metadata,
-          description: `[Butuh Persetujuan] ${metadata.memo || (type === "transfer" ? `Kirim ke ${validDest}` : "Pemindahan Treasury")}`,
-          real: true,
-          destinationAddress: validDest,
-          isHighValue: true,
-          requestedAt: new Date().toISOString(),
-        },
-      })
-      .select()
-      .single();
-
-    if (dbError) throw dbError;
-
-    await logAuditEvent(
-      supabaseAdmin,
-      userId,
-      "HIGH_VALUE_TX_APPROVAL_QUEUED",
-      {
-        amount,
-        txId: pendingTx.id,
-      },
-    );
-
-    return {
-      txId: pendingTx.id,
-      status: "pending_approval",
-      message:
-        "Transaksi ini melebihi batas dan memerlukan persetujuan admin sebelum diproses.",
-    };
-  }
   // --- SELESAI ANTREAN PERSETUJUAN ---
+  // (Pengecekan persetujuan sekarang dilakukan di tingkat route sebelum memanggil fungsi ini)
 
   // Fase 2: Estimasi Gas & Cek Saldo
   const sourceAddress = walletData.wallet_address as `0x${string}`;
@@ -778,11 +776,11 @@ export async function executeReleaseEscrow(
       },
     });
 
-    // Update the ecommerce_orders table with transaction ID
+    // Update the ecommerce_orders table with transaction ID to intermediate PROCESSING_RELEASE state
     await supabaseAdmin
        .from("ecommerce_orders")
        .update({ 
-         status: "RELEASED",
+         status: "PROCESSING_RELEASE",
          tx_hash: circleTxId
        })
        .eq("id", orderId);

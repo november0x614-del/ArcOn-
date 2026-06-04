@@ -4,6 +4,7 @@ import { publicClient, getTokenMetadata } from "../services/arcViem.js";
 import { verifyAndProcessWebhook } from "../services/webhook.js";
 import { getSupabaseAdmin } from "../config/supabase.js";
 import { getTokenDetails, executeTransaction } from "../services/circle.js";
+import { requireUserAuth } from "../middleware/userAuth.js";
 import * as crypto from "crypto";
 
 const router = express.Router();
@@ -35,7 +36,7 @@ router.get("/rates", async (req, res) => {
   res.json({ rate: rate + (Math.random() * 0.001 - 0.0005) });
 });
 
-router.post("/faucet/claim", async (req, res) => {
+router.post("/faucet/claim", requireUserAuth, async (req, res) => {
   try {
     const { address, userId } = req.body;
     if (!address) return res.status(400).json({ error: "Address required" });
@@ -43,28 +44,24 @@ router.post("/faucet/claim", async (req, res) => {
     const supabaseAdmin = getSupabaseAdmin();
     const adminId = "11111111-1111-1111-1111-111111111111";
 
-    let txHash = crypto.randomUUID();
-    let successMessage = "100 USDC sent to your wallet on Arc Testnet via Circle SDK";
+    let txHash: string = crypto.randomUUID();
     
-    try {
-      // Attempt actual Circle transfer from Platform Treasury Account
-      const result = await executeTransaction(
-        supabaseAdmin,
-        adminId,
-        100, // 100 USDC
-        address,
-        "faucet_distribution",
-        {
-          memo: "USDC Faucet Distribution",
-          bypassApproval: true
-        }
-      );
-      if (result && result.txId) {
-        txHash = result.txId;
+    // Attempt actual Circle transfer from Platform Treasury Account
+    // Jika gagal, error akan dilempar dan ditangkap oleh catch block di baris 95
+    const result = await executeTransaction(
+      supabaseAdmin,
+      adminId,
+      100, // 100 USDC
+      address,
+      "faucet_distribution",
+      {
+        memo: "USDC Faucet Distribution",
+        bypassApproval: true
       }
-    } catch (circleErr: any) {
-      console.warn("Live Circle Faucet execution failed, falling back to instant ledger credit:", circleErr.message);
-      successMessage = "100 USDC Faucet claimed successfully (Ledger Top-Up)";
+    );
+    
+    if (result && result.txId) {
+      txHash = result.txId;
     }
 
     // Always ensure database is updated to credit user
@@ -87,7 +84,7 @@ router.post("/faucet/claim", async (req, res) => {
 
     res.json({
       success: true,
-      message: successMessage,
+      message: "100 USDC sent to your wallet on Arc Testnet via Circle SDK",
       txHash: txHash,
       amount: "100",
     });
@@ -157,7 +154,7 @@ router.get("/tokens/resolve/:address", async (req, res) => {
   }
 });
 
-router.post("/tokens/import", async (req, res) => {
+router.post("/tokens/import", requireUserAuth, async (req, res) => {
   try {
     const { userId, symbol, name, contractAddress, decimals } = req.body;
     if (!userId || !contractAddress)
@@ -183,9 +180,9 @@ router.post("/tokens/import", async (req, res) => {
   }
 });
 
-router.get("/tokens/imported/:userId", async (req, res) => {
+router.get("/tokens/imported", requireUserAuth, async (req, res) => {
   try {
-    const { userId } = req.params;
+    const userId = (req as any).userId;
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from("user_tokens")
@@ -206,9 +203,10 @@ router.get("/tokens/imported/:userId", async (req, res) => {
   }
 });
 
-router.delete("/tokens/imported/:userId/:address", async (req, res) => {
+router.delete("/tokens/imported/:address", requireUserAuth, async (req, res) => {
   try {
-    const { userId, address } = req.params;
+    const userId = (req as any).userId;
+    const { address } = req.params;
     const supabase = getSupabaseAdmin();
     const { error } = await supabase
       .from("user_tokens")

@@ -23,6 +23,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { ViewState } from "../../types";
 import { useApp } from "../../contexts/AppContext";
 import { useStore } from "../../store/useStore";
+import { apiRequest } from "../../services/api/index";
 import { OverviewTab } from "../admin/OverviewTab";
 import { UsersTab } from "../admin/UsersTab";
 import { TreasuryTab } from "../admin/TreasuryTab";
@@ -159,8 +160,7 @@ export function AdminDashboardScreen({
 
   const fetchStats = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/stats");
-      if (res.ok) setStats(await res.json());
+      setStats(await apiRequest("/api/admin/stats", "GET"));
     } catch (err) {
       console.error(err);
     }
@@ -168,8 +168,7 @@ export function AdminDashboardScreen({
 
   const fetchUsers = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/users");
-      if (res.ok) setUsers(await res.json());
+      setUsers(await apiRequest("/api/admin/users", "GET"));
     } catch (err) {
       console.error(err);
     }
@@ -177,8 +176,7 @@ export function AdminDashboardScreen({
 
   const fetchOtcTransactions = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/otc/pending");
-      if (res.ok) setOtcTransactions(await res.json());
+      setOtcTransactions(await apiRequest("/api/admin/otc/pending", "GET"));
     } catch (err) {
       console.error(err);
     }
@@ -186,8 +184,7 @@ export function AdminDashboardScreen({
 
   const fetchTransactions = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/transactions?limit=20");
-      if (res.ok) setSystemTransactions(await res.json());
+      setSystemTransactions(await apiRequest("/api/admin/transactions?limit=20", "GET"));
     } catch (err) {
       console.error(err);
     }
@@ -195,8 +192,7 @@ export function AdminDashboardScreen({
 
   const fetchApprovals = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/approvals");
-      if (res.ok) setPendingApprovals(await res.json());
+      setPendingApprovals(await apiRequest("/api/admin/approvals", "GET"));
     } catch (err) {
       console.error(err);
     }
@@ -208,22 +204,16 @@ export function AdminDashboardScreen({
   ) => {
     setSaving(true);
     try {
-      const res = await fetch(`/api/admin/approvals/${txId}/decide`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ decision }),
-      });
-      if (res.ok) {
-        setSuccessMsg(
-          `Transaction ${decision === "approve" ? "approved and executed" : "rejected"}.`,
-        );
-        await Promise.all([
-          fetchApprovals(),
-          fetchTransactions(),
-          fetchStats(),
-        ]);
-        setTimeout(() => setSuccessMsg(null), 4000);
-      }
+      await apiRequest(`/api/admin/approvals/${txId}/decide`, "POST", { decision });
+      setSuccessMsg(
+        `Transaction ${decision === "approve" ? "approved and executed" : "rejected"}.`,
+      );
+      await Promise.all([
+        fetchApprovals(),
+        fetchTransactions(),
+        fetchStats(),
+      ]);
+      setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err) {
       console.error(err);
       setError("Failed to process approval decision.");

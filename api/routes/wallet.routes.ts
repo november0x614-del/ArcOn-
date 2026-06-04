@@ -4,6 +4,8 @@ import { createWallet } from "../services/circle.js";
 import { fetchUnifiedBalance } from "../services/balance.js";
 import { publicClient } from "../services/arcViem.js";
 import { formatUnits } from "viem";
+import { requireUserAuth } from "../middleware/userAuth.js";
+import { authenticateAdmin } from "../middleware/adminAuth.js";
 
 const router = express.Router();
 
@@ -47,6 +49,9 @@ router.get("/wallets/resolve/:address", async (req, res) => {
   }
 });
 
+// Enforce authentication on all user-specific wallet & balance routes
+router.use(requireUserAuth);
+
 router.post("/wallets/create", async (req, res) => {
   try {
     const { userId } = req.body;
@@ -87,7 +92,7 @@ router.post("/wallets/create", async (req, res) => {
   }
 });
 
-router.get("/debug-wallet/:userId", async (req, res) => {
+router.get("/debug-wallet/:userId", authenticateAdmin, async (req, res) => {
   try {
     const { userId } = req.params;
     const { data, error } = await getSupabaseAdmin()

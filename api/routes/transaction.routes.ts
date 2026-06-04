@@ -4,6 +4,8 @@ import {
   executeTransaction,
   executeAtomicBatchTransfer,
   ARC_USDC_TOKEN_ID,
+  shouldRequireApproval,
+  recordPendingApprovalTx,
 } from "../services/circle.js";
 import { TransactionService } from "../services/transaction.service.js";
 import {
@@ -12,10 +14,14 @@ import {
 } from "../services/bridge.js";
 import { getCircleClientInstance } from "../services/circleClient.js";
 import { logAuditEvent } from "../services/audit.js";
-import { getPlatformConfigs } from "./admin.routes.js";
+import { getPlatformConfigs, isValidEVMAddress } from "./admin.routes.js";
+import { requireUserAuth } from "../middleware/userAuth.js";
 import * as crypto from "crypto";
 
 const router = express.Router();
+
+// Enforce authentication on all transaction execution endpoints
+router.use(requireUserAuth);
 
 async function getUserTodayTransferTotal(userId: string): Promise<number> {
   try {
@@ -48,13 +54,14 @@ async function getUserTodayTransferTotal(userId: string): Promise<number> {
   }
 }
 
-router.get("/transactions/:userId", async (req, res) => {
+router.get("/transactions", async (req, res) => {
   try {
+    const authenticatedUserId = (req as any).userId;
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from("transactions")
       .select("*")
-      .eq("user_id", req.params.userId)
+      .eq("user_id", authenticatedUserId)
       .order("created_at", { ascending: false });
 
     if (error) throw error;
@@ -137,8 +144,9 @@ router.get("/transactions/:userId", async (req, res) => {
 
 router.post("/swap/execute", async (req, res) => {
   try {
-    const { userId, amount, fromToken, toToken } = req.body;
-    if (await isUserBlocked(userId)) {
+    const authenticatedUserId = (req as any).userId;
+    const { amount, fromToken, toToken } = req.body;
+    if (await isUserBlocked(authenticatedUserId)) {
       return res.status(403).json({
         error:
           "Your account has been disabled by the system administrator. All transaction operations are suspended.",
@@ -165,7 +173,7 @@ router.post("/swap/execute", async (req, res) => {
     const { data: userWallet } = await supabaseAdmin
       .from("user_wallets")
       .select("wallet_id, wallet_address")
-      .eq("id", userId)
+      .eq("id", authenticatedUserId)
       .single();
 
     if (!userWallet?.wallet_address) {
@@ -180,7 +188,7 @@ router.post("/swap/execute", async (req, res) => {
 
     // Write to standard transactions table for UI History visibility
     await supabaseAdmin.from("transactions").insert({
-      user_id: userId,
+      user_id: authenticatedUserId,
       type: "swap",
       amount: `-${amount}`,
       status: "pending",
@@ -196,7 +204,7 @@ router.post("/swap/execute", async (req, res) => {
     });
 
     await supabaseAdmin.from("transaction_ledger").insert({
-      user_id: userId,
+      user_id: authenticatedUserId,
       tx_type: "SWAP",
       amount: amount,
       circle_tx_id: internalRef,
@@ -317,10 +325,11 @@ router.post("/swap/execute", async (req, res) => {
  */
 router.post("/transfer/execute", async (req, res) => {
   try {
-    const { userId, amount, destinationAddress, memo, recipientName } = req.body;
+    const authenticatedUserId = (req as any).userId;
+    const { amount, destinationAddress, memo, recipientName } = req.body;
 
     // 1. Cek keamanan: apakah user diblokir?
-    if (await isUserBlocked(userId)) {
+    if (await isUserBlocked(authenticatedUserId)) {
       return res.status(403).json({ error: "Akun Anda dinonaktifkan oleh administrator." });
     }
 
@@ -337,7 +346,7 @@ router.post("/transfer/execute", async (req, res) => {
 
     // 2. Cek limit harian
     const dailyLimit = parseFloat(config?.dailyTransferLimit?.replace(/[^0-9.]/g, "") || "5000");
-    const todayTotal = await getUserTodayTransferTotal(userId);
+    const todayTotal = await getUserTodayTransferTotal(authenticatedUserId);
     if (todayTotal + amountNum > dailyLimit) {
       return res.status(400).json({
         error: `Limit harian terlampaui. Batas Anda: ${dailyLimit} USDC. Sudah dipakai hari ini: ${todayTotal.toFixed(2)} USDC.`,
@@ -348,8 +357,31 @@ router.post("/transfer/execute", async (req, res) => {
     const internalRef = crypto.randomUUID();
     const fee = parseFloat(config?.withdrawFee?.replace(/[^0-9.]/g, "") || "0");
 
-    // 3. Daftarkan transaksi ke DB (Status PENDING sementara)
-    await TransactionService.registerPending(supabaseAdmin, userId, {
+    // 3. Pengecekan Persetujuan
+    if (shouldRequireApproval(amountNum, authenticatedUserId)) {
+      await recordPendingApprovalTx(
+        supabaseAdmin,
+        authenticatedUserId,
+        amountNum,
+        "transfer",
+        {
+          recipientName: recipientName || "Akun EVM",
+          destinationAddress,
+          memo,
+          platformFee: fee,
+        },
+        internalRef,
+        destinationAddress
+      );
+      return res.status(202).json({
+        message: "Transaksi ini memerlukan persetujuan admin.",
+        txId: internalRef,
+        status: "pending_approval"
+      });
+    }
+
+    // 4. Daftarkan transaksi ke DB (Status PENDING sementara)
+    await TransactionService.registerPending(supabaseAdmin, authenticatedUserId, {
       amount,
       type: "transfer",
       internalRef,
@@ -364,26 +396,32 @@ router.post("/transfer/execute", async (req, res) => {
       },
     });
 
-    // 4. Jalankan eksekusi Blockchain di latar belakang (Async)
-    TransactionService.executeAsync(
-      supabaseAdmin,
-      internalRef,
-      () => executeAtomicBatchTransfer(
+    // 5. Jalankan eksekusi Blockchain secara sinkron
+    try {
+      const result = await executeAtomicBatchTransfer(
         supabaseAdmin,
-        userId,
+        authenticatedUserId,
         [{ address: destinationAddress, amount: amountNum, name: recipientName || "Akun EVM" }],
         fee,
         true, // skipDbInsert karena sudah kita lakukan di registerPending
         internalRef
-      )
-    ).catch(e => console.error("[TransferAsync] Fatal error:", e));
+      );
 
-    // 5. Berikan respons CEPAT ke pengguna
-    res.status(202).json({
-      message: "Transfer sedang diproses dalam jaringan (Background Processing)",
-      txId: internalRef,
-      status: "pending"
-    });
+      await supabaseAdmin.from("transactions").update({ status: "success", tx_hash: result.txId }).eq("internal_ref", internalRef);
+      await supabaseAdmin.from("transaction_ledger").update({ status: "COMPLETE", tx_hash: result.txId }).eq("circle_tx_id", internalRef);
+
+      res.status(200).json({
+        message: "Transfer berhasil",
+        txId: internalRef,
+        status: "success"
+      });
+    } catch (e: any) {
+      console.error("[TransferSync] Fatal error:", e);
+      await supabaseAdmin.from("transactions").update({ status: "failed", metadata: { error: e.message } }).eq("internal_ref", internalRef);
+      await supabaseAdmin.from("transaction_ledger").update({ status: "FAILED", metadata: { error: e.message } }).eq("circle_tx_id", internalRef);
+      res.status(500).json({ error: "Transfer gagal: " + e.message });
+    }
+
   } catch (error: any) {
     console.error("Atomic Transfer Error:", error);
     res.status(500).json({ error: error.message });
@@ -422,8 +460,27 @@ router.post("/withdraw/execute", async (req, res) => {
     if (!treasuryAddress) throw new Error("Dompet Treasury platform belum dikonfigurasi.");
 
     const internalRef = crypto.randomUUID();
+    const amountNum = parseFloat(amount);
 
-    // 1. Registrasi awal
+    // 1. Pengecekan Persetujuan
+    if (shouldRequireApproval(amountNum, userId)) {
+      await recordPendingApprovalTx(
+        supabaseAdmin,
+        userId,
+        amountNum,
+        "withdraw",
+        { bank, memo, finality: "deterministic" },
+        internalRef,
+        treasuryAddress!
+      );
+      return res.status(202).json({
+        message: "Transaksi ini memerlukan persetujuan admin.",
+        txId: internalRef,
+        status: "pending_approval"
+      });
+    }
+
+    // 2. Registrasi awal jika tidak butuh persetujuan
     await TransactionService.registerPending(supabaseAdmin, userId, {
       amount,
       type: "withdraw",
@@ -431,26 +488,33 @@ router.post("/withdraw/execute", async (req, res) => {
       metadata: { bank, memo, finality: "deterministic" },
     });
 
-    // 2. Eksekusi pemindahan dana ke treasury (Async)
-    TransactionService.executeAsync(
-      supabaseAdmin,
-      internalRef,
-      () => executeTransaction(
+    // 3. Eksekusi pemindahan dana ke treasury secara sinkron
+    try {
+      const result = await executeTransaction(
         supabaseAdmin,
         userId,
-        parseFloat(amount),
+        amountNum,
         treasuryAddress!,
         "withdraw",
-        { bank, memo, finality: "deterministic" },
+        { bank, memo, finality: "deterministic", bypassApproval: true },
         internalRef
-      )
-    ).catch(e => console.error("[WithdrawAsync] Fatal error:", e));
+      );
 
-    res.status(202).json({ 
-      message: "Permintaan withdraw sedang diproses", 
-      txId: internalRef,
-      status: "pending" 
-    });
+      await supabaseAdmin.from("transactions").update({ status: "success", tx_hash: result.txId }).eq("internal_ref", internalRef);
+      await supabaseAdmin.from("transaction_ledger").update({ status: "COMPLETE", tx_hash: result.txId }).eq("circle_tx_id", internalRef);
+
+      res.status(200).json({ 
+        message: "Withdraw berhasil diproses", 
+        txId: internalRef,
+        status: "success" 
+      });
+    } catch (e: any) {
+      console.error("[WithdrawSync] Fatal error:", e);
+      await supabaseAdmin.from("transactions").update({ status: "failed", metadata: { error: e.message } }).eq("internal_ref", internalRef);
+      await supabaseAdmin.from("transaction_ledger").update({ status: "FAILED", metadata: { error: e.message } }).eq("circle_tx_id", internalRef);
+      res.status(500).json({ error: "Withdraw gagal: " + e.message });
+    }
+
   } catch (error: any) {
     console.error("Withdraw Error", error);
     res.status(500).json({ error: error.message });
@@ -459,30 +523,52 @@ router.post("/withdraw/execute", async (req, res) => {
 
 router.post("/payments/create", async (req, res) => {
   try {
-    const { walletId, destinationAddress, amount, userId, recipientName } =
-      req.body;
+    // SECURITY: We extract and enforce userId entirely from req.userId (set by requireUserAuth verified JWT).
+    // We completely ignore any walletId sent from the client body to prevent raw wallet hijacking.
+    const authenticatedUserId = (req as any).userId;
+    const { destinationAddress, amount, recipientName } = req.body;
+    
+    if (!destinationAddress || !amount || parseFloat(amount) <= 0) {
+      return res.status(400).json({ error: "Missing or invalid payment parameters." });
+    }
+
+    const supabaseAdmin = getSupabaseAdmin();
+
+    // Secure database lookup: Load the authenticated user's actual wallet ID directly from user_wallets
+    const { data: walletData, error: walletError } = await supabaseAdmin
+      .from("user_wallets")
+      .select("wallet_id, wallet_address")
+      .eq("id", authenticatedUserId)
+      .single();
+
+    if (walletError || !walletData?.wallet_id) {
+      console.error(`[PaymentsCreate] Wallet lookup failed for user ${authenticatedUserId}:`, walletError);
+      return res.status(404).json({ error: "Authenticated user's wallet could not be found." });
+    }
+
     const client = getCircleClientInstance();
 
     if (parseFloat(amount) > 100) {
-      await logAuditEvent(getSupabaseAdmin(), userId, "TRANSFER_HIGH_VALUE", {
+      await logAuditEvent(supabaseAdmin, authenticatedUserId, "TRANSFER_HIGH_VALUE", {
         amount,
         destinationAddress,
       });
     }
 
+    // Secure execution: use verified walletId from the database
     const response = await client.createTransaction({
       idempotencyKey: crypto.randomUUID(),
-      walletId: walletId,
+      walletId: walletData.wallet_id,
       destinationAddress: destinationAddress,
       amount: [amount.toString()],
       feeLevel: "MEDIUM",
       tokenId: ARC_USDC_TOKEN_ID, // Ensure we use USDC token ID by default for payments
     } as any);
 
-    await getSupabaseAdmin()
+    await supabaseAdmin
       .from("transactions")
       .insert({
-        user_id: userId,
+        user_id: authenticatedUserId,
         amount: `-${amount}`,
         type: "transfer",
         status: "pending",
@@ -586,8 +672,15 @@ router.post("/payments/batch", async (req, res) => {
 
 router.post("/purchase/execute", async (req, res) => {
   try {
-    const { userId, amount, product } = req.body;
-    if (await isUserBlocked(userId)) {
+    // SECURITY: Ambil userId langsung dari user token yang terverifikasi, abaikan input body untuk mencegah impersonation
+    const authenticatedUserId = (req as any).userId;
+    const { amount, product } = req.body;
+
+    if (!amount || parseFloat(amount) <= 0 || !product) {
+      return res.status(400).json({ error: "Missing or invalid purchase parameters." });
+    }
+
+    if (await isUserBlocked(authenticatedUserId)) {
       return res.status(403).json({
         error:
           "Your account has been disabled by the system administrator. All transaction operations are suspended.",
@@ -602,10 +695,25 @@ router.post("/purchase/execute", async (req, res) => {
     }
 
     const useEscrow = config?.useLoungeHubEscrow === true;
-    const recipientAddress = useEscrow
-      ? config?.loungeHubContractAddress ||
-        "0x8F3Cf9D0eAcC841cA4E8D77fDeFfD15C9C0A74D4"
-      : "0x2222222222222222222222222222222222222222";
+    let recipientAddress: string;
+
+    if (useEscrow) {
+      const escrowAddr = config?.loungeHubContractAddress;
+      if (!escrowAddr || !isValidEVMAddress(escrowAddr)) {
+        return res.status(500).json({
+          error: "On-chain Escrow contract address is missing or invalid in default configs.",
+        });
+      }
+      recipientAddress = escrowAddr;
+    } else {
+      const treasuryAddr = config?.treasuryWalletAddress;
+      if (!treasuryAddr || !isValidEVMAddress(treasuryAddr)) {
+        return res.status(500).json({
+          error: "Platform Treasury address is missing or invalid in configs.",
+        });
+      }
+      recipientAddress = treasuryAddr;
+    }
 
     const memoText = useEscrow
       ? `[On-Chain Escrow Locked - LoungeHub] Purchase ${product}`
@@ -613,7 +721,7 @@ router.post("/purchase/execute", async (req, res) => {
 
     const result = await executeTransaction(
       getSupabaseAdmin(),
-      userId,
+      authenticatedUserId,
       amount,
       recipientAddress,
       "purchase",
