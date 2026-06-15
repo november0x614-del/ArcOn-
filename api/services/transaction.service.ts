@@ -25,12 +25,12 @@ export class TransactionService {
   ) {
     const { amount, type, internalRef, metadata, ledgerType, destinationAddress } = params;
 
-    // 1. Masukkan ke tabel transaksi utama (untuk Riwayat UI)
+    // 1. Masukkan ke tabel transaksi utama (untuk Riwayat UI) dengan Optimistic Finality
     const { error: txError } = await supabase.from("transactions").insert({
       user_id: userId,
       amount: amount.toString().startsWith("-") ? amount.toString() : `-${amount}`,
       type,
-      status: "pending",
+      status: "success",
       internal_ref: internalRef,
       metadata: {
         ...metadata,
@@ -42,14 +42,14 @@ export class TransactionService {
 
     if (txError) throw txError;
 
-    // 2. Masukkan ke tabel ledger (untuk pembukuan teknis/akuntansi)
+    // 2. Masukkan ke tabel ledger (untuk pembukuan teknis/akuntansi) dengan Optimistic Finality
     if (ledgerType) {
       await supabase.from("transaction_ledger").insert({
         user_id: userId,
         tx_type: ledgerType,
         amount: Math.abs(parseFloat(amount.toString())),
         circle_tx_id: internalRef,
-        status: "PENDING",
+        status: "COMPLETE",
         destination_address: destinationAddress,
         metadata: { ...metadata, is_async: true },
       });

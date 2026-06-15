@@ -351,6 +351,7 @@ export async function executeTransaction(
 
   const txParams: any = {
     idempotencyKey,
+    refId: internalRef || undefined,
     walletId: walletData.wallet_id,
     destinationAddress: validDest,
     amount: [formattedAmount],
@@ -492,6 +493,7 @@ export async function executeAtomicBatchTransfer(
   // 3. Execute via Circle contractExecution
   const txParams: any = {
     idempotencyKey,
+    refId: internalRef || undefined,
     walletId: walletData.wallet_id,
     contractAddress: walletData.wallet_address,
     blockchain: "ARC-TESTNET",

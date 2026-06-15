@@ -28,14 +28,24 @@ router.post("/ecommerce/checkout-batch", requireUserAuth, async (req, res) => {
     }
 
     // SECURITY: Ambil harga dan detail merchant dari Database (Authority)
-    const productIds = items.map((i: any) => i.productId);
+    const uniqueProductIds = Array.from(new Set(items.map((i: any) => i.productId)));
     const { data: products, error: productError } = await supabaseAdmin
       .from("ecommerce_products")
-      .select("id, price, merchant_address, name")
-      .in("id", productIds);
+      .select("id, price, merchant_address, name, stock, sales")
+      .in("id", uniqueProductIds);
 
-    if (productError || !products || products.length !== items.length) {
+    if (productError || !products || products.length !== uniqueProductIds.length) {
+      console.log("Product fetch error or mismatch:", { productError, items, productsSelectedLength: products?.length, uniqueLen: uniqueProductIds.length });
       return res.status(400).json({ error: "One or more products could not be found." });
+    }
+
+    // Periksa stok dan reconstruksi items
+    for (const item of items) {
+      const product = products.find((p) => p.id === item.productId);
+      const requestedQty = item.quantity || 1;
+      if (product!.stock < requestedQty) {
+        return res.status(400).json({ error: `Insufficient stock for product ${product!.name}. Available: ${product!.stock}` });
+      }
     }
 
     // Reconstruct items with verified data
@@ -146,6 +156,21 @@ router.post("/ecommerce/checkout-batch", requireUserAuth, async (req, res) => {
         .from("transactions")
         .update({ status: "success", tx_hash: result.txId })
         .eq("internal_ref", internalRef);
+
+      // Kurangi stok dan tambah sales di produk
+      for (const item of reconstructedItems) {
+        const product = products.find((p) => p.id === item.productId);
+        if (product) {
+          const qty = item.quantity || 1;
+          await supabaseAdmin
+            .from("ecommerce_products")
+            .update({ 
+               stock: Math.max(0, product.stock - qty),
+               sales: (product.sales || 0) + qty
+            })
+            .eq("id", product.id);
+        }
+      }
 
       res.status(200).json({ 
         message: "Pembayaran berhasil dan escrow terkunci", 

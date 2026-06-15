@@ -651,7 +651,7 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                           <button onClick={() => handleCopy(txHash, "TxHash")} className="text-slate-400 hover:text-slate-600 bg-transparent border-0 cursor-pointer p-0"><Copy size={12} /></button>
                         </div>
                       ) : (
-                        <span className="text-[12px] font-bold text-slate-400 font-mono">-</span>
+                        <div className="flex items-center gap-1.5 opacity-70"><span className="text-[12px] font-medium text-slate-400 font-mono italic">{possibleRealHash ? `Ref: ${possibleRealHash.slice(0, 8)}...` : "Processing..."}</span></div>
                       )}
                     </div>
                     <div className="flex justify-between items-center">
@@ -728,7 +728,7 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                           <button onClick={() => handleCopy(txHash, "TxHash")} className="text-slate-400 hover:text-slate-600 bg-transparent border-0 cursor-pointer p-0"><Copy size={12} /></button>
                         </div>
                       ) : (
-                        <span className="text-[12px] font-bold text-slate-400 font-mono">-</span>
+                        <div className="flex items-center gap-1.5 opacity-70"><span className="text-[12px] font-medium text-slate-400 font-mono italic">{possibleRealHash ? `Ref: ${possibleRealHash.slice(0, 8)}...` : "Processing..."}</span></div>
                       )}
                     </div>
                     <div className="flex justify-between items-center">
@@ -794,7 +794,7 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                           <button onClick={() => handleCopy(txHash, "TxHash")} className="text-slate-400 hover:text-slate-600 bg-transparent border-0 cursor-pointer p-0"><Copy size={12} /></button>
                         </div>
                       ) : (
-                        <span className="text-[12px] font-bold text-slate-400 font-mono">-</span>
+                        <div className="flex items-center gap-1.5 opacity-70"><span className="text-[12px] font-medium text-slate-400 font-mono italic">{possibleRealHash ? `Ref: ${possibleRealHash.slice(0, 8)}...` : "Processing..."}</span></div>
                       )}
                     </div>
                     <div className="flex justify-between items-center">
@@ -881,7 +881,7 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                           <button onClick={() => handleCopy(txHash, "TxHash")} className="text-slate-400 hover:text-slate-600 bg-transparent border-0 cursor-pointer p-0"><Copy size={12} /></button>
                         </div>
                       ) : (
-                        <span className="text-[12px] font-bold text-slate-400 font-mono">-</span>
+                        <span className="text-[12px] font-medium text-slate-400 font-mono italic">Pending (Ref: {tx?.id?.slice(0,8)})</span>
                       )}
                     </div>
                     <div className="flex justify-between items-center">
@@ -980,7 +980,11 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                           <button onClick={() => handleCopy(txHash, "TxHash")} className="text-slate-400 hover:text-slate-600 bg-transparent border-0 cursor-pointer p-0"><Copy size={12} /></button>
                         </div>
                       ) : (
-                        <span className="text-[12px] font-bold text-slate-400 font-mono">-</span>
+                        <div className="flex items-center gap-1.5 opacity-70">
+                          <span className="text-[12px] font-medium text-slate-400 font-mono italic">
+                            {possibleRealHash ? `Ref: ${possibleRealHash.slice(0, 8)}...` : "Processing..."}
+                          </span>
+                        </div>
                       )}
                     </div>
                     <div className="flex justify-between items-center">
@@ -1068,7 +1072,11 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                           <button onClick={() => handleCopy(txHash, "TxHash")} className="text-slate-400 hover:text-slate-600 bg-transparent border-0 cursor-pointer p-0"><Copy size={12} /></button>
                         </div>
                       ) : (
-                        <span className="text-[12px] font-bold text-slate-400 font-mono">-</span>
+                        <div className="flex items-center gap-1.5 opacity-70">
+                          <span className="text-[12px] font-medium text-slate-400 font-mono italic">
+                            {possibleRealHash ? `Ref: ${possibleRealHash.slice(0, 8)}...` : "Processing..."}
+                          </span>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -1121,7 +1129,11 @@ export function ReceiptScreen({ onBack }: { onBack: () => void }) {
                           <button onClick={() => handleCopy(txHash, "TxHash")} className="text-slate-400 hover:text-slate-600 bg-transparent border-0 cursor-pointer p-0"><Copy size={12} /></button>
                         </div>
                       ) : (
-                        <span className="text-[12px] font-bold text-slate-400 font-mono">-</span>
+                        <div className="flex items-center gap-1.5 opacity-70">
+                          <span className="text-[12px] font-medium text-slate-400 font-mono italic">
+                            {possibleRealHash ? `Ref: ${possibleRealHash.slice(0, 8)}...` : "Processing..."}
+                          </span>
+                        </div>
                       )}
                     </div>
                     <div className="flex justify-between items-center">

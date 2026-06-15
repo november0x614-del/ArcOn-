@@ -826,15 +826,10 @@ export const ViewRouter = React.memo(
                 await fetchBalance();
                 await fetchTransactions();
 
-                setTransferSuccessData({
-                  txId: result.txId,
-                  amount: numAmount.toString(),
-                  recipientName: selectedContact.name,
-                  fee: fee > 0 ? fee.toFixed(2) : undefined
-                });
-                setViewState("transferSuccess");
-
-                displayToast(`Transfer to ${selectedContact.name} initiated!`);
+                displayToast(`Transfer submitted! Check your Inbox.`);
+                setTransferAmount("");
+                setTransferMemo("");
+                setViewState("transfer");
               } catch (error) {
                 console.error(error);
                 displayToast("Transfer failed. Please try again.");

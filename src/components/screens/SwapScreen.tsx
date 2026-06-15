@@ -39,7 +39,6 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
   const [fromAmount, setFromAmount] = useState("");
   const [toAmount, setToAmount] = useState("0");
   const [isSwapping, setIsSwapping] = useState(false);
-  const [swapFinished, setSwapFinished] = useState(false);
   const [exchangeRate, setExchangeRate] = useState(0);
   const [tokens, setTokens] = useState<any[]>([]);
 
@@ -50,8 +49,8 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
   const [fromToken, setFromToken] = useState<any | null>(null);
   const [toToken, setToToken] = useState<any | null>(null);
   const [searchToken, setSearchToken] = useState("");
-  const [txHash, setTxHash] = useState("");
   const [slippage, setSlippage] = useState<string>("0.5");
+  const [routeStrategy, setRouteStrategy] = useState<"standard" | "otc">("standard");
   const [showDetails, setShowDetails] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [swapError, setSwapError] = useState<{
@@ -107,12 +106,16 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
       if (fromToken?.symbol === toToken?.symbol) {
         setToAmount(fromAmount);
       } else {
-        setToAmount((parseFloat(fromAmount) * exchangeRate).toFixed(4));
+        const baseAmount = parseFloat(fromAmount) * exchangeRate;
+        // Standar Industri: Rute OTC/Private Treasury memberikan rate yang sedikit lebih buruk 
+        // karena spread risk dan kebutuhan instant liquidity (+0.25% premium / spread)
+        const spreadPenalty = routeStrategy === "otc" ? 0.9975 : 1; 
+        setToAmount((baseAmount * spreadPenalty).toFixed(4));
       }
     } else {
       setToAmount("0");
     }
-  }, [fromAmount, exchangeRate, fromToken, toToken]);
+  }, [fromAmount, exchangeRate, fromToken, toToken, routeStrategy]);
 
   const numFromAmount = parseFloat(fromAmount) || 0;
   const fromTokenBalance = getTokenBalance(fromToken?.symbol || "");
@@ -164,7 +167,6 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
     }
 
     setIsSwapping(true);
-    setSwapFinished(false);
 
     try {
       const selectedFromToken = fromToken;
@@ -179,14 +181,22 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
         fromToken,
         toToken,
         targetTokenAddress,
+        routeStrategy
       );
 
-      setTxHash(result.txId);
       setIsSwapping(false);
-      setSwapFinished(true);
       setShowConfirmModal(false);
       queryClient.invalidateQueries({ queryKey: ["balances"] });
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      
+      const state = useStore.getState();
+      if (state.fetchTransactions) state.fetchTransactions();
+      if (state.fetchBalance) state.fetchBalance();
+      
+      state.displayToast("Swap submitted! Check your Inbox.");
+      
+      setFromAmount("");
+      setToAmount("0");
     } catch (error: any) {
       console.error(error);
       setIsSwapping(false);
@@ -217,91 +227,6 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
     setFromAmount("");
     setToAmount("0");
   };
-
-  if (swapFinished) {
-    return (
-      <div className="w-full h-full bg-[#ecf5fc] relative flex flex-col z-50 animate-in slide-in-from-bottom duration-300">
-        <div className="flex items-center px-4 pt-6 pb-3 bg-slate-900 shadow-md relative z-10 w-full shrink-0 justify-between">
-          <button
-            onClick={onBack}
-            className="p-2 hover:bg-white/10 rounded-full transition-colors active:bg-white/20 cursor-pointer border-0 bg-transparent"
-          >
-            <X size={20} className="text-white" />
-          </button>
-          <h2 className="font-bold text-[16px] text-white ml-2">
-            Transaction Receipt
-          </h2>
-        </div>
-        <div className="flex-1 p-6 flex flex-col items-center justify-center">
-          <div className="bg-white p-8 rounded-[32px] w-full max-w-sm shadow-xl flex flex-col items-center text-center">
-            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6 shadow-sm border-4 border-white">
-              <Check size={40} className="text-green-500" strokeWidth={3} />
-            </div>
-            <h2 className="text-[24px] font-extrabold text-white mb-2">
-              Swap Confirmed
-            </h2>
-            <a
-              href={`${ARC_TESTNET.blockExplorers.default.url}/tx/${txHash}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[14px] text-slate-500 mb-8 leading-relaxed hover:underline hover:text-slate-700 transition-colors block cursor-pointer"
-            >
-              Your assets have been successfully swapped on the Arc Network.
-            </a>
-
-            <div className="w-full bg-slate-50 rounded-2xl p-5 mb-8 border border-slate-100 space-y-4 text-left">
-              <div className="flex justify-between items-center">
-                <span className="text-[13px] text-slate-500">Paid</span>
-                <span className="font-bold text-slate-800">
-                  {fromAmount} {fromToken?.symbol || ""}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-[13px] text-slate-500">Received</span>
-                <span className="font-bold text-green-600">
-                  +{toAmount} {toToken?.symbol || ""}
-                </span>
-              </div>
-              <div className="w-full h-[1px] bg-slate-200 my-2"></div>
-              <div className="flex justify-between items-center">
-                <span className="text-[12px] text-slate-400">Tx Hash</span>
-                {txHash.startsWith("0x") ? (
-                  <a
-                    href={`${ARC_TESTNET.blockExplorers.default.url}/tx/${txHash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[12px] font-mono text-slate-600 break-all hover:underline text-right"
-                  >
-                    {txHash}
-                  </a>
-                ) : (
-                  <span className="text-[12px] font-mono text-slate-600 break-all text-right">
-                    {txHash} <br />
-                    <span className="text-[10px] text-slate-400">
-                      (Process ID - Pending On-chain Finality)
-                    </span>
-                  </span>
-                )}
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-[12px] text-slate-400">Network</span>
-                <span className="text-[12px] font-bold text-slate-600">
-                  Arc Testnet
-                </span>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setSwapFinished(false)}
-              className="w-full bg-slate-900 text-white font-bold py-4 rounded-xl hover:bg-slate-800 transition-colors shadow-lg active:scale-95"
-            >
-              Return to Swap
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="w-full h-full bg-[#ecf5fc] relative flex flex-col z-50 animate-in slide-in-from-right duration-300">
@@ -463,13 +388,13 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
         {/* Info Box */}
         <div className="bg-white border border-slate-200 rounded-[20px] p-5 mb-8 shadow-sm">
           <div className="flex justify-between items-center mb-3">
-            <span className="text-[13px] text-slate-500">Live Rate</span>
+            <span className="text-[13px] text-slate-500">{routeStrategy === "otc" ? "Applied Rate (Inc. Spread)" : "Live Rate"}</span>
             <span className="text-[13px] font-bold text-slate-800 flex items-center gap-1">
               <Zap size={14} className="text-yellow-500" />1{" "}
               {fromToken?.symbol || ""} ={" "}
               {fromToken?.symbol === "USDC" && toToken?.symbol === "ARC"
-                ? (typeof exchangeRate === 'number' ? Number(exchangeRate.toFixed(6)) : exchangeRate)
-                : (typeof exchangeRate === 'number' && exchangeRate !== 0 ? Number((1 / exchangeRate).toFixed(6)) : "0")}{" "}
+                ? (typeof exchangeRate === 'number' ? Number((exchangeRate * (routeStrategy === "otc" ? 0.9975 : 1)).toFixed(6)) : exchangeRate)
+                : (typeof exchangeRate === 'number' && exchangeRate !== 0 ? Number(((1 / exchangeRate) * (routeStrategy === "otc" ? 0.9975 : 1)).toFixed(6)) : "0")}{" "}
               {toToken?.symbol || ""}
             </span>
           </div>
@@ -493,6 +418,32 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
             </div>
           </div>
           <div className="w-full h-[1px] border-b border-dashed border-slate-200 my-3"></div>
+          
+          <div className="flex justify-between items-center mb-3">
+            <span className="text-[13px] text-slate-500 flex flex-col">
+              Routing Strategy
+              <span className="text-[10px] text-slate-400 font-normal">
+                {routeStrategy === "standard" ? "Estimated ~15s (Best Price)" : "Instant Settlement via Treasury Desk"}
+              </span>
+            </span>
+            <div className="flex gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200">
+              <button
+                onClick={() => setRouteStrategy("standard")}
+                className={`px-3 py-1 rounded-md text-[11px] font-bold transition-colors ${routeStrategy === "standard" ? "bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] text-slate-800" : "text-slate-500 hover:text-slate-700"}`}
+              >
+                Standard
+              </button>
+              <button
+                onClick={() => setRouteStrategy("otc")}
+                className={`px-3 py-1 rounded-md text-[11px] font-bold transition-colors flex items-center gap-1 ${routeStrategy === "otc" ? "bg-indigo-50 shadow-sm text-indigo-700 border border-indigo-100" : "text-slate-500 hover:text-slate-700"}`}
+              >
+                <Zap size={10} className={routeStrategy === "otc" ? "text-indigo-500" : "hidden"} />
+                Flash
+              </button>
+            </div>
+          </div>
+          <div className="w-full h-[1px] border-b border-dashed border-slate-200 my-3"></div>
+
           <div className="flex justify-between items-center mb-3">
             <span className="text-[13px] text-slate-500">Price Impact</span>
             <div
@@ -533,8 +484,19 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
               </div>
               <div className="flex justify-between items-center mt-1">
                 <span className="text-[12px] text-slate-500">Platform Fee</span>
-                <span className="text-[12px] font-mono text-slate-700 font-bold">
-                  {platformConfig?.swapFee?.includes('%') ? platformConfig.swapFee : `${parseFloat(platformConfig?.swapFee?.replace(/[^0-9.]/g, '') || "0.1")}%`}
+                <span className="text-[12px] font-mono text-slate-700 font-bold flex items-center gap-1">
+                  {routeStrategy === "otc" ? (
+                    <>
+                      <span className="line-through text-slate-400 mr-1 text-[10px]">
+                        {platformConfig?.swapFee?.includes('%') ? platformConfig.swapFee : `${parseFloat(platformConfig?.swapFee?.replace(/[^0-9.]/g, '') || "0.1")}%`}
+                      </span>
+                      <span className="text-indigo-600 bg-indigo-50 px-1 rounded">
+                        {(parseFloat(platformConfig?.swapFee?.replace(/[^0-9.]/g, '') || "0.1") + 0.25).toFixed(2)}%
+                      </span>
+                    </>
+                  ) : (
+                    platformConfig?.swapFee?.includes('%') ? platformConfig.swapFee : `${parseFloat(platformConfig?.swapFee?.replace(/[^0-9.]/g, '') || "0.1")}%`
+                  )}
                 </span>
               </div>
               <div className="flex justify-between items-center mt-1">
@@ -615,7 +577,7 @@ export function SwapScreen({ onBack }: SwapScreenProps) {
               <div className="pt-4 border-t border-slate-200 space-y-2">
                 <div className="flex justify-between text-[13px]">
                   <span className="text-slate-500 font-medium">Exchange Rate</span>
-                  <span className="text-slate-800 font-bold">1 {fromToken?.symbol} = {typeof exchangeRate === 'number' ? Number(exchangeRate.toFixed(6)) : exchangeRate} {toToken?.symbol}</span>
+                  <span className="text-slate-800 font-bold">1 {fromToken?.symbol} = {typeof exchangeRate === 'number' ? Number((exchangeRate * (routeStrategy === "otc" ? 0.9975 : 1)).toFixed(6)) : exchangeRate} {toToken?.symbol}</span>
                 </div>
                 <div className="flex justify-between text-[13px]">
                   <span className="text-slate-500 font-medium">Platform Fee</span>

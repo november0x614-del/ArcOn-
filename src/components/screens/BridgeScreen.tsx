@@ -97,13 +97,9 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
         );
       }
 
-      const txId = result?.burnTxId;
-      if (txId) {
-        setPendingTxId(txId);
-      }
-
-      setProcessingPhase("attesting");
-      // UI-only phase transitions - the actual status tracking happens via polling
+      displayToast("Bridge submitted! Check your Inbox.");
+      onBack();
+      
     } catch (error: any) {
       console.error("Bridge failed", error);
       displayToast(error.message || "Bridge execution failed");
@@ -111,34 +107,7 @@ export function BridgeScreen({ onBack, onSuccess }: BridgeScreenProps) {
     }
   };
 
-  // Polling Effect
-  React.useEffect(() => {
-    if (!pendingTxId) return;
-
-    const interval = setInterval(async () => {
-      try {
-        const txs = await BackendClient.getTransactions(registeredUser?.supabaseUid!);
-        const currentTx = txs.find((t: any) => t.internal_ref === pendingTxId || t.circle_tx_id === pendingTxId);
-        
-        if (currentTx) {
-          if (currentTx.status === "COMPLETE" || currentTx.status === "success") {
-            setStep("success");
-            setPendingTxId(null);
-            clearInterval(interval);
-          } else if (currentTx.status === "FAILED" || currentTx.status === "failed") {
-            displayToast("Bridge failed on-chain.");
-            setStep("form");
-            setPendingTxId(null);
-            clearInterval(interval);
-          }
-        }
-      } catch (e) {
-        console.error("Polling error", e);
-      }
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, [pendingTxId, registeredUser?.supabaseUid]);
+  // Polling Effect removed for optimistic UI
 
 
   if (step === "processing") {

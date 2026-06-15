@@ -184,8 +184,6 @@ export default function App() {
         resetState();
       } else if (session) {
         handleUserSession(session.user);
-      } else {
-        resetState();
       }
     });
 

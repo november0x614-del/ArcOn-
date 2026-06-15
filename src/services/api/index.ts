@@ -29,12 +29,24 @@ export async function apiRequest(
   };
   if (body) config.body = JSON.stringify(body);
 
-  const response = await fetch(endpoint, config);
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || errorData.message || errorMessage);
+  let maxRetries = 3;
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const response = await fetch(endpoint, config);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.message || errorMessage);
+      }
+      return await response.json();
+    } catch (err: any) {
+      if (i === maxRetries - 1) {
+        console.error(`[apiRequest error] Endpoint: ${endpoint}`, err.message);
+        throw err;
+      }
+      // Wait before retrying (exponential backoff)
+      await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, i)));
+    }
   }
-  return response.json();
 }
 
 /**
@@ -74,12 +86,13 @@ export const BackendClient = {
     fromToken: any,
     toToken: any,
     tokenAddress: string,
+    routeStrategy: "standard" | "otc" = "standard"
   ) {
     const { registeredUser } = useStore.getState();
     if (!registeredUser?.supabaseUid) throw new Error("User not registered");
 
     console.log(
-      `[Adapter] Initiating swap: ${amount} ${fromToken?.symbol} -> ${toToken?.symbol}`,
+      `[Adapter] Initiating swap: ${amount} ${fromToken?.symbol} -> ${toToken?.symbol} via ${routeStrategy}`,
     );
 
     return apiRequest(
@@ -91,6 +104,7 @@ export const BackendClient = {
         fromToken,
         toToken,
         tokenAddress,
+        routeStrategy
       },
       "Swap failed",
     );

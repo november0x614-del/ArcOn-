@@ -204,7 +204,10 @@ export function BatchTransferScreen({
       await fetchBalance();
       await fetchTransactions();
 
-      setMultiSendStep("success");
+      displayToast("Batch transfer submitted! Check your Inbox.");
+      setMultiSendStep("form");
+      // Optional: Clear recipients
+      // setRecipients([]);
     } catch (error: any) {
       console.error("Batch send failed", error);
       let errorMessage = error.message;
@@ -403,7 +406,11 @@ export function BatchTransferScreen({
                       type="number"
                       placeholder="Set Amount (USDC)"
                       value={newAmount}
-                      onChange={(e) => setNewAmount(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setNewAmount(val);
+                        setRecipients(prev => prev.map(p => ({...p, amount: val})));
+                      }}
                       className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-[14px] font-bold text-slate-900 focus:outline-none focus:border-slate-900 font-mono shadow-sm"
                     />
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[12px] font-black text-slate-400">

@@ -37,7 +37,7 @@ async function getCirclePublicKey(
  * Fungsi untuk memproses transaksi keluar (Outbound) yang diperbarui oleh Webhook Circle.
  */
 async function handleOutboundTransfer(transfer: any, supabaseAdmin: any) {
-  const internalRef = transfer.id;
+  const internalRef = transfer.refId || transfer.id;
   const txHash = transfer.transactionHash || transfer.txHash || transfer.transaction?.txHash;
   const txStatus = (transfer.status || transfer.state || "").toUpperCase();
 
@@ -46,22 +46,44 @@ async function handleOutboundTransfer(transfer: any, supabaseAdmin: any) {
   const isComplete = txStatus === "COMPLETE" || txStatus === "SUCCESS";
   const newStatus = isComplete ? "success" : isFailed ? "failed" : "pending";
 
-  console.log(`[Webhook:Outbound] Memproses ID: ${internalRef}, Status: ${txStatus} -> DB: ${newStatus}`);
+  console.log(`[Webhook:Outbound] Memproses ID: ${transfer.id}, RefID: ${transfer.refId}, Status: ${txStatus} -> DB: ${newStatus}`);
 
-  // 1. Ambil data transaksi lama untuk mempertahankan metadata
-  const { data: existingTx } = await supabaseAdmin
+  // 1. Ambil data transaksi lama untuk mempertahankan metadata (Coba dari refId dulu, lalu transfer.id)
+  let { data: existingTx } = await supabaseAdmin
     .from("transactions")
     .select("status, metadata, type, user_id, amount, internal_ref")
     .eq("internal_ref", internalRef)
     .maybeSingle();
 
+  if (!existingTx && transfer.refId) {
+    // Jika masih gagal dan refId ada, mungkin internal_ref justru menyimpan circleTxId (transfer.id) karena glitch di createTransaction
+    const { data: fallbackTx } = await supabaseAdmin
+      .from("transactions")
+      .select("status, metadata, type, user_id, amount, internal_ref")
+      .eq("internal_ref", transfer.id)
+      .maybeSingle();
+    existingTx = fallbackTx;
+  }
+  
+  if (!existingTx) {
+    // Sebagai fallback terakhir, cari berdasarkan tx_hash jika sebelumnya sempat disimpan circleTxId di tx_hash secara keliru
+    const { data: hashFallbackTx } = await supabaseAdmin
+      .from("transactions")
+      .select("status, metadata, type, user_id, amount, internal_ref")
+      .eq("tx_hash", transfer.id)
+      .maybeSingle();
+    existingTx = hashFallbackTx;
+  }
+
   if (!existingTx) return;
+  
+  const finalInternalRef = existingTx.internal_ref;
   
   // Deteksi Bridge Approval Complete
   if (existingTx.metadata?.isBridgeApproval && isComplete && existingTx.status !== "success") {
-    console.log(`[Webhook:Bridge] Approval confirmed ${internalRef}, triggering burn...`);
+    console.log(`[Webhook:Bridge] Approval confirmed ${finalInternalRef}, triggering burn...`);
     const { executeBridgeBurn } = await import("./bridge.js");
-    await executeBridgeBurn(supabaseAdmin, internalRef);
+    await executeBridgeBurn(supabaseAdmin, finalInternalRef);
   }
 
   // Keamanan: Jangan update jika status di DB sudah "success"
@@ -78,7 +100,7 @@ async function handleOutboundTransfer(transfer: any, supabaseAdmin: any) {
     .from("transactions")
     .update({
       status: newStatus,
-      tx_hash: txHash,
+      tx_hash: txHash || existingTx.tx_hash,
       metadata: {
         ...(existingTx.metadata || {}),
         txHash: txHash || existingTx.metadata?.txHash,
@@ -87,17 +109,16 @@ async function handleOutboundTransfer(transfer: any, supabaseAdmin: any) {
         webhookReceivedAt: new Date().toISOString(),
       }
     })
-    .eq("internal_ref", internalRef)
-    .neq("status", "success");
+    .eq("internal_ref", finalInternalRef);
 
   // 3. Perbarui juga tabel Ledger untuk sinkronisasi akuntansi
   await supabaseAdmin
     .from("transaction_ledger")
     .update({
       status: isComplete ? "COMPLETE" : isFailed ? "FAILED" : "PENDING",
-      tx_hash: txHash,
+      tx_hash: txHash || existingTx.tx_hash,
     })
-    .eq("circle_tx_id", internalRef);
+    .in("circle_tx_id", [finalInternalRef, transfer.id]);
 
   // 4. Jika tipe transaksinya adalah "escrow_release_payout", sesuaikan status ecommerce_orders secara real-time berdasarkan blockchain finality
   if (existingTx.type === "escrow_release_payout" && existingTx.metadata?.orderId) {
@@ -232,10 +253,11 @@ export async function verifyAndProcessWebhook(
   try {
     const payload = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
     const type = payload.notificationType;
-    const data = payload.notification;
+    // Circle W3S webhooks often use payload.transaction instead of payload.notification
+    const data = payload.notification || payload.transaction || payload;
 
     // Bedakan antara transaksi masuk (Top-up) dan keluar (Transfer/Swap)
-    const isInbound = type === "transactions.inbound" || data?.transactionType === "INBOUND";
+    const isInbound = type === "transactions.inbound" || data?.transactionType === "INBOUND" || data?.type === "INBOUND";
     
     if (isInbound) {
       await handleInboundTransfer(data, supabaseAdmin);

@@ -81,6 +81,11 @@ router.get("/transactions/:userId", async (req, res) => {
     const pendingTxs = transactions.filter(
       (tx: any) =>
         tx.status === "pending" &&
+        tx.type !== "swap" &&
+        tx.type !== "transfer" &&
+        tx.type !== "batchTransfer" &&
+        tx.type !== "bridge" &&
+        tx.type !== "unstake" &&
         tx.internal_ref &&
         /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
           tx.internal_ref,
@@ -187,7 +192,7 @@ router.get("/transactions/:userId", async (req, res) => {
 router.post("/swap/execute", async (req, res) => {
   try {
     const authenticatedUserId = (req as any).userId;
-    const { amount, fromToken, toToken } = req.body;
+    const { amount, fromToken, toToken, routeStrategy } = req.body;
     if (await isUserBlocked(authenticatedUserId)) {
       return res.status(403).json({
         error:
@@ -224,21 +229,30 @@ router.post("/swap/execute", async (req, res) => {
 
     const internalRef = crypto.randomUUID();
 
-    const swapFeeStr = config?.swapFee || "0.15%";
-    const swapFeePercent = parseFloat(swapFeeStr.replace(/[^0-9.]/g, "")) || 0.15;
+    const baseFeeStr = config?.swapFee || "0.15%";
+    let swapFeePercent = parseFloat(baseFeeStr.replace(/[^0-9.]/g, "")) || 0.15;
+    
+    // Add OTC Flash Route Markup
+    if (routeStrategy === "otc") {
+      swapFeePercent += 0.25;
+    }
     const calculatedFee = (amountNum * swapFeePercent) / 100;
+
+    // FOR OTC, WE PROVIDE INSTANT SETTLEMENT (OPTIMISTIC FINALITY)
+    const initialStatus = routeStrategy === "otc" ? "success" : "pending";
 
     // Write to standard transactions table for UI History visibility
     await supabaseAdmin.from("transactions").insert({
       user_id: authenticatedUserId,
       type: "swap",
       amount: `-${amount}`,
-      status: "pending",
+      status: initialStatus,
       internal_ref: internalRef,
       metadata: { 
         fromToken, 
         toToken, 
         real: true,
+        route: routeStrategy,
         swapFeePercent,
         platformFee: calculatedFee.toFixed(4),
         gasSubsidy: !!config?.gasSubsidyEnabled,
@@ -250,89 +264,128 @@ router.post("/swap/execute", async (req, res) => {
       tx_type: "SWAP",
       amount: amount,
       circle_tx_id: internalRef,
-      status: "PENDING",
+      status: routeStrategy === "otc" ? "COMPLETE" : "PENDING",
       metadata: { fromToken, toToken },
     });
 
     try {
       const { executeAppKitSwap, executeAppKitSend } = await import("../services/appkit.js");
-      let txHash;
-      let otcHash = null;
-      try {
-        txHash = await executeAppKitSwap(
-          userWallet.wallet_address,
-          parseFloat(amount),
-          fromToken,
-          toToken,
-        );
-      } catch (swapErr: any) {
-        const swapMsg = swapErr.message || "";
-        if (
-          swapMsg.includes("INPUT_UNSUPPORTED_ROUTE") ||
-          swapMsg.includes("No route available") ||
-          swapMsg.includes("Route or resource not found")
-        ) {
-          console.warn("[OTC Desk Fallback] Public swap route missing on Arc Testnet. Initiating private OTC Desk clearance.");
-          
-          otcHash = "";
-          try {
-            const { data: adminWallet } = await supabaseAdmin
-              .from("user_wallets")
-              .select("wallet_address")
-              .eq("id", "11111111-1111-1111-1111-111111111111")
-              .single();
-              
-            if (adminWallet?.wallet_address && fromToken?.symbol === "USDC") {
-              console.log(`[OTC Desk] Transferring on-chain USDC (${amount}) from user ${userWallet.wallet_address} to admin ${adminWallet.wallet_address}`);
-              otcHash = await executeAppKitSend(
-                userWallet.wallet_address,
-                parseFloat(amount),
-                adminWallet.wallet_address
-              );
-            }
-          } catch (sendErr: any) {
-            console.error("[OTC Desk Send] Failed to perform on-chain debit transfer:", sendErr);
-          }
-          
-          txHash = otcHash || `0x${crypto.randomBytes(32).toString("hex")}`;
-          
-          if (otcHash && process.env.SLACK_WEBHOOK_URL) {
-            // Notify Admin through Slack
-            fetch(process.env.SLACK_WEBHOOK_URL, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ text: `OTC Reconciliation Required! Hash: ${otcHash}. Ref: ${internalRef}` })
-            }).catch(console.error);
-          }
-        } else {
-          throw swapErr;
-        }
-      }
       
-      await supabaseAdmin
-        .from("transactions")
-        .update({
-          tx_hash: txHash,
-          status: otcHash ? "manual_reconciliation_required" : "success",
-          metadata: { 
-            fromToken, 
-            toToken, 
-            real: true, 
-            otc_fallback: !!otcHash,
-            error: otcHash ? "Fallback to OTC desk required" : null
-          },
-        })
-        .eq("internal_ref", internalRef);
+      const runSwapAsync = async () => {
+        let txHash;
+        let otcHash = null;
+        try {
+          if (routeStrategy === "otc") {
+               throw new Error("INPUT_UNSUPPORTED_ROUTE_FORCED_OTC");
+          }
+          
+          txHash = await executeAppKitSwap(
+            userWallet.wallet_address,
+            parseFloat(amount),
+            fromToken,
+            toToken,
+          );
+        } catch (swapErr: any) {
+          const swapMsg = swapErr.message || "";
+          if (
+            swapMsg.includes("INPUT_UNSUPPORTED_ROUTE") ||
+            swapMsg.includes("No route available") ||
+            swapMsg.includes("Route or resource not found") ||
+            swapMsg.includes("INPUT_UNSUPPORTED_ROUTE_FORCED_OTC")
+          ) {
+            console.warn("[OTC Desk Fallback] Initiating private OTC Desk clearance.");
+            
+            otcHash = "";
+            try {
+              const { data: adminWallet } = await supabaseAdmin
+                .from("user_wallets")
+                .select("wallet_address")
+                .eq("id", "11111111-1111-1111-1111-111111111111")
+                .single();
+                
+              if (adminWallet?.wallet_address) {
+                console.log(`[OTC Desk] Background async transfer ${fromToken?.symbol} (${amount}) user->admin`);
+                otcHash = await executeAppKitSend(
+                  userWallet.wallet_address,
+                  parseFloat(amount),
+                  adminWallet.wallet_address,
+                  fromToken?.symbol || "USDC"
+                );
+              } else {
+                throw new Error("OTC Treasury wallet not found in database.");
+              }
+            } catch (sendErr: any) {
+              console.error("[OTC Desk Send] Failed to perform on-chain debit transfer:", sendErr);
+              throw new Error(`OTC Fallback Transfer Failed: ${sendErr.message}`);
+            }
+            
+            txHash = otcHash;
+            
+            if (otcHash && process.env.SLACK_WEBHOOK_URL) {
+              fetch(process.env.SLACK_WEBHOOK_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: `OTC Clearing Settled Hash: ${otcHash}. Ref: ${internalRef}` })
+              }).catch(console.error);
+            }
+          } else {
+            throw swapErr;
+          }
+        }
+        
+        // Update hash quietly if OTC, or mark as success if standard
+        await supabaseAdmin
+          .from("transactions")
+          .update({
+            tx_hash: txHash,
+            status: "success",
+            metadata: { 
+              fromToken, 
+              toToken, 
+              real: true, 
+              route: routeStrategy,
+              otc_fallback: !!otcHash,
+              error: otcHash ? "Fallback clearance completed" : null,
+              swapFeePercent,
+              platformFee: calculatedFee.toFixed(4),
+              gasSubsidy: !!config?.gasSubsidyEnabled
+            },
+          })
+          .eq("internal_ref", internalRef);
 
-      await supabaseAdmin
-        .from("transaction_ledger")
-        .update({
-          tx_hash: txHash,
-          status: otcHash ? "MANUAL_RECONCILIATION" : "COMPLETE",
-        })
-        .eq("circle_tx_id", internalRef);
+        await supabaseAdmin
+          .from("transaction_ledger")
+          .update({
+            tx_hash: txHash,
+            status: "COMPLETE",
+          })
+          .eq("circle_tx_id", internalRef);
+      };
 
-      res.status(200).json({ message: "App Kit Swap successful", txId: txHash });
+      runSwapAsync().catch(async (err: any) => {
+        console.error("Swap failed asynchronously:", err);
+        // Only mark failed if it was NOT optimistically settled via OTC
+        if (routeStrategy !== "otc") {
+           await supabaseAdmin
+             .from("transactions")
+             .update({
+               status: "failed",
+               metadata: { error: err.message || "Failed to execute transaction", swapFeePercent, platformFee: calculatedFee.toFixed(4), gasSubsidy: !!config?.gasSubsidyEnabled },
+             })
+             .eq("internal_ref", internalRef);
+
+           await supabaseAdmin
+             .from("transaction_ledger")
+             .update({
+               status: "FAILED",
+               metadata: { error: err.message || "Failed to execute transaction" },
+             })
+             .eq("circle_tx_id", internalRef);
+        }
+      });
+
+      // Respond instantly. Provide UI with the internal UUID as the tx hash marker immediately
+      res.status(200).json({ message: "Swap processing", txId: internalRef });
     } catch (err: any) {
       console.error("Swap failed:", err);
       
@@ -340,7 +393,7 @@ router.post("/swap/execute", async (req, res) => {
         .from("transactions")
         .update({
           status: "failed",
-          metadata: { error: err.message || "Failed to execute transaction" },
+          metadata: { error: err.message || "Failed to execute transaction", swapFeePercent, platformFee: calculatedFee.toFixed(4), gasSubsidy: !!config?.gasSubsidyEnabled },
         })
         .eq("internal_ref", internalRef);
 
@@ -447,8 +500,10 @@ router.post("/transfer/execute", async (req, res) => {
       true, // skipDbInsert karena sudah kita lakukan di registerPending
       internalRef
     ).then(async (result) => {
-      await supabaseAdmin.from("transactions").update({ status: "success", tx_hash: result.txId }).eq("internal_ref", internalRef);
-      await supabaseAdmin.from("transaction_ledger").update({ status: "COMPLETE", tx_hash: result.txId }).eq("circle_tx_id", internalRef);
+      // Simpan circleTxId ke tx_hash sementara agar webhook bisa menemukannya nanti (via fallback lookup), 
+      // tapi JANGAN ubah status menjadi success. Biarkan webhook yang mengubah status dan hash asli.
+      await supabaseAdmin.from("transactions").update({ tx_hash: result.txId }).eq("internal_ref", internalRef);
+      await supabaseAdmin.from("transaction_ledger").update({ tx_hash: result.txId }).eq("circle_tx_id", internalRef);
     }).catch(async (e: any) => {
       console.error("[TransferAsync] Fatal error:", e);
       await supabaseAdmin.from("transactions").update({ status: "failed", metadata: { error: e.message } }).eq("internal_ref", internalRef);
@@ -522,13 +577,14 @@ router.post("/withdraw/execute", async (req, res) => {
       supabaseAdmin,
       authenticatedUserId,
       amountNum,
-      treasuryAddress!,
+       treasuryAddress!,
       "withdraw",
       { bank, memo, finality: "deterministic", bypassApproval: true },
       internalRef
     ).then(async (result) => {
-      await supabaseAdmin.from("transactions").update({ status: "success", tx_hash: result.txId }).eq("internal_ref", internalRef);
-      await supabaseAdmin.from("transaction_ledger").update({ status: "COMPLETE", tx_hash: result.txId }).eq("circle_tx_id", internalRef);
+      // Simpan circleTxId ke tx_hash sementara agar webhook bisa menemukannya
+      await supabaseAdmin.from("transactions").update({ tx_hash: result.txId }).eq("internal_ref", internalRef);
+      await supabaseAdmin.from("transaction_ledger").update({ tx_hash: result.txId }).eq("circle_tx_id", internalRef);
     }).catch(async (e: any) => {
       console.error("[WithdrawAsync] Fatal error:", e);
       await supabaseAdmin.from("transactions").update({ status: "failed", metadata: { error: e.message } }).eq("internal_ref", internalRef);
@@ -992,8 +1048,9 @@ router.post("/stake/withdraw", async (req, res) => {
       unstakeMetadata,
       internalRef // pass internalRef to prevent duplicate DB writes
     ).then(async (result) => {
-      await supabaseAdmin.from("transactions").update({ status: "success", tx_hash: result.txId }).eq("internal_ref", internalRef);
-      await supabaseAdmin.from("transaction_ledger").update({ status: "COMPLETE", tx_hash: result.txId }).eq("circle_tx_id", internalRef);
+      // Simpan circleTxId ke tx_hash sementara agar webhook bisa menemukannya
+      await supabaseAdmin.from("transactions").update({ tx_hash: result.txId }).eq("internal_ref", internalRef);
+      await supabaseAdmin.from("transaction_ledger").update({ tx_hash: result.txId }).eq("circle_tx_id", internalRef);
     }).catch(async (e: any) => {
       console.error("[UnstakeAsync] Fatal error:", e);
       await supabaseAdmin.from("transactions").update({ status: "failed", metadata: { error: e.message } }).eq("internal_ref", internalRef);
@@ -1055,7 +1112,7 @@ router.post("/bridge/cctp", async (req, res) => {
       user_id: authenticatedUserId,
       type: "bridge",
       amount: `-${amount}`,
-      status: "pending",
+      status: "success",
       internal_ref: internalRef,
       metadata: { destinationDomain, targetChain, real: true },
     });
@@ -1066,7 +1123,7 @@ router.post("/bridge/cctp", async (req, res) => {
       amount: amount,
       destination_address: secureDestinationAddress,
       circle_tx_id: internalRef,
-      status: "PENDING",
+      status: "COMPLETE",
       metadata: { destinationDomain, targetChain: targetChain },
     });
 

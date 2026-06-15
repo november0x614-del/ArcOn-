@@ -95,10 +95,19 @@ export function EcommerceScreen({ onBack, isDesktop }: EcommerceScreenProps) {
 
   const updateQuantity = (id: any, delta: number) => {
     if (delta > 0) {
+      const p = products.find(prod => String(prod.id) === String(id));
+      const currentQty = cartQuantities[id] || 0;
+      if (p && currentQty >= p.stock) {
+        displayToast(`Maximum stock reached. Only ${p.stock} available.`);
+        return false;
+      }
       addToCart(id);
+      return true;
     } else if (delta < 0) {
       removeFromCart(id);
+      return true;
     }
+    return false;
   };
 
   const getCartCount = (): number => {
@@ -599,7 +608,7 @@ export function EcommerceScreen({ onBack, isDesktop }: EcommerceScreenProps) {
                                <span className="font-black text-[14.5px] text-slate-900 tracking-tight leading-none">{p.price} <span className="text-[10px] text-slate-400 font-bold">USdc</span></span>
                              </div>
                              <button 
-                               onClick={(e) => { e.stopPropagation(); addToCart(p.id); displayToast("Added NFT to Cart"); }} 
+                               onClick={(e) => { e.stopPropagation(); const added = updateQuantity(p.id, 1); if (added) displayToast("Added NFT to Cart"); }} 
                                className="w-8 h-8 rounded-full bg-slate-900 hover:bg-slate-850 flex items-center justify-center text-white active:scale-90 transition-all border-0 shadow-lg shadow-slate-200 cursor-pointer">
                                <Plus size={14} strokeWidth={3} />
                              </button>
@@ -732,7 +741,7 @@ export function EcommerceScreen({ onBack, isDesktop }: EcommerceScreenProps) {
                         </div>
                         <div className="flex gap-3">
                            <button 
-                             onClick={() => { updateQuantity(selectedProduct.id, 1); displayToast("Added to cart"); }}
+                             onClick={() => { const added = updateQuantity(selectedProduct.id, 1); if(added) displayToast("Added to cart"); }}
                              className="w-11 h-11 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-slate-700 active:scale-90 transition-all cursor-pointer"
                            >
                              <ShoppingCart size={18} strokeWidth={2.5}/>
@@ -752,7 +761,13 @@ export function EcommerceScreen({ onBack, isDesktop }: EcommerceScreenProps) {
                      </div>
 
                      <button 
-                       onClick={() => { updateQuantity(selectedProduct.id, 1); displayToast("Added to cart"); setViewState("checkout"); }} 
+                       onClick={() => { 
+                          if ((cartQuantities[selectedProduct.id] || 0) < selectedProduct.stock) {
+                             updateQuantity(selectedProduct.id, 1);
+                             displayToast("Added to cart");
+                          }
+                          setViewState("checkout"); 
+                       }} 
                        className="w-full bg-slate-900 hover:bg-slate-800 text-white font-black text-[16px] py-4 rounded-3xl shadow-xl shadow-slate-200 active:scale-[0.98] transition-all border-0 cursor-pointer"
                      >
                        Buy Now with USDC

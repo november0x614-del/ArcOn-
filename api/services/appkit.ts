@@ -90,6 +90,7 @@ export async function executeAppKitSend(
   walletAddress: string,
   amount: number,
   destinationAddress: string,
+  tokenSymbol: string = "USDC"
 ) {
   const { appKit, adapter } = await getAppKit();
   const kitKey = getValidKitKey();
@@ -102,7 +103,7 @@ export async function executeAppKitSend(
     },
     to: destinationAddress,
     amount: amount.toString(),
-    token: normalizeToken("USDC"),
+    token: normalizeToken(tokenSymbol),
     config: {
       kitKey: kitKey as string,
     }
